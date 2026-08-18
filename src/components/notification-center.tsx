@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
@@ -76,21 +77,18 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { data, error: workspaceError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { membership, error: membershipError } = await getActiveMembership(
+        supabase,
+        userId
+      );
 
-      if (workspaceError) {
-        setError(workspaceError.message);
+      if (membershipError) {
+        setError(membershipError);
         setLoading(false);
         return;
       }
 
-      const nextWorkspaceId = data?.[0]?.workspace_id ?? null;
+      const nextWorkspaceId = membership?.workspaceId ?? null;
       setWorkspaceId(nextWorkspaceId);
       await loadNotifications(nextWorkspaceId);
     };

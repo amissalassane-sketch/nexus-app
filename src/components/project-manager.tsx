@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FolderKanban, Pencil, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
 import { canCreateProject } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
@@ -103,15 +104,16 @@ function ProjectManagerInner({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { data: memberships } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { membership, error: membershipError } = await getActiveMembership(
+        supabase,
+        userId
+      );
 
-      const nextWorkspaceId = memberships?.[0]?.workspace_id ?? null;
+      if (membershipError) {
+        setError(membershipError);
+      }
+
+      const nextWorkspaceId = membership?.workspaceId ?? null;
       setWorkspaceId(nextWorkspaceId);
       await fetchProjects(nextWorkspaceId);
     };

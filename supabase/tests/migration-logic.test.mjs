@@ -1,0 +1,390 @@
+/**
+ * ============================================================
+ * NEXUS — MIGRATION LOGIC TEST HARNESS
+ * ============================================================
+ * Executes the versioned migrations (006 -> 011) against a real
+ * PostgreSQL engine (PGlite / WASM) on top of a minimal schema fixture,
+ * and asserts the freemium enforcement behaviour.
+ *
+ * It verifies SQL logic only. It does NOT verify the RLS policies of the
+ * live project (migrations 001-005 are not versioned here) — use
+ * supabase/tests/rls_audit.sql for that.
+ *
+ * Run:
+ *   npm install --no-save @electric-sql/pglite
+ *   node supabase/tests/migration-logic.test.mjs
+ * ============================================================
+ */
+
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PGlite } from "@electric-sql/pglite";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const migrationsDir = join(here, "..", "migrations");
+
+let passed = 0;
+let failed = 0;
+
+function ok(name) {
+  passed += 1;
+  console.log(`  PASS  ${name}`);
+}
+
+function ko(name, detail) {
+  failed += 1;
+  console.log(`  FAIL  ${name}\n        ${detail}`);
+}
+
+function assert(name, condition, detail = "") {
+  if (condition) ok(name);
+  else ko(name, detail);
+}
+
+async function expectPlanLimit(db, name, sql, params = []) {
+  try {
+    await db.query(sql, params);
+    ko(name, "expected PLAN_LIMIT_EXCEEDED, statement succeeded");
+  } catch (error) {
+    assert(
+      name,
+      String(error.message).includes("PLAN_LIMIT_EXCEEDED"),
+      `got: ${error.message}`
+    );
+  }
+}
+
+async function expectOk(db, name, sql, params = []) {
+  try {
+    await db.query(sql, params);
+    ok(name);
+  } catch (error) {
+    ko(name, error.message);
+  }
+}
+
+const db = await PGlite.create();
+
+// ---- schema fixture + versioned migrations ------------------------
+await db.exec(readFileSync(join(here, "00_base_schema_fixture.sql"), "utf8"));
+
+const migrations = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort();
+for (const file of migrations) {
+  try {
+    await db.exec(readFileSync(join(migrationsDir, file), "utf8"));
+    ok(`migration applied: ${file}`);
+  } catch (error) {
+    ko(`migration applied: ${file}`, error.message);
+  }
+}
+
+console.log("\n-- signup bootstrap ------------------------------------");
+
+// 006/008: inserting an auth user must create their default workspace,
+// and 011 (workspace limit) must not break that path.
+await db.query(
+  `insert into auth.users (id, email, raw_user_meta_data)
+   values ('11111111-1111-1111-1111-111111111111', 'owner@nexus.test',
+           '{"full_name":"Owner One","username":"ownerone"}'::jsonb)`
+);
+
+const bootstrap = await db.query(
+  `select id, name, slug from public.workspaces where owner_id = '11111111-1111-1111-1111-111111111111'`
+);
+assert(
+  "signup creates exactly one default workspace",
+  bootstrap.rows.length === 1,
+  `rows=${bootstrap.rows.length}`
+);
+assert(
+  "default workspace has a non-null slug (008 fix)",
+  Boolean(bootstrap.rows[0]?.slug),
+  JSON.stringify(bootstrap.rows[0])
+);
+
+const workspaceId = bootstrap.rows[0].id;
+
+const sub = await db.query(
+  `select plan, status from public.workspace_subscriptions where workspace_id = $1`,
+  [workspaceId]
+);
+assert(
+  "007 auto-creates an active FREE subscription",
+  sub.rows[0]?.plan === "FREE" && sub.rows[0]?.status === "active",
+  JSON.stringify(sub.rows)
+);
+
+console.log("\n-- FREE limits (projects 2 / goals 3 / members 1) -------");
+
+await expectOk(
+  db,
+  "project 1/2 allowed",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'P1','p1')`,
+  [workspaceId]
+);
+await expectOk(
+  db,
+  "project 2/2 allowed",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'P2','p2')`,
+  [workspaceId]
+);
+await expectPlanLimit(
+  db,
+  "project 3 blocked server-side",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'P3','p3')`,
+  [workspaceId]
+);
+
+for (let i = 1; i <= 3; i += 1) {
+  await expectOk(
+    db,
+    `goal ${i}/3 allowed`,
+    `insert into public.goals (workspace_id, title) values ($1, $2)`,
+    [workspaceId, `G${i}`]
+  );
+}
+await expectPlanLimit(
+  db,
+  "goal 4 blocked server-side",
+  `insert into public.goals (workspace_id, title) values ($1,'G4')`,
+  [workspaceId]
+);
+
+await db.query(
+  `insert into auth.users (id, email, raw_user_meta_data)
+   values ('22222222-2222-2222-2222-222222222222', 'member@nexus.test', '{"username":"memberone"}'::jsonb)`
+);
+await expectPlanLimit(
+  db,
+  "second member blocked on FREE (limit 1)",
+  `insert into public.workspace_members (workspace_id, user_id, role, status)
+   values ($1, '22222222-2222-2222-2222-222222222222', 'member', 'active')`,
+  [workspaceId]
+);
+
+console.log("\n-- FREE active task limit (100) + reopen bypass (009) ---");
+
+await db.query(
+  `insert into public.tasks (workspace_id, title, status)
+   select $1, 'T' || g, 'todo' from generate_series(1,100) g`,
+  [workspaceId]
+);
+const activeCount = await db.query(
+  `select count(*)::int as c from public.tasks where workspace_id = $1 and status not in ('done','cancelled')`,
+  [workspaceId]
+);
+assert("100 active tasks inserted", activeCount.rows[0].c === 100, JSON.stringify(activeCount.rows));
+
+await expectPlanLimit(
+  db,
+  "task 101 blocked server-side",
+  `insert into public.tasks (workspace_id, title, status) values ($1,'T101','todo')`,
+  [workspaceId]
+);
+await expectOk(
+  db,
+  "completing a task is always allowed (done insert bypasses limit)",
+  `insert into public.tasks (workspace_id, title, status) values ($1,'T-done','done')`,
+  [workspaceId]
+);
+await expectPlanLimit(
+  db,
+  "reopening a done task above the limit is blocked (009)",
+  `update public.tasks set status = 'todo' where workspace_id = $1 and status = 'done'`,
+  [workspaceId]
+);
+await expectOk(
+  db,
+  "editing an already-active task is not blocked",
+  `update public.tasks set title = 'renamed' where workspace_id = $1 and status = 'todo' and title = 'T1'`,
+  [workspaceId]
+);
+
+console.log("\n-- workspace limit (011) --------------------------------");
+
+await expectPlanLimit(
+  db,
+  "second workspace blocked on FREE (limit 1)",
+  `insert into public.workspaces (owner_id, name, slug)
+   values ('11111111-1111-1111-1111-111111111111','Second','second-ws')`
+);
+
+await db.query(
+  `update public.workspace_subscriptions set plan = 'PRO' where workspace_id = $1`,
+  [workspaceId]
+);
+await expectOk(
+  db,
+  "PRO owner can create a second workspace (limit 5)",
+  `insert into public.workspaces (owner_id, name, slug)
+   values ('11111111-1111-1111-1111-111111111111','Second','second-ws')`
+);
+
+const proWorkspaces = await db.query(
+  `select count(*)::int as c from public.workspaces where owner_id = '11111111-1111-1111-1111-111111111111'`
+);
+assert("PRO owner now has 2 workspaces", proWorkspaces.rows[0].c === 2, JSON.stringify(proWorkspaces.rows));
+
+console.log("\n-- plan is workspace-scoped, limits stay enforced --------");
+
+const secondWs = await db.query(
+  `select id from public.workspaces where slug = 'second-ws'`
+);
+const secondWsId = secondWs.rows[0].id;
+
+// Documented behaviour of 007: every new workspace is provisioned on FREE,
+// even when its owner already pays for PRO on another workspace. Plans are
+// workspace-scoped, so the new workspace must be upgraded on its own.
+const secondPlan = await db.query(
+  `select plan from public.workspace_subscriptions where workspace_id = $1`,
+  [secondWsId]
+);
+assert(
+  "new workspace of a PRO owner is provisioned on FREE (workspace-scoped plans)",
+  secondPlan.rows[0]?.plan === "FREE",
+  JSON.stringify(secondPlan.rows)
+);
+await expectOk(
+  db,
+  "second workspace: project 1/2 allowed (FREE)",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'PP1','pp1')`,
+  [secondWsId]
+);
+await expectOk(
+  db,
+  "second workspace: project 2/2 allowed (FREE)",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'PP2','pp2')`,
+  [secondWsId]
+);
+await expectPlanLimit(
+  db,
+  "second workspace: project 3 blocked (FREE limit applies per workspace)",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'PP3','pp3')`,
+  [secondWsId]
+);
+
+// The PRO workspace itself gets the higher limit (10 projects), not unlimited.
+for (let i = 3; i <= 10; i += 1) {
+  await expectOk(
+    db,
+    `PRO workspace project ${i}/10 allowed`,
+    `insert into public.projects (workspace_id, name, slug) values ($1, $2, $3)`,
+    [workspaceId, `P${i}`, `p${i}`]
+  );
+}
+await expectPlanLimit(
+  db,
+  "PRO workspace project 11 blocked (limit 10)",
+  `insert into public.projects (workspace_id, name, slug) values ($1,'P11','p11')`,
+  [workspaceId]
+);
+
+console.log("\n-- usage RPC --------------------------------------------");
+
+await db.query(`select set_config('test.current_user_id', '11111111-1111-1111-1111-111111111111', false)`);
+const usage = await db.query(`select public.get_workspace_usage($1) as payload`, [workspaceId]);
+const payload = usage.rows[0].payload;
+assert(
+  "get_workspace_usage returns plan/usage/limits for a member",
+  payload?.plan === "PRO" &&
+    payload?.usage?.projects === 10 &&
+    payload?.limits?.projects === 10 &&
+    payload?.limits?.active_tasks === 1000,
+  JSON.stringify(payload)
+);
+
+await db.query(`select set_config('test.current_user_id', '22222222-2222-2222-2222-222222222222', false)`);
+try {
+  await db.query(`select public.get_workspace_usage($1)`, [workspaceId]);
+  ko("get_workspace_usage rejects non-members", "expected Unauthorized");
+} catch (error) {
+  assert(
+    "get_workspace_usage rejects non-members",
+    String(error.message).includes("Unauthorized"),
+    error.message
+  );
+}
+
+console.log("\n-- 012 membership hardening -----------------------------");
+
+// user 2 is authenticated but is NOT a member of the workspace
+await db.query(`select set_config('test.current_user_id', '22222222-2222-2222-2222-222222222222', false)`);
+try {
+  await db.query(
+    `insert into public.tasks (workspace_id, title) values ($1, 'forged')`,
+    [workspaceId]
+  );
+  ko("non-member cannot insert a task in someone else's workspace", "insert succeeded");
+} catch (error) {
+  assert(
+    "non-member cannot insert a task in someone else's workspace",
+    String(error.message).includes("WORKSPACE_ACCESS_DENIED"),
+    error.message
+  );
+}
+
+try {
+  await db.query(
+    `insert into public.projects (workspace_id, name, slug) values ($1,'forged','forged')`,
+    [workspaceId]
+  );
+  ko("non-member cannot insert a project in someone else's workspace", "insert succeeded");
+} catch (error) {
+  assert(
+    "non-member cannot insert a project in someone else's workspace",
+    String(error.message).includes("WORKSPACE_ACCESS_DENIED"),
+    error.message
+  );
+}
+
+// the legitimate member can still write, and cannot forge authorship
+await db.query(`select set_config('test.current_user_id', '11111111-1111-1111-1111-111111111111', false)`);
+await expectOk(
+  db,
+  "active member can still insert (limits permitting)",
+  `insert into public.goals (workspace_id, title, created_by)
+   values ($1, 'legit goal', '11111111-1111-1111-1111-111111111111')`,
+  [workspaceId]
+);
+
+try {
+  await db.query(
+    `insert into public.goals (workspace_id, title, created_by)
+     values ($1, 'forged author', '22222222-2222-2222-2222-222222222222')`,
+    [workspaceId]
+  );
+  ko("created_by cannot be forged", "insert succeeded");
+} catch (error) {
+  assert(
+    "created_by cannot be forged",
+    String(error.message).includes("WORKSPACE_ACCESS_DENIED"),
+    error.message
+  );
+}
+
+// service-role / trigger context (no auth.uid()) stays unrestricted
+await db.query(`select set_config('test.current_user_id', '', false)`);
+await expectOk(
+  db,
+  "service-role context (auth.uid() null) is not blocked by 012",
+  `insert into public.notifications (workspace_id, user_id, title)
+   values ($1, '11111111-1111-1111-1111-111111111111', 'system notice')`,
+  [workspaceId]
+);
+
+console.log("\n-- signup still works while limits are saturated --------");
+
+await expectOk(
+  db,
+  "new user signup still bootstraps a workspace",
+  `insert into auth.users (id, email, raw_user_meta_data)
+   values ('33333333-3333-3333-3333-333333333333','fresh@nexus.test','{"username":"freshuser"}'::jsonb)`
+);
+const freshWs = await db.query(
+  `select count(*)::int as c from public.workspaces where owner_id = '33333333-3333-3333-3333-333333333333'`
+);
+assert("fresh user got exactly 1 workspace", freshWs.rows[0].c === 1, JSON.stringify(freshWs.rows));
+
+console.log(`\n================ ${passed} passed / ${failed} failed ================`);
+process.exit(failed === 0 ? 0 : 1);

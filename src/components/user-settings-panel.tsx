@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CreditCard, Layers, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -26,6 +28,7 @@ type StatusState = {
 type TabId = "profile" | "workspace";
 
 export function UserSettingsPanel({ userId }: { userId: string }) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [form, setForm] = useState<ProfileState>({
     display_name: "",
@@ -61,22 +64,15 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
         });
       }
 
-      const { data: membershipData, error: membershipError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id, role")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { membership } = await getActiveMembership(supabase, userId);
 
-      if (!membershipError && membershipData && membershipData[0]) {
-        const workspaceId = membershipData[0].workspace_id;
-        setWorkspaceRole(membershipData[0].role ?? "member");
+      if (membership) {
+        setWorkspaceRole(membership.role);
 
         const { data: workspaceData, error: workspaceError } = await supabase
           .from("workspaces")
           .select("name")
-          .eq("id", workspaceId)
+          .eq("id", membership.workspaceId)
           .maybeSingle();
 
         if (!workspaceError && workspaceData) {
@@ -120,15 +116,24 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     setSaving(true);
     setStatus({ type: "idle", message: "" });
 
-    const { error } = await supabase
+    // `update()` alone reports success even when it matched 0 rows (missing
+    // profile row, or a row hidden by RLS), so the UI claimed "saved" while
+    // nothing was persisted. `upsert(...).select()` writes the row and returns
+    // it, which lets us verify the write actually happened.
+    const { data, error } = await supabase
       .from("profiles")
-      .update({
-        display_name: form.display_name.trim(),
-        username: form.username.trim() || null,
-        bio: form.bio.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
+      .upsert(
+        {
+          id: userId,
+          display_name: form.display_name.trim(),
+          username: form.username.trim() || null,
+          bio: form.bio.trim() || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      )
+      .select("id, display_name, username, bio")
+      .maybeSingle();
 
     setSaving(false);
 
@@ -137,7 +142,23 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
       return;
     }
 
+    if (!data) {
+      setStatus({
+        type: "error",
+        message:
+          "Profile could not be saved. Your account may not have permission to update this profile.",
+      });
+      return;
+    }
+
+    setForm({
+      display_name: data.display_name ?? "",
+      username: data.username ?? "",
+      bio: data.bio ?? "",
+    });
+
     setStatus({ type: "success", message: "Profile updated successfully." });
+    router.refresh();
   };
 
   return (

@@ -43,6 +43,16 @@ every number, date, counter and identifier.
 Radius hierarchy: pill buttons `9999px`, inputs/nav/rows `10px`, cards/dropdowns `16px`,
 empty states `20px`, auth and pricing cards `24px`.
 
+## Routing & session
+
+`src/proxy.ts` (Next.js 16 file convention — formerly `middleware.ts`) refreshes the
+Supabase session cookies on every request and redirects unauthenticated users to
+`/login`. It must live inside `src/`, next to `app/`: a root-level `middleware.ts` is
+**not** executed when the project uses a `src` directory.
+
+API routes under `/api/**` are never redirected — they answer with their own status
+codes (`401`, `403`, `400`) so clients get JSON instead of an HTML login page.
+
 ## Freemium
 
 Plans are `FREE`, `PRO`, `TEAM`.
@@ -56,6 +66,20 @@ Plans are `FREE`, `PRO`, `TEAM`.
   limited and what the next plan unlocks — it never acts as the security boundary.
 - No payment provider is connected yet: `/api/billing/upgrade` validates auth, workspace
   and role, then returns `501 PAYMENT_PROVIDER_NOT_CONFIGURED`. No transaction is faked.
+
+## Database verification
+
+```bash
+# Executes migrations 006-012 against a real Postgres engine (WASM) on top of a
+# minimal schema fixture and asserts the freemium/security behaviour.
+npm install --no-save @electric-sql/pglite
+node supabase/tests/migration-logic.test.mjs
+```
+
+`supabase/tests/rls_audit.sql` is a read-only script to run in the Supabase SQL editor:
+it lists RLS status, policies, enforcement triggers and the plan limits actually
+installed in the database. Migrations 001-005 (base schema + RLS policies) are not
+versioned in this repository, so the live policies can only be audited that way.
 
 ## Scripts
 

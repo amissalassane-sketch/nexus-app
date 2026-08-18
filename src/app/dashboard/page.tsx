@@ -9,6 +9,7 @@ import { Card, SectionHeader } from "@/components/ui/card";
 import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
 import { StatLine } from "@/components/ui/page-header";
 import type { PlanName } from "@/lib/plan-limits";
+import { getActiveMembership } from "@/lib/workspace";
 
 type DashboardTask = {
   id: string;
@@ -66,14 +67,15 @@ export default async function DashboardPage() {
   const userName = profile?.display_name || profile?.username || user.email || "User";
   const username = profile?.username || undefined;
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("workspace_members")
-    .select("workspace_id, role, status")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
+  // Shared resolution (order by created_at desc + limit 1): identical to the
+  // one used by every other page, and safe when the user is an active member
+  // of several workspaces.
+  const { membership, error: membershipError } = await getActiveMembership(
+    supabase,
+    user.id
+  );
 
-  const workspaceId = membership?.workspace_id ?? null;
+  const workspaceId = membership?.workspaceId ?? null;
 
   const { data: workspace, error: workspaceError } = workspaceId
     ? await supabase
@@ -210,6 +212,9 @@ export default async function DashboardPage() {
   const activeTasksList = (activeTasksResult.data as DashboardTask[] | null) ?? [];
   const recentGoals = recentGoalsResult.data ?? [];
   const recentActivities = recentActivitiesResult.data ?? [];
+  // The activities feed is written by database triggers. If the table or its
+  // policies are missing, say so instead of pretending the feed is empty.
+  const activitiesUnavailable = Boolean(recentActivitiesResult.error);
   const currentPlan = ((subscriptionResult.data?.plan as PlanName) ?? "FREE") as PlanName;
 
   // ---- Focus Block ------------------------------------------------
@@ -573,7 +578,12 @@ export default async function DashboardPage() {
             <section>
               <SectionHeader eyebrow="Activity" title="Recent" />
 
-              {recentActivities.length === 0 ? (
+              {activitiesUnavailable ? (
+                <EmptyState
+                  title="Activity feed unavailable"
+                  description="The workspace activity log could not be read."
+                />
+              ) : recentActivities.length === 0 ? (
                 <EmptyState title="No recent activity" />
               ) : (
                 <ul className="relative ml-1.5 space-y-3.5 border-l border-border-subtle py-1 pl-4">

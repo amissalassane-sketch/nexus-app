@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
 import { PLAN_ORDER, PLAN_PRESENTATION, planRank } from "@/lib/billing/plans";
 import { type PlanName } from "@/lib/plan-limits";
+import { canManageBilling, getActiveMembership } from "@/lib/workspace";
 
 type UsageResult = {
   plan: string;
@@ -32,17 +33,10 @@ export default async function UpgradePage() {
 
   if (!user) redirect("/login");
 
-  const { data: membership } = await supabase
-    .from("workspace_members")
-    .select("workspace_id, role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { membership } = await getActiveMembership(supabase, user.id);
 
-  const workspaceId = membership?.workspace_id ?? null;
-  const canManageBilling = ["owner", "admin"].includes(membership?.role ?? "");
+  const workspaceId = membership?.workspaceId ?? null;
+  const userCanManageBilling = canManageBilling(membership?.role);
 
   const { data: subscription } = workspaceId
     ? await supabase
@@ -208,7 +202,7 @@ export default async function UpgradePage() {
                   ) : isUpgrade ? (
                     <BillingUpgradeButton
                       targetPlan={planName}
-                      canManageBilling={canManageBilling}
+                      canManageBilling={userCanManageBilling}
                       fullWidth
                       label={`Upgrade to ${planName}`}
                     />
