@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
+/* NEXUS Design Tokens */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Dark theme (default) */
+  --color-bg-base: #0c0c0e;
+  --color-bg-subtle: #111114;
+  --color-bg-surface: #17171a;
+  --color-bg-surface-2: #1e1e22;
+  --color-bg-surface-3: #27272c;
+
+  --color-border-subtle: #1c1c1f;
+  --color-border-default: #232326;
+  --color-border-strong: #2c2c30;
+  --color-border-focus: #3a3a40;
+
+  --color-text-primary: #f2f1ed;
+  --color-text-secondary: #9f9fa6;
+  --color-text-tertiary: #6e6e76;
+  --color-text-quaternary: #4a4a50;
+
+  --color-accent-primary: #f2f1ed;
+  --color-accent-primary-fg: #0c0c0e;
+  --color-accent-primary-hover: #eae8e3;
+
+  --color-volt: #d2ff4d;
+  --color-volt-fg: #0c0c0e;
+  --color-volt-subtle: rgba(210, 255, 77, 0.12);
+  --color-volt-border: rgba(210, 255, 77, 0.30);
+
+  --color-success-fg: #6eff8e;
+  --color-danger-fg: #ff5a5f;
+  --color-warning-fg: #ffc857;
+  --color-info-fg: #8aa8ff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Foundation */
+html {
+  height: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   VOLT SIGNAL — BRAND ACCENT
+   ─────────────────────────────────────────────────────────────────
+   #D2FF4D is a SIGNAL token, not a primary color.
+   
+   STRICT USAGE RULES (< 2% of visual surface):
+   ✓ Active indicators (nav, tabs, checkboxes)
+   ✓ Progress bars and completion signals
+   ✓ Focus rings (keyboard navigation)
+   ✓ Micro status badges (unread, urgent)
+   ✓ Attention callouts (error, warning contexts only)
+   
+   FORBIDDEN (violates brand precision):
+   ✗ Large backgrounds or surfaces
+   ✗ Volt gradients or decorations
+   ✗ Big filled buttons with Volt
+   ✗ Volt used throughout text or body
+   ✗ Cards or sections filled with Volt
+   ✗ Decorative hover effects with Volt
+   
+   Primary button remains: #F2F1ED background, #0C0C0E text
+   Volt is precision, not color scheme.
+   ───────────────────────────────────────────────────────────────── */
