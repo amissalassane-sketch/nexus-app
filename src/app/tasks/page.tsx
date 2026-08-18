@@ -24,7 +24,7 @@ export default async function TasksPage() {
   const username = profile?.username || undefined;
 
   return (
-    <NexusShell title="Tasks" subtitle="Track your priorities and execution." userName={userName} username={username}>
+    <NexusShell title="Tasks" userName={userName} username={username}>
       <TaskManager userId={user.id} />
     </NexusShell>
   );

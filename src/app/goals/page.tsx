@@ -24,7 +24,7 @@ export default async function GoalsPage() {
   const username = profile?.username || undefined;
 
   return (
-    <NexusShell title="Goals" subtitle="Keep your long-term progress visible and measurable." userName={userName} username={username}>
+    <NexusShell title="Goals" userName={userName} username={username}>
       <GoalManager userId={user.id} />
     </NexusShell>
   );

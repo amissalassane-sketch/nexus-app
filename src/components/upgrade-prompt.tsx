@@ -1,13 +1,22 @@
-﻿"use client";
+"use client";
 
 // ============================================================
-// NEXUS  UpgradePrompt
-// Reusable component displayed when a plan limit is hit.
-// Uses existing NEXUS design tokens  no new styles.
+// NEXUS V3 — UpgradePrompt
+// Shown when a workspace hits a plan limit. Never a silently
+// disabled button: it explains what is limited, the current plan,
+// what the next plan unlocks, and offers a real upgrade path.
+// Server-side enforcement stays in Supabase (triggers + RPC).
 // ============================================================
 
-import { X } from "lucide-react";
-import { type LimitCheckResult, PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
+import Link from "next/link";
+import { ArrowUpRight, X } from "lucide-react";
+import {
+  type LimitCheckResult,
+  PLAN_LIMITS,
+  type PlanName,
+} from "@/lib/plan-limits";
+import { Progress } from "@/components/ui/feedback";
+import { buttonClasses } from "@/components/ui/button";
 
 const RESOURCE_LABELS: Record<string, string> = {
   projects: "projects",
@@ -32,75 +41,75 @@ export function UpgradePrompt({ limitResult, onDismiss }: UpgradePromptProps) {
   const { current, limit, plan, resource } = limitResult;
   const resourceLabel = RESOURCE_LABELS[resource] ?? resource;
   const nextPlan = NEXT_PLAN[plan];
-  const nextLimits = nextPlan ? PLAN_LIMITS[nextPlan] : null;
-  const nextLimit = nextLimits ? nextLimits[resource] : null;
+  const nextLimit = nextPlan ? PLAN_LIMITS[nextPlan][resource] : null;
 
   return (
     <div
       role="alert"
-      className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5"
+      className="rounded-card border border-lavender-border bg-bg-subtle p-5"
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          {/* Title */}
-          <p className="font-mono text-[10px] uppercase tracking-widest text-amber-400 mb-1">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-mono uppercase tracking-[0.08em] text-lavender">
             Plan limit reached
           </p>
-          <h3 className="text-body font-semibold text-text-primary">
+          <h3 className="mt-1 text-h2 text-text-primary">
             You have reached your {resourceLabel} limit
           </h3>
 
-          {/* Current usage */}
-          <p className="mt-1 text-small text-text-secondary">
-            Your <span className="font-semibold text-text-primary">{plan}</span> plan
-            allows <span className="font-mono font-semibold text-text-primary">{limit}</span> {resourceLabel}.
-            You currently have <span className="font-mono font-semibold text-text-primary">{current}</span>.
+          <p className="mt-1.5 text-small text-text-secondary">
+            Your <span className="font-mono text-text-primary">{plan}</span> plan
+            includes{" "}
+            <span className="font-mono tabular-nums text-text-primary">{limit}</span>{" "}
+            {resourceLabel}. You are currently using{" "}
+            <span className="font-mono tabular-nums text-text-primary">{current}</span>.
           </p>
 
-          {/* Downgrade note */}
-          <p className="mt-2 text-xs text-text-secondary">
-            Your existing {resourceLabel} are safe  you can continue using them.
-            Creating new {resourceLabel} requires an upgrade.
+          <Progress
+            value={limit > 0 ? (current / limit) * 100 : 100}
+            label={`${resourceLabel} usage`}
+            tone="lavender"
+            className="mt-3 max-w-sm"
+          />
+
+          <p className="mt-3 text-caption text-text-tertiary">
+            Existing {resourceLabel} keep working. Creating new ones requires more
+            capacity.
           </p>
 
-          {/* Upgrade CTA */}
-          {nextPlan && nextLimit !== null && (
+          {nextPlan && nextLimit !== null ? (
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-xs text-text-secondary">
-                <span className="font-mono font-semibold text-text-primary">{nextPlan}</span>
-                {"  "}up to{" "}
-                <span className="font-mono font-semibold text-text-primary">{nextLimit}</span>{" "}
+              <div className="rounded-pill border border-border-default bg-bg-surface px-3 py-1.5 font-mono text-mono text-text-secondary">
+                <span className="text-text-primary">{nextPlan}</span> · up to{" "}
+                <span className="tabular-nums text-text-primary">{nextLimit}</span>{" "}
                 {resourceLabel}
               </div>
-              <a
-                href="/settings/billing"
-                className="rounded-md bg-[#F2F1ED] px-4 py-2 text-xs font-semibold text-[#0C0C0E] transition hover:bg-white"
+              <Link
+                href="/upgrade"
+                className={buttonClasses({ variant: "primary", size: "md" })}
               >
                 Upgrade to {nextPlan}
-              </a>
+                <ArrowUpRight size={15} strokeWidth={1.75} />
+              </Link>
             </div>
-          )}
-
-          {!nextPlan && (
-            <p className="mt-3 text-xs text-text-tertiary">
+          ) : (
+            <p className="mt-3 text-caption text-text-tertiary">
               You are on the highest plan. Contact support to request a custom limit.
             </p>
           )}
         </div>
 
-        {/* Dismiss */}
-        {onDismiss && (
+        {onDismiss ? (
           <button
             type="button"
-            aria-label="Dismiss"
+            aria-label="Dismiss upgrade notice"
             onClick={onDismiss}
-            className="shrink-0 rounded p-1 text-text-tertiary hover:text-text-primary transition"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
           >
-            <X size={16} />
+            <X size={16} strokeWidth={1.75} />
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
-

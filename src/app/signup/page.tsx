@@ -1,8 +1,13 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { NexusLogo } from "@/components/nexus-logo";
+import { Field, Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -57,9 +62,7 @@ export default function SignupPage() {
       return;
     }
 
-    setMessage(
-      "Account created. Check your email if confirmation is required."
-    );
+    setMessage("Account created. Check your email if confirmation is required.");
 
     setTimeout(() => {
       router.push("/login");
@@ -67,120 +70,89 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-black">
-            N
-          </div>
-
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Create your NEXUS
-          </h1>
-
-          <p className="mt-2 text-sm text-zinc-500">
+    <main className="flex min-h-screen items-center justify-center bg-bg-base px-4 py-10">
+      <div className="w-full max-w-[400px] rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <NexusLogo size={48} priority className="mb-5" />
+          <h1 className="text-h1 text-text-primary">Create your NEXUS</h1>
+          <p className="mt-1 text-small text-text-secondary">
             Start building your personal operating system.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
-          <form onSubmit={handleSignup} className="space-y-5">
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Full name
-              </label>
+        <form onSubmit={handleSignup} className="flex flex-col gap-4">
+          <Field label="Full name" htmlFor="signup-name">
+            <Input
+              id="signup-name"
+              size="lg"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="Your full name"
+              autoComplete="name"
+              required
+            />
+          </Field>
 
-              <input
-                type="text"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="Your full name"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
+          <Field label="Username" htmlFor="signup-username">
+            <Input
+              id="signup-username"
+              size="lg"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="yourusername"
+              minLength={3}
+              maxLength={30}
+              pattern="[A-Za-z0-9_]+"
+              title="Username can only contain letters, numbers and underscores."
+              autoComplete="username"
+              required
+            />
+          </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Username
-              </label>
+          <Field label="Email" htmlFor="signup-email">
+            <Input
+              id="signup-email"
+              size="lg"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
+          </Field>
 
-              <input
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="yourusername"
-                required
-                minLength={3}
-                maxLength={30}
-                pattern="[A-Za-z0-9_]+"
-                title="Username can only contain letters, numbers and underscores."
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
+          <Field label="Password" htmlFor="signup-password">
+            <Input
+              id="signup-password"
+              size="lg"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Minimum 6 characters"
+              minLength={6}
+              autoComplete="new-password"
+              required
+            />
+          </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Email
-              </label>
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {message ? <Alert tone="success">{message}</Alert> : null}
 
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
+          <Button type="submit" size="lg" disabled={loading} className="mt-1 w-full">
+            {loading ? "Creating account..." : "Create account"}
+          </Button>
+        </form>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Password
-              </label>
-
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Minimum 6 characters"
-                minLength={6}
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-zinc-500">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-white underline underline-offset-4"
-            >
-              Sign in
-            </a>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-small text-text-secondary">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </main>
   );

@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { CreditCard, Layers, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Alert, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
+import { PillTabs } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 type ProfileState = {
   display_name: string;
@@ -14,14 +23,21 @@ type StatusState = {
   message: string;
 };
 
+type TabId = "profile" | "workspace";
+
 export function UserSettingsPanel({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
-  const [form, setForm] = useState<ProfileState>({ display_name: "", username: "", bio: "" });
+  const [form, setForm] = useState<ProfileState>({
+    display_name: "",
+    username: "",
+    bio: "",
+  });
   const [workspaceName, setWorkspaceName] = useState<string>("Not linked");
   const [workspaceRole, setWorkspaceRole] = useState<string>("-");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
+  const [tab, setTab] = useState<TabId>("profile");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -125,84 +141,151 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-        <h2 className="text-xl font-semibold">Profile</h2>
-        <p className="mt-1 text-sm text-zinc-500">Update the public profile associated with your account.</p>
+    <div className="space-y-5">
+      <PageHeader
+        title="Settings"
+        description="Customize your workspace and preferences."
+      />
 
-        {loading ? (
-          <div className="mt-6 text-sm text-zinc-500">Loading profile...</div>
-        ) : (
-          <div className="mt-6 space-y-4">
-            <div>
-              <label className="mb-2 block text-sm text-zinc-300">Display name</label>
-              <input
-                value={form.display_name}
-                onChange={(event) => setForm((current) => ({ ...current, display_name: event.target.value }))}
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-                placeholder="Jane Doe"
-              />
+      <PillTabs
+        label="Settings sections"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
+          {
+            id: "workspace",
+            label: "Workspace",
+            icon: <Layers size={15} strokeWidth={1.75} />,
+          },
+        ]}
+      />
+
+      {tab === "profile" ? (
+        <Card className="max-w-2xl p-6">
+          <h2 className="text-h2 text-text-primary">Profile</h2>
+          <p className="mt-1 text-small text-text-secondary">
+            Update the public profile associated with your account.
+          </p>
+
+          {loading ? (
+            <div className="mt-6 space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
             </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              <Field label="Display name" htmlFor="settings-display-name">
+                <Input
+                  id="settings-display-name"
+                  value={form.display_name}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      display_name: event.target.value,
+                    }))
+                  }
+                  placeholder="Jane Doe"
+                />
+              </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-300">Username</label>
-              <input
-                value={form.username}
-                onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-                placeholder="janedoe"
-              />
-            </div>
+              <Field label="Username" htmlFor="settings-username">
+                <Input
+                  id="settings-username"
+                  value={form.username}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, username: event.target.value }))
+                  }
+                  placeholder="janedoe"
+                />
+              </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-300">Bio</label>
-              <textarea
-                value={form.bio}
-                onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))}
-                rows={5}
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-                placeholder="Write a short bio"
-              />
-            </div>
-
-            {status.type !== "idle" ? (
-              <div
-                className={`rounded-xl border px-4 py-3 text-sm ${
-                  status.type === "success"
-                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-300"
-                    : "border-red-500/30 bg-red-500/5 text-red-300"
-                }`}
+              <Field
+                label="Bio"
+                htmlFor="settings-bio"
+                hint={`${form.bio.length}/500`}
               >
-                {status.message}
+                <Textarea
+                  id="settings-bio"
+                  value={form.bio}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, bio: event.target.value }))
+                  }
+                  rows={5}
+                  placeholder="Write a short bio"
+                />
+              </Field>
+
+              {status.type !== "idle" ? (
+                <Alert tone={status.type === "success" ? "success" : "danger"}>
+                  {status.message}
+                </Alert>
+              ) : null}
+
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </div>
+          )}
+        </Card>
+      ) : (
+        <div className="grid max-w-2xl gap-4">
+          <Card className="p-6">
+            <h2 className="text-h2 text-text-primary">Workspace</h2>
+            <p className="mt-1 text-small text-text-secondary">
+              The workspace this account is currently working in.
+            </p>
+
+            <dl className="mt-5 space-y-3">
+              <div className="flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
+                <dt className="text-small text-text-secondary">Current workspace</dt>
+                <dd className="truncate text-body-medium text-text-primary">
+                  {loading ? "…" : workspaceName}
+                </dd>
               </div>
-            ) : null}
+              <div className="flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
+                <dt className="text-small text-text-secondary">Role</dt>
+                <dd>
+                  <Badge>{loading ? "…" : workspaceRole}</Badge>
+                </dd>
+              </div>
+            </dl>
+          </Card>
 
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save changes"}
-            </button>
-          </div>
-        )}
-      </div>
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-h2 text-text-primary">Plan &amp; billing</h2>
+                <p className="mt-1 text-small text-text-secondary">
+                  Review usage against your plan limits and upgrade when you need more
+                  capacity.
+                </p>
+              </div>
+              <CreditCard
+                size={18}
+                strokeWidth={1.75}
+                className="shrink-0 text-text-tertiary"
+              />
+            </div>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-        <h2 className="text-xl font-semibold">Workspace</h2>
-        <div className="mt-6 space-y-4 text-sm text-zinc-300">
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <div className="text-zinc-500">Current workspace</div>
-            <div className="mt-2 text-lg font-medium text-white">{workspaceName}</div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <div className="text-zinc-500">Role</div>
-            <div className="mt-2 text-lg font-medium text-white">{workspaceRole}</div>
-          </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/settings/billing"
+                className="inline-flex h-9 items-center rounded-pill border border-border-default px-4 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+              >
+                Usage &amp; billing
+              </Link>
+              <Link
+                href="/upgrade"
+                className="inline-flex h-9 items-center rounded-pill bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
+              >
+                Compare plans
+              </Link>
+            </div>
+          </Card>
         </div>
-      </div>
+      )}
     </div>
   );
 }

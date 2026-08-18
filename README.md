@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NEXUS
 
-## Getting Started
+NEXUS is a personal operating system built with Next.js (App Router), React, TypeScript,
+Tailwind CSS v4 and Supabase (Auth + Postgres + RLS).
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment variables (`.env.local`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Design system — NEXUS V3 "Pill Atelier Noir"
 
-To learn more about Next.js, take a look at the following resources:
+The visual language is monochrome, dense and hardware-like: `#0A0A0A` base with a subtle
+dot grid, white pill CTAs, lavender (`#E9E4FF`) used only as a rare accent, mono type for
+every number, date, counter and identifier.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Tokens** live in `src/app/globals.css` inside the Tailwind v4 `@theme` block
+  (colors, typography scale, radius hierarchy, shadows, motion). There is no
+  `tailwind.config.*`: Tailwind v4 reads the CSS theme directly.
+- **Fonts** are self-hosted in `src/fonts/` (Inter Variable + Geist Mono Variable) and
+  wired through `next/font/local` in `src/app/layout.tsx` — no external font CDN.
+- **Shared components** live in `src/components/ui/`:
+  `button`, `create-button`, `dropdown`, `input` (Input/Textarea/Select/Field/Checkbox),
+  `card`, `badge`, `feedback` (EmptyState/ListRow/Progress/Alert/Skeleton),
+  `page-header` (PageHeader/StatLine) and `tabs`.
+- **Shell** components live in `src/components/layout/` (`top-bar`, `sidebar`) and are
+  composed by `src/components/nexus-shell.tsx`.
+- **Logo**: the interlaced white "N" is a locked asset (`public/logo/nexus.png`,
+  `src/app/icon.png`). It is never redrawn, recolored beyond the black/white variants,
+  or geometrically modified. Use `NexusLogo` / `NexusWordmark`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Radius hierarchy: pill buttons `9999px`, inputs/nav/rows `10px`, cards/dropdowns `16px`,
+empty states `20px`, auth and pricing cards `24px`.
 
-## Deploy on Vercel
+## Freemium
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Plans are `FREE`, `PRO`, `TEAM`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Limits are declared once in `src/lib/plan-limits.ts` and mirrored in SQL
+  (`supabase/migrations/008_sync_plan_limits_and_slug.sql`).
+- Enforcement is **server-side**: Postgres triggers on `projects`, `tasks`, `goals`,
+  `workspace_members` and `workspaces` raise `PLAN_LIMIT_EXCEEDED`, and
+  `get_workspace_usage()` exposes usage through an RPC guarded by membership checks.
+- The UI (`useFeatureGate`, `FeatureGate`, `UpgradePrompt`, `/upgrade`) explains what is
+  limited and what the next plan unlocks — it never acts as the security boundary.
+- No payment provider is connected yet: `/api/billing/upgrade` validates auth, workspace
+  and role, then returns `501 PAYMENT_PROVIDER_NOT_CONFIGURED`. No transaction is faked.
+
+## Scripts
+
+```bash
+npm run dev     # development server
+npm run build   # production build (type-checked)
+npm run lint    # eslint
+```

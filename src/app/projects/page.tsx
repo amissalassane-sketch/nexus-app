@@ -24,7 +24,7 @@ export default async function ProjectsPage() {
   const username = profile?.username || undefined;
 
   return (
-    <NexusShell title="Projects" subtitle="Prioritize work across initiatives and milestones." userName={userName} username={username}>
+    <NexusShell title="Projects" userName={userName} username={username}>
       <ProjectManager userId={user.id} />
     </NexusShell>
   );

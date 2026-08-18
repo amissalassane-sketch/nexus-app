@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
   const username = profile?.username || undefined;
 
   return (
-    <NexusShell title="Notifications" subtitle="Review workspace alerts and updates." userName={userName} username={username}>
+    <NexusShell title="Notifications" userName={userName} username={username}>
       <NotificationCenter userId={user.id} />
     </NexusShell>
   );

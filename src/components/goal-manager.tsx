@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Pencil, Target, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateGoal } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/ui/create-button";
+import { Badge } from "@/components/ui/badge";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
+import { Card } from "@/components/ui/card";
+import { PageHeader, StatLine } from "@/components/ui/page-header";
 
 type Goal = {
   id: string;
@@ -32,8 +41,28 @@ const blankGoalForm = (): GoalForm => ({
   target_date: "",
 });
 
-export function GoalManager({ userId }: { userId: string }) {
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "on_track", label: "On track" },
+  { value: "paused", label: "Paused" },
+  { value: "completed", label: "Completed" },
+];
+
+const formatDate = (value: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+function GoalManagerInner({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +71,9 @@ export function GoalManager({ userId }: { userId: string }) {
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  const titleRef = useRef<HTMLInputElement>(null);
+
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
     canCreateGoal,
@@ -88,12 +120,22 @@ export function GoalManager({ userId }: { userId: string }) {
     };
 
     void loadWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId]);
+
+  useEffect(() => {
+    if (formOpen) titleRef.current?.focus();
+  }, [formOpen]);
 
   const resetForm = () => {
     setForm(blankGoalForm());
     setEditingGoalId(null);
     setSuccess("");
+  };
+
+  const closeForm = () => {
+    resetForm();
+    setFormOpen(false);
   };
 
   const createGoal = async () => {
@@ -103,7 +145,12 @@ export function GoalManager({ userId }: { userId: string }) {
     }
 
     const allowed = await guardCreate();
-    if (!allowed) return;
+    if (!allowed) {
+      setError(
+        "You have reached your plan limit for goals. See the upgrade options above."
+      );
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -178,12 +225,15 @@ export function GoalManager({ userId }: { userId: string }) {
 
   const populateEditForm = (goal: Goal) => {
     setEditingGoalId(goal.id);
+    setFormOpen(true);
     setForm({
       title: goal.title,
       description: goal.description ?? "",
       status: goal.status,
       progress: goal.progress,
-      target_date: goal.target_date ? new Date(goal.target_date).toISOString().slice(0, 10) : "",
+      target_date: goal.target_date
+        ? new Date(goal.target_date).toISOString().slice(0, 10)
+        : "",
     });
     setError("");
     setSuccess("");
@@ -192,7 +242,10 @@ export function GoalManager({ userId }: { userId: string }) {
   const handleProgress = async (goalId: string, progress: number) => {
     const { error: updateError } = await supabase
       .from("goals")
-      .update({ progress: Math.min(100, Math.max(0, progress)), updated_at: new Date().toISOString() })
+      .update({
+        progress: Math.min(100, Math.max(0, progress)),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", goalId)
       .eq("workspace_id", workspaceId ?? "");
 
@@ -209,7 +262,11 @@ export function GoalManager({ userId }: { userId: string }) {
     const confirmed = window.confirm("Delete this goal?");
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabase.from("goals").delete().eq("id", goalId).eq("workspace_id", workspaceId ?? "");
+    const { error: deleteError } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
       setError(deleteError.message);
@@ -223,143 +280,278 @@ export function GoalManager({ userId }: { userId: string }) {
     await fetchGoals(workspaceId);
   };
 
+  const completedCount = goals.filter((goal) => goal.status === "completed").length;
+  const averageProgress =
+    goals.length > 0
+      ? Math.round(
+          goals.reduce((sum, goal) => sum + Number(goal.progress ?? 0), 0) / goals.length
+        )
+      : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <PageHeader
+        title="Goals"
+        count={goals.length}
+        description="Keep your long-term progress visible and measurable."
+        actions={
+          <CreateButton
+            label="New Goal"
+            onClick={() => {
+              if (formOpen && !editingGoalId) {
+                closeForm();
+                return;
+              }
+              resetForm();
+              setFormOpen(true);
+            }}
+          />
+        }
+      />
+
+      <StatLine
+        items={[
+          { value: `${averageProgress}%`, label: "average progress" },
+          { value: completedCount, label: "completed" },
+          { value: goals.length, label: "total" },
+        ]}
+      />
+
       {!editingGoalId && limitResult ? (
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="mb-4 text-xl font-semibold">{editingGoalId ? "Edit goal" : "Create goal"}</h2>
-          {editingGoalId ? (
-            <button type="button" onClick={resetForm} className="text-sm text-zinc-400 hover:text-white">
-              Cancel
-            </button>
-          ) : null}
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            value={form.title}
-            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            placeholder="Goal title"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-          />
-          <input
-            type="date"
-            value={form.target_date}
-            onChange={(event) => setForm((current) => ({ ...current, target_date: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          />
-          <select
-            value={form.status}
-            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          >
-            <option value="active">Active</option>
-            <option value="on_track">On track</option>
-            <option value="paused">Paused</option>
-            <option value="completed">Completed</option>
-          </select>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={form.progress}
-            onChange={(event) => setForm((current) => ({ ...current, progress: Number(event.target.value) }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          />
-        </div>
-
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Goal description"
-          rows={3}
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-        />
-
-        {error ? <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div> : null}
-        {success ? <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">{success}</div> : null}
-
-        <button
-          type="button"
-          onClick={submitGoal}
-          disabled={saving || !workspaceId || (!editingGoalId && Boolean(limitResult))}
-          className="mt-4 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (editingGoalId ? "Saving goal..." : "Creating goal...") : editingGoalId ? "Save goal" : "Add goal"}
-        </button>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <h2 className="mb-4 text-xl font-semibold">Goals</h2>
-
-        {loading ? (
-          <div className="text-sm text-zinc-500">Loading goals...</div>
-        ) : goals.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-zinc-500">
-            No goals yet.
+      {formOpen ? (
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-h2 text-text-primary">
+              {editingGoalId ? "Edit goal" : "New goal"}
+            </h2>
+            <Button variant="icon" onClick={closeForm} aria-label="Close goal form">
+              <X size={16} strokeWidth={1.75} />
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {goals.map((goal) => (
-              <div key={goal.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-white">{goal.title}</h3>
-                    {goal.description ? <p className="mt-1 text-sm text-zinc-400">{goal.description}</p> : null}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Title" htmlFor="goal-title">
+              <Input
+                id="goal-title"
+                ref={titleRef}
+                value={form.title}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, title: event.target.value }))
+                }
+                placeholder="What do you want to achieve?"
+              />
+            </Field>
+
+            <Field label="Target date" htmlFor="goal-target">
+              <Input
+                id="goal-target"
+                type="date"
+                value={form.target_date}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, target_date: event.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Status" htmlFor="goal-status">
+              <Select
+                id="goal-status"
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, status: event.target.value }))
+                }
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Progress (%)" htmlFor="goal-progress">
+              <Input
+                id="goal-progress"
+                type="number"
+                min={0}
+                max={100}
+                value={form.progress}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    progress: Number(event.target.value),
+                  }))
+                }
+              />
+            </Field>
+          </div>
+
+          <Field label="Description" htmlFor="goal-description" className="mt-4">
+            <Textarea
+              id="goal-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
+              placeholder="Why does this goal matter?"
+              rows={3}
+            />
+          </Field>
+
+          {error ? (
+            <Alert tone="danger" className="mt-4">
+              {error}
+            </Alert>
+          ) : null}
+          {success ? (
+            <Alert tone="success" className="mt-4">
+              {success}
+            </Alert>
+          ) : null}
+
+          <div className="mt-4 flex items-center gap-2">
+            <Button onClick={submitGoal} disabled={saving || !workspaceId}>
+              {saving
+                ? editingGoalId
+                  ? "Saving..."
+                  : "Creating..."
+                : editingGoalId
+                  ? "Save goal"
+                  : "Add goal"}
+            </Button>
+            <Button variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {!formOpen && error ? <Alert tone="danger">{error}</Alert> : null}
+      {!formOpen && success ? <Alert tone="success">{success}</Alert> : null}
+
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[0, 1].map((index) => (
+            <Skeleton key={index} className="h-32 w-full rounded-[20px]" />
+          ))}
+        </div>
+      ) : !workspaceId ? (
+        <EmptyState
+          title="No active workspace"
+          description="This account is not linked to an active workspace yet."
+        />
+      ) : goals.length === 0 ? (
+        <EmptyState
+          title="No goals yet"
+          description="Define the outcomes you are working towards."
+          icon={<Target size={18} strokeWidth={1.75} />}
+          action={
+            <CreateButton
+              label="New Goal"
+              onClick={() => {
+                resetForm();
+                setFormOpen(true);
+              }}
+            />
+          }
+        />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2">
+          {goals.map((goal) => {
+            const progress = Math.min(100, Math.max(0, Number(goal.progress ?? 0)));
+
+            return (
+              <li
+                key={goal.id}
+                className="rounded-[20px] border border-border-subtle bg-bg-subtle p-5 transition-colors duration-150 ease-nexus hover:border-border-default"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-h3 text-text-primary">{goal.title}</h3>
+                    {goal.target_date ? (
+                      <p className="mt-1 font-mono text-mono uppercase tabular-nums text-text-tertiary">
+                        Target · {formatDate(goal.target_date)}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="icon"
+                      aria-label={`Edit ${goal.title}`}
                       onClick={() => populateEditForm(goal)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
                     >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteGoal(goal.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
+                      <Pencil size={15} strokeWidth={1.75} />
+                    </Button>
+                    <Button
+                      variant="icon"
+                      aria-label={`Delete ${goal.title}`}
+                      onClick={() => void deleteGoal(goal.id)}
+                      className="hover:text-danger"
                     >
-                      Delete
-                    </button>
+                      <Trash2 size={15} strokeWidth={1.75} />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
-                    <span>Progress</span>
-                    <span>{Math.round(goal.progress)}%</span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-white"
-                      style={{ width: `${Math.min(100, Math.max(0, goal.progress))}%` }}
-                    />
-                  </div>
+                {goal.description ? (
+                  <p className="mt-2 line-clamp-2 text-small text-text-secondary">
+                    {goal.description}
+                  </p>
+                ) : null}
+
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <Badge tone={goal.status === "completed" ? "success" : "neutral"}>
+                    {goal.status.replace("_", " ")}
+                  </Badge>
+                  <span className="font-mono text-mono tabular-nums text-text-primary">
+                    {Math.round(progress)}%
+                  </span>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Progress
+                  value={progress}
+                  label={`${goal.title} progress`}
+                  className="mt-2"
+                />
+
+                <label className="mt-3 flex items-center gap-2">
+                  <span className="sr-only">Update {goal.title} progress</span>
                   <input
                     type="range"
                     min={0}
                     max={100}
-                    value={goal.progress}
-                    onChange={(event) => handleProgress(goal.id, Number(event.target.value))}
-                    className="w-full max-w-xs accent-white"
+                    value={progress}
+                    onChange={(event) =>
+                      void handleProgress(goal.id, Number(event.target.value))
+                    }
+                    aria-label={`Set ${goal.title} progress`}
+                    className="h-1 w-full cursor-pointer accent-white"
                   />
-                  <span className="text-xs text-zinc-500">{goal.status}</span>
-                  {goal.target_date ? <span className="text-xs text-zinc-500">Due {new Date(goal.target_date).toLocaleDateString()}</span> : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
 
+export function GoalManager({ userId }: { userId: string }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-32 w-full rounded-[20px]" />
+        </div>
+      }
+    >
+      <GoalManagerInner userId={userId} />
+    </Suspense>
+  );
+}

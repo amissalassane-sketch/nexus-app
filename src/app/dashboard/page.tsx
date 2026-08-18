@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CheckSquare, FolderKanban, Target } from "lucide-react";
 import { NexusShell } from "@/components/nexus-shell";
 import { createClient } from "@/lib/supabase/server";
-import { CheckSquare, FolderKanban } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui/badge";
+import { Card, SectionHeader } from "@/components/ui/card";
+import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
+import { StatLine } from "@/components/ui/page-header";
+import type { PlanName } from "@/lib/plan-limits";
 
 type DashboardTask = {
   id: string;
@@ -25,8 +31,7 @@ const formatDate = (value: string | null | undefined) => {
 
   return new Intl.DateTimeFormat("en", {
     month: "short",
-    day: "numeric",
-    year: "numeric",
+    day: "2-digit",
   }).format(date);
 };
 
@@ -50,10 +55,10 @@ export default async function DashboardPage() {
 
   if (profileError) {
     return (
-      <NexusShell title="Overview" userName="User">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center text-zinc-400">
+      <NexusShell title="Dashboard" userName="User">
+        <Alert tone="danger">
           We could not load your profile right now. Please try again in a moment.
-        </div>
+        </Alert>
       </NexusShell>
     );
   }
@@ -80,25 +85,32 @@ export default async function DashboardPage() {
 
   const statsPromise = workspaceId
     ? (async () => {
-        const [projectsResult, tasksResult, doneResult, activeResult, overdueResult, goalsResult, goalProgressResult] =
-          await Promise.all([
-            supabase.from("projects").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
-            supabase.from("tasks").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
-            supabase.from("tasks").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "done"),
-            supabase
-              .from("tasks")
-              .select("id", { count: "exact", head: true })
-              .eq("workspace_id", workspaceId)
-              .in("status", ["todo", "in_progress", "in_review", "blocked"]),
-            supabase
-              .from("tasks")
-              .select("id", { count: "exact", head: true })
-              .eq("workspace_id", workspaceId)
-              .lt("due_at", new Date().toISOString())
-              .neq("status", "done"),
-            supabase.from("goals").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
-            supabase.from("goals").select("progress").eq("workspace_id", workspaceId),
-          ]);
+        const [
+          projectsResult,
+          tasksResult,
+          doneResult,
+          activeResult,
+          overdueResult,
+          goalsResult,
+          goalProgressResult,
+        ] = await Promise.all([
+          supabase.from("projects").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+          supabase.from("tasks").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+          supabase.from("tasks").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "done"),
+          supabase
+            .from("tasks")
+            .select("id", { count: "exact", head: true })
+            .eq("workspace_id", workspaceId)
+            .in("status", ["todo", "in_progress", "in_review", "blocked"]),
+          supabase
+            .from("tasks")
+            .select("id", { count: "exact", head: true })
+            .eq("workspace_id", workspaceId)
+            .lt("due_at", new Date().toISOString())
+            .neq("status", "done"),
+          supabase.from("goals").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+          supabase.from("goals").select("progress").eq("workspace_id", workspaceId),
+        ]);
 
         const goalProgressRows = goalProgressResult.data ?? [];
         const averageGoalProgress =
@@ -165,12 +177,29 @@ export default async function DashboardPage() {
         .limit(6)
     : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null });
 
-  const [stats, recentProjectsResult, activeTasksResult, recentGoalsResult, recentActivitiesResult] = await Promise.all([
+  const subscriptionPromise = workspaceId
+    ? supabase
+        .from("workspace_subscriptions")
+        .select("plan, status")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "active")
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
+
+  const [
+    stats,
+    recentProjectsResult,
+    activeTasksResult,
+    recentGoalsResult,
+    recentActivitiesResult,
+    subscriptionResult,
+  ] = await Promise.all([
     statsPromise,
     recentProjectsPromise,
     activeTasksPromise,
     recentGoalsPromise,
     recentActivitiesPromise,
+    subscriptionPromise,
   ]);
 
   const projectTotal = stats.projectTotal;
@@ -181,46 +210,40 @@ export default async function DashboardPage() {
   const activeTasksList = (activeTasksResult.data as DashboardTask[] | null) ?? [];
   const recentGoals = recentGoalsResult.data ?? [];
   const recentActivities = recentActivitiesResult.data ?? [];
+  const currentPlan = ((subscriptionResult.data?.plan as PlanName) ?? "FREE") as PlanName;
 
-  // Focus Block Logic (Level 1)
+  // ---- Focus Block ------------------------------------------------
   const nowStr = new Date().toISOString();
-  
-  // 1. Overdue
+
   const focusOverdue = activeTasksList.filter((task) => task.due_at && task.due_at < nowStr);
-  
-  // 2. Blocked (not already in overdue)
+
   const focusBlocked = activeTasksList.filter(
-    (task) => task.status === "blocked" && !focusOverdue.some((overdueTask) => overdueTask.id === task.id)
+    (task) =>
+      task.status === "blocked" &&
+      !focusOverdue.some((overdueTask) => overdueTask.id === task.id)
   );
-  
-  // 3. High priority / urgent (not already in overdue or blocked)
+
   const focusHighPriority = activeTasksList.filter(
     (task) =>
       (task.priority === "high" || task.priority === "urgent") &&
       !focusOverdue.some((overdueTask) => overdueTask.id === task.id) &&
       !focusBlocked.some((blockedTask) => blockedTask.id === task.id)
   );
-  
-  // Combine in order: Overdue -> Blocked -> High Priority, limit to 3 items
+
   const focusItems: FocusTask[] = [
     ...focusOverdue.map((task): FocusTask => ({ ...task, reason: "Overdue" })),
     ...focusBlocked.map((task): FocusTask => ({ ...task, reason: "Blocked" })),
     ...focusHighPriority.map((task): FocusTask => ({ ...task, reason: "High priority" })),
   ].slice(0, 3);
 
-  // Priority Tasks list (Level 3 Left)
-  const priorityWeight = {
-    urgent: 4,
-    high: 3,
-    medium: 2,
-    low: 1,
-  };
+  // ---- Priority list ----------------------------------------------
+  const priorityWeight = { urgent: 4, high: 3, medium: 2, low: 1 };
+
   const priorityTasks = [...activeTasksList]
     .sort((a, b) => {
       const pA = priorityWeight[a.priority as keyof typeof priorityWeight] ?? 0;
       const pB = priorityWeight[b.priority as keyof typeof priorityWeight] ?? 0;
       if (pB !== pA) return pB - pA;
-      // Secondary sort: due_at ascending
       if (a.due_at && b.due_at) return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
       if (a.due_at) return -1;
       if (b.due_at) return 1;
@@ -228,333 +251,362 @@ export default async function DashboardPage() {
     })
     .slice(0, 5);
 
-  const todayFormatted = new Date().toLocaleDateString("en-US", {
+  const todayFormatted = new Intl.DateTimeFormat("en", {
     weekday: "long",
     month: "long",
-    day: "numeric",
-  }).toUpperCase();
+    day: "2-digit",
+  })
+    .format(new Date())
+    .toUpperCase();
 
   const workspaceName = workspace?.name ?? "No workspace";
-
-  const showWorkspaceWarning = membershipError || workspaceError || !workspaceId || !workspace;
+  const showWorkspaceWarning = Boolean(
+    membershipError || workspaceError || !workspaceId || !workspace
+  );
 
   return (
-    <NexusShell title="Overview" userName={userName} username={username}>
-      <div className="mx-auto max-w-6xl space-y-8 py-2">
-        {/* HEADER GREETING */}
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between border-b border-border-subtle pb-6">
+    <NexusShell title="Dashboard" userName={userName} username={username}>
+      <div className="space-y-6">
+        {/* HEADER */}
+        <div className="flex flex-col gap-3 border-b border-border-subtle pb-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="font-mono text-xs font-medium text-text-tertiary tracking-wider uppercase mb-1">
+            <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
               {todayFormatted}
-            </div>
-            <h1 className="text-display font-semibold text-text-primary">
+            </p>
+            <h1 className="mt-1.5 text-display text-text-primary">
               Bonjour, {userName}
             </h1>
-            <p className="text-small text-text-secondary mt-1">
+            <p className="mt-1 text-small text-text-secondary">
               {focusItems.length > 0
                 ? `${focusItems.length} ${focusItems.length === 1 ? "item needs" : "items need"} your attention today.`
                 : "Everything is under control today."}
             </p>
           </div>
-          {workspace && (
-            <div className="font-mono text-[10px] uppercase tracking-widest text-text-tertiary border border-border-default px-3 py-1.5 rounded bg-bg-surface">
-              {workspaceName} · {membership?.role ?? "member"}
-            </div>
-          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {workspace ? (
+              <span className="inline-flex h-[22px] items-center rounded-pill border border-border-default bg-bg-surface px-2 font-mono text-mono uppercase tracking-[0.04em] text-text-secondary">
+                {workspaceName} · {membership?.role ?? "member"}
+              </span>
+            ) : null}
+            <Link href="/upgrade" aria-label={`Current plan ${currentPlan} — see plans`}>
+              <Badge tone={currentPlan === "FREE" ? "neutral" : "lavender"}>
+                {currentPlan}
+              </Badge>
+            </Link>
+          </div>
         </div>
 
-        {showWorkspaceWarning && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-small text-amber-200">
+        {showWorkspaceWarning ? (
+          <Alert tone="warning">
             No active workspace is currently linked to this account.
-          </div>
-        )}
+          </Alert>
+        ) : null}
 
-        {/* LEVEL 1 — FOCUS BLOCK */}
-        <div className="rounded-xl border border-border-default bg-bg-surface-2 p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-body font-semibold text-text-primary uppercase tracking-wide">
-              What needs attention today?
-            </h2>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+        {/* FOCUS BLOCK */}
+        <Card className="border-border-default p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-h2 text-text-primary">What needs attention today?</h2>
+            <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
               Focus
             </span>
           </div>
 
           {focusItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-bg-surface text-volt">
-                <CheckSquare size={18} strokeWidth={1.75} />
+            <div className="flex items-center gap-3 rounded-row bg-bg-surface px-3.5 py-3">
+              <CheckSquare size={16} strokeWidth={1.75} className="text-success" />
+              <div>
+                <p className="text-body-medium text-text-primary">
+                  Everything is under control.
+                </p>
+                <p className="text-caption text-text-tertiary">
+                  Nothing urgent needs your attention right now.
+                </p>
               </div>
-              <h3 className="text-body font-medium text-text-primary">Everything is under control.</h3>
-              <p className="mt-1 text-xs text-text-secondary">Nothing urgent needs your attention right now.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <ul className="flex flex-col gap-1.5">
               {focusItems.map((task) => {
-                let badgeClass = "bg-danger-bg text-danger-fg border-danger-border";
-                let labelText = "Overdue";
-                if (task.reason === "Blocked") {
-                  badgeClass = "bg-warning-bg text-warning-fg border-warning-border";
-                  labelText = "Blocked";
-                } else if (task.reason === "High priority") {
-                  badgeClass = "bg-volt-subtle text-volt border-volt-border";
-                  labelText = "Priority";
-                }
+                const tone =
+                  task.reason === "Overdue"
+                    ? "danger"
+                    : task.reason === "Blocked"
+                      ? "warning"
+                      : "lavender";
 
                 return (
-                  <div
+                  <li
                     key={task.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 transition duration-120 hover:border-border-strong"
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2 transition-colors duration-150 ease-nexus hover:bg-bg-surface-2"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={`rounded px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider border ${badgeClass}`}>
-                        {labelText}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Badge tone={tone}>{task.reason}</Badge>
+                      <span className="truncate text-body text-text-primary">
+                        {task.title}
                       </span>
-                      <span className="text-body font-medium text-text-primary">{task.title}</span>
                     </div>
-                    {task.due_at && (
-                      <span className="font-mono text-xs text-text-tertiary">
+                    {task.due_at ? (
+                      <span className="shrink-0 font-mono text-mono tabular-nums text-text-tertiary">
                         {formatDate(task.due_at)}
                       </span>
-                    )}
-                  </div>
+                    ) : null}
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
-        </div>
+        </Card>
 
-        {/* LEVEL 2 — COMPACT STATS */}
-        <div className="flex items-center gap-2 border-y border-border-subtle py-3 text-small text-text-secondary">
-          <span className="font-mono font-medium text-text-primary">{activeTasks}</span> active tasks
-          <span className="text-text-quaternary font-mono">·</span>
-          <span className="font-mono font-medium text-text-primary">{projectTotal}</span> projects
-          <span className="text-text-quaternary font-mono">·</span>
-          <span className="font-mono font-medium text-text-primary">{goalsTotal}</span> goals
-        </div>
+        {/* COMPACT STATS */}
+        <StatLine
+          items={[
+            { value: activeTasks, label: "active tasks" },
+            {
+              value: stats.overdueTasks,
+              label: "overdue",
+              tone: stats.overdueTasks > 0 ? "danger" : "default",
+            },
+            { value: projectTotal, label: "projects" },
+            { value: goalsTotal, label: "goals" },
+            { value: `${Math.round(stats.averageGoalProgress)}%`, label: "goal progress" },
+          ]}
+        />
 
-        {/* LEVEL 3 — CONTENT 2-COLUMN GRID */}
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          {/* LEFT COLUMN */}
-          <div className="space-y-8">
+        {/* CONTENT GRID */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-8 lg:col-span-2">
             {/* PRIORITY TASKS */}
-            <div>
-              <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-h3-mono uppercase tracking-wider text-text-tertiary">Tasks</span>
-                  <span className="text-text-quaternary font-mono">/</span>
-                  <h3 className="text-body font-semibold text-text-primary">Priority</h3>
-                </div>
-                <Link href="/tasks" className="text-xs text-text-secondary hover:text-text-primary transition duration-120">
-                  View all
-                </Link>
-              </div>
+            <section>
+              <SectionHeader
+                eyebrow="Tasks"
+                title="Priority"
+                action={
+                  <Link
+                    href="/tasks"
+                    className="text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
+                  >
+                    View all
+                  </Link>
+                }
+              />
 
               {priorityTasks.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border-default p-6 text-center text-small text-text-secondary">
-                  No priority tasks. Your mind is clear.
-                </div>
+                <EmptyState
+                  title="No priority tasks"
+                  description="Your queue is clear."
+                  icon={<CheckSquare size={18} strokeWidth={1.75} />}
+                />
               ) : (
-                <div className="divide-y divide-border-subtle">
+                <ul className="flex flex-col">
                   {priorityTasks.map((task) => {
-                    let dotColor = "bg-text-quaternary";
-                    if (task.priority === "urgent" || task.priority === "high") {
-                      dotColor = "bg-danger-fg";
-                    } else if (task.priority === "medium") {
-                      dotColor = "bg-warning-fg";
-                    }
+                    const overdue = Boolean(task.due_at && task.due_at < nowStr);
 
                     return (
-                      <div key={task.id} className="flex h-11 items-center justify-between gap-4 py-2 hover:bg-bg-subtle/30 px-2 rounded transition duration-120">
-                        <div className="flex items-center gap-3">
-                          <div className="h-[18px] w-[18px] shrink-0 rounded-[6px] border border-border-strong" />
-                          <span className="text-body text-text-primary line-clamp-1">{task.title}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-                            <span className="font-mono text-[10px] text-text-tertiary capitalize">{task.priority}</span>
-                          </div>
-                          {task.due_at && (
-                            <span className="font-mono text-[11px] text-text-tertiary">
-                              {formatDate(task.due_at)}
-                            </span>
+                      <li
+                        key={task.id}
+                        className="flex h-11 items-center gap-3 rounded-row px-2.5 transition-colors duration-150 ease-nexus hover:bg-bg-surface"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="h-[18px] w-[18px] shrink-0 rounded-[6px] border border-border-strong"
+                        />
+                        <Link
+                          href="/tasks"
+                          className="min-w-0 flex-1 truncate text-body text-text-primary"
+                        >
+                          {task.title}
+                        </Link>
+                        <span className="hidden font-mono text-mono uppercase text-text-tertiary sm:block">
+                          {task.priority}
+                        </span>
+                        <span
+                          className={cn(
+                            "w-14 shrink-0 text-right font-mono text-mono tabular-nums",
+                            overdue ? "text-danger" : "text-text-tertiary"
                           )}
-                        </div>
-                      </div>
+                        >
+                          {task.due_at ? formatDate(task.due_at) : "—"}
+                        </span>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-            </div>
+            </section>
 
             {/* RECENT PROJECTS */}
-            <div>
-              <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-h3-mono uppercase tracking-wider text-text-tertiary">Projects</span>
-                  <span className="text-text-quaternary font-mono">/</span>
-                  <h3 className="text-body font-semibold text-text-primary">Recent</h3>
-                </div>
-                <Link href="/projects" className="text-xs text-text-secondary hover:text-text-primary transition duration-120">
-                  View all
-                </Link>
-              </div>
+            <section>
+              <SectionHeader
+                eyebrow="Projects"
+                title="Recent"
+                action={
+                  <Link
+                    href="/projects"
+                    className="text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
+                  >
+                    View all
+                  </Link>
+                }
+              />
 
               {recentProjects.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border-default p-6 text-center text-small text-text-secondary">
-                  No projects yet. <Link href="/projects" className="text-text-primary underline decoration-border-strong hover:decoration-text-primary transition">Create your first project</Link>
-                </div>
+                <EmptyState
+                  title="No projects yet"
+                  description="Create your first project to group your work."
+                  icon={<FolderKanban size={18} strokeWidth={1.75} />}
+                  action={
+                    <Link
+                      href="/projects?create=1"
+                      className="text-small text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+                    >
+                      Create a project
+                    </Link>
+                  }
+                />
               ) : (
-                <div className="space-y-3">
+                <ul className="flex flex-col gap-2">
                   {recentProjects.map((project) => {
-                    const progress = Math.min(100, Math.max(0, Number(project.progress ?? 0)));
+                    const progress = Math.min(
+                      100,
+                      Math.max(0, Number(project.progress ?? 0))
+                    );
+
                     return (
-                      <div
-                        key={project.id}
-                        className="group relative flex h-14 flex-col justify-between overflow-hidden rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 transition duration-120 hover:border-border-strong"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface-2 text-text-secondary group-hover:text-text-primary transition duration-120">
-                              <FolderKanban size={15} strokeWidth={1.75} />
-                            </div>
-                            <div>
-                              <div className="text-body font-medium text-text-primary leading-tight">{project.name}</div>
-                              <div className="font-mono text-[10px] text-text-tertiary uppercase tracking-wider mt-0.5">{project.status}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-mono text-small text-text-secondary">{progress}%</span>
-                            {project.due_date && (
-                              <div className="font-mono text-[10px] text-text-tertiary mt-0.5">
-                                {formatDate(project.due_date)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Integrated bottom progress bar */}
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-border-default">
-                          <div
-                            className="h-full bg-accent transition-all duration-600 ease-out"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
+                      <li key={project.id as string}>
+                        <Link
+                          href="/projects"
+                          className="flex items-center gap-3 rounded-row px-2.5 py-2 transition-colors duration-150 ease-nexus hover:bg-bg-surface"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-bg-surface text-text-secondary">
+                            <FolderKanban size={16} strokeWidth={1.75} />
+                          </span>
+
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-body-medium text-text-primary">
+                              {project.name as string}
+                            </span>
+                            <Progress
+                              value={progress}
+                              label={`${project.name as string} progress`}
+                              className="mt-1.5"
+                            />
+                          </span>
+
+                          <span className="shrink-0 text-right">
+                            <span className="block font-mono text-mono tabular-nums text-text-secondary">
+                              {progress}%
+                            </span>
+                            {project.due_date ? (
+                              <span className="mt-0.5 block font-mono text-mono tabular-nums text-text-tertiary">
+                                {formatDate(project.due_date as string)}
+                              </span>
+                            ) : null}
+                          </span>
+                        </Link>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-            </div>
+            </section>
           </div>
 
           {/* RIGHT COLUMN */}
           <div className="space-y-8">
-            {/* GOALS */}
-            <div>
-              <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-h3-mono uppercase tracking-wider text-text-tertiary">Goals</span>
-                  <span className="text-text-quaternary font-mono">/</span>
-                  <h3 className="text-body font-semibold text-text-primary">Objectives</h3>
-                </div>
-                <Link href="/goals" className="text-xs text-text-secondary hover:text-text-primary transition duration-120">
-                  View all
-                </Link>
-              </div>
+            <section>
+              <SectionHeader
+                eyebrow="Goals"
+                title="Objectives"
+                action={
+                  <Link
+                    href="/goals"
+                    className="text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
+                  >
+                    View all
+                  </Link>
+                }
+              />
 
               {recentGoals.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border-default p-6 text-center text-small text-text-secondary">
-                  No goals yet. <Link href="/goals" className="text-text-primary underline decoration-border-strong hover:decoration-text-primary transition">Set your first goal</Link>
-                </div>
+                <EmptyState
+                  title="No goals yet"
+                  description="Define what you are working towards."
+                  icon={<Target size={18} strokeWidth={1.75} />}
+                />
               ) : (
-                <div className="space-y-3">
+                <ul className="flex flex-col gap-3">
                   {recentGoals.map((goal) => {
                     const progress = Math.min(100, Math.max(0, Number(goal.progress ?? 0)));
+
                     return (
-                      <div key={goal.id} className="rounded-lg border border-border-subtle bg-bg-surface p-4 transition duration-120 hover:border-border-strong">
+                      <li
+                        key={goal.id as string}
+                        className="rounded-[20px] border border-border-subtle bg-bg-subtle p-4 transition-colors duration-150 ease-nexus hover:border-border-default"
+                      >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-body-medium font-medium text-text-primary leading-tight">{goal.title}</h4>
-                            {goal.target_date && (
-                              <span className="font-mono text-[10px] text-text-tertiary block mt-1 uppercase">
-                                Target: {formatDate(goal.target_date)}
-                              </span>
-                            )}
+                          <div className="min-w-0">
+                            <p className="truncate text-body-medium text-text-primary">
+                              {goal.title as string}
+                            </p>
+                            {goal.target_date ? (
+                              <p className="mt-0.5 font-mono text-mono uppercase tabular-nums text-text-tertiary">
+                                Target · {formatDate(goal.target_date as string)}
+                              </p>
+                            ) : null}
                           </div>
-                          <span className="font-mono text-small font-semibold text-text-primary">{progress}%</span>
+                          <span className="font-mono text-mono tabular-nums text-text-primary">
+                            {progress}%
+                          </span>
                         </div>
-                        
-                        {/* Linear progress bar for goal (Volt #D2FF4D) */}
-                        <div className="mt-3 h-1 overflow-hidden rounded-full bg-border-default">
-                          <div
-                            className="h-full bg-volt shadow-[0_0_8px_rgba(210,255,77,0.4)] transition-all duration-600 ease-out"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
+                        <Progress
+                          value={progress}
+                          label={`${goal.title as string} progress`}
+                          className="mt-3"
+                        />
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-            </div>
+            </section>
 
-            {/* RECENT ACTIVITY */}
-            <div>
-              <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-h3-mono uppercase tracking-wider text-text-tertiary">Activity</span>
-                  <span className="text-text-quaternary font-mono">/</span>
-                  <h3 className="text-body font-semibold text-text-primary">Recent</h3>
-                </div>
-              </div>
+            <section>
+              <SectionHeader eyebrow="Activity" title="Recent" />
 
               {recentActivities.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border-default p-6 text-center text-small text-text-secondary">
-                  No recent activity.
-                </div>
+                <EmptyState title="No recent activity" />
               ) : (
-                <div className="relative pl-4 border-l border-border-subtle ml-2 space-y-4 py-1">
+                <ul className="relative ml-1.5 space-y-3.5 border-l border-border-subtle py-1 pl-4">
                   {recentActivities.map((activity) => {
-                    const metadata = activity.metadata ?? {};
+                    const metadata =
+                      (activity.metadata as Record<string, unknown> | null) ?? {};
                     const label =
                       typeof metadata?.title === "string"
                         ? metadata.title
                         : typeof metadata?.name === "string"
                           ? metadata.name
-                          : activity.entity_type;
-                    
-                    const isVolt = activity.action?.toLowerCase().includes("create") || 
-                                   activity.action?.toLowerCase().includes("complete") ||
-                                   activity.action?.toLowerCase().includes("done");
+                          : (activity.entity_type as string);
 
                     return (
-                      <div key={activity.id} className="relative group">
-                        {/* Timeline Dot */}
+                      <li key={activity.id as string} className="relative">
                         <span
-                          className={`absolute -left-[21px] top-1.5 h-1.5 w-1.5 rounded-full border border-bg-base transition duration-120 ${
-                            isVolt ? "bg-volt shadow-[0_0_4px_rgba(210,255,77,0.5)]" : "bg-border-strong group-hover:bg-text-secondary"
-                          }`}
+                          aria-hidden="true"
+                          className="absolute -left-[21px] top-1.5 h-1.5 w-1.5 rounded-pill bg-border-strong"
                         />
-                        
-                        <div className="text-xs">
-                          <div className="font-medium text-text-primary">
-                            <span className="capitalize">{activity.action}</span>
-                            <span className="text-text-secondary"> · {label}</span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-text-tertiary uppercase font-mono">
-                            <span>{activity.entity_type}</span>
-                            <span>/</span>
-                            <span>{formatDate(activity.created_at)}</span>
-                          </div>
-                        </div>
-                      </div>
+                        <p className="text-small text-text-primary">
+                          <span className="capitalize">{activity.action as string}</span>
+                          <span className="text-text-secondary"> · {label}</span>
+                        </p>
+                        <p className="mt-0.5 font-mono text-mono uppercase tabular-nums text-text-tertiary">
+                          {activity.entity_type as string} /{" "}
+                          {formatDate(activity.created_at as string)}
+                        </p>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-            </div>
+            </section>
           </div>
         </div>
       </div>

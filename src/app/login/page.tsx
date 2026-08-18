@@ -1,7 +1,12 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { NexusLogo } from "@/components/nexus-logo";
+import { Field, Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -29,7 +34,9 @@ export default function LoginPage() {
     }
 
     if (!data.session) {
-      setError("Sign in succeeded, but no browser session was created. Please try again.");
+      setError(
+        "Sign in succeeded, but no browser session was created. Please try again."
+      );
       setLoading(false);
       return;
     }
@@ -44,7 +51,9 @@ export default function LoginPage() {
     });
 
     if (!sessionResponse.ok) {
-      const payload = (await sessionResponse.json().catch(() => null)) as { error?: string } | null;
+      const payload = (await sessionResponse.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       setError(payload?.error ?? "Session could not be synchronized with the server.");
       setLoading(false);
       return;
@@ -54,85 +63,72 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-black">
-            N
-          </div>
-
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome to NEXUS
-          </h1>
-
-          <p className="mt-2 text-sm text-zinc-500">
-            Your personal operating system.
+    <main className="flex min-h-screen items-center justify-center bg-bg-base px-4 py-10">
+      <div className="w-full max-w-[400px] rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <NexusLogo size={48} priority className="mb-5" />
+          <h1 className="text-h1 text-text-primary">Sign in to NEXUS</h1>
+          <p className="mt-1 text-small text-text-secondary">
+            Enter your details to access your workspace.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Email
-              </label>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <Field label="Email address" htmlFor="login-email">
+            <Input
+              id="login-email"
+              size="lg"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
+          </Field>
 
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
+          <Field label="Password" htmlFor="login-password">
+            <Input
+              id="login-password"
+              size="lg"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              required
+            />
+          </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Password
-              </label>
+          {error ? <Alert tone="danger">{error}</Alert> : null}
 
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
-              />
-            </div>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={loading}
+            className="mt-1 w-full"
+          >
+            {loading ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
 
-            {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-zinc-600">NEXUS</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <p className="text-center text-sm text-zinc-500">
-            Don&apos;t have an account?{" "}
-            <a
-              href="/signup"
-              className="text-white underline underline-offset-4"
-            >
-              Create one
-            </a>
-          </p>
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-border-subtle" />
+          <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+            Nexus
+          </span>
+          <span className="h-px flex-1 bg-border-subtle" />
         </div>
+
+        <p className="text-center text-small text-text-secondary">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+          >
+            Create one
+          </Link>
+        </p>
       </div>
     </main>
   );

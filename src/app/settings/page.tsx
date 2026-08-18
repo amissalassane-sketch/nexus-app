@@ -24,7 +24,7 @@ export default async function SettingsPage() {
   const username = profile?.username || undefined;
 
   return (
-    <NexusShell title="Settings" subtitle="Customize your workspace and preferences." userName={userName} username={username}>
+    <NexusShell title="Settings" userName={userName} username={username}>
       <UserSettingsPanel userId={user.id} />
     </NexusShell>
   );
