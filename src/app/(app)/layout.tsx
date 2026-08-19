@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getProfileSummary, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +17,13 @@ import { DEFAULT_PLAN, PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
   const profile = await getProfileSummary();
+
+  // Signup -> onboarding -> workspace -> dashboard: the product stays behind
+  // a completed profile. /onboarding sends completed users straight back here.
+  if (!profile.onboardingCompleted) {
+    redirect("/onboarding");
+  }
+
   const supabase = await createClient();
 
   const { membership } = await getActiveMembership(supabase, user.id);

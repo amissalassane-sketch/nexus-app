@@ -44,12 +44,12 @@ export function AppRail({ unreadCount }: { unreadCount: number }) {
   return (
     <aside
       aria-label="Global navigation"
-      className="hidden w-14 shrink-0 flex-col items-center gap-1 border-r border-border-subtle bg-bg-subtle py-3 lg:flex"
+      className="hidden w-14 shrink-0 flex-col items-center gap-1 rounded-[20px] border border-border-subtle bg-bg-subtle py-3 lg:flex"
     >
       <Link
         href="/dashboard"
         aria-label="NEXUS — Dashboard"
-        className="mb-2 flex h-9 w-9 items-center justify-center rounded-nav"
+        className="mb-3 flex h-9 w-9 items-center justify-center rounded-nav"
       >
         <NexusLogo size={26} priority />
       </Link>
@@ -68,7 +68,7 @@ export function AppRail({ unreadCount }: { unreadCount: number }) {
       </nav>
 
       <div className="mt-auto flex flex-col items-center gap-1">
-        <span className="mb-1 h-px w-6 bg-border-subtle" aria-hidden="true" />
+        <span className="mb-1.5 h-px w-6 bg-border-subtle" aria-hidden="true" />
         {RAIL_BOTTOM.map((item) => (
           <RailItem
             key={item.href}

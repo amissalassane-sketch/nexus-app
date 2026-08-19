@@ -54,8 +54,8 @@ export async function updateSession(request: NextRequest) {
 
   // Route handlers must answer with their own status codes (401/403/400)
   // instead of being redirected to an HTML page. The session cookies are
-  // still refreshed above, and /api/auth/session must stay reachable for
-  // users who are in the middle of signing in.
+  // still refreshed above, and /api/auth/signin|signup must stay reachable
+  // for users who are in the middle of authenticating.
   if (pathname.startsWith("/api/")) {
     return response;
   }

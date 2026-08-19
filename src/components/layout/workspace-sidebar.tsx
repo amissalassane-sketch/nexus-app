@@ -102,7 +102,7 @@ export function WorkspaceSidebar({
     } catch (cause) {
       console.error("Logout error:", cause);
     }
-    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => null);
     router.replace("/login");
     router.refresh();
   };
@@ -111,7 +111,7 @@ export function WorkspaceSidebar({
   const initial = (user.name || "U").trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className={cn("flex h-full w-full flex-col gap-1 px-3 py-3", className)}>
+    <div className={cn("flex h-full w-full flex-col px-2.5 py-2.5", className)}>
       {/* Account header */}
       <Dropdown
         label="Account"
@@ -174,12 +174,14 @@ export function WorkspaceSidebar({
         </DropdownItem>
       </Dropdown>
 
+      <div className="my-2.5 h-px bg-border-subtle" aria-hidden="true" />
+
       {/* Create */}
       <Dropdown
         label="Create"
         align="start"
         width={248}
-        className="mt-1 w-full"
+        className="w-full"
         trigger={({ toggle, ref, ariaProps }) => (
           <CreateButtonTrigger
             label="Create"
@@ -208,7 +210,7 @@ export function WorkspaceSidebar({
       </Dropdown>
 
       {/* Navigation */}
-      <nav aria-label="Workspace" className="mt-1 overflow-y-auto">
+      <nav aria-label="Workspace" className="mt-1 min-h-0 flex-1 overflow-y-auto pb-2">
         <SectionLabel>Workspace</SectionLabel>
         <div className="flex flex-col gap-0.5">
           <NavItem
@@ -284,7 +286,7 @@ export function WorkspaceSidebar({
       </nav>
 
       {/* Plan usage — real values from the workspace subscription */}
-      <div className="mt-auto rounded-card border border-border-subtle bg-bg-subtle p-3">
+      <div className="mt-auto rounded-card border border-border-subtle bg-bg-surface/60 p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
             Plan

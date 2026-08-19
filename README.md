@@ -55,6 +55,22 @@ resolves the user, the workspace, the live counters and the plan usage once):
 
 Below `lg`, both levels collapse into a single drawer opened from a compact header.
 
+## Authentication
+
+Authentication is performed **server-side**, so the session and the SSR cookies are
+created by the same client — there is no token relay that can silently fail:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/auth/signin` | email + password, writes the SSR cookies, returns `redirectTo` |
+| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` explicitly |
+| `POST /api/auth/signout` | ends the session and clears the cookies |
+
+The cookies are not `HttpOnly` (Supabase default), so the browser client keeps working
+for client-side CRUD under RLS. `src/lib/auth-errors.ts` turns Supabase errors into
+messages a user can act on. The product routes sit behind an onboarding gate: until
+`profiles.onboarding_completed` is true, `(app)` redirects to `/onboarding`.
+
 ## Routing & session
 
 `src/proxy.ts` (Next.js 16 file convention — formerly `middleware.ts`) refreshes the

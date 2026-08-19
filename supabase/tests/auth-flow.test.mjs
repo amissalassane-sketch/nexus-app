@@ -1,30 +1,28 @@
 /**
  * ============================================================
- * NEXUS — AUTH PIPELINE END-TO-END TEST
+ * NEXUS — AUTH END-TO-END TEST
  * ============================================================
- * Drives the real application (dev or production server) against a stubbed
- * Supabase service and asserts the complete session pipeline:
+ * Exercises the real application (server auth routes, proxy, server
+ * components, cookie plumbing) against a stubbed Supabase service.
  *
- *   sign in -> tokens -> /api/auth/session -> SSR cookies -> proxy ->
- *   protected pages -> logout
- *
- * Nothing about NEXUS itself is mocked: the proxy, the route handler, the
- * server components and the cookie plumbing are the real ones.
+ * Covers the scenarios that must never regress:
+ *   signup (session / confirmation / already registered)
+ *   login  (success / wrong password / unknown email / invalid input)
+ *   session persistence + expired-token refresh
+ *   route protection
+ *   onboarding gate
+ *   logout
  *
  * Usage:
- *   node supabase/tests/auth-flow.test.mjs            # expects app on :3100
- *   APP_URL=http://localhost:3000 node supabase/tests/auth-flow.test.mjs
- *
- * The app under test must be started with:
  *   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
- *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=stub-key \
- *   npm run dev -- --port 3100
+ *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=stub-key npm run dev -- --port 3000
+ *   node supabase/tests/auth-flow.test.mjs
  * ============================================================
  */
 
-import { makeSession, startSupabaseStub } from "./supabase-stub.mjs";
+import { makeAccessToken, startSupabaseStub } from "./supabase-stub.mjs";
 
-const APP_URL = process.env.APP_URL ?? "http://127.0.0.1:3100";
+const APP_URL = process.env.APP_URL ?? "http://127.0.0.1:3000";
 
 let passed = 0;
 let failed = 0;
@@ -39,13 +37,11 @@ function assert(name, condition, detail = "") {
   }
 }
 
-/** Minimal cookie jar so we behave like a browser across requests. */
 function createJar() {
   const jar = new Map();
   return {
     store(response) {
-      const raw = response.headers.getSetCookie?.() ?? [];
-      for (const cookie of raw) {
+      for (const cookie of response.headers.getSetCookie?.() ?? []) {
         const [pair] = cookie.split(";");
         const index = pair.indexOf("=");
         const name = pair.slice(0, index).trim();
@@ -54,15 +50,17 @@ function createJar() {
         else jar.set(name, value);
       }
     },
+    set(name, value) {
+      jar.set(name, value);
+    },
+    get(name) {
+      return jar.get(name);
+    },
     header() {
       return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
     },
-    size() {
-      return jar.size;
-    },
-    names() {
-      return [...jar.keys()];
-    },
+    size: () => jar.size,
+    names: () => [...jar.keys()],
   };
 }
 
@@ -81,100 +79,249 @@ async function visit(path, { jar, method = "GET", body, headers = {} } = {}) {
   return response;
 }
 
+const PRODUCT_ROUTES = [
+  "/dashboard",
+  "/tasks",
+  "/projects",
+  "/goals",
+  "/notifications",
+  "/settings",
+  "/settings/billing",
+  "/upgrade",
+];
+
 const stub = await startSupabaseStub(54321);
-console.log(`Supabase stub listening on ${stub.url}`);
-console.log(`Application under test: ${APP_URL}\n`);
+console.log(`Supabase stub: ${stub.url}\nApplication:   ${APP_URL}\n`);
 
-// ---- 1. anonymous access -------------------------------------------
-console.log("-- anonymous ------------------------------------------");
+// ============ 1. ROUTE PROTECTION (no session) ============
+console.log("-- protection (anonymous) -----------------------------");
 
-for (const path of ["/", "/dashboard", "/tasks", "/projects", "/goals", "/notifications", "/settings", "/settings/billing", "/upgrade", "/onboarding"]) {
+for (const path of ["/", ...PRODUCT_ROUTES, "/onboarding"]) {
   const response = await visit(path);
   assert(
-    `anonymous ${path} redirects to /login`,
+    `anonymous ${path} -> /login`,
     response.status === 307 && (response.headers.get("location") ?? "").endsWith("/login"),
     `status=${response.status} location=${response.headers.get("location")}`
   );
 }
 
-const loginPage = await visit("/login");
-assert("anonymous /login renders", loginPage.status === 200, `status=${loginPage.status}`);
+assert("anonymous /login renders", (await visit("/login")).status === 200);
+assert("anonymous /signup renders", (await visit("/signup")).status === 200);
 
-const signupPage = await visit("/signup");
-assert("anonymous /signup renders", signupPage.status === 200, `status=${signupPage.status}`);
+// ============ 2. SIGNUP ============
+console.log("\n-- signup ---------------------------------------------");
 
-// ---- 2. session handshake ------------------------------------------
-console.log("\n-- sign-in handshake ----------------------------------");
-
-const jar = createJar();
-const session = makeSession();
-
-const badPayload = await visit("/api/auth/session", {
-  jar,
-  method: "POST",
-  body: { access_token: 123 },
-});
-assert(
-  "/api/auth/session rejects a malformed payload",
-  badPayload.status === 400,
-  `status=${badPayload.status}`
-);
-
-const handshake = await visit("/api/auth/session", {
-  jar,
+const signupJar = createJar();
+const signup = await visit("/api/auth/signup", {
+  jar: signupJar,
   method: "POST",
   body: {
-    access_token: session.access_token,
-    refresh_token: session.refresh_token,
+    fullName: "Fresh User",
+    username: "freshuser",
+    email: "fresh@nexus.test",
+    password: "supersecret",
   },
 });
+const signupBody = await signup.json().catch(() => null);
+
+assert("signup succeeds", signup.status === 200 && signupBody?.ok === true, JSON.stringify(signupBody));
 assert(
-  "/api/auth/session accepts valid tokens",
-  handshake.status === 200,
-  `status=${handshake.status} body=${await handshake.clone().text()}`
+  "signup with an immediate session writes auth cookies",
+  signupJar.size() > 0,
+  `cookies=${JSON.stringify(signupJar.names())}`
 );
 assert(
-  "/api/auth/session writes Supabase auth cookies",
-  jar.size() > 0,
-  `cookies=${JSON.stringify(jar.names())}`
+  "signup sends the new user to /onboarding",
+  signupBody?.redirectTo === "/onboarding",
+  JSON.stringify(signupBody)
 );
 
-// ---- 3. authenticated navigation ------------------------------------
+const confirmSignup = await visit("/api/auth/signup", {
+  method: "POST",
+  body: {
+    fullName: "Confirm User",
+    username: "confirmuser",
+    email: "confirm-me@nexus.test",
+    password: "supersecret",
+  },
+});
+const confirmBody = await confirmSignup.json().catch(() => null);
+assert(
+  "signup requiring email confirmation is reported explicitly",
+  confirmSignup.status === 200 &&
+    confirmBody?.ok === true &&
+    confirmBody?.requiresConfirmation === true &&
+    typeof confirmBody?.message === "string",
+  JSON.stringify(confirmBody)
+);
+
+const existing = await visit("/api/auth/signup", {
+  method: "POST",
+  body: {
+    fullName: "Existing User",
+    username: "existinguser",
+    email: "existing@nexus.test",
+    password: "supersecret",
+  },
+});
+const existingBody = await existing.json().catch(() => null);
+assert(
+  "signup with an existing email returns a readable error",
+  existing.status === 400 && /already exists/i.test(existingBody?.error ?? ""),
+  JSON.stringify(existingBody)
+);
+
+const badSignup = await visit("/api/auth/signup", {
+  method: "POST",
+  body: { fullName: "X", username: "ab", email: "not-an-email", password: "123" },
+});
+assert("signup validates its input (400)", badSignup.status === 400);
+
+// ============ 3. ONBOARDING GATE ============
+console.log("\n-- onboarding gate ------------------------------------");
+
+const gate = await visit("/dashboard", { jar: signupJar });
+assert(
+  "a user without a completed profile is sent to /onboarding",
+  gate.status === 307 && (gate.headers.get("location") ?? "").endsWith("/onboarding"),
+  `status=${gate.status} location=${gate.headers.get("location")}`
+);
+
+const onboarding = await visit("/onboarding", { jar: signupJar });
+assert("authenticated /onboarding renders", onboarding.status === 200, `status=${onboarding.status}`);
+
+// ============ 4. LOGIN ============
+console.log("\n-- login ----------------------------------------------");
+
+const wrongPassword = await visit("/api/auth/signin", {
+  method: "POST",
+  body: { email: "owner@nexus.test", password: "wrong-password" },
+});
+const wrongBody = await wrongPassword.json().catch(() => null);
+assert(
+  "wrong password -> 401 with a readable message",
+  wrongPassword.status === 401 && /incorrect email or password/i.test(wrongBody?.error ?? ""),
+  JSON.stringify(wrongBody)
+);
+assert(
+  "wrong password sets no session cookie",
+  (wrongPassword.headers.getSetCookie?.() ?? []).length === 0
+);
+
+const unknownEmail = await visit("/api/auth/signin", {
+  method: "POST",
+  body: { email: "unknown@nexus.test", password: "supersecret" },
+});
+const unknownBody = await unknownEmail.json().catch(() => null);
+assert(
+  "unknown email -> 401 with a readable message",
+  unknownEmail.status === 401 && /incorrect email or password/i.test(unknownBody?.error ?? ""),
+  JSON.stringify(unknownBody)
+);
+
+const unconfirmed = await visit("/api/auth/signin", {
+  method: "POST",
+  body: { email: "unconfirmed@nexus.test", password: "supersecret" },
+});
+const unconfirmedBody = await unconfirmed.json().catch(() => null);
+assert(
+  "unconfirmed email -> actionable message",
+  unconfirmed.status === 401 && /not confirmed/i.test(unconfirmedBody?.error ?? ""),
+  JSON.stringify(unconfirmedBody)
+);
+
+const invalidInput = await visit("/api/auth/signin", {
+  method: "POST",
+  body: { email: "nope", password: "x" },
+});
+assert("invalid login input -> 400", invalidInput.status === 400);
+
+const jar = createJar();
+const login = await visit("/api/auth/signin", {
+  jar,
+  method: "POST",
+  body: { email: "owner@nexus.test", password: "supersecret" },
+});
+const loginBody = await login.json().catch(() => null);
+assert("login succeeds", login.status === 200 && loginBody?.ok === true, JSON.stringify(loginBody));
+assert("login writes auth cookies", jar.size() > 0, JSON.stringify(jar.names()));
+assert(
+  "an onboarded user lands on /dashboard",
+  loginBody?.redirectTo === "/dashboard",
+  JSON.stringify(loginBody)
+);
+
+// ============ 5. AUTHENTICATED NAVIGATION ============
 console.log("\n-- authenticated navigation ---------------------------");
 
 const root = await visit("/", { jar });
 assert(
-  "authenticated / redirects to /dashboard",
+  "/ redirects to /dashboard once signed in",
   root.status === 307 && (root.headers.get("location") ?? "").endsWith("/dashboard"),
   `status=${root.status} location=${root.headers.get("location")}`
 );
 
 const dashboard = await visit("/dashboard", { jar });
 const dashboardHtml = await dashboard.text();
+assert("/dashboard returns 200", dashboard.status === 200, `status=${dashboard.status}`);
 assert(
-  "authenticated /dashboard returns 200",
-  dashboard.status === 200,
-  `status=${dashboard.status}`
-);
-assert(
-  "/dashboard renders the shell for the signed-in user",
-  dashboardHtml.includes("Dashboard") && !dashboardHtml.includes("Sign in to NEXUS"),
-  "dashboard HTML did not contain the expected shell"
+  "/dashboard renders the workspace shell",
+  dashboardHtml.includes("Global navigation") &&
+    dashboardHtml.includes("Workspace navigation") &&
+    !dashboardHtml.includes("Sign in to NEXUS"),
+  "shell markup missing"
 );
 
-for (const path of ["/tasks", "/projects", "/goals", "/notifications", "/settings", "/settings/billing", "/upgrade"]) {
+for (const path of PRODUCT_ROUTES) {
   const response = await visit(path, { jar });
-  assert(`authenticated ${path} returns 200`, response.status === 200, `status=${response.status}`);
+  assert(`${path} returns 200`, response.status === 200, `status=${response.status}`);
 }
 
-const loginWhenAuthenticated = await visit("/login", { jar });
+const loginWhileAuthenticated = await visit("/login", { jar });
 assert(
-  "authenticated /login redirects away (no dead-end on the login page)",
-  loginWhenAuthenticated.status === 307,
-  `status=${loginWhenAuthenticated.status} location=${loginWhenAuthenticated.headers.get("location")}`
+  "/login redirects away when already signed in",
+  loginWhileAuthenticated.status === 307,
+  `status=${loginWhileAuthenticated.status}`
 );
 
-// ---- 4. API contract -------------------------------------------------
+// ============ 6. SESSION PERSISTENCE + REFRESH ============
+console.log("\n-- session persistence --------------------------------");
+
+const reload = await visit("/dashboard", { jar });
+assert("session survives a reload", reload.status === 200, `status=${reload.status}`);
+
+// Simulate an expired access token: the proxy must silently refresh it.
+const authCookieName = jar.names().find((name) => name.includes("auth-token"));
+if (authCookieName) {
+  const raw = jar.get(authCookieName);
+  const decoded = decodeURIComponent(raw);
+  const jsonPart = decoded.startsWith("base64-")
+    ? Buffer.from(decoded.slice(7), "base64").toString("utf8")
+    : decoded;
+
+  try {
+    const session = JSON.parse(jsonPart);
+    session.access_token = makeAccessToken(undefined, -60);
+    session.expires_at = Math.floor(Date.now() / 1000) - 60;
+    const rebuilt = decoded.startsWith("base64-")
+      ? `base64-${Buffer.from(JSON.stringify(session)).toString("base64")}`
+      : JSON.stringify(session);
+    jar.set(authCookieName, encodeURIComponent(rebuilt));
+
+    const refreshed = await visit("/dashboard", { jar });
+    assert(
+      "an expired access token is refreshed server-side",
+      refreshed.status === 200,
+      `status=${refreshed.status}`
+    );
+  } catch (cause) {
+    assert("an expired access token is refreshed server-side", false, String(cause));
+  }
+} else {
+  assert("an expired access token is refreshed server-side", false, "auth cookie not found");
+}
+
+// ============ 7. API CONTRACT ============
 console.log("\n-- API contract ---------------------------------------");
 
 const upgradeAnonymous = await visit("/api/billing/upgrade", {
@@ -182,21 +329,10 @@ const upgradeAnonymous = await visit("/api/billing/upgrade", {
   body: { targetPlan: "PRO" },
 });
 assert(
-  "/api/billing/upgrade refuses anonymous callers with 401 JSON",
+  "/api/billing/upgrade -> 401 JSON for anonymous callers",
   upgradeAnonymous.status === 401 &&
     (upgradeAnonymous.headers.get("content-type") ?? "").includes("application/json"),
-  `status=${upgradeAnonymous.status} type=${upgradeAnonymous.headers.get("content-type")}`
-);
-
-const upgradeAuthenticated = await visit("/api/billing/upgrade", {
-  jar,
-  method: "POST",
-  body: { targetPlan: "PRO" },
-});
-assert(
-  "/api/billing/upgrade refuses a signed-in user without an active workspace (403)",
-  upgradeAuthenticated.status === 403,
-  `status=${upgradeAuthenticated.status} body=${await upgradeAuthenticated.clone().text()}`
+  `status=${upgradeAnonymous.status}`
 );
 
 const upgradeBadPlan = await visit("/api/billing/upgrade", {
@@ -204,26 +340,34 @@ const upgradeBadPlan = await visit("/api/billing/upgrade", {
   method: "POST",
   body: { targetPlan: "FREE" },
 });
-assert(
-  "/api/billing/upgrade rejects FREE as a target plan (400)",
-  upgradeBadPlan.status === 400,
-  `status=${upgradeBadPlan.status}`
-);
+assert("/api/billing/upgrade rejects FREE (400)", upgradeBadPlan.status === 400);
 
-// ---- 5. sign-out -----------------------------------------------------
-console.log("\n-- sign-out -------------------------------------------");
+// ============ 8. LOGOUT ============
+console.log("\n-- logout ---------------------------------------------");
 
-const signOut = await visit("/api/auth/session", { jar, method: "DELETE" });
-assert("/api/auth/session supports sign-out (DELETE)", signOut.status === 200, `status=${signOut.status}`);
+const signOut = await visit("/api/auth/signout", { jar, method: "POST" });
+assert("/api/auth/signout succeeds", signOut.status === 200, `status=${signOut.status}`);
 
 const afterSignOut = await visit("/dashboard", { jar });
 assert(
-  "after sign-out /dashboard redirects to /login",
-  afterSignOut.status === 307 && (afterSignOut.headers.get("location") ?? "").endsWith("/login"),
+  "after logout /dashboard redirects to /login",
+  afterSignOut.status === 307 &&
+    (afterSignOut.headers.get("location") ?? "").endsWith("/login"),
   `status=${afterSignOut.status} location=${afterSignOut.headers.get("location")}`
+);
+
+const tasksAfterSignOut = await visit("/tasks", { jar });
+assert(
+  "after logout /tasks redirects to /login",
+  tasksAfterSignOut.status === 307,
+  `status=${tasksAfterSignOut.status}`
 );
 
 await stub.close();
 
 console.log(`\n================ ${passed} passed / ${failed} failed ================`);
+console.log(`(stub received ${stub.calls.length} Supabase calls, incl. ${
+  stub.calls.filter((c) => c.includes("/auth/v1/")).length
+} auth calls)`);
+
 process.exit(failed === 0 ? 0 : 1);

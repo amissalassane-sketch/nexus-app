@@ -17,7 +17,7 @@ export function LogoutButton() {
     }
 
     // Clear the SSR cookies too, so Server Components stop seeing the user.
-    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => null);
 
     router.replace("/login");
     router.refresh();
