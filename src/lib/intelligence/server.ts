@@ -42,6 +42,15 @@ export async function collectWorkspaceIntel(workspaceId: string): Promise<{
   const projects = (projectsResult.data as IntelProject[] | null) ?? [];
   const goals = (goalsResult.data as IntelGoal[] | null) ?? [];
 
+  // P8 — time-based notification producers (task overdue, goal at risk,
+  // plan limit 80%). Best-effort: before migration 015 is pushed the RPC
+  // does not exist and this is a no-op — never blocks the page.
+  try {
+    await supabase.rpc("refresh_workspace_signals", { p_workspace_id: workspaceId });
+  } catch {
+    // network-level failure only — Supabase RPC errors return without throwing
+  }
+
   const result = computeInsights({ now: new Date(), tasks, projects, goals });
   const brief = deterministicBrief(result, { now: new Date(), tasks, projects, goals });
 

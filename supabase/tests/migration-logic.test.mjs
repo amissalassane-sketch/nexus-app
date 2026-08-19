@@ -139,4 +139,58 @@ test("workspace bootstrap keeps its exception guard (never block auth.users inse
   );
 });
 
+
+// ------------------------------------------------------------
+// 015_notification_producers.sql — P8
+// ------------------------------------------------------------
+const m015Name = files.find((f) => f.startsWith("015_"));
+assert.ok(m015Name, "migration 015 (notification producers) must exist");
+const m015 = read(m015Name);
+
+test("015: notifications gain severity + action, guarded by information_schema", () => {
+  assert.match(m015, /add column severity text/);
+  assert.match(m015, /add column action text/);
+  assert.match(m015, /information_schema\.columns[\s\S]*?notifications[\s\S]*?severity/);
+  assert.match(m015, /information_schema\.columns[\s\S]*?notifications[\s\S]*?\baction\b/);
+});
+
+test("015: notify_workspace deduplicates on UNREAD same-type notifications", () => {
+  assert.match(m015, /read_at is null/);
+  assert.match(m015, /and type = p_type[\s\S]*?continue;/);
+});
+
+test("015: every trigger body is exception-guarded (never break user writes)", () => {
+  const bodies = m015.split("create or replace function public.").slice(1);
+  const triggerFns = bodies.filter((body) => body.includes("returns trigger"));
+  assert.ok(triggerFns.length >= 2, "expected at least 2 trigger functions");
+  for (const body of triggerFns) {
+    const fnName = body.split("(")[0];
+    assert.match(
+      body,
+      /exception\s+when others then[\s\S]*?return NEW;/,
+      `${fnName}: missing exception guard`
+    );
+  }
+});
+
+test("015: producers cover the 5 useful events — and no 'edited' noise", () => {
+  assert.match(m015, /task_overdue/);
+  assert.match(m015, /project_blocked/);
+  assert.match(m015, /goal_at_risk/);
+  assert.match(m015, /project_milestone/);
+  assert.match(m015, /plan_limit/);
+  assert.ok(!/'task_edited'|'project_edited'|'x_edited'|updated_by/.test(m015), "no noise event types allowed");
+});
+
+test("015: milestone trigger fires only on boundary crossings (25/50/75/100)", () => {
+  assert.match(m015, /v_new_m > v_old_m and v_new_m > 0/);
+  for (const milestone of [25, 50, 75, 100]) {
+    assert.ok(m015.includes(`then ${milestone}`), `milestone ${milestone} missing`);
+  }
+});
+
+test("015: refresh_workspace_signals verifies the caller is an active member", () => {
+  assert.match(m015, /refresh_workspace_signals[\s\S]*?auth\.uid\(\)[\s\S]*?'active'/);
+});
+
 console.log(`\nmigration-logic: ${passed} assertions passed`);

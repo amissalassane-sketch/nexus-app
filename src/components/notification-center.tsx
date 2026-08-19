@@ -30,6 +30,15 @@ type NotificationItem = {
   entity_id: string | null;
   read_at: string | null;
   created_at: string;
+  /** P8 producers (migration 015) — absent on older rows, degrade cleanly. */
+  severity?: string | null;
+  action?: string | null;
+};
+
+const SEVERITY_TONES: Record<string, "danger" | "warning" | "info" | "neutral"> = {
+  critical: "danger",
+  warning: "warning",
+  info: "info",
 };
 
 const entityRoutes: Record<string, string> = {
@@ -215,7 +224,14 @@ export function NotificationCenter({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={isUnread ? "info" : "neutral"}>{notification.type}</Badge>
+                    <Badge
+                      tone={
+                        SEVERITY_TONES[notification.severity ?? ""] ??
+                        (isUnread ? "info" : "neutral")
+                      }
+                    >
+                      {notification.type.replace(/_/g, " ")}
+                    </Badge>
                     {isUnread ? <Badge tone="volt">Unread</Badge> : null}
                   </div>
 
@@ -245,7 +261,7 @@ export function NotificationCenter({
                       href={href}
                       className="rounded-md border border-border-default px-2.5 py-1.5 text-caption text-text-secondary transition-all duration-[120ms] hover:border-border-strong hover:text-text-primary active:scale-[0.98]"
                     >
-                      Open
+                      {notification.action ?? "Open"}
                     </Link>
                   ) : null}
 
