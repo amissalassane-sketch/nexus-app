@@ -140,8 +140,8 @@ export function Dropdown({
             onKeyDown={onMenuKeyDown}
             style={{ width }}
             className={cn(
-              "absolute top-[calc(100%+8px)] z-50 rounded-dropdown border border-border-default bg-bg-surface p-1.5 shadow-dropdown animate-scale-in",
-              align === "end" ? "right-0" : "left-0"
+              "absolute top-[calc(100%+8px)] z-[60] rounded-dropdown border border-border-default bg-bg-surface p-1.5 shadow-dropdown animate-scale-in",
+              align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left"
             )}
           >
             {children}

@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { PillTabs } from "@/components/ui/tabs";
 import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
@@ -31,6 +32,8 @@ type NotificationItem = {
   entity_id: string | null;
   read_at: string | null;
   created_at: string;
+  severity?: string | null;
+  action?: string | null;
 };
 
 const entityRoutes: Record<string, string> = {
@@ -307,20 +310,32 @@ export function NotificationCenter({ userId }: { userId: string }) {
                     ) : null}
 
                     <div className="mt-1.5 flex items-center gap-2">
-                      <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
-                        {notification.type}
-                      </span>
-                      {notification.entity_id ? (
-                        <Link
-                          href={href}
-                          onClick={() => {
-                            if (isUnread) void markAsRead(notification.id);
-                          }}
-                          className="text-caption text-text-secondary underline decoration-border-strong underline-offset-4 transition-colors hover:text-text-primary"
+                      {notification.severity ? (
+                        <Badge
+                          tone={
+                            notification.severity === "critical"
+                              ? "danger"
+                              : notification.severity === "warning"
+                                ? "warning"
+                                : "info"
+                          }
                         >
-                          Open
-                        </Link>
-                      ) : null}
+                          {notification.severity}
+                        </Badge>
+                      ) : (
+                        <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                          {notification.type}
+                        </span>
+                      )}
+                      <Link
+                        href={href}
+                        onClick={() => {
+                          if (isUnread) void markAsRead(notification.id);
+                        }}
+                        className="text-caption text-text-secondary underline decoration-border-strong underline-offset-4 transition-colors hover:text-text-primary"
+                      >
+                        {notification.action ?? "Open"}
+                      </Link>
                       {isUnread ? (
                         <button
                           type="button"

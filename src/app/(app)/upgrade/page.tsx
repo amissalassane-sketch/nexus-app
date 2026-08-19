@@ -138,7 +138,7 @@ export default async function UpgradePage() {
                         {plan.priceLabel}
                       </span>
                       <span className="text-small text-text-secondary">
-                        {plan.pricePeriod}
+                        / {plan.pricePeriod}
                       </span>
                     </>
                   ) : (
@@ -150,7 +150,7 @@ export default async function UpgradePage() {
 
                 <p className="mt-2 text-small text-text-secondary">{plan.description}</p>
 
-                <ul className="mt-5 flex flex-col gap-2.5">
+                <ul className="mt-5 flex flex-1 flex-col gap-2.5">
                   {plan.highlights.map((highlight) => (
                     <li
                       key={highlight}
@@ -167,7 +167,7 @@ export default async function UpgradePage() {
                   ))}
                 </ul>
 
-                <div className="mt-6 pt-2">
+                <div className="mt-6 flex-none pt-2">
                   {isCurrent ? (
                     <div className="flex h-9 items-center justify-center rounded-pill border border-border-default text-button text-text-secondary">
                       Your current plan

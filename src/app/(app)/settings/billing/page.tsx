@@ -52,7 +52,7 @@ export default async function BillingPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="space-y-5">
         <PageHeader
           title="Billing"
           description="Plan, usage and capacity for this workspace."

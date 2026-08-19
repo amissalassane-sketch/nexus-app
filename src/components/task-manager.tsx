@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateTask } from "@/lib/access";
@@ -96,6 +96,21 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
   const submitting = useRef(false);
+
+  // Quick create ("+ Add task" inline) + inline title editing.
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const [inlineTitle, setInlineTitle] = useState("");
+  const [toast, setToast] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (tone: "success" | "danger", message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ tone, message });
+    toastTimer.current = setTimeout(() => setToast(null), 3200);
+  };
 
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
@@ -319,7 +334,22 @@ function TaskManagerInner({ userId }: { userId: string }) {
   };
 
   const toggleTaskStatus = async (task: Task) => {
-    const nextStatus: TaskStatus = task.status === "done" ? "todo" : "done";
+    const previousStatus = task.status;
+    const nextStatus: TaskStatus = previousStatus === "done" ? "todo" : "done";
+
+    // Optimistic update — the row flips immediately.
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              status: nextStatus,
+              completed_at: nextStatus === "done" ? new Date().toISOString() : null,
+            }
+          : item
+      )
+    );
+
     const { error: updateError } = await supabase
       .from("tasks")
       .update({
@@ -330,12 +360,29 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (updateError) {
-      if (await handleMutationError(updateError.message)) return;
-      setError(updateError.message);
+      if (await handleMutationError(updateError.message)) {
+        // Rollback the optimistic change on a plan-limit rejection.
+        setTasks((current) =>
+          current.map((item) =>
+            item.id === task.id ? { ...item, status: previousStatus } : item
+          )
+        );
+        return;
+      }
+      // Rollback + surface the error as a toast.
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id ? { ...item, status: previousStatus } : item
+        )
+      );
+      showToast("danger", `Could not update task: ${updateError.message}`);
       return;
     }
 
-    await fetchTasks(workspaceId);
+    showToast(
+      "success",
+      nextStatus === "done" ? "Task completed." : "Task reopened."
+    );
     syncServerViews();
   };
 
@@ -358,6 +405,89 @@ function TaskManagerInner({ userId }: { userId: string }) {
     if (editingTaskId === taskId) closeForm();
     await fetchTasks(workspaceId);
     syncServerViews();
+  };
+
+  // Quick create — inline "+ Add task" at the head of the list.
+  const createQuickTask = async () => {
+    if (!workspaceId || !quickTitle.trim()) return;
+
+    const allowed = await guardCreate();
+    if (!allowed) {
+      showToast("danger", "Plan limit reached for tasks.");
+      setQuickOpen(false);
+      setQuickTitle("");
+      return;
+    }
+
+    setQuickSaving(true);
+    const { error: createError } = await supabase.from("tasks").insert({
+      workspace_id: workspaceId,
+      title: quickTitle.trim(),
+      status: "todo",
+      priority: "medium",
+      assignee_id: userId,
+      created_by: userId,
+    });
+    setQuickSaving(false);
+
+    if (createError) {
+      if (await handleMutationError(createError.message)) {
+        setQuickOpen(false);
+        setQuickTitle("");
+        return;
+      }
+      showToast("danger", createError.message);
+      return;
+    }
+
+    showToast("success", "Task added.");
+    setQuickTitle("");
+    setQuickOpen(false);
+    await fetchTasks(workspaceId);
+    syncServerViews();
+  };
+
+  // Inline title editing — double-click the title to rename in place.
+  const beginInlineEdit = (task: Task) => {
+    setInlineEditId(task.id);
+    setInlineTitle(task.title);
+  };
+
+  const saveInlineTitle = async () => {
+    const taskId = inlineEditId;
+    const title = inlineTitle.trim();
+    if (!taskId || !title) {
+      setInlineEditId(null);
+      return;
+    }
+
+    const previous = tasks.find((task) => task.id === taskId)?.title ?? title;
+    setTasks((current) =>
+      current.map((task) => (task.id === taskId ? { ...task, title } : task))
+    );
+    setInlineEditId(null);
+
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({ title, updated_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .eq("workspace_id", workspaceId ?? "");
+
+    if (updateError) {
+      setTasks((current) =>
+        current.map((task) => (task.id === taskId ? { ...task, title: previous } : task))
+      );
+      showToast("danger", `Could not rename task: ${updateError.message}`);
+      return;
+    }
+
+    showToast("success", "Task renamed.");
+    syncServerViews();
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditId(null);
+    setInlineTitle("");
   };
 
   const today = new Date();
@@ -388,25 +518,42 @@ function TaskManagerInner({ userId }: { userId: string }) {
           label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
         />
 
-        <button
-          type="button"
-          onClick={() => populateEditForm(task)}
-          className="min-w-0 flex-1 text-left"
-        >
-          <span
-            className={cn(
-              "block truncate text-body text-text-primary",
-              done && "text-text-tertiary line-through"
-            )}
+        {inlineEditId === task.id ? (
+          <input
+            autoFocus
+            value={inlineTitle}
+            onChange={(event) => setInlineTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void saveInlineTitle();
+              if (event.key === "Escape") cancelInlineEdit();
+            }}
+            onBlur={() => void saveInlineTitle()}
+            className="h-8 min-w-0 flex-1 rounded-input border border-border-focus bg-bg-surface px-2.5 text-body text-text-primary outline-none"
+            aria-label={`Rename ${task.title}`}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => populateEditForm(task)}
+            onDoubleClick={() => beginInlineEdit(task)}
+            className="min-w-0 flex-1 text-left"
+            title="Double-click to rename"
           >
-            {task.title}
-          </span>
-          {task.description ? (
-            <span className="block truncate text-caption text-text-tertiary">
-              {task.description}
+            <span
+              className={cn(
+                "block truncate text-body text-text-primary",
+                done && "strike text-text-tertiary"
+              )}
+            >
+              {task.title}
             </span>
-          ) : null}
-        </button>
+            {task.description ? (
+              <span className="block truncate text-caption text-text-tertiary">
+                {task.description}
+              </span>
+            ) : null}
+          </button>
+        )}
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
@@ -594,7 +741,8 @@ function TaskManagerInner({ userId }: { userId: string }) {
         ) : (
           GROUPS.map((group) => {
             const rows = grouped[group.id];
-            if (rows.length === 0) return null;
+            const isActiveGroup = group.id === "active";
+            if (rows.length === 0 && !isActiveGroup) return null;
 
             return (
               <div key={group.id}>
@@ -606,7 +754,40 @@ function TaskManagerInner({ userId }: { userId: string }) {
                     {rows.length}
                   </span>
                 </div>
-                <ul>{rows.map(renderRow)}</ul>
+
+                {isActiveGroup ? (
+                  quickOpen ? (
+                    <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2">
+                      <input
+                        autoFocus
+                        disabled={quickSaving}
+                        value={quickTitle}
+                        onChange={(event) => setQuickTitle(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") void createQuickTask();
+                          if (event.key === "Escape") {
+                            setQuickOpen(false);
+                            setQuickTitle("");
+                          }
+                        }}
+                        placeholder="Task title — Enter to create, Esc to cancel"
+                        className="h-9 min-w-0 flex-1 rounded-input border border-border-focus bg-bg-surface px-3 text-body text-text-primary outline-none placeholder:text-text-quaternary"
+                        aria-label="New task title"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setQuickOpen(true)}
+                      className="flex h-9 w-full items-center gap-2 px-4 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-bg-surface/60 hover:text-text-secondary"
+                    >
+                      <Plus size={14} strokeWidth={1.75} />
+                      Add task
+                    </button>
+                  )
+                ) : null}
+
+                {rows.length > 0 ? <ul>{rows.map(renderRow)}</ul> : null}
               </div>
             );
           })
@@ -716,6 +897,20 @@ function TaskManagerInner({ userId }: { userId: string }) {
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>
+
+      {toast ? (
+        <div
+          role="status"
+          className={cn(
+            "fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 animate-toast-in rounded-pill border px-4 py-2.5 text-small shadow-dropdown",
+            toast.tone === "success"
+              ? "border-success-border bg-bg-surface text-success"
+              : "border-danger-border bg-bg-surface text-danger"
+          )}
+        >
+          {toast.message}
+        </div>
+      ) : null}
     </div>
   );
 }

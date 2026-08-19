@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
+  BrainCircuit,
   CheckSquare,
   ChevronsUpDown,
   CreditCard,
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  Search,
   Settings2,
   Sparkles,
   Target,
@@ -176,6 +178,19 @@ export function WorkspaceSidebar({
 
       <div className="my-2.5 h-px bg-border-subtle" aria-hidden="true" />
 
+      {/* Search / command palette */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
+        className="flex h-9 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-bg-surface/40 px-2.5 text-left text-[13px] text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface hover:text-text-secondary"
+      >
+        <Search size={15} strokeWidth={1.75} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">Search…</span>
+        <kbd className="shrink-0 font-mono text-mono text-text-quaternary">⌘K</kbd>
+      </button>
+
+      <div className="my-2.5 h-px bg-border-subtle" aria-hidden="true" />
+
       {/* Create */}
       <Dropdown
         label="Create"
@@ -243,6 +258,13 @@ export function WorkspaceSidebar({
             active={isActive("/goals")}
             onNavigate={onNavigate}
             icon={<Target size={16} strokeWidth={1.75} />}
+          />
+          <NavItem
+            href="/intelligence"
+            label="Intelligence"
+            active={isActive("/intelligence")}
+            onNavigate={onNavigate}
+            icon={<BrainCircuit size={16} strokeWidth={1.75} />}
           />
         </div>
 

@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Metric, Panel } from "@/components/ui/card";
 import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
+import { FocusPanel } from "@/components/intelligence-panel";
+import { nextBestAction, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type { PlanName } from "@/lib/plan-limits";
 import { getActiveMembership } from "@/lib/workspace";
 
@@ -161,6 +163,31 @@ export default async function DashboardPage() {
         .maybeSingle()
     : Promise.resolve({ data: null, error: null });
 
+  // FOCUS — full (minimal-column) snapshot for the deterministic engine.
+  const focusSnapshotPromise: Promise<WorkspaceSnapshot> = workspaceId
+    ? (async () => {
+        const [tasks, projects, goals] = await Promise.all([
+          supabase
+            .from("tasks")
+            .select("id, title, status, priority, due_at, completed_at, project_id")
+            .eq("workspace_id", workspaceId),
+          supabase
+            .from("projects")
+            .select("id, name, status, due_date, goal_id")
+            .eq("workspace_id", workspaceId),
+          supabase
+            .from("goals")
+            .select("id, title, status, progress, target_date")
+            .eq("workspace_id", workspaceId),
+        ]);
+        return {
+          tasks: (tasks.data ?? []) as WorkspaceSnapshot["tasks"],
+          projects: (projects.data ?? []) as WorkspaceSnapshot["projects"],
+          goals: (goals.data ?? []) as WorkspaceSnapshot["goals"],
+        };
+      })()
+    : Promise.resolve({ tasks: [], projects: [], goals: [] });
+
   const [
     stats,
     recentProjectsResult,
@@ -168,6 +195,7 @@ export default async function DashboardPage() {
     recentGoalsResult,
     recentActivitiesResult,
     subscriptionResult,
+    focusSnapshot,
   ] = await Promise.all([
     statsPromise,
     recentProjectsPromise,
@@ -175,6 +203,7 @@ export default async function DashboardPage() {
     recentGoalsPromise,
     recentActivitiesPromise,
     subscriptionPromise,
+    focusSnapshotPromise,
   ]);
 
   const projectTotal = stats.projectTotal;
@@ -277,6 +306,9 @@ export default async function DashboardPage() {
           No active workspace is currently linked to this account.
         </Alert>
       ) : null}
+
+      {/* FOCUS — next best action from the deterministic engine */}
+      <FocusPanel insight={nextBestAction(focusSnapshot)} />
 
       {/* METRICS STRIP */}
       <div className="grid grid-cols-2 divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-x">

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { NexusWordmark } from "@/components/nexus-logo";
+import { CommandMenu } from "@/components/command-menu";
 import { AppRail } from "@/components/layout/app-rail";
 import {
   WorkspaceSidebar,
@@ -38,11 +39,12 @@ export function AppShell({
 
   return (
     <div className="flex h-dvh gap-2 overflow-hidden bg-bg-base p-2 lg:gap-2.5 lg:p-2.5">
+      <CommandMenu />
       <AppRail unreadCount={counts.unreadNotifications} />
 
       <aside
         aria-label="Workspace navigation"
-        className="hidden w-[248px] shrink-0 overflow-hidden rounded-[20px] border border-border-subtle bg-bg-subtle/70 lg:block"
+        className="hidden w-[248px] shrink-0 overflow-visible rounded-[20px] border border-border-subtle bg-bg-subtle/70 lg:block"
       >
         <WorkspaceSidebar
           user={user}

@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CreditCard, Layers, User } from "lucide-react";
+import { CreditCard, KeyRound, Layers, LogOut, Mail, ShieldAlert, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getActiveMembership } from "@/lib/workspace";
+import { getActiveMembership, canManageBilling } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -25,10 +25,11 @@ type StatusState = {
   message: string;
 };
 
-type TabId = "profile" | "workspace";
+type TabId = "profile" | "account" | "workspace";
 
 const SECTIONS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
+  { id: "account", label: "Account", icon: <KeyRound size={15} strokeWidth={1.75} /> },
   { id: "workspace", label: "Workspace", icon: <Layers size={15} strokeWidth={1.75} /> },
 ];
 
@@ -41,10 +42,14 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     bio: "",
   });
   const [workspaceName, setWorkspaceName] = useState<string>("Not linked");
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [workspaceRole, setWorkspaceRole] = useState<string>("-");
+  const [email, setEmail] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
+  const [workspaceStatus, setWorkspaceStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [tab, setTab] = useState<TabId>("profile");
 
   useEffect(() => {
@@ -69,10 +74,16 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
         });
       }
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email) setEmail(user.email);
+
       const { membership } = await getActiveMembership(supabase, userId);
 
       if (membership) {
         setWorkspaceRole(membership.role);
+        setWorkspaceId(membership.workspaceId);
 
         const { data: workspaceData, error: workspaceError } = await supabase
           .from("workspaces")
@@ -175,6 +186,57 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     router.refresh();
   };
 
+  const handleRenameWorkspace = async () => {
+    if (!workspaceId) {
+      setWorkspaceStatus({ type: "error", message: "No active workspace." });
+      return;
+    }
+    if (!canManageBilling(workspaceRole)) {
+      setWorkspaceStatus({
+        type: "error",
+        message: "Only owners and admins can rename this workspace.",
+      });
+      return;
+    }
+
+    const name = workspaceName.trim();
+    if (!name) {
+      setWorkspaceStatus({ type: "error", message: "Workspace name is required." });
+      return;
+    }
+
+    setSavingWorkspace(true);
+    setWorkspaceStatus({ type: "idle", message: "" });
+
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq("id", workspaceId);
+
+    setSavingWorkspace(false);
+
+    if (error) {
+      setWorkspaceStatus({ type: "error", message: error.message });
+      return;
+    }
+
+    setWorkspaceStatus({ type: "success", message: "Workspace renamed." });
+    router.refresh();
+  };
+
+  const handleSignOutEverywhere = async () => {
+    setStatus({ type: "idle", message: "" });
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch {
+      // Fall back to local sign-out if the global scope is unavailable.
+      await supabase.auth.signOut();
+    }
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => null);
+    router.replace("/login");
+    router.refresh();
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -273,6 +335,51 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
             </div>
           )}
         </Card>
+      ) : tab === "account" ? (
+        <div className="grid gap-4">
+          <Card className="p-6">
+            <h2 className="text-h2 text-text-primary">Email</h2>
+            <p className="mt-1 text-small text-text-secondary">
+              The address used to sign in to NEXUS.
+            </p>
+            <div className="mt-5 flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
+              <span className="flex items-center gap-2.5 text-body text-text-primary">
+                <Mail size={15} strokeWidth={1.75} className="text-text-tertiary" />
+                {loading ? "…" : email || "Not available"}
+              </span>
+              <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-tertiary">
+                Change email — requires backend evolution
+              </span>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-h2 text-text-primary">Sessions</h2>
+            <p className="mt-1 text-small text-text-secondary">
+              Sign out of every device at once.
+            </p>
+            <div className="mt-5">
+              <Button variant="secondary" onClick={handleSignOutEverywhere}>
+                <LogOut size={15} strokeWidth={1.75} />
+                Sign out everywhere
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-start gap-3">
+              <ShieldAlert size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-text-tertiary" />
+              <div>
+                <h2 className="text-h2 text-text-primary">Danger zone</h2>
+                <p className="mt-1 text-small text-text-secondary">
+                  Password change and account deletion are not yet exposed in this
+                  build. They depend on a backend evolution of the auth service and
+                  are intentionally not simulated.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
       ) : (
         <div className="grid gap-4">
           <Card className="p-6">
@@ -283,18 +390,50 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
 
             <dl className="mt-5 space-y-3">
               <div className="flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
-                <dt className="text-small text-text-secondary">Current workspace</dt>
-                <dd className="truncate text-body-medium text-text-primary">
-                  {loading ? "…" : workspaceName}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
                 <dt className="text-small text-text-secondary">Role</dt>
                 <dd>
                   <Badge>{loading ? "…" : workspaceRole}</Badge>
                 </dd>
               </div>
             </dl>
+
+            <div className="mt-5 border-t border-border-subtle pt-5">
+              <Field
+                label="Workspace name"
+                htmlFor="settings-workspace-name"
+                hint={
+                  canManageBilling(workspaceRole)
+                    ? "Only owners and admins can rename the workspace."
+                    : "You need the owner or admin role to rename this workspace."
+                }
+              >
+                <Input
+                  id="settings-workspace-name"
+                  value={workspaceName}
+                  onChange={(event) => setWorkspaceName(event.target.value)}
+                  disabled={!canManageBilling(workspaceRole)}
+                  placeholder="My Workspace"
+                />
+              </Field>
+
+              {workspaceStatus.type !== "idle" ? (
+                <Alert
+                  className="mt-3"
+                  tone={workspaceStatus.type === "success" ? "success" : "danger"}
+                >
+                  {workspaceStatus.message}
+                </Alert>
+              ) : null}
+
+              <div className="mt-4">
+                <Button
+                  onClick={handleRenameWorkspace}
+                  disabled={savingWorkspace || !canManageBilling(workspaceRole)}
+                >
+                  {savingWorkspace ? "Renaming…" : "Rename workspace"}
+                </Button>
+              </div>
+            </div>
           </Card>
 
           <Card className="p-6">
