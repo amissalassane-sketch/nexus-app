@@ -1,10 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckSquare, Plus, SquarePen, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateTask } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { useToast } from "@/components/toast";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorBox,
+  Field,
+  InlineEdit,
+  Select,
+  SkeletonList,
+  StatCard,
+  TaskCheckbox,
+  TextArea,
+} from "@/components/ui";
+
+// ============================================================
+// NEXUS — TASK MANAGER (P2: alive)
+//  - Quick create: "+ Add task" on top of the list (Enter/Escape)
+//  - Optimistic complete / reopen with rollback + toast
+//  - Inline title editing (double-click)
+//  - Skeletons at real dimensions, staggered list, animated checkbox
+// ============================================================
 
 type TaskStatus = "todo" | "in_progress" | "in_review" | "blocked" | "done" | "cancelled";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -28,6 +52,7 @@ type TaskForm = {
   due_at: string;
 };
 
+
 const blankTaskForm = (): TaskForm => ({
   title: "",
   description: "",
@@ -36,42 +61,68 @@ const blankTaskForm = (): TaskForm => ({
   due_at: "",
 });
 
+const PRIORITY_TONES: Record<Priority, "neutral" | "info" | "warning" | "danger"> = {
+  low: "neutral",
+  medium: "info",
+  high: "warning",
+  urgent: "danger",
+};
 
-// Module-level loader: setState stays behind an await (React Compiler rule
-// react-hooks/set-state-in-effect — known pitfall #5).
+const isToday = (value: string | null) => {
+  if (!value) return false;
+  return new Date(value).toDateString() === new Date().toDateString();
+};
+
+const isOverdue = (task: Task) => {
+  if (!task.due_at || task.status === "done" || task.status === "cancelled") return false;
+  return new Date(task.due_at) < new Date();
+};
+
+const formatDue = (value: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
+};
+
+// Module-level loader (setState stays behind an await — pitfall #5).
 async function loadTasksForWorkspace(
   supabase: ReturnType<typeof createClient>,
   workspaceId: string
-): Promise<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }> {
+): Promise<{ data: Task[] | null; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
     .eq("workspace_id", workspaceId)
-    .order("due_at", { ascending: true });
+    .order("due_at", { ascending: true, nullsFirst: false });
 
-  return {
-    data: (data as Array<Record<string, unknown>>) ?? null,
-    error: error as { message: string } | null,
-  };
+  return { data: (data as Task[]) ?? null, error: error as { message: string } | null };
 }
 
 export function TaskManager({
   userId,
   workspaceId,
+  initialNew = false,
 }: {
   userId: string;
   /** Resolved server-side by the (app) layout — never null in practice. */
   workspaceId: string | null;
+  initialNew?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const toast = useToast();
+  const quickAddRef = useRef<HTMLInputElement>(null);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ status: "all", priority: "all" });
   const [form, setForm] = useState<TaskForm>(blankTaskForm());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
+  const [quickAdd, setQuickAdd] = useState("");
+
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
     [tasks]
@@ -81,29 +132,6 @@ export function TaskManager({
     canCreateTask,
     activeTaskCount
   );
-
-  const fetchTasks = async (activeWorkspaceId: string | null) => {
-    if (!activeWorkspaceId) {
-      // The (app) layout guarantees a workspace; nothing to load otherwise.
-      return;
-    }
-
-    const { data, error: loadError } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("workspace_id", activeWorkspaceId)
-      .order("due_at", { ascending: true });
-
-    if (loadError) {
-      setError(loadError.message);
-      setTasks([]);
-      setLoading(false);
-      return;
-    }
-
-    setTasks((data as Task[]) ?? []);
-    setLoading(false);
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -115,11 +143,16 @@ export function TaskManager({
         setLoading(false);
         return;
       }
-      setTasks((data as never[]) ?? []);
+      setTasks(data ?? []);
       setLoading(false);
     };
     void load();
   }, [supabase, workspaceId]);
+
+  // /tasks?new=1 (Create dropdown) → focus the quick-add field.
+  useEffect(() => {
+    if (initialNew) quickAddRef.current?.focus();
+  }, [initialNew]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -129,10 +162,120 @@ export function TaskManager({
     });
   }, [filters, tasks]);
 
+  // -- Quick create (optimistic) -------------------------------
+
+  const submitQuickAdd = async () => {
+    const title = quickAdd.trim();
+    if (!workspaceId || !title) return;
+
+    const allowed = await guardCreate();
+    if (!allowed) return;
+
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimistic: Task = {
+      id: tempId,
+      title,
+      description: null,
+      status: "todo",
+      priority: "medium",
+      due_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const snapshot = tasks;
+    setTasks((current) => [optimistic, ...current]);
+    setQuickAdd("");
+
+    const { data: created, error: createError } = await supabase
+      .from("tasks")
+      .insert({
+        workspace_id: workspaceId,
+        title,
+        description: null,
+        status: "todo",
+        priority: "medium",
+        due_at: null,
+        assignee_id: userId,
+        created_by: userId,
+      })
+      .select("*")
+      .single();
+
+    if (createError) {
+      setTasks(snapshot); // rollback
+      setQuickAdd(title); // field keeps what the user typed
+      if (await handleMutationError(createError.message)) return;
+      toast.error(`Task not created — ${createError.message}`);
+      return;
+    }
+
+    setTasks((current) =>
+      current.map((task) => (task.id === tempId ? ((created as Task) ?? optimistic) : task))
+    );
+  };
+
+  // -- Optimistic complete / reopen ----------------------------
+
+  const toggleTaskStatus = async (task: Task) => {
+    const nextStatus: TaskStatus = task.status === "done" ? "todo" : "done";
+    const snapshot = tasks;
+
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              status: nextStatus,
+            }
+          : item
+      )
+    );
+
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({
+        status: nextStatus,
+        completed_at: nextStatus === "done" ? new Date().toISOString() : null,
+      })
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId ?? "");
+
+    if (updateError) {
+      setTasks(snapshot); // rollback — the row returns to its real state
+      if (await handleMutationError(updateError.message)) return;
+      toast.error(`Change not saved — ${updateError.message}`);
+    }
+  };
+
+  // -- Inline title edit (double-click) ------------------------
+
+  const saveInlineTitle = async (task: Task, nextTitle: string) => {
+    setInlineEditingId(null);
+    if (nextTitle === task.title) return;
+
+    const snapshot = tasks;
+    setTasks((current) =>
+      current.map((item) => (item.id === task.id ? { ...item, title: nextTitle } : item))
+    );
+
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({ title: nextTitle, updated_at: new Date().toISOString() })
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId ?? "");
+
+    if (updateError) {
+      setTasks(snapshot);
+      toast.error(`Title not saved — ${updateError.message}`);
+    }
+  };
+
+  // -- Editor (create / edit) ----------------------------------
+
   const resetForm = () => {
     setForm(blankTaskForm());
     setEditingTaskId(null);
-    setSuccess("");
   };
 
   const createTask = async () => {
@@ -146,9 +289,8 @@ export function TaskManager({
 
     setSaving(true);
     setError("");
-    setSuccess("");
 
-    const payload = {
+    const { error: createError } = await supabase.from("tasks").insert({
       workspace_id: workspaceId,
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -157,9 +299,7 @@ export function TaskManager({
       due_at: form.due_at ? new Date(form.due_at).toISOString() : null,
       assignee_id: userId,
       created_by: userId,
-    };
-
-    const { error: createError } = await supabase.from("tasks").insert(payload);
+    });
 
     setSaving(false);
 
@@ -169,9 +309,10 @@ export function TaskManager({
       return;
     }
 
-    setSuccess("Task created successfully.");
+    toast.success("Task created.");
     resetForm();
-    await fetchTasks(workspaceId);
+    const { data } = await loadTasksForWorkspace(supabase, workspaceId);
+    setTasks(data ?? []);
   };
 
   const updateTask = async () => {
@@ -182,7 +323,6 @@ export function TaskManager({
 
     setSaving(true);
     setError("");
-    setSuccess("");
 
     const { error: updateError } = await supabase
       .from("tasks")
@@ -205,18 +345,10 @@ export function TaskManager({
       return;
     }
 
-    setSuccess("Task updated successfully.");
+    toast.success("Task updated.");
     resetForm();
-    await fetchTasks(workspaceId);
-  };
-
-  const submitTask = async () => {
-    if (editingTaskId) {
-      await updateTask();
-      return;
-    }
-
-    await createTask();
+    const { data } = await loadTasksForWorkspace(supabase, workspaceId);
+    setTasks(data ?? []);
   };
 
   const populateEditForm = (task: Task) => {
@@ -229,60 +361,33 @@ export function TaskManager({
       due_at: task.due_at ? new Date(task.due_at).toISOString().slice(0, 10) : "",
     });
     setError("");
-    setSuccess("");
-  };
-
-  const toggleTaskStatus = async (task: Task) => {
-    const nextStatus: TaskStatus = task.status === "done" ? "todo" : "done";
-    const { error: updateError } = await supabase
-      .from("tasks")
-      .update({
-        status: nextStatus,
-        completed_at: nextStatus === "done" ? new Date().toISOString() : null,
-      })
-      .eq("id", task.id)
-      .eq("workspace_id", workspaceId ?? "");
-
-    if (updateError) {
-      if (await handleMutationError(updateError.message)) return;
-      setError(updateError.message);
-      return;
-    }
-
-    setSuccess("Task status updated.");
-    await fetchTasks(workspaceId);
   };
 
   const deleteTask = async (taskId: string) => {
-    const confirmed = window.confirm("Delete this task?");
-    if (!confirmed) return;
+    if (!window.confirm("Delete this task?")) return;
 
-    const { error: deleteError } = await supabase.from("tasks").delete().eq("id", taskId).eq("workspace_id", workspaceId ?? "");
+    const snapshot = tasks;
+    setTasks((current) => current.filter((task) => task.id !== taskId));
+
+    const { error: deleteError } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
-      setError(deleteError.message);
+      setTasks(snapshot);
+      toast.error(`Task not deleted — ${deleteError.message}`);
       return;
     }
 
-    setSuccess("Task deleted.");
-    if (editingTaskId === taskId) {
-      resetForm();
-    }
-    await fetchTasks(workspaceId);
+    toast.success("Task deleted.");
+    if (editingTaskId === taskId) resetForm();
   };
 
-  const today = new Date();
-  const todayTasks = tasks.filter((task) => {
-    if (!task.due_at) return false;
-    const dueDate = new Date(task.due_at);
-    return dueDate.toDateString() === today.toDateString();
-  });
-
-  const overdueTasks = tasks.filter((task) => {
-    if (!task.due_at || task.status === "done") return false;
-    const dueDate = new Date(task.due_at);
-    return dueDate < today;
-  });
+  const todayCount = tasks.filter((task) => isToday(task.due_at)).length;
+  const overdueCount = tasks.filter(isOverdue).length;
+  const doneCount = tasks.filter((task) => task.status === "done").length;
 
   return (
     <div className="space-y-6">
@@ -290,61 +395,62 @@ export function TaskManager({
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Today</div>
-          <div className="mt-3 text-3xl font-semibold">{todayTasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tasks due today</div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Overdue</div>
-          <div className="mt-3 text-3xl font-semibold">{overdueTasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tasks requiring attention</div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Total</div>
-          <div className="mt-3 text-3xl font-semibold">{tasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tracked tasks</div>
-        </div>
+      {/* STATS */}
+      <div className="stagger-list grid gap-4 sm:grid-cols-3">
+        <StatCard label="Today" value={todayCount} hint="Tasks due today" />
+        <StatCard
+          label="Overdue"
+          value={overdueCount}
+          hint={overdueCount > 0 ? "The oldest needs you first" : "Nothing late"}
+          tone={overdueCount > 0 ? "danger" : "default"}
+        />
+        <StatCard label="Done" value={doneCount} hint={`${activeTaskCount} active now`} />
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+      {/* EDITOR */}
+      <Card>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">{editingTaskId ? "Edit task" : "Create task"}</h2>
+          <h3 className="text-body font-semibold text-text-primary">
+            {editingTaskId ? "Edit task" : "Create task"}
+          </h3>
           {editingTaskId ? (
-            <button type="button" onClick={resetForm} className="text-sm text-zinc-400 hover:text-white">
-              Cancel
-            </button>
+            <Button variant="ghost" onClick={resetForm} className="min-h-0 px-2 py-1">
+              <X size={14} strokeWidth={2} /> Cancel
+            </Button>
           ) : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <input
+          <Field
+            label="Title"
             value={form.title}
             onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
             placeholder="Task title"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
           />
-          <input
+          <Field
+            label="Due date"
             type="date"
             value={form.due_at}
             onChange={(event) => setForm((current) => ({ ...current, due_at: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
           />
-          <select
+          <Select
+            label="Priority"
             value={form.priority}
-            onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as Priority }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
+            onChange={(event) =>
+              setForm((current) => ({ ...current, priority: event.target.value as Priority }))
+            }
           >
-            <option value="low">Low priority</option>
-            <option value="medium">Medium priority</option>
-            <option value="high">High priority</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
             <option value="urgent">Urgent</option>
-          </select>
-          <select
+          </Select>
+          <Select
+            label="Status"
             value={form.status}
-            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as TaskStatus }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
+            onChange={(event) =>
+              setForm((current) => ({ ...current, status: event.target.value as TaskStatus }))
+            }
           >
             <option value="todo">To do</option>
             <option value="in_progress">In progress</option>
@@ -352,38 +458,46 @@ export function TaskManager({
             <option value="blocked">Blocked</option>
             <option value="done">Done</option>
             <option value="cancelled">Cancelled</option>
-          </select>
+          </Select>
         </div>
 
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Add notes for this task"
-          rows={3}
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-        />
+        <div className="mt-4">
+          <TextArea
+            label="Notes"
+            rows={3}
+            value={form.description}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, description: event.target.value }))
+            }
+            placeholder="Add notes for this task"
+          />
+        </div>
 
-        {error ? <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div> : null}
-        {success ? <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">{success}</div> : null}
+        {error ? <div className="mt-4">{<ErrorBox message={error} />}</div> : null}
 
-        <button
-          type="button"
-          onClick={submitTask}
-          disabled={saving || !workspaceId || (!editingTaskId && Boolean(limitResult))}
-          className="mt-4 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (editingTaskId ? "Saving task..." : "Creating task...") : editingTaskId ? "Save task" : "Add task"}
-        </button>
-      </div>
+        <div className="mt-4">
+          <Button
+            variant="primary"
+            onClick={() => (editingTaskId ? void updateTask() : void createTask())}
+            disabled={saving || !workspaceId || (!editingTaskId && Boolean(limitResult))}
+          >
+            {saving ? "Saving…" : editingTaskId ? "Save task" : "Add task"}
+          </Button>
+        </div>
+      </Card>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-semibold">Tasks</h2>
+      {/* LIST */}
+      <div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-body font-semibold text-text-primary">Tasks</h2>
           <div className="flex flex-wrap gap-2">
-            <select
+            <Select
               value={filters.status}
-              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-              className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none focus:border-white/30"
+              onChange={(event) =>
+                setFilters((current) => ({ ...current, status: event.target.value }))
+              }
+              className="min-h-9 w-auto py-1"
+              aria-label="Filter by status"
             >
               <option value="all">All statuses</option>
               <option value="todo">To do</option>
@@ -392,76 +506,153 @@ export function TaskManager({
               <option value="blocked">Blocked</option>
               <option value="done">Done</option>
               <option value="cancelled">Cancelled</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filters.priority}
-              onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}
-              className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none focus:border-white/30"
+              onChange={(event) =>
+                setFilters((current) => ({ ...current, priority: event.target.value }))
+              }
+              className="min-h-9 w-auto py-1"
+              aria-label="Filter by priority"
             >
               <option value="all">All priorities</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
-            </select>
+            </Select>
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-sm text-zinc-500">Loading tasks...</div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-zinc-500">
-            No tasks yet. Create your first task above.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredTasks.map((task) => (
-              <div key={task.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-white">{task.title}</h3>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-zinc-400">
-                        {task.priority}
-                      </span>
-                    </div>
-                    {task.description ? <p className="mt-1 text-sm text-zinc-400">{task.description}</p> : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => populateEditForm(task)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleTaskStatus(task)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                    >
-                      {task.status === "done" ? "Reopen" : "Mark done"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTask(task.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+        {/* QUICK CREATE — Enter creates, Escape cancels */}
+        <div className="mb-3 flex min-h-11 items-center gap-3 rounded-lg border border-dashed border-border-default bg-bg-subtle px-4 transition-colors duration-[160ms] focus-within:border-border-focus">
+          <Plus size={16} strokeWidth={2} className="shrink-0 text-volt" />
+          <input
+            ref={quickAddRef}
+            value={quickAdd}
+            onChange={(event) => setQuickAdd(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void submitQuickAdd();
+              } else if (event.key === "Escape") {
+                setQuickAdd("");
+              }
+            }}
+            placeholder="Add task — Enter to create, Escape to cancel"
+            aria-label="Quick add task"
+            className="w-full bg-transparent py-3 text-body text-text-primary outline-none placeholder:text-text-quaternary"
+          />
+        </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                  <span>Status: {task.status}</span>
-                  {task.due_at ? <span>Due: {new Date(task.due_at).toLocaleDateString()}</span> : null}
+        {loading ? (
+          <SkeletonList rows={4} />
+        ) : error && tasks.length === 0 ? (
+          <ErrorBox message={error} />
+        ) : !workspaceId ? (
+          <EmptyState
+            icon={<CheckSquare size={16} strokeWidth={1.75} />}
+            title="No active workspace"
+            hint="Your workspace link is being verified — reload in a moment."
+          />
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            icon={<CheckSquare size={16} strokeWidth={1.75} />}
+            title="No tasks yet"
+            hint="Type your first task in the field above — Enter is enough."
+          />
+        ) : filteredTasks.length === 0 ? (
+          <EmptyState title="Nothing matches these filters" hint="Adjust status or priority above." />
+        ) : (
+          <div className="stagger-list space-y-2">
+            {filteredTasks.map((task) => {
+              const done = task.status === "done";
+              const overdue = isOverdue(task);
+              const due = formatDue(task.due_at);
+              const editingInline = inlineEditingId === task.id;
+
+              return (
+                <div
+                  key={task.id}
+                  className={`group flex min-h-11 items-center gap-3 rounded-lg border px-4 transition-all duration-[160ms] ease-out ${
+                    done
+                      ? "border-border-subtle bg-bg-subtle/60"
+                      : "border-border-subtle bg-bg-surface hover:border-border-strong hover:bg-bg-surface-2"
+                  }`}
+                >
+                  <TaskCheckbox
+                    checked={done}
+                    onChange={() => void toggleTaskStatus(task)}
+                    label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    {editingInline ? (
+                      <InlineEdit
+                        value={task.title}
+                        onSave={(next) => void saveInlineTitle(task, next)}
+                        ariaLabel="Edit task title"
+                        className="w-full text-body"
+                      />
+                    ) : (
+                      <div
+                        onDoubleClick={() => setInlineEditingId(task.id)}
+                        title="Double-click to rename"
+                        className={`truncate text-body transition-all duration-[160ms] ease-out ${
+                          done ? "text-text-quaternary line-through" : "text-text-primary"
+                        }`}
+                      >
+                        {task.title}
+                      </div>
+                    )}
+                    {task.description && !editingInline ? (
+                      <p className="truncate text-caption text-text-tertiary">{task.description}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge tone={PRIORITY_TONES[task.priority]}>{task.priority}</Badge>
+                    {task.status !== "todo" && task.status !== "done" ? (
+                      <Badge tone={task.status === "blocked" ? "warning" : "info"}>
+                        {task.status.replace("_", " ")}
+                      </Badge>
+                    ) : null}
+                    {due ? (
+                      <span
+                        className={`font-mono text-mono-small ${
+                          overdue ? "text-danger-fg" : "text-text-tertiary"
+                        }`}
+                      >
+                        {overdue ? "↑ " : ""}
+                        {due}
+                      </span>
+                    ) : null}
+
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity duration-[160ms] group-hover:opacity-100 focus-within:opacity-100">
+                      <button
+                        type="button"
+                        aria-label={`Edit ${task.title}`}
+                        onClick={() => populateEditForm(task)}
+                        className="rounded p-1.5 text-text-tertiary transition-colors duration-[120ms] hover:bg-bg-surface-3 hover:text-text-primary"
+                      >
+                        <SquarePen size={14} strokeWidth={1.75} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${task.title}`}
+                        onClick={() => void deleteTask(task.id)}
+                        className="rounded p-1.5 text-text-tertiary transition-colors duration-[120ms] hover:bg-danger-bg hover:text-danger-fg"
+                      >
+                        <Trash2 size={14} strokeWidth={1.75} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
-

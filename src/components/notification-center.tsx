@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Bell, CheckCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
+import { Badge, Button, EmptyState, ErrorBox, SkeletonList } from "@/components/ui";
+
+// ============================================================
+// NEXUS — NOTIFICATION CENTER (P2: alive)
+//  - Optimistic mark read / mark all read (instant dim + counter)
+//  - Rollback + toast when the write fails
+//  - Skeletons at real dimensions, staggered list
+// ============================================================
 
 type NotificationItem = {
   id: string;
@@ -23,7 +33,6 @@ const entityRoutes: Record<string, string> = {
   goal: "/goals",
   workspace: "/dashboard",
 };
-
 
 async function loadNotificationsForUser(
   supabase: ReturnType<typeof createClient>,
@@ -52,34 +61,11 @@ export function NotificationCenter({
   workspaceId: string | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const toast = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
-
-  const loadNotifications = async (activeWorkspaceId: string | null) => {
-    if (!activeWorkspaceId) {
-      return;
-    }
-
-    const { data, error: loadError } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("workspace_id", activeWorkspaceId)
-      .order("created_at", { ascending: false });
-
-    if (loadError) {
-      setError(loadError.message);
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
-
-    setNotifications((data as NotificationItem[]) ?? []);
-    setError("");
-    setLoading(false);
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -107,7 +93,20 @@ export function NotificationCenter({
     [notifications]
   );
 
+  // OPTIMISTIC mark-as-read — the row dims instantly.
   const markAsRead = async (notificationId: string) => {
+    const target = notifications.find((notification) => notification.id === notificationId);
+    if (!target || target.read_at) return;
+
+    const snapshot = notifications;
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, read_at: new Date().toISOString() }
+          : notification
+      )
+    );
+
     const { error: updateError } = await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
@@ -115,126 +114,141 @@ export function NotificationCenter({
       .eq("user_id", userId);
 
     if (updateError) {
-      setError(updateError.message);
-      return;
+      setNotifications(snapshot); // rollback
+      toast.error(`Not marked as read — ${updateError.message}`);
     }
-
-    await loadNotifications(workspaceId);
   };
 
+  // OPTIMISTIC mark-all-as-read.
   const markAllAsRead = async () => {
-    if (!workspaceId || unreadCount === 0) {
-      return;
-    }
+    if (!workspaceId || unreadCount === 0) return;
 
+    const snapshot = notifications;
+    const stamp = new Date().toISOString();
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.read_at ? notification : { ...notification, read_at: stamp }
+      )
+    );
     setMarkingAll(true);
+
     const { error: updateError } = await supabase
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: stamp })
       .eq("user_id", userId)
       .eq("workspace_id", workspaceId)
       .is("read_at", null);
 
+    setMarkingAll(false);
+
     if (updateError) {
-      setError(updateError.message);
-      setMarkingAll(false);
+      setNotifications(snapshot); // rollback
+      toast.error(`Not updated — ${updateError.message}`);
       return;
     }
 
-    setMarkingAll(false);
-    await loadNotifications(workspaceId);
+    toast.success("All notifications marked as read.");
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-5 md:flex-row md:items-center md:justify-between">
+      {/* HEADER */}
+      <div className="flex flex-col gap-3 rounded-xl border border-border-default bg-bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Notifications</h2>
-          <p className="mt-1 text-sm text-zinc-500">Your workspace updates and reminders.</p>
+          <h2 className="text-h3 font-semibold text-text-primary">Notifications</h2>
+          <p className="mt-1 text-small text-text-secondary">
+            {unreadCount > 0
+              ? `${unreadCount} unread — review them below.`
+              : "You are all caught up."}
+          </p>
         </div>
 
-        <button
-          type="button"
-          onClick={markAllAsRead}
+        <Button
+          variant="secondary"
+          onClick={() => void markAllAsRead()}
           disabled={!workspaceId || unreadCount === 0 || markingAll}
-          className="rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {markingAll ? "Updating..." : "Mark all as read"}
-        </button>
+          <CheckCheck size={14} strokeWidth={1.75} />
+          {markingAll ? "Updating…" : "Mark all as read"}
+        </Button>
       </div>
 
-      {error ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-          {error}
-        </div>
-      ) : null}
+      {error ? <ErrorBox message={error} /> : null}
 
       {loading ? (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          Loading notifications...
-        </div>
+        <SkeletonList rows={3} />
       ) : !workspaceId ? (
-        <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          No active workspace is linked to this account yet.
-        </div>
+        <EmptyState
+          icon={<Bell size={16} strokeWidth={1.75} />}
+          title="No active workspace"
+          hint="Your workspace link is being verified — reload in a moment."
+        />
       ) : notifications.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          No notifications yet.
-        </div>
+        <EmptyState
+          icon={<Bell size={16} strokeWidth={1.75} />}
+          title="No notifications yet"
+          hint="NEXUS will alert you here when something needs arbitration — overdue tasks, blocked projects, goals at risk."
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="stagger-list space-y-2">
           {notifications.map((notification) => {
-            const href = notification.entity_type ? entityRoutes[notification.entity_type.toLowerCase()] ?? "/dashboard" : "/dashboard";
+            const href = notification.entity_type
+              ? (entityRoutes[notification.entity_type.toLowerCase()] ?? "/dashboard")
+              : "/dashboard";
             const isUnread = !notification.read_at;
 
             return (
               <div
                 key={notification.id}
-                className={`rounded-3xl border p-4 ${isUnread ? "border-white/20 bg-white/[0.04]" : "border-white/10 bg-black/10"}`}
+                className={`group flex min-h-11 items-start gap-4 rounded-lg border px-4 py-3 transition-all duration-[160ms] ease-out ${
+                  isUnread
+                    ? "border-border-default bg-bg-surface-2"
+                    : "border-border-subtle bg-bg-surface"
+                }`}
               >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-zinc-400">
-                        {notification.type}
-                      </span>
-                      {isUnread ? (
-                        <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-zinc-200">
-                          Unread
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <h3 className="mt-3 text-base font-semibold text-white">{notification.title}</h3>
-                    {notification.message ? <p className="mt-1 text-sm text-zinc-400">{notification.message}</p> : null}
-
-                    <div className="mt-2 text-xs text-zinc-500">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={isUnread ? "info" : "neutral"}>{notification.type}</Badge>
+                    {isUnread ? <Badge tone="volt">Unread</Badge> : null}
                   </div>
 
-                  <div className="flex items-center gap-2 md:flex-col md:items-end">
-                    {notification.entity_id ? (
-                      <Link
-                        href={href}
-                        className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                      >
-                        Open
-                      </Link>
-                    ) : null}
+                  <h3
+                    className={`mt-2 text-body font-medium ${
+                      isUnread ? "text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    {notification.title}
+                  </h3>
+                  {notification.message ? (
+                    <p className="mt-1 text-small text-text-secondary">{notification.message}</p>
+                  ) : null}
 
-                    {!notification.read_at ? (
-                      <button
-                        type="button"
-                        onClick={() => markAsRead(notification.id)}
-                        className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                      >
-                        Mark as read
-                      </button>
-                    ) : (
-                      <span className="text-xs text-zinc-500">Read</span>
-                    )}
+                  <div className="mt-2 font-mono text-mono-small text-text-quaternary">
+                    {new Date(notification.created_at).toLocaleString()}
                   </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  {notification.entity_id ? (
+                    <Link
+                      href={href}
+                      className="rounded-md border border-border-default px-2.5 py-1.5 text-caption text-text-secondary transition-all duration-[120ms] hover:border-border-strong hover:text-text-primary active:scale-[0.98]"
+                    >
+                      Open
+                    </Link>
+                  ) : null}
+
+                  {isUnread ? (
+                    <button
+                      type="button"
+                      onClick={() => void markAsRead(notification.id)}
+                      className="rounded-md px-2.5 py-1.5 text-caption text-text-tertiary transition-colors duration-[120ms] hover:text-text-primary"
+                    >
+                      Mark as read
+                    </button>
+                  ) : (
+                    <span className="px-2.5 py-1.5 text-caption text-text-quaternary">Read</span>
+                  )}
                 </div>
               </div>
             );

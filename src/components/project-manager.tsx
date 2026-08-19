@@ -1,10 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FolderKanban, Plus, SquarePen, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateProject } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { useToast } from "@/components/toast";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorBox,
+  Field,
+  ProgressBar,
+  Select,
+  SkeletonList,
+  StatCard,
+  TextArea,
+} from "@/components/ui";
+
+// ============================================================
+// NEXUS — PROJECT MANAGER (P2: alive)
+//  - Quick create, optimistic progress with rollback + toast
+//  - Skeletons, staggered cards, animated progress (500ms)
+// ============================================================
 
 type Project = {
   id: string;
@@ -32,68 +53,60 @@ const blankProjectForm = (): ProjectForm => ({
   due_date: "",
 });
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 40) || "project";
 
-// Module-level loader: setState stays behind an await (React Compiler rule
-// react-hooks/set-state-in-effect — known pitfall #5).
+const formatDue = (value: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
+};
+
 async function loadProjectsForWorkspace(
   supabase: ReturnType<typeof createClient>,
   workspaceId: string
-): Promise<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }> {
+): Promise<{ data: Project[] | null; error: { message: string } | null }> {
   const { data, error } = await supabase
     .from("projects")
     .select("*")
     .eq("workspace_id", workspaceId)
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: true, nullsFirst: false });
 
-  return {
-    data: (data as Array<Record<string, unknown>>) ?? null,
-    error: error as { message: string } | null,
-  };
+  return { data: (data as Project[]) ?? null, error: error as { message: string } | null };
 }
 
 export function ProjectManager({
   userId,
   workspaceId,
+  initialNew = false,
 }: {
   userId: string;
   /** Resolved server-side by the (app) layout — never null in practice. */
   workspaceId: string | null;
+  initialNew?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const toast = useToast();
+  const nameFieldRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [form, setForm] = useState<ProjectForm>(blankProjectForm());
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
     canCreateProject,
     projects.length
   );
-
-  const fetchProjects = async (activeWorkspaceId: string | null) => {
-    if (!activeWorkspaceId) {
-      return;
-    }
-
-    const { data, error: loadError } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("workspace_id", activeWorkspaceId)
-      .order("due_date", { ascending: true });
-
-    if (loadError) {
-      setError(loadError.message);
-      setProjects([]);
-      setLoading(false);
-      return;
-    }
-
-    setProjects((data as Project[]) ?? []);
-    setLoading(false);
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -105,16 +118,20 @@ export function ProjectManager({
         setLoading(false);
         return;
       }
-      setProjects((data as never[]) ?? []);
+      setProjects(data ?? []);
       setLoading(false);
     };
     void load();
   }, [supabase, workspaceId]);
 
+  // /projects?new=1 (Create dropdown) → open the editor.
+  useEffect(() => {
+    if (initialNew) nameInputRef.current?.focus();
+  }, [initialNew]);
+
   const resetForm = () => {
     setForm(blankProjectForm());
     setEditingProjectId(null);
-    setSuccess("");
   };
 
   const createProject = async () => {
@@ -128,14 +145,11 @@ export function ProjectManager({
 
     setSaving(true);
     setError("");
-    setSuccess("");
-
-    const slug = form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
 
     const { error: createError } = await supabase.from("projects").insert({
       workspace_id: workspaceId,
       name: form.name.trim(),
-      slug,
+      slug: slugify(form.name.trim()),
       description: form.description.trim() || null,
       status: form.status,
       progress: Math.min(100, Math.max(0, Number(form.progress))),
@@ -151,9 +165,10 @@ export function ProjectManager({
       return;
     }
 
-    setSuccess("Project created successfully.");
+    toast.success("Project created.");
     resetForm();
-    await fetchProjects(workspaceId);
+    const { data } = await loadProjectsForWorkspace(supabase, workspaceId);
+    setProjects(data ?? []);
   };
 
   const updateProject = async () => {
@@ -164,15 +179,12 @@ export function ProjectManager({
 
     setSaving(true);
     setError("");
-    setSuccess("");
-
-    const slug = form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
 
     const { error: updateError } = await supabase
       .from("projects")
       .update({
         name: form.name.trim(),
-        slug,
+        slug: slugify(form.name.trim()),
         description: form.description.trim() || null,
         status: form.status,
         progress: Math.min(100, Math.max(0, Number(form.progress))),
@@ -185,22 +197,15 @@ export function ProjectManager({
     setSaving(false);
 
     if (updateError) {
+      if (await handleMutationError(updateError.message)) return;
       setError(updateError.message);
       return;
     }
 
-    setSuccess("Project updated successfully.");
+    toast.success("Project updated.");
     resetForm();
-    await fetchProjects(workspaceId);
-  };
-
-  const submitProject = async () => {
-    if (editingProjectId) {
-      await updateProject();
-      return;
-    }
-
-    await createProject();
+    const { data } = await loadProjectsForWorkspace(supabase, workspaceId);
+    setProjects(data ?? []);
   };
 
   const populateEditForm = (project: Project) => {
@@ -213,42 +218,57 @@ export function ProjectManager({
       due_date: project.due_date ? new Date(project.due_date).toISOString().slice(0, 10) : "",
     });
     setError("");
-    setSuccess("");
+    nameFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const handleProgress = async (projectId: string, progress: number) => {
+  // OPTIMISTIC progress change — the bar moves instantly.
+  const handleProgress = async (project: Project, rawProgress: number) => {
+    const progress = Math.min(100, Math.max(0, rawProgress));
+    if (progress === project.progress) return;
+
+    const snapshot = projects;
+    setProjects((current) =>
+      current.map((item) => (item.id === project.id ? { ...item, progress } : item))
+    );
+
     const { error: updateError } = await supabase
       .from("projects")
-      .update({ progress: Math.min(100, Math.max(0, progress)), updated_at: new Date().toISOString() })
-      .eq("id", projectId)
+      .update({ progress, updated_at: new Date().toISOString() })
+      .eq("id", project.id)
       .eq("workspace_id", workspaceId ?? "");
 
     if (updateError) {
-      setError(updateError.message);
-      return;
+      setProjects(snapshot); // rollback — the bar snaps back
+      toast.error(`Progress not saved — ${updateError.message}`);
     }
-
-    setSuccess("Project progress updated.");
-    await fetchProjects(workspaceId);
   };
 
   const deleteProject = async (projectId: string) => {
-    const confirmed = window.confirm("Delete this project?");
-    if (!confirmed) return;
+    if (!window.confirm("Delete this project?")) return;
 
-    const { error: deleteError } = await supabase.from("projects").delete().eq("id", projectId).eq("workspace_id", workspaceId ?? "");
+    const snapshot = projects;
+    setProjects((current) => current.filter((project) => project.id !== projectId));
+
+    const { error: deleteError } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", projectId)
+      .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
-      setError(deleteError.message);
+      setProjects(snapshot);
+      toast.error(`Project not deleted — ${deleteError.message}`);
       return;
     }
 
-    setSuccess("Project deleted.");
-    if (editingProjectId === projectId) {
-      resetForm();
-    }
-    await fetchProjects(workspaceId);
+    toast.success("Project deleted.");
+    if (editingProjectId === projectId) resetForm();
   };
+
+  const averageProgress =
+    projects.length > 0
+      ? Math.round(projects.reduce((sum, project) => sum + Number(project.progress ?? 0), 0) / projects.length)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -256,138 +276,201 @@ export function ProjectManager({
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+      {/* STATS */}
+      <div className="stagger-list grid gap-4 sm:grid-cols-3">
+        <StatCard label="Projects" value={projects.length} hint="In this workspace" />
+        <StatCard label="Average progress" value={`${averageProgress}%`} hint="Across all projects" />
+        <StatCard
+          label="Planning"
+          value={projects.filter((project) => project.status === "planning").length}
+          hint="Not started yet"
+        />
+      </div>
+
+      {/* EDITOR */}
+      <Card>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="mb-4 text-xl font-semibold">{editingProjectId ? "Edit project" : "Create project"}</h2>
+          <h3 className="text-body font-semibold text-text-primary">
+            {editingProjectId ? "Edit project" : "Create project"}
+          </h3>
           {editingProjectId ? (
-            <button type="button" onClick={resetForm} className="text-sm text-zinc-400 hover:text-white">
-              Cancel
-            </button>
+            <Button variant="ghost" onClick={resetForm} className="min-h-0 px-2 py-1">
+              <X size={14} strokeWidth={2} /> Cancel
+            </Button>
           ) : null}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <input
-            value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            placeholder="Project name"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-          />
-          <input
+          <div ref={nameFieldRef}>
+            <Field
+              ref={nameInputRef}
+              label="Name"
+              value={form.name}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Project name"
+            />
+          </div>
+          <Field
+            label="Due date"
             type="date"
             value={form.due_date}
-            onChange={(event) => setForm((current) => ({ ...current, due_date: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
+            onChange={(event) =>
+              setForm((current) => ({ ...current, due_date: event.target.value }))
+            }
           />
-          <select
+          <Select
+            label="Status"
             value={form.status}
-            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
+            onChange={(event) =>
+              setForm((current) => ({ ...current, status: event.target.value }))
+            }
           >
             <option value="planning">Planning</option>
             <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="completed">Completed</option>
-            <option value="archived">Archived</option>
-          </select>
-          <input
-            type="number"
+            <option value="on_hold">On hold</option>
+            <option value="done">Done</option>
+            <option value="cancelled">Cancelled</option>
+          </Select>
+          <Field
+            label={`Progress — ${Math.round(form.progress)}%`}
+            type="range"
             min={0}
             max={100}
             value={form.progress}
-            onChange={(event) => setForm((current) => ({ ...current, progress: Number(event.target.value) }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
+            onChange={(event) =>
+              setForm((current) => ({ ...current, progress: Number(event.target.value) }))
+            }
+            className="py-3.5"
           />
         </div>
 
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Project summary"
-          rows={3}
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-        />
+        <div className="mt-4">
+          <TextArea
+            label="Description"
+            rows={3}
+            value={form.description}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, description: event.target.value }))
+            }
+            placeholder="What is this project about?"
+          />
+        </div>
 
-        {error ? <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div> : null}
-        {success ? <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">{success}</div> : null}
+        {error ? <div className="mt-4">{<ErrorBox message={error} />}</div> : null}
 
-        <button
-          type="button"
-          onClick={submitProject}
-          disabled={saving || !workspaceId || (!editingProjectId && Boolean(limitResult))}
-          className="mt-4 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (editingProjectId ? "Saving project..." : "Creating project...") : editingProjectId ? "Save project" : "Add project"}
-        </button>
-      </div>
+        <div className="mt-4">
+          <Button
+            variant="primary"
+            onClick={() => (editingProjectId ? void updateProject() : void createProject())}
+            disabled={saving || !workspaceId || (!editingProjectId && Boolean(limitResult))}
+          >
+            {saving ? "Saving…" : editingProjectId ? "Save project" : "Create project"}
+          </Button>
+        </div>
+      </Card>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <h2 className="mb-4 text-xl font-semibold">Projects</h2>
+      {/* LIST */}
+      <div>
+        <h2 className="mb-4 text-body font-semibold text-text-primary">Projects</h2>
 
         {loading ? (
-          <div className="text-sm text-zinc-500">Loading projects...</div>
+          <SkeletonList rows={3} />
+        ) : error && projects.length === 0 ? (
+          <ErrorBox message={error} />
+        ) : !workspaceId ? (
+          <EmptyState
+            icon={<FolderKanban size={16} strokeWidth={1.75} />}
+            title="No active workspace"
+            hint="Your workspace link is being verified — reload in a moment."
+          />
         ) : projects.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-zinc-500">
-            No projects yet.
-          </div>
+          <EmptyState
+            icon={<Plus size={16} strokeWidth={1.75} />}
+            title="No projects yet"
+            hint="Create your first project above — NEXUS never invents one for you."
+          />
         ) : (
-          <div className="space-y-4">
-            {projects.map((project) => (
-              <div key={project.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-white">{project.name}</h3>
-                    {project.description ? <p className="mt-1 text-sm text-zinc-400">{project.description}</p> : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => populateEditForm(project)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteProject(project.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+          <div className="stagger-list grid gap-4 md:grid-cols-2">
+            {projects.map((project) => {
+              const progress = Math.min(100, Math.max(0, Number(project.progress ?? 0)));
+              const due = formatDue(project.due_date);
+              return (
+                <div
+                  key={project.id}
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border-default bg-bg-surface p-5 transition-all duration-[160ms] ease-out hover:-translate-y-px hover:border-border-strong hover:shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-body font-medium text-text-primary">
+                        {project.name}
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Badge>{project.status.replace("_", " ")}</Badge>
+                        {due ? (
+                          <span className="font-mono text-mono-small text-text-tertiary">{due}</span>
+                        ) : null}
+                      </div>
+                    </div>
 
-                <div className="mt-4">
-                  <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
-                    <span>Progress</span>
-                    <span>{Math.round(project.progress)}%</span>
+                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-[160ms] group-hover:opacity-100 focus-within:opacity-100">
+                      <button
+                        type="button"
+                        aria-label={`Edit ${project.name}`}
+                        onClick={() => populateEditForm(project)}
+                        className="rounded p-1.5 text-text-tertiary transition-colors duration-[120ms] hover:bg-bg-surface-3 hover:text-text-primary"
+                      >
+                        <SquarePen size={14} strokeWidth={1.75} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${project.name}`}
+                        onClick={() => void deleteProject(project.id)}
+                        className="rounded p-1.5 text-text-tertiary transition-colors duration-[120ms] hover:bg-danger-bg hover:text-danger-fg"
+                      >
+                        <Trash2 size={14} strokeWidth={1.75} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-white"
-                      style={{ width: `${Math.min(100, Math.max(0, project.progress))}%` }}
-                    />
-                  </div>
-                </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={project.progress}
-                    onChange={(event) => handleProgress(project.id, Number(event.target.value))}
-                    className="w-full max-w-xs accent-white"
-                  />
-                  <span className="text-xs text-zinc-500">{project.status}</span>
-                  {project.due_date ? <span className="text-xs text-zinc-500">Due {new Date(project.due_date).toLocaleDateString()}</span> : null}
+                  {project.description ? (
+                    <p className="mt-3 line-clamp-2 text-small text-text-secondary">
+                      {project.description}
+                    </p>
+                  ) : null}
+
+                  {/* Optimistic progress: ±10 steps, instant bar */}
+                  <div className="mt-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          aria-label="Decrease progress"
+                          onClick={() => void handleProgress(project, progress - 10)}
+                          className="flex h-6 w-6 items-center justify-center rounded border border-border-default font-mono text-text-secondary transition-colors duration-[120ms] hover:border-border-strong hover:text-text-primary active:scale-90"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Increase progress"
+                          onClick={() => void handleProgress(project, progress + 10)}
+                          className="flex h-6 w-6 items-center justify-center rounded border border-border-default font-mono text-text-secondary transition-colors duration-[120ms] hover:border-border-strong hover:text-text-primary active:scale-90"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="font-mono text-small text-text-secondary">
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+                    <ProgressBar value={progress} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
-

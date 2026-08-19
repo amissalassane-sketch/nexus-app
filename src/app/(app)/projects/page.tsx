@@ -3,12 +3,18 @@ import { NexusShell } from "@/components/nexus-shell";
 import { ProjectManager } from "@/components/project-manager";
 import { getProfileSummary } from "@/lib/profile";
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
   const summary = await getProfileSummary();
 
   if (!summary) {
     redirect("/login");
   }
+
+  const params = await searchParams;
 
   return (
     <NexusShell
@@ -17,7 +23,11 @@ export default async function ProjectsPage() {
       userName={summary.displayName}
       username={summary.username ?? undefined}
     >
-      <ProjectManager userId={summary.userId} workspaceId={summary.workspaceId} />
+      <ProjectManager
+        userId={summary.userId}
+        workspaceId={summary.workspaceId}
+        initialNew={params?.new === "1"}
+      />
     </NexusShell>
   );
 }
