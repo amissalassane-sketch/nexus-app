@@ -126,6 +126,66 @@ assert("anonymous /signup renders", (await visit("/signup")).status === 200);
 assert("anonymous /forgot-password renders", (await visit("/forgot-password")).status === 200);
 assert("anonymous /check-email renders", (await visit("/check-email")).status === 200);
 
+function redirectTarget(response) {
+  return new URL(response.headers.get("location") ?? "", APP_URL);
+}
+
+const callbackBare = await visit("/auth/callback");
+assert(
+  "confirmation link without a code goes to the landing page, not /onboarding",
+  callbackBare.status === 307 &&
+    redirectTarget(callbackBare).pathname === "/" &&
+    !redirectTarget(callbackBare).href.includes("onboarding") &&
+    redirectTarget(callbackBare).pathname !== "/login",
+  `status=${callbackBare.status} location=${callbackBare.headers.get("location")}`
+);
+
+const callbackOnboarding = await visit("/auth/callback?code=ok-code&next=/onboarding");
+assert(
+  "legacy next=/onboarding confirmation links still land on the homepage",
+  callbackOnboarding.status === 307 &&
+    (callbackOnboarding.headers.get("location") ?? "").includes("/?confirmed=1") &&
+    !(callbackOnboarding.headers.get("location") ?? "").includes("onboarding"),
+  `status=${callbackOnboarding.status} location=${callbackOnboarding.headers.get("location")}`
+);
+
+const callbackInvalid = await visit("/auth/callback?code=invalid");
+assert(
+  "a confirmation click in another browser (failed PKCE) still opens the landing page",
+  callbackInvalid.status === 307 &&
+    !(callbackInvalid.headers.get("location") ?? "").includes("onboarding") &&
+    !(callbackInvalid.headers.get("location") ?? "").includes("/login"),
+  `status=${callbackInvalid.status} location=${callbackInvalid.headers.get("location")}`
+);
+
+const callbackRecover = await visit("/auth/callback?code=recover-code&next=/reset-password");
+assert(
+  "a recovery link that cannot be exchanged does not open onboarding",
+  callbackRecover.status === 307 &&
+    !(callbackRecover.headers.get("location") ?? "").includes("onboarding") &&
+    (callbackRecover.headers.get("location") ?? "").includes("/forgot-password"),
+  `status=${callbackRecover.status} location=${callbackRecover.headers.get("location")}`
+);
+
+const emailOnOnboarding = await visit("/onboarding?code=ok-code");
+assert(
+  "a confirmation code that landed on /onboarding is forwarded to /auth/callback",
+  emailOnOnboarding.status === 307 &&
+    (emailOnOnboarding.headers.get("location") ?? "").includes("/auth/callback") &&
+    (emailOnOnboarding.headers.get("location") ?? "").includes("code=ok-code"),
+  `status=${emailOnOnboarding.status} location=${emailOnOnboarding.headers.get("location")}`
+);
+
+const confirmedLanding = await visit("/?confirmed=1");
+const confirmedHtml = await confirmedLanding.text();
+assert(
+  "landing page after confirmation still offers sign in and sign up",
+  confirmedLanding.status === 200 &&
+    confirmedHtml.includes("Sign in") &&
+    (confirmedHtml.includes("Create your NEXUS") || confirmedHtml.includes("Get started")),
+  `status=${confirmedLanding.status}`
+);
+
 const health = await visit("/api/health");
 const healthBody = await health.json().catch(() => null);
 assert(
@@ -160,6 +220,11 @@ assert(
   "signup sends the new user to /onboarding",
   signupBody?.redirectTo === "/onboarding",
   JSON.stringify(signupBody)
+);
+assert(
+  "confirmation email never forces /onboarding",
+  (stub.redirectTos ?? []).every((value) => !String(value).includes("onboarding")),
+  JSON.stringify(stub.redirectTos)
 );
 
 const confirmSignup = await visit("/api/auth/signup", {

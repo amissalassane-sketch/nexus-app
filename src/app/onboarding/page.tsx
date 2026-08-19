@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isPlanLimitError } from "@/lib/plan-errors";
+import { isMissingColumnError } from "@/lib/schema-errors";
 import { NexusLogo } from "@/components/nexus-logo";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
@@ -130,9 +131,13 @@ export default function OnboardingPage() {
         return;
       }
 
+      // Never select onboarding_intent here: that column is added by
+      // migrations 013/014 and is missing on some hosted databases.
+      // Selecting it used to freeze the page on
+      // "column profiles.onboarding_intent does not exist".
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("display_name, username, onboarding_completed, onboarding_intent")
+        .select("display_name, username, onboarding_completed")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -149,12 +154,15 @@ export default function OnboardingPage() {
 
       if (profile?.display_name) setDisplayName(profile.display_name);
       if (profile?.username) setUsername(profile.username);
-      if (profile?.onboarding_intent) {
-        const savedIntent = profile.onboarding_intent as IntentId;
-        if (savedIntent in STEP3_BY_INTENT) {
-          setIntent(savedIntent);
-          setFirstKind(STEP3_BY_INTENT[savedIntent].defaultKind);
-        }
+
+      const savedIntent =
+        typeof user.user_metadata?.onboarding_intent === "string"
+          ? user.user_metadata.onboarding_intent
+          : "";
+      if (savedIntent in STEP3_BY_INTENT) {
+        const known = savedIntent as IntentId;
+        setIntent(known);
+        setFirstKind(STEP3_BY_INTENT[known].defaultKind);
       }
 
       if (!profile?.display_name) {
@@ -219,206 +227,252 @@ export default function OnboardingPage() {
     setSaving(true);
     setError("");
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      router.replace("/login");
-      return;
-    }
-
-    const cleanDisplayName = displayName.trim();
-    const cleanUsername = username.trim().toLowerCase();
-
-    // 1. Persist profile WITHOUT onboarding_completed — it is only set
-    //    after the workspace is verified below.
-    const { error: profileError } = await supabase.from("profiles").upsert({
-      id: user.id,
-      display_name: cleanDisplayName,
-      username: cleanUsername,
-      onboarding_intent: intent,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (profileError) {
-      setError(profileError.message);
-      setSaving(false);
-      return;
-    }
-
-    // 2. Ensure the user has an active workspace membership.
-    const { data: memberships, error: membershipError } = await supabase
-      .from("workspace_members")
-      .select("workspace_id, role, status")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false });
-
-    if (membershipError) {
-      setError(`Could not verify your workspace: ${membershipError.message}`);
-      setSaving(false);
-      return;
-    }
-
-    let membership: { workspace_id: string; role: string; status: string } | null =
-      memberships?.[0] ?? null;
-
-    // No membership yet — create a personal workspace and its membership.
-    if (!membership) {
-      const { data: workspace, error: workspaceError } = await supabase
-        .from("workspaces")
-        .insert({
-          owner_id: user.id,
-          name: `${cleanDisplayName}'s Workspace`,
-          slug: createSlug(cleanUsername),
-        })
-        .select("id")
-        .single();
-
-      if (workspaceError) {
-        setError(
-          isPlanLimitError(workspaceError.message)
-            ? "Your plan does not allow another workspace. Visit /upgrade to unlock more."
-            : `Could not create your workspace: ${workspaceError.message}`
-        );
-        setSaving(false);
+      if (userError || !user) {
+        router.replace("/login");
         return;
       }
 
-      if (!workspace?.id) {
-        setError(
-          "We couldn't finish setting up your workspace — it was not saved. Your answers are kept, please try again."
-        );
-        setSaving(false);
+      const cleanDisplayName = displayName.trim();
+      const cleanUsername = username.trim().toLowerCase();
+
+      const persistProfile = async (completed: boolean) => {
+        const base = {
+          id: user.id,
+          display_name: cleanDisplayName,
+          username: cleanUsername,
+          updated_at: new Date().toISOString(),
+          ...(completed ? { onboarding_completed: true } : {}),
+        };
+
+        const attempt = (payload: Record<string, unknown>) =>
+          supabase.from("profiles").upsert(payload).select("onboarding_completed").maybeSingle();
+
+        let result = await attempt(intent ? { ...base, onboarding_intent: intent } : base);
+        if (result.error && isMissingColumnError(result.error.message, "onboarding_intent")) {
+          result = await attempt(base);
+        }
+        return result;
+      };
+
+      if (intent) {
+        await supabase.auth.updateUser({ data: { onboarding_intent: intent } }).catch(() => null);
+      }
+
+      // 1. Persist profile WITHOUT onboarding_completed — it is only set
+      //    after the workspace is verified below.
+      const { error: profileError } = await persistProfile(false);
+
+      if (profileError) {
+        setError(profileError.message);
         return;
       }
 
-      // Re-read the membership so we only proceed on verified state.
-      const { data: refreshed } = await supabase
+      // 2. Ensure the user has an active workspace membership.
+      const { data: memberships, error: membershipError } = await supabase
         .from("workspace_members")
         .select("workspace_id, role, status")
         .eq("user_id", user.id)
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      membership = refreshed?.[0] ?? null;
-    }
+      if (membershipError) {
+        setError(`Could not verify your workspace: ${membershipError.message}`);
+        return;
+      }
 
-    // 3. Verify membership is real and usable before declaring success.
-    const validRoles = new Set(["owner", "admin", "member"]);
-    if (!membership?.workspace_id) {
-      setError(
-        "Your workspace could not be established. Please try again or contact support."
-      );
-      setSaving(false);
-      return;
-    }
-    if (!validRoles.has(String(membership.role))) {
-      setError("Your workspace role is invalid. Please try again or contact support.");
-      setSaving(false);
-      return;
-    }
+      let membership: { workspace_id: string; role: string; status: string } | null =
+        memberships?.[0] ?? null;
 
-    const workspaceId = membership.workspace_id as string;
+      const rereadMembership = async () => {
+        const { data: refreshed } = await supabase
+          .from("workspace_members")
+          .select("workspace_id, role, status")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
+        return refreshed?.[0] ?? null;
+      };
 
-    // 4. Create the first value (project or task) when provided, and read
-    //    the row back: an insert without a returned id is NOT a success.
-    if (firstTitle.trim()) {
-      if (firstKind === "project") {
-        const { data: project, error: projectError } = await supabase
-          .from("projects")
-          .insert({
-            workspace_id: workspaceId,
-            owner_id: user.id,
-            name: firstTitle.trim(),
-          })
+      // Signup already creates a personal workspace. Reuse it instead of
+      // inserting a second one (FREE plan limit = 1) and getting stuck.
+      if (!membership) {
+        const { data: owned } = await supabase
+          .from("workspaces")
           .select("id")
-          .single();
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (projectError) {
-          setError(
-            isPlanLimitError(projectError.message)
-              ? "Your plan does not allow another project. Visit /upgrade to unlock more."
-              : `We couldn't finish setting up your workspace — your project was not created: ${projectError.message}`
-          );
-          setSaving(false);
-          return;
-        }
-
-        if (!project?.id) {
-          setError(
-            "We couldn't finish setting up your workspace — your project was not saved. Your answers are kept, please try again."
-          );
-          setSaving(false);
-          return;
-        }
-      } else {
-        const { data: task, error: taskError } = await supabase
-          .from("tasks")
-          .insert({
-            workspace_id: workspaceId,
-            title: firstTitle.trim(),
-            assignee_id: user.id,
-            created_by: user.id,
-          })
-          .select("id")
-          .single();
-
-        if (taskError) {
-          setError(
-            isPlanLimitError(taskError.message)
-              ? "Your plan does not allow another task. Visit /upgrade to unlock more."
-              : `We couldn't finish setting up your workspace — your task was not created: ${taskError.message}`
-          );
-          setSaving(false);
-          return;
-        }
-
-        if (!task?.id) {
-          setError(
-            "We couldn't finish setting up your workspace — your task was not saved. Your answers are kept, please try again."
-          );
-          setSaving(false);
-          return;
+        if (owned?.id) {
+          await supabase.from("workspace_members").insert({
+            workspace_id: owned.id,
+            user_id: user.id,
+            role: "owner",
+            status: "active",
+          });
+          membership = (await rereadMembership()) ?? {
+            workspace_id: owned.id,
+            role: "owner",
+            status: "active",
+          };
         }
       }
-    }
 
-    // 5. Only now mark onboarding complete — and read the flag back from
-    //    the database. We redirect on confirmed state, never on hope.
-    const { data: completed, error: completeError } = await supabase
-      .from("profiles")
-      .upsert({
-        id: user.id,
-        display_name: cleanDisplayName,
-        username: cleanUsername,
-        onboarding_intent: intent,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
-      })
-      .select("onboarding_completed")
-      .single();
+      // No membership yet — create a personal workspace and its membership.
+      if (!membership) {
+        const { data: workspace, error: workspaceError } = await supabase
+          .from("workspaces")
+          .insert({
+            owner_id: user.id,
+            name: `${cleanDisplayName}'s Workspace`,
+            slug: createSlug(cleanUsername),
+          })
+          .select("id")
+          .single();
 
-    if (completeError) {
+        if (workspaceError) {
+          setError(
+            isPlanLimitError(workspaceError.message)
+              ? "A workspace already exists for this account but could not be opened. Sign out, sign back in, and try again."
+              : `Could not create your workspace: ${workspaceError.message}`
+          );
+          return;
+        }
+
+        if (!workspace?.id) {
+          setError(
+            "We couldn't finish setting up your workspace — it was not saved. Your answers are kept, please try again."
+          );
+          return;
+        }
+
+        membership = (await rereadMembership()) ?? {
+          workspace_id: workspace.id,
+          role: "owner",
+          status: "active",
+        };
+      }
+
+      // 3. Verify membership is real and usable before declaring success.
+      const validRoles = new Set(["owner", "admin", "member"]);
+      if (!membership?.workspace_id) {
+        setError(
+          "Your workspace could not be established. Please try again or contact support."
+        );
+        return;
+      }
+      if (!validRoles.has(String(membership.role))) {
+        setError("Your workspace role is invalid. Please try again or contact support.");
+        return;
+      }
+
+      const workspaceId = membership.workspace_id as string;
+
+      // 4. Create the first value (project or task) when provided, and read
+      //    the row back: an insert without a returned id is NOT a success.
+      if (firstTitle.trim()) {
+        if (firstKind === "project") {
+          const { data: project, error: projectError } = await supabase
+            .from("projects")
+            .insert({
+              workspace_id: workspaceId,
+              owner_id: user.id,
+              name: firstTitle.trim(),
+            })
+            .select("id")
+            .single();
+
+          if (projectError) {
+            setError(
+              isPlanLimitError(projectError.message)
+                ? "Your plan does not allow another project. Visit /upgrade to unlock more."
+                : `We couldn't finish setting up your workspace — your project was not created: ${projectError.message}`
+            );
+            return;
+          }
+
+          if (!project?.id) {
+            setError(
+              "We couldn't finish setting up your workspace — your project was not saved. Your answers are kept, please try again."
+            );
+            return;
+          }
+        } else {
+          const { data: task, error: taskError } = await supabase
+            .from("tasks")
+            .insert({
+              workspace_id: workspaceId,
+              title: firstTitle.trim(),
+              assignee_id: user.id,
+              created_by: user.id,
+            })
+            .select("id")
+            .single();
+
+          if (taskError) {
+            setError(
+              isPlanLimitError(taskError.message)
+                ? "Your plan does not allow another task. Visit /upgrade to unlock more."
+                : `We couldn't finish setting up your workspace — your task was not created: ${taskError.message}`
+            );
+            return;
+          }
+
+          if (!task?.id) {
+            setError(
+              "We couldn't finish setting up your workspace — your task was not saved. Your answers are kept, please try again."
+            );
+            return;
+          }
+        }
+      }
+
+      // 5. Only now mark onboarding complete — and read the flag back from
+      //    the database. We redirect on confirmed state, never on hope.
+      const { data: completedRow, error: completeError } = await persistProfile(true);
+
+      if (completeError) {
+        setError(
+          `We couldn't finish setting up your workspace — ${completeError.message}`
+        );
+        return;
+      }
+
+      let completed = completedRow;
+      if (completed?.onboarding_completed !== true) {
+        const verified = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", user.id)
+          .maybeSingle();
+        completed = verified.data;
+      }
+
+      if (completed?.onboarding_completed !== true) {
+        setError(
+          "We couldn't finish setting up your workspace — your setup was not confirmed. Your answers are kept, please try again."
+        );
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (cause) {
       setError(
-        `We couldn't finish setting up your workspace — ${completeError.message}`
+        cause instanceof Error
+          ? cause.message
+          : "We couldn't finish setting up your workspace. Your answers are kept, please try again."
       );
+    } finally {
       setSaving(false);
-      return;
     }
-
-    if (completed?.onboarding_completed !== true) {
-      setError(
-        "We couldn't finish setting up your workspace — your setup was not confirmed. Your answers are kept, please try again."
-      );
-      setSaving(false);
-      return;
-    }
-
-    router.replace("/dashboard");
-    router.refresh();
   };
 
   if (loading) {

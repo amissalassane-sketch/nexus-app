@@ -21,8 +21,9 @@ export default async function CheckEmailPage({
               {email ? (
                 <>
                   We sent a confirmation link to{" "}
-                  <span className="text-text-primary">{email}</span>. Open it to
-                  activate your account, then sign in.
+                  <span className="text-text-primary">{email}</span>. Open it
+                  (any browser) to activate your account — you will land on the
+                  NEXUS homepage, then sign in.
                 </>
               ) : (
                 <>

@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { ButtonLink } from "@/components/ui/button";
+import { Alert } from "@/components/ui/feedback";
 
 const FEATURES = [
   {
@@ -24,8 +25,18 @@ const FEATURES = [
   },
 ] as const;
 
-export default async function Home() {
-  if (isSupabaseConfigured()) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirmed?: string }>;
+}) {
+  const params = await searchParams;
+  const justConfirmed = params.confirmed === "1";
+
+  // After an email confirmation link we always show this page so the
+  // visitor can choose Sign in or Create account — even if a leftover
+  // session would otherwise bounce them into /onboarding.
+  if (isSupabaseConfigured() && !justConfirmed) {
     const user = await getAuthenticatedUser();
     if (user) {
       redirect("/dashboard");
@@ -47,6 +58,12 @@ export default async function Home() {
       </header>
 
       <section className="mx-auto flex w-full max-w-[720px] flex-col items-center px-5 pb-20 pt-20 text-center sm:pt-28">
+        {justConfirmed ? (
+          <Alert tone="success" className="mb-8 w-full max-w-[460px] text-left">
+            Your email is confirmed. Sign in to enter your workspace, or create
+            an account.
+          </Alert>
+        ) : null}
         <p className="font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
           Personal operating system
         </p>
