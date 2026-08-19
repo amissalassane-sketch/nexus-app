@@ -261,6 +261,24 @@ export default async function DashboardPage() {
                   <div className="text-body font-medium text-text-primary">
                     {nextAction.insight.title}
                   </div>
+                  {/* P7 — the chain that makes NEXUS more than three lists */}
+                  {(nextAction.goal || nextAction.project) && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-text-quaternary">
+                      {nextAction.goal ? (
+                        <>
+                          <span>{nextAction.goal.title}</span>
+                          <span className="text-border-strong">›</span>
+                        </>
+                      ) : null}
+                      {nextAction.project ? (
+                        <>
+                          <span>{nextAction.project.name}</span>
+                          <span className="text-border-strong">›</span>
+                        </>
+                      ) : null}
+                      <span className="text-volt">Task</span>
+                    </div>
+                  )}
                   {/* The reason is ALWAYS displayed */}
                   <p className="mt-0.5 text-small text-text-secondary">
                     {nextAction.insight.reason}

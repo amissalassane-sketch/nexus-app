@@ -64,6 +64,8 @@ export type IntelProject = {
   status: string;
   progress: number;
   due_date: string | null;
+  /** P7 — projects.goal_id (optional; probed by the application). */
+  goal_id?: string | null;
 };
 
 export type IntelGoal = {
@@ -85,7 +87,20 @@ export type NextAction = {
   insight: Insight;
   task: IntelTask | null;
   project: IntelProject | null;
+  /** Goal the project reports to, when the chain is linked (P7). */
+  goal: IntelGoal | null;
 };
+
+/** Goal › Project › Task chain for the recommended action (P7). */
+export function actionChain(next: NextAction | null): Array<{ type: "goal" | "project" | "task"; label: string }> {
+  if (!next) return [];
+  const chain: Array<{ type: "goal" | "project" | "task"; label: string }> = [];
+  if (next.goal) chain.push({ type: "goal", label: next.goal.title });
+  if (next.project) chain.push({ type: "project", label: next.project.name });
+  if (next.task) chain.push({ type: "task", label: next.task.title });
+  else chain.push({ type: "task", label: "New task" });
+  return chain;
+}
 
 export type IntelResult = {
   insights: Insight[];
@@ -275,8 +290,27 @@ function emptyAndStaleProjectSignals(tasks: IntelTask[], projects: IntelProject[
   return insights;
 }
 
-function goalAtRiskSignals(goals: IntelGoal[], now: Date): Insight[] {
+function goalAtRiskSignals(goals: IntelGoal[], projects: IntelProject[], now: Date): Insight[] {
   const insights: Insight[] = [];
+
+  // P7 — a goal with no project attached is structurally at risk:
+  // nothing in the workspace is declared as moving toward it.
+  for (const goal of goals) {
+    if (goal.status !== "active") continue;
+    const linked = projects.filter((project) => project.goal_id === goal.id);
+    if (linked.length === 0) {
+      insights.push({
+        id: `goal_no_project:${goal.id}`,
+        signal: "goal_at_risk",
+        severity: "warning",
+        title: `No project moves toward: ${truncate(goal.title)}`,
+        reason: "This goal has no project attached — attach one (Projects → goal selector) or it stays a wish, not a trajectory.",
+        entity: { type: "goal", id: goal.id, label: goal.title },
+        href: "/goals",
+        cta: "Attach a project",
+      });
+    }
+  }
 
   for (const goal of goals) {
     if (goal.status !== "active" || !goal.target_date) continue;
@@ -346,6 +380,9 @@ function momentumSignal(tasks: IntelTask[], now: Date): Insight | null {
 export function computeNextAction(input: IntelInput): NextAction | null {
   const { now, tasks, projects, goals } = input;
 
+  const goalOf = (project: IntelProject | null | undefined): IntelGoal | null =>
+    project?.goal_id ? (goals.find((goal) => goal.id === project.goal_id) ?? null) : null;
+
   const activeProjects = projects.filter(
     (project) => project.status !== "done" && project.status !== "cancelled"
   );
@@ -356,6 +393,7 @@ export function computeNextAction(input: IntelInput): NextAction | null {
     return {
       task: null,
       project: null,
+      goal: null,
       insight: {
         id: "next_best_action:create_project",
         signal: "next_best_action",
@@ -375,6 +413,7 @@ export function computeNextAction(input: IntelInput): NextAction | null {
     return {
       task: null,
       project: activeProjects[0],
+      goal: goalOf(activeProjects[0]),
       insight: {
         id: "next_best_action:create_task",
         signal: "next_best_action",
@@ -397,9 +436,11 @@ export function computeNextAction(input: IntelInput): NextAction | null {
   if (overdue.length > 0) {
     const oldest = overdue[0];
     const late = daysLate(oldest.due_at ?? "", now);
+    const overdueProject = projects.find((project) => project.id === oldest.project_id) ?? null;
     return {
       task: oldest,
-      project: projects.find((project) => project.id === oldest.project_id) ?? null,
+      project: overdueProject,
+      goal: goalOf(overdueProject),
       insight: {
         id: "next_best_action:overdue",
         signal: "next_best_action",
@@ -417,9 +458,11 @@ export function computeNextAction(input: IntelInput): NextAction | null {
   const blocked = activeTasks.filter(isBlocked);
   if (blocked.length > 0) {
     const task = blocked[0];
+    const blockedProject = projects.find((project) => project.id === task.project_id) ?? null;
     return {
       task,
-      project: projects.find((project) => project.id === task.project_id) ?? null,
+      project: blockedProject,
+      goal: goalOf(blockedProject),
       insight: {
         id: "next_best_action:blocked",
         signal: "next_best_action",
@@ -439,9 +482,11 @@ export function computeNextAction(input: IntelInput): NextAction | null {
   );
   const urgent = byPriority[0];
   if (priorityRank(urgent.priority) <= 1) {
+    const urgentProject = projects.find((project) => project.id === urgent.project_id) ?? null;
     return {
       task: urgent,
-      project: projects.find((project) => project.id === urgent.project_id) ?? null,
+      project: urgentProject,
+      goal: goalOf(urgentProject),
       insight: {
         id: "next_best_action:priority",
         signal: "next_best_action",
@@ -460,9 +505,11 @@ export function computeNextAction(input: IntelInput): NextAction | null {
     .filter((task) => task.due_at)
     .sort((a, b) => (a.due_at ?? "").localeCompare(b.due_at ?? ""));
   const next = byDue[0] ?? byPriority[0];
+  const nextProject = projects.find((project) => project.id === next.project_id) ?? null;
   return {
     task: next,
-    project: projects.find((project) => project.id === next.project_id) ?? null,
+    project: nextProject,
+    goal: goalOf(nextProject),
     insight: {
       id: "next_best_action:next",
       signal: "next_best_action",
@@ -493,7 +540,7 @@ export function computeInsights(input: IntelInput): IntelResult {
     ...blockedSignals(tasks, projects),
     ...(dueToday ? [dueToday] : []),
     ...emptyAndStaleProjectSignals(tasks, projects),
-    ...goalAtRiskSignals(goals, now),
+    ...goalAtRiskSignals(goals, projects, now),
     ...(momentumSignal(tasks, now) ? [momentumSignal(tasks, now) as Insight] : []),
   ].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 

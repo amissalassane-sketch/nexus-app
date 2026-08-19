@@ -60,6 +60,27 @@ const formatTarget = (value: string | null) => {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
 };
 
+type LinkedProject = { id: string; name: string; progress: number; goal_id: string | null };
+
+// P7: projects.goal_id may be absent until migration 014 — degrade by
+// hiding the linkage section instead of erroring.
+async function probeGoalColumn(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  const { error } = await supabase.from("projects").select("goal_id").limit(1);
+  return !error;
+}
+
+async function loadLinkedProjects(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<LinkedProject[]> {
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name, progress, goal_id")
+    .eq("workspace_id", workspaceId)
+    .order("name", { ascending: true });
+  return ((data as LinkedProject[]) ?? []).filter((project) => project.id && project.name);
+}
+
 async function loadGoalsForWorkspace(
   supabase: ReturnType<typeof createClient>,
   workspaceId: string
@@ -93,6 +114,8 @@ export function GoalManager({
   const [error, setError] = useState("");
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [linkedProjects, setLinkedProjects] = useState<LinkedProject[]>([]);
+  const [linkCapable, setLinkCapable] = useState(false);
 
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
@@ -112,6 +135,13 @@ export function GoalManager({
       }
       setGoals(data ?? []);
       setLoading(false);
+
+      const capable = await probeGoalColumn(supabase);
+      setLinkCapable(capable);
+      if (capable) {
+        const projects = await loadLinkedProjects(supabase, workspaceId);
+        setLinkedProjects(projects);
+      }
     };
     void load();
   }, [supabase, workspaceId]);
@@ -253,6 +283,9 @@ export function GoalManager({
     toast.success("Goal deleted.");
     if (editingGoalId === goalId) resetForm();
   };
+
+  const projectsOf = (goal: Goal) =>
+    linkedProjects.filter((project) => project.goal_id === goal.id);
 
   const averageProgress =
     goals.length > 0
@@ -424,6 +457,51 @@ export function GoalManager({
                       </div>
                     </div>
                   </div>
+
+                  {/* P7 — what moves toward this goal? */}
+                  {linkCapable ? (
+                    <div className="mt-4 border-t border-border-subtle pt-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-quaternary">
+                          What advances this goal
+                        </span>
+                        {projectsOf(goal).length === 0 ? (
+                          <Badge tone="warning">No project attached</Badge>
+                        ) : (
+                          <Badge tone="success">
+                            {projectsOf(goal).length} project
+                            {projectsOf(goal).length === 1 ? "" : "s"}
+                          </Badge>
+                        )}
+                      </div>
+                      {projectsOf(goal).length === 0 ? (
+                        <p className="text-caption text-text-tertiary">
+                          A goal without a project stays a wish — attach one from Projects → goal
+                          selector.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {projectsOf(goal).map((project) => {
+                            const projectProgress = Math.min(
+                              100,
+                              Math.max(0, Number(project.progress ?? 0))
+                            );
+                            return (
+                              <div key={project.id}>
+                                <div className="mb-1 flex items-center justify-between text-caption">
+                                  <span className="truncate text-text-secondary">{project.name}</span>
+                                  <span className="font-mono text-text-quaternary">
+                                    {Math.round(projectProgress)}%
+                                  </span>
+                                </div>
+                                <ProgressBar value={projectProgress} className="h-0.5" />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
 
                   {/* Optimistic progress: ±10 steps, instant bar */}
                   <div className="mt-4">

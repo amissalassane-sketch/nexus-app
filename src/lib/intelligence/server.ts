@@ -27,7 +27,7 @@ export async function collectWorkspaceIntel(workspaceId: string): Promise<{
       .eq("workspace_id", workspaceId),
     supabase
       .from("projects")
-      .select("id, name, status, progress, due_date")
+      .select("id, name, status, progress, due_date, goal_id")
       .eq("workspace_id", workspaceId),
     supabase
       .from("goals")

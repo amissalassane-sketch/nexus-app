@@ -7,7 +7,12 @@
 // ============================================================
 
 import assert from "node:assert/strict";
-import { computeInsights, computeNextAction, deterministicBrief } from "../../src/lib/intelligence/engine.ts";
+import {
+  actionChain,
+  computeInsights,
+  computeNextAction,
+  deterministicBrief,
+} from "../../src/lib/intelligence/engine.ts";
 
 const NOW = new Date("2026-08-19T12:00:00.000Z");
 
@@ -113,10 +118,41 @@ test("stale_project: active project whose tasks are all done is parked", () => {
 test("goal_at_risk: close deadline + low progress is at risk", () => {
   const risky = goal({ title: "Ship course", progress: 20, target_date: daysFromNow(10) });
   const safe = goal({ title: "Long term", progress: 80, target_date: daysFromNow(10) });
-  const result = computeInsights({ now: NOW, tasks: [], projects: [], goals: [risky, safe] });
-  const atRisk = result.insights.filter((i) => i.signal === "goal_at_risk");
-  assert.equal(atRisk.length, 1);
-  assert.ok(atRisk[0].title.includes("Ship course"));
+  // Both goals have a linked project → only the deadline rule applies.
+  const proj = project({ goal_id: risky.id });
+  const proj2 = project({ goal_id: safe.id });
+  const result = computeInsights({
+    now: NOW,
+    tasks: [],
+    projects: [proj, proj2],
+    goals: [risky, safe],
+  });
+  const deadlineRisk = result.insights.filter((i) => i.id.startsWith("goal_at_risk:"));
+  assert.equal(deadlineRisk.length, 1);
+  assert.ok(deadlineRisk[0].title.includes("Ship course"));
+});
+
+test("P7: a goal with no project attached is structurally at risk", () => {
+  const lonely = goal({ title: "Learn piano", target_date: null });
+  const backed = goal({ title: "Backed goal" });
+  const proj = project({ goal_id: backed.id });
+  const result = computeInsights({ now: NOW, tasks: [], projects: [proj], goals: [lonely, backed] });
+  const noProject = result.insights.filter((i) => i.id.startsWith("goal_no_project:"));
+  assert.equal(noProject.length, 1);
+  assert.ok(noProject[0].title.includes("Learn piano"));
+  assert.ok(noProject[0].reason.includes("no project attached"));
+});
+
+test("P7: actionChain returns Goal › Project › Task when linked", async () => {
+  const g = goal({ title: "Ship v2" });
+  const proj = project({ name: "Website", goal_id: g.id });
+  const t = task({ title: "Fix footer", project_id: proj.id, priority: "urgent" });
+  const next = computeNextAction({ now: NOW, tasks: [t], projects: [proj], goals: [g] });
+  assert.ok(next.goal, "goal not resolved");
+  assert.equal(next.goal.title, "Ship v2");
+  const chain = actionChain(next);
+  assert.equal(chain.length, 3);
+  assert.deepEqual(chain.map((c) => c.type), ["goal", "project", "task"]);
 });
 
 test("momentum: counts completions of the last 7 days only", () => {

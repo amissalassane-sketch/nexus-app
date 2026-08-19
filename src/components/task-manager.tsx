@@ -40,9 +40,12 @@ type Task = {
   status: TaskStatus;
   priority: Priority;
   due_at: string | null;
+  project_id: string | null;
   created_at: string;
   updated_at: string;
 };
+
+type ProjectOption = { id: string; name: string };
 
 type TaskForm = {
   title: string;
@@ -50,6 +53,7 @@ type TaskForm = {
   priority: Priority;
   status: TaskStatus;
   due_at: string;
+  projectId: string;
 };
 
 
@@ -59,6 +63,7 @@ const blankTaskForm = (): TaskForm => ({
   priority: "medium",
   status: "todo",
   due_at: "",
+  projectId: "",
 });
 
 const PRIORITY_TONES: Record<Priority, "neutral" | "info" | "warning" | "danger"> = {
@@ -84,6 +89,27 @@ const formatDue = (value: string | null) => {
   if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
 };
+
+// Capability probe (P7): tasks.project_id may be absent — hide the
+// project UI entirely instead of erroring.
+async function probeProjectColumn(
+  supabase: ReturnType<typeof createClient>
+): Promise<boolean> {
+  const { error } = await supabase.from("tasks").select("project_id").limit(1);
+  return !error;
+}
+
+async function loadProjectOptions(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<ProjectOption[]> {
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name")
+    .eq("workspace_id", workspaceId)
+    .order("name", { ascending: true });
+  return ((data as ProjectOption[]) ?? []).filter((project) => project.id && project.name);
+}
 
 // Module-level loader (setState stays behind an await — pitfall #5).
 async function loadTasksForWorkspace(
@@ -122,6 +148,9 @@ export function TaskManager({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
   const [quickAdd, setQuickAdd] = useState("");
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+  const [projectCapable, setProjectCapable] = useState(false);
+  const [projectFilter, setProjectFilter] = useState("all");
 
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
@@ -136,6 +165,10 @@ export function TaskManager({
   useEffect(() => {
     const load = async () => {
       if (!workspaceId) return;
+
+      const capable = await probeProjectColumn(supabase);
+      setProjectCapable(capable);
+
       const { data, error: loadError } = await loadTasksForWorkspace(supabase, workspaceId);
       if (loadError) {
         setError(loadError.message);
@@ -145,6 +178,11 @@ export function TaskManager({
       }
       setTasks(data ?? []);
       setLoading(false);
+
+      if (capable) {
+        const projects = await loadProjectOptions(supabase, workspaceId);
+        setProjectOptions(projects);
+      }
     };
     void load();
   }, [supabase, workspaceId]);
@@ -154,13 +192,22 @@ export function TaskManager({
     if (initialNew) quickAddRef.current?.focus();
   }, [initialNew]);
 
+  const projectNameById = useMemo(
+    () => new Map(projectOptions.map((project) => [project.id, project.name])),
+    [projectOptions]
+  );
+
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const statusMatch = filters.status === "all" || task.status === filters.status;
       const priorityMatch = filters.priority === "all" || task.priority === filters.priority;
-      return statusMatch && priorityMatch;
+      const projectMatch =
+        !projectCapable ||
+        projectFilter === "all" ||
+        (projectFilter === "none" ? !task.project_id : task.project_id === projectFilter);
+      return statusMatch && priorityMatch && projectMatch;
     });
-  }, [filters, tasks]);
+  }, [filters, tasks, projectCapable, projectFilter]);
 
   // -- Quick create (optimistic) -------------------------------
 
@@ -179,6 +226,7 @@ export function TaskManager({
       status: "todo",
       priority: "medium",
       due_at: null,
+      project_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -299,6 +347,7 @@ export function TaskManager({
       due_at: form.due_at ? new Date(form.due_at).toISOString() : null,
       assignee_id: userId,
       created_by: userId,
+      ...(projectCapable && form.projectId ? { project_id: form.projectId } : {}),
     });
 
     setSaving(false);
@@ -333,6 +382,7 @@ export function TaskManager({
         priority: form.priority,
         due_at: form.due_at ? new Date(form.due_at).toISOString() : null,
         updated_at: new Date().toISOString(),
+        ...(projectCapable ? { project_id: form.projectId || null } : {}),
       })
       .eq("id", editingTaskId)
       .eq("workspace_id", workspaceId);
@@ -359,6 +409,7 @@ export function TaskManager({
       priority: task.priority,
       status: task.status,
       due_at: task.due_at ? new Date(task.due_at).toISOString().slice(0, 10) : "",
+      projectId: task.project_id ?? "",
     });
     setError("");
   };
@@ -459,6 +510,22 @@ export function TaskManager({
             <option value="done">Done</option>
             <option value="cancelled">Cancelled</option>
           </Select>
+          {projectCapable ? (
+            <Select
+              label="Project"
+              value={form.projectId}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, projectId: event.target.value }))
+              }
+            >
+              <option value="">No project</option>
+              {projectOptions.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
         </div>
 
         <div className="mt-4">
@@ -521,6 +588,22 @@ export function TaskManager({
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </Select>
+            {projectCapable ? (
+              <Select
+                value={projectFilter}
+                onChange={(event) => setProjectFilter(event.target.value)}
+                className="min-h-9 w-auto py-1"
+                aria-label="Filter by project"
+              >
+                <option value="all">All projects</option>
+                <option value="none">No project</option>
+                {projectOptions.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
           </div>
         </div>
 
@@ -611,6 +694,9 @@ export function TaskManager({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
+                    {projectCapable && task.project_id && projectNameById.has(task.project_id) ? (
+                      <Badge>{projectNameById.get(task.project_id)}</Badge>
+                    ) : null}
                     <Badge tone={PRIORITY_TONES[task.priority]}>{task.priority}</Badge>
                     {task.status !== "todo" && task.status !== "done" ? (
                       <Badge tone={task.status === "blocked" ? "warning" : "info"}>

@@ -34,7 +34,18 @@ type Project = {
   status: string;
   progress: number;
   due_date: string | null;
+  goal_id: string | null;
   created_at: string;
+};
+
+type GoalOption = { id: string; title: string };
+
+type ProjectTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  due_at: string | null;
 };
 
 type ProjectForm = {
@@ -43,6 +54,7 @@ type ProjectForm = {
   status: string;
   progress: number;
   due_date: string;
+  goalId: string;
 };
 
 const blankProjectForm = (): ProjectForm => ({
@@ -51,6 +63,7 @@ const blankProjectForm = (): ProjectForm => ({
   status: "planning",
   progress: 0,
   due_date: "",
+  goalId: "",
 });
 
 const slugify = (value: string) =>
@@ -66,6 +79,55 @@ const formatDue = (value: string | null) => {
   if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
 };
+
+// Capability probe (P7): projects.goal_id may be absent until
+// migration 014 — the goal selector hides itself instead of erroring.
+async function probeGoalColumn(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  const { error } = await supabase.from("projects").select("goal_id").limit(1);
+  return !error;
+}
+
+async function loadGoalOptions(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<GoalOption[]> {
+  const { data } = await supabase
+    .from("goals")
+    .select("id, title")
+    .eq("workspace_id", workspaceId)
+    .order("title", { ascending: true });
+  return ((data as GoalOption[]) ?? []).filter((goal) => goal.id && goal.title);
+}
+
+async function loadTasksForProject(
+  supabase: ReturnType<typeof createClient>,
+  projectId: string
+): Promise<ProjectTask[]> {
+  const { data } = await supabase
+    .from("tasks")
+    .select("id, title, status, priority, due_at")
+    .eq("project_id", projectId)
+    .order("due_at", { ascending: true, nullsFirst: false });
+  return ((data as ProjectTask[]) ?? []).filter((task) => task.id);
+}
+
+async function loadProjectTaskCounts(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<Map<string, number>> {
+  const { data } = await supabase
+    .from("tasks")
+    .select("project_id")
+    .eq("workspace_id", workspaceId)
+    .limit(1000);
+  const counts = new Map<string, number>();
+  for (const row of (data as Array<{ project_id: string | null }> | null) ?? []) {
+    if (row.project_id) {
+      counts.set(row.project_id, (counts.get(row.project_id) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
 
 async function loadProjectsForWorkspace(
   supabase: ReturnType<typeof createClient>,
@@ -101,6 +163,12 @@ export function ProjectManager({
   const [error, setError] = useState("");
   const [form, setForm] = useState<ProjectForm>(blankProjectForm());
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [goalOptions, setGoalOptions] = useState<GoalOption[]>([]);
+  const [goalCapable, setGoalCapable] = useState(false);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<ProjectTask[]>([]);
+  const [expanding, setExpanding] = useState(false);
+  const [projectTaskCounts, setProjectTaskCounts] = useState<Map<string, number>>(new Map());
 
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
@@ -111,6 +179,10 @@ export function ProjectManager({
   useEffect(() => {
     const load = async () => {
       if (!workspaceId) return;
+
+      const capable = await probeGoalColumn(supabase);
+      setGoalCapable(capable);
+
       const { data, error: loadError } = await loadProjectsForWorkspace(supabase, workspaceId);
       if (loadError) {
         setError(loadError.message);
@@ -120,6 +192,14 @@ export function ProjectManager({
       }
       setProjects(data ?? []);
       setLoading(false);
+
+      const counts = await loadProjectTaskCounts(supabase, workspaceId);
+      setProjectTaskCounts(counts);
+
+      if (capable) {
+        const goals = await loadGoalOptions(supabase, workspaceId);
+        setGoalOptions(goals);
+      }
     };
     void load();
   }, [supabase, workspaceId]);
@@ -155,6 +235,7 @@ export function ProjectManager({
       progress: Math.min(100, Math.max(0, Number(form.progress))),
       due_date: form.due_date || null,
       owner_id: userId,
+      ...(goalCapable && form.goalId ? { goal_id: form.goalId } : {}),
     });
 
     setSaving(false);
@@ -190,6 +271,7 @@ export function ProjectManager({
         progress: Math.min(100, Math.max(0, Number(form.progress))),
         due_date: form.due_date || null,
         updated_at: new Date().toISOString(),
+        ...(goalCapable ? { goal_id: form.goalId || null } : {}),
       })
       .eq("id", editingProjectId)
       .eq("workspace_id", workspaceId);
@@ -216,6 +298,7 @@ export function ProjectManager({
       status: project.status,
       progress: project.progress,
       due_date: project.due_date ? new Date(project.due_date).toISOString().slice(0, 10) : "",
+      goalId: project.goal_id ?? "",
     });
     setError("");
     nameFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -243,6 +326,20 @@ export function ProjectManager({
     }
   };
 
+  // P7: expandable project tasks — next action, blockers, due date.
+  const toggleExpand = async (projectId: string) => {
+    if (expandedProjectId === projectId) {
+      setExpandedProjectId(null);
+      setExpandedTasks([]);
+      return;
+    }
+    setExpandedProjectId(projectId);
+    setExpanding(true);
+    const tasks = await loadTasksForProject(supabase, projectId);
+    setExpandedTasks(tasks);
+    setExpanding(false);
+  };
+
   const deleteProject = async (projectId: string) => {
     if (!window.confirm("Delete this project?")) return;
 
@@ -264,6 +361,11 @@ export function ProjectManager({
     toast.success("Project deleted.");
     if (editingProjectId === projectId) resetForm();
   };
+
+  const goalTitleById = useMemo(
+    () => new Map(goalOptions.map((goal) => [goal.id, goal.title])),
+    [goalOptions]
+  );
 
   const averageProgress =
     projects.length > 0
@@ -342,6 +444,22 @@ export function ProjectManager({
             }
             className="py-3.5"
           />
+          {goalCapable ? (
+            <Select
+              label="Goal (what this project serves)"
+              value={form.goalId}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, goalId: event.target.value }))
+              }
+            >
+              <option value="">No goal</option>
+              {goalOptions.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.title}
+                </option>
+              ))}
+            </Select>
+          ) : null}
         </div>
 
         <div className="mt-4">
@@ -404,8 +522,11 @@ export function ProjectManager({
                       <div className="truncate text-body font-medium text-text-primary">
                         {project.name}
                       </div>
-                      <div className="mt-1.5 flex items-center gap-2">
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
                         <Badge>{project.status.replace("_", " ")}</Badge>
+                        {goalCapable && project.goal_id && goalTitleById.has(project.goal_id) ? (
+                          <Badge tone="volt">→ {goalTitleById.get(project.goal_id)}</Badge>
+                        ) : null}
                         {due ? (
                           <span className="font-mono text-mono-small text-text-tertiary">{due}</span>
                         ) : null}
@@ -465,6 +586,84 @@ export function ProjectManager({
                     </div>
                     <ProgressBar value={progress} />
                   </div>
+
+                  {/* P7: project task drill-down — next action + blockers */}
+                  <button
+                    type="button"
+                    onClick={() => void toggleExpand(project.id)}
+                    aria-expanded={expandedProjectId === project.id}
+                    className="mt-3 flex min-h-9 w-full items-center justify-between rounded-md border border-border-subtle px-3 text-caption text-text-secondary transition-colors duration-[120ms] hover:border-border-strong hover:text-text-primary"
+                  >
+                    <span>
+                      {expandedProjectId === project.id ? "Hide tasks" : "Show tasks"}
+                      {projectTaskCounts.get(project.id) !== undefined
+                        ? ` · ${projectTaskCounts.get(project.id)}`
+                        : ""}
+                    </span>
+                    <span className="font-mono">{expandedProjectId === project.id ? "−" : "+"}</span>
+                  </button>
+
+                  {expandedProjectId === project.id ? (
+                    expanding ? (
+                      <div className="skeleton mt-3 min-h-11 w-full rounded-lg" aria-hidden="true" />
+                    ) : (
+                      <div className="animate-fade-in mt-3 space-y-1.5 border-t border-border-subtle pt-3">
+                        {expandedTasks.length === 0 ? (
+                          <p className="text-caption text-text-tertiary">
+                            No task in this project yet — give it its first one.
+                          </p>
+                        ) : (
+                          <>
+                            {(() => {
+                              const blockedCount = expandedTasks.filter(
+                                (task) => task.status === "blocked"
+                              ).length;
+                              const nextAction = expandedTasks
+                                .filter((task) => !["done", "cancelled", "blocked"].includes(task.status))
+                                .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))[0];
+                              return (
+                                <div className="mb-2 flex flex-wrap items-center gap-2 text-caption">
+                                  {nextAction ? (
+                                    <span className="text-text-secondary">
+                                      Next action:{" "}
+                                      <span className="text-text-primary">{nextAction.title}</span>
+                                      {nextAction.due_at
+                                        ? ` · ${formatDue(nextAction.due_at)}`
+                                        : ""}
+                                    </span>
+                                  ) : (
+                                    <span className="text-text-tertiary">No next action</span>
+                                  )}
+                                  {blockedCount > 0 ? (
+                                    <Badge tone="warning">{blockedCount} blocked</Badge>
+                                  ) : null}
+                                </div>
+                              );
+                            })()}
+                            {expandedTasks.slice(0, 6).map((task) => (
+                              <div
+                                key={task.id}
+                                className="flex min-h-9 items-center justify-between gap-2 rounded-md bg-bg-subtle px-3"
+                              >
+                                <span
+                                  className={`truncate text-caption ${
+                                    task.status === "done"
+                                      ? "text-text-quaternary line-through"
+                                      : "text-text-secondary"
+                                  }`}
+                                >
+                                  {task.title}
+                                </span>
+                                <span className="shrink-0 font-mono text-[10px] text-text-quaternary">
+                                  {task.status.replace("_", " ")}
+                                </span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )
+                  ) : null}
                 </div>
               );
             })}
