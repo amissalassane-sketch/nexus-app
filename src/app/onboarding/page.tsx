@@ -13,10 +13,16 @@ import { cn } from "@/lib/cn";
 // ============================================================
 // NEXUS — ONBOARDING (3 STEPS)
 // 1. Identity (name + username)  2. Intent  3. First value
-// The workspace is VERIFIED in the database before
-// `onboarding_completed` is set and the user is redirected. If any
-// check fails, we stay here and show an actionable error — the
-// dashboard never appears "successful" behind a broken workspace.
+//
+// Refinements:
+// - `← Back` on steps 2 and 3: pure local state, never browser
+//   navigation, so every field typed so far survives.
+// - Step 3 adapts to the intent chosen at step 2 (STEP3_BY_INTENT).
+// - Visual 3-segment progress bar.
+// - Nothing is declared "done" on optimism: every write is read back
+//   from the database (`.select(...).single()`) and verified before
+//   the user is redirected. On any failure we STAY here, with the
+//   data intact, and explain what happened.
 // ============================================================
 
 const INTENT_OPTIONS = [
@@ -28,6 +34,57 @@ const INTENT_OPTIONS = [
 ] as const;
 
 type IntentId = (typeof INTENT_OPTIONS)[number]["id"];
+type FirstKind = "project" | "task";
+
+type Step3Config = {
+  defaultKind: FirstKind;
+  title: string;
+  description: string;
+  projectPlaceholder: string;
+  taskPlaceholder: string;
+};
+
+// Step 3 is not a generic form: it speaks the language of the intent
+// selected at step 2, and pre-selects the unit of work that matches it.
+const STEP3_BY_INTENT: Record<IntentId, Step3Config> = {
+  personal: {
+    defaultKind: "task",
+    title: "What's the first thing you want to get under control?",
+    description: "One task you keep carrying around. Write it down and let NEXUS hold it.",
+    projectPlaceholder: "e.g. Reorganise my personal admin",
+    taskPlaceholder: "e.g. Renew my passport",
+  },
+  project: {
+    defaultKind: "project",
+    title: "Set up your project",
+    description: "Name the outcome you are driving. Tasks will live underneath it.",
+    projectPlaceholder: "e.g. Launch my portfolio",
+    taskPlaceholder: "e.g. Draft the project brief",
+  },
+  studies: {
+    defaultKind: "project",
+    title: "Set up your study goal",
+    description: "A course, a semester, an exam — give it a home before the deadlines arrive.",
+    projectPlaceholder: "e.g. Semester 1 — Data Structures",
+    taskPlaceholder: "e.g. Revise chapter 3",
+  },
+  team: {
+    defaultKind: "project",
+    title: "Structure your team's first project",
+    description: "Start with the work everyone is already talking about.",
+    projectPlaceholder: "e.g. Q3 product launch",
+    taskPlaceholder: "e.g. Share the kickoff notes",
+  },
+  everything: {
+    defaultKind: "project",
+    title: "Set up your first workflow",
+    description: "Start anywhere. One project or one task is enough to make the system real.",
+    projectPlaceholder: "e.g. Build my NEXUS system",
+    taskPlaceholder: "e.g. Capture everything on my mind",
+  },
+};
+
+const DEFAULT_STEP3 = STEP3_BY_INTENT.everything;
 
 const TOTAL_STEPS = 3;
 
@@ -40,11 +97,15 @@ export default function OnboardingPage() {
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
 
+  // All answers live at component level: moving between steps only
+  // changes `step`, so nothing typed is ever lost.
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [intent, setIntent] = useState<IntentId | null>(null);
-  const [firstKind, setFirstKind] = useState<"project" | "task">("project");
+  const [firstKind, setFirstKind] = useState<FirstKind>("project");
   const [firstTitle, setFirstTitle] = useState("");
+
+  const step3 = intent ? STEP3_BY_INTENT[intent] : DEFAULT_STEP3;
 
   const fallbackUsername = (email?: string | null) => {
     const base = email?.split("@")[0] ?? "user";
@@ -89,7 +150,11 @@ export default function OnboardingPage() {
       if (profile?.display_name) setDisplayName(profile.display_name);
       if (profile?.username) setUsername(profile.username);
       if (profile?.onboarding_intent) {
-        setIntent(profile.onboarding_intent as IntentId);
+        const savedIntent = profile.onboarding_intent as IntentId;
+        if (savedIntent in STEP3_BY_INTENT) {
+          setIntent(savedIntent);
+          setFirstKind(STEP3_BY_INTENT[savedIntent].defaultKind);
+        }
       }
 
       if (!profile?.display_name) {
@@ -127,9 +192,21 @@ export default function OnboardingPage() {
     if (step < TOTAL_STEPS) setStep((current) => current + 1);
   };
 
+  // Local state only — no router call, no history entry, no reload.
+  // Every answer already given stays exactly as it was.
   const back = () => {
     setError("");
     if (step > 1) setStep((current) => current - 1);
+  };
+
+  // Choosing an intent re-targets step 3 (default unit of work), but
+  // never destroys a title the user already typed.
+  const selectIntent = (nextIntent: IntentId) => {
+    setError("");
+    setIntent(nextIntent);
+    // Only the *default* unit of work follows the intent — `firstTitle`
+    // is user-authored content and is never touched.
+    setFirstKind(STEP3_BY_INTENT[nextIntent].defaultKind);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -210,6 +287,14 @@ export default function OnboardingPage() {
         return;
       }
 
+      if (!workspace?.id) {
+        setError(
+          "We couldn't finish setting up your workspace — it was not saved. Your answers are kept, please try again."
+        );
+        setSaving(false);
+        return;
+      }
+
       // Re-read the membership so we only proceed on verified state.
       const { data: refreshed } = await supabase
         .from("workspace_members")
@@ -219,7 +304,6 @@ export default function OnboardingPage() {
         .order("created_at", { ascending: false });
 
       membership = refreshed?.[0] ?? null;
-      void workspace;
     }
 
     // 3. Verify membership is real and usable before declaring success.
@@ -239,36 +323,72 @@ export default function OnboardingPage() {
 
     const workspaceId = membership.workspace_id as string;
 
-    // 4. Create the first value (project or task) when provided.
+    // 4. Create the first value (project or task) when provided, and read
+    //    the row back: an insert without a returned id is NOT a success.
     if (firstTitle.trim()) {
       if (firstKind === "project") {
-        const { error: projectError } = await supabase.from("projects").insert({
-          workspace_id: workspaceId,
-          owner_id: user.id,
-          name: firstTitle.trim(),
-        });
+        const { data: project, error: projectError } = await supabase
+          .from("projects")
+          .insert({
+            workspace_id: workspaceId,
+            owner_id: user.id,
+            name: firstTitle.trim(),
+          })
+          .select("id")
+          .single();
+
         if (projectError) {
-          setError(projectError.message);
+          setError(
+            isPlanLimitError(projectError.message)
+              ? "Your plan does not allow another project. Visit /upgrade to unlock more."
+              : `We couldn't finish setting up your workspace — your project was not created: ${projectError.message}`
+          );
+          setSaving(false);
+          return;
+        }
+
+        if (!project?.id) {
+          setError(
+            "We couldn't finish setting up your workspace — your project was not saved. Your answers are kept, please try again."
+          );
           setSaving(false);
           return;
         }
       } else {
-        const { error: taskError } = await supabase.from("tasks").insert({
-          workspace_id: workspaceId,
-          title: firstTitle.trim(),
-          assignee_id: user.id,
-          created_by: user.id,
-        });
+        const { data: task, error: taskError } = await supabase
+          .from("tasks")
+          .insert({
+            workspace_id: workspaceId,
+            title: firstTitle.trim(),
+            assignee_id: user.id,
+            created_by: user.id,
+          })
+          .select("id")
+          .single();
+
         if (taskError) {
-          setError(taskError.message);
+          setError(
+            isPlanLimitError(taskError.message)
+              ? "Your plan does not allow another task. Visit /upgrade to unlock more."
+              : `We couldn't finish setting up your workspace — your task was not created: ${taskError.message}`
+          );
+          setSaving(false);
+          return;
+        }
+
+        if (!task?.id) {
+          setError(
+            "We couldn't finish setting up your workspace — your task was not saved. Your answers are kept, please try again."
+          );
           setSaving(false);
           return;
         }
       }
     }
 
-    // 5. Only now mark onboarding complete, then redirect.
-    const { error: completeError } = await supabase
+    // 5. Only now mark onboarding complete — and read the flag back from
+    //    the database. We redirect on confirmed state, never on hope.
+    const { data: completed, error: completeError } = await supabase
       .from("profiles")
       .upsert({
         id: user.id,
@@ -277,10 +397,22 @@ export default function OnboardingPage() {
         onboarding_intent: intent,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
-      });
+      })
+      .select("onboarding_completed")
+      .single();
 
     if (completeError) {
-      setError(completeError.message);
+      setError(
+        `We couldn't finish setting up your workspace — ${completeError.message}`
+      );
+      setSaving(false);
+      return;
+    }
+
+    if (completed?.onboarding_completed !== true) {
+      setError(
+        "We couldn't finish setting up your workspace — your setup was not confirmed. Your answers are kept, please try again."
+      );
       setSaving(false);
       return;
     }
@@ -300,28 +432,51 @@ export default function OnboardingPage() {
     );
   }
 
+  const heading =
+    step === 1
+      ? "Who are you?"
+      : step === 2
+        ? "What are you trying to get under control?"
+        : step3.title;
+
+  const subheading =
+    step === 1
+      ? "This is how your workspace will recognise you."
+      : step === 2
+        ? "NEXUS adapts the experience to how you work."
+        : step3.description;
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg-base px-4 py-10">
       <div className="w-full max-w-[440px] rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
         <div className="mb-6 flex flex-col items-center text-center">
           <NexusLogo size={48} priority className="mb-5" />
-          <p className="font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
+
+          {/* Progress — 3 segments, filled up to the current step. */}
+          <div
+            className="flex w-full items-center gap-1.5"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={TOTAL_STEPS}
+            aria-valuenow={step}
+            aria-label={`Step ${step} of ${TOTAL_STEPS}`}
+          >
+            {Array.from({ length: TOTAL_STEPS }, (_, index) => index + 1).map((segment) => (
+              <span
+                key={segment}
+                className={cn(
+                  "h-1 flex-1 rounded-pill transition-colors duration-300 ease-out-expo",
+                  segment <= step ? "bg-accent" : "bg-bg-surface-3"
+                )}
+              />
+            ))}
+          </div>
+
+          <p className="mt-3 font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
             Step {step} of {TOTAL_STEPS}
           </p>
-          <h1 className="mt-2 text-h1 text-text-primary">
-            {step === 1
-              ? "Who are you?"
-              : step === 2
-                ? "What are you trying to get under control?"
-                : "Set up your first value"}
-          </h1>
-          <p className="mt-1 text-small text-text-secondary">
-            {step === 1
-              ? "This is how your workspace will recognise you."
-              : step === 2
-                ? "NEXUS adapts the experience to how you work."
-                : "Capture one real thing — or skip for now."}
-          </p>
+          <h1 className="mt-2 text-h1 text-text-primary">{heading}</h1>
+          <p className="mt-1 text-small text-text-secondary">{subheading}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -362,7 +517,7 @@ export default function OnboardingPage() {
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => setIntent(option.id)}
+                    onClick={() => selectIntent(option.id)}
                     aria-pressed={active}
                     className={cn(
                       "flex items-center justify-between gap-3 rounded-input border px-4 py-3 text-left transition-colors duration-150 ease-nexus",
@@ -425,8 +580,8 @@ export default function OnboardingPage() {
                   onChange={(event) => setFirstTitle(event.target.value)}
                   placeholder={
                     firstKind === "project"
-                      ? "e.g. Launch my portfolio"
-                      : "e.g. Draft the outline"
+                      ? step3.projectPlaceholder
+                      : step3.taskPlaceholder
                   }
                 />
               </Field>
@@ -437,8 +592,14 @@ export default function OnboardingPage() {
 
           <div className="mt-1 flex items-center gap-2">
             {step > 1 ? (
-              <Button type="button" variant="ghost" size="lg" onClick={back} disabled={saving}>
-                Back
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={back}
+                disabled={saving}
+              >
+                ← Back
               </Button>
             ) : null}
 
