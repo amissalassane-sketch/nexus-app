@@ -70,7 +70,41 @@ test("P0: onboarding verifies membership in the database BEFORE redirecting", ()
 
 test("P0: onboarding stays in repair mode for broken completed accounts (no ping-pong)", () => {
   const onboarding = read("src/app/onboarding/page.tsx");
-  assert.match(onboarding, /activeMemberships && activeMemberships\.length > 0/);
+  // Redirect away ONLY when completed AND an active membership exists
+  assert.match(onboarding, /onboarding_completed === true && hasMembership/);
+  assert.match(onboarding, /Boolean\(memberships && memberships\.length > 0\)/);
+});
+
+test("P1: onboarding is a 3-step wizard with visible progress", () => {
+  const onboarding = read("src/app/onboarding/page.tsx");
+  assert.match(onboarding, /Step \$?\{step\} of \$?\{TOTAL_STEPS\}/);
+  assert.match(onboarding, /TOTAL_STEPS = 3/);
+  assert.match(onboarding, /Identity.*Intent.*First value/s);
+});
+
+test("P1: intent routing offers the 5 canonical answers", () => {
+  const onboarding = read("src/app/onboarding/page.tsx");
+  for (const label of ["Personal work", "A project", "Studies", "A team", "Everything"]) {
+    assert.ok(onboarding.includes(`label: "${label}"`), `missing intent: ${label}`);
+  }
+});
+
+test("P1: intent persistence degrades cleanly when the column is absent", () => {
+  const onboarding = read("src/app/onboarding/page.tsx");
+  assert.match(onboarding, /onboarding_intent/);
+  assert.match(onboarding, /missingColumn/);
+});
+
+test("P1: step 3 never invents data — first value is user-entered with a skip", () => {
+  const onboarding = read("src/app/onboarding/page.tsx");
+  assert.match(onboarding, /Skip for now/);
+  assert.match(onboarding, /never invents data/);
+});
+
+test("P1: migration 012 adds nullable onboarding_intent idempotently", () => {
+  const m012 = read("supabase/migrations/012_onboarding_intent.sql");
+  assert.match(m012, /add column onboarding_intent text/);
+  assert.match(m012, /information_schema\.columns/);
 });
 
 test("middleware protects everything except auth routes and static assets", () => {
