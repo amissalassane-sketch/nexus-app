@@ -199,6 +199,11 @@ export function startSupabaseStub(port = 54321) {
       return;
     }
 
+    if (url.pathname === "/auth/v1/recover") {
+      await readBody(req);
+      return json(200, {});
+    }
+
     if (url.pathname === "/auth/v1/.well-known/jwks.json") {
       return json(200, { keys: [] });
     }

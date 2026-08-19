@@ -63,8 +63,12 @@ created by the same client — there is no token relay that can silently fail:
 | Route | Purpose |
 | --- | --- |
 | `POST /api/auth/signin` | email + password, writes the SSR cookies, returns `redirectTo` |
-| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` explicitly |
+| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` and emails `/auth/callback` |
 | `POST /api/auth/signout` | ends the session and clears the cookies |
+| `POST /api/auth/forgot-password` | sends a recovery email (same success copy whether the address exists) |
+| `POST /api/auth/update-password` | completes recovery after `/auth/callback?next=/reset-password` |
+| `GET  /auth/callback` | exchanges the email `code` for an SSR session |
+| `GET  /api/health` | public liveness probe |
 
 The cookies are not `HttpOnly` (Supabase default), so the browser client keeps working
 for client-side CRUD under RLS. `src/lib/auth-errors.ts` turns Supabase errors into
