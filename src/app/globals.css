@@ -190,3 +190,8 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Preferences → density (Settings → Preferences, applied live) */
+[data-density="compact"] .min-h-11 {
+  min-height: 36px;
+}

@@ -6,6 +6,11 @@ import { Bell, CheckCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/toast";
 import { Badge, Button, EmptyState, ErrorBox, SkeletonList } from "@/components/ui";
+import {
+  DEFAULT_PREFERENCES,
+  formatDateWithPrefs,
+  type Preferences,
+} from "@/lib/preferences";
 
 // ============================================================
 // NEXUS — NOTIFICATION CENTER (P2: alive)
@@ -55,10 +60,12 @@ async function loadNotificationsForUser(
 export function NotificationCenter({
   userId,
   workspaceId,
+  preferences = DEFAULT_PREFERENCES,
 }: {
   userId: string;
   /** Resolved server-side by the (app) layout — never null in practice. */
   workspaceId: string | null;
+  preferences?: Preferences;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
@@ -224,7 +231,11 @@ export function NotificationCenter({
                   ) : null}
 
                   <div className="mt-2 font-mono text-mono-small text-text-quaternary">
-                    {new Date(notification.created_at).toLocaleString()}
+                    {formatDateWithPrefs(notification.created_at, preferences)} ·{" "}
+                    {new Date(notification.created_at).toLocaleTimeString("en-GB", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
 
