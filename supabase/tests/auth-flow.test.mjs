@@ -107,6 +107,39 @@ test("P1: migration 012 adds nullable onboarding_intent idempotently", () => {
   assert.match(m012, /information_schema\.columns/);
 });
 
+test("P6: ⌘K — shell-level listener with correct modifier handling", () => {
+  const palette = read("src/components/command-palette.tsx");
+  assert.match(palette, /metaKey \|\| event\.ctrlKey/);
+  assert.match(palette, /event\.key\.toLowerCase\(\) === "k"/);
+  assert.match(palette, /preventDefault\(\)/);
+  const shell = read("src/components/nexus-shell.tsx");
+  assert.ok(shell.includes("CommandPalette"), "palette must be mounted in the shell");
+});
+
+test("P6: ⌘K — no synchronous setState inside useEffect", () => {
+  const palette = read("src/components/command-palette.tsx");
+  const effects = palette.split("useEffect(").slice(1);
+  for (const effect of effects) {
+    const body = effect.split("}, [")[0];
+    const syncSetState = /\n\s*(set[A-Z]\w*)\(/.test(body.split("=>")[1] ?? body);
+    assert.ok(
+      !syncSetState,
+      "effect body must not call setState synchronously (React Compiler rule)"
+    );
+  }
+});
+
+test("P6: ⌘K — visible Search… ⌘K button, dialog a11y, keyboard nav", () => {
+  const palette = read("src/components/command-palette.tsx");
+  assert.match(palette, /Search…/);
+  assert.match(palette, /aria-modal="true"/);
+  assert.match(palette, /role="dialog"/);
+  assert.match(palette, /ArrowDown/);
+  assert.match(palette, /ArrowUp/);
+  assert.match(palette, /triggerRef\.current\?\.focus\(\)/);
+  assert.match(palette, /Ask NEXUS: what should I work on\?/);
+});
+
 test("middleware protects everything except auth routes and static assets", () => {
   const mw = read("src/lib/supabase/middleware.ts");
   assert.match(mw, /pathname\.startsWith\("\/login"\)/);

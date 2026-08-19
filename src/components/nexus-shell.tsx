@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { NexusLogo } from "@/components/nexus-logo";
 import { LogoutButton } from "@/components/logout-button";
+import { CommandPalette } from "@/components/command-palette";
 
 // ============================================================
 // NEXUS — SHELL
@@ -120,6 +121,11 @@ export function NexusShell({
               <div className="font-semibold text-text-primary tracking-tight text-sm">NEXUS</div>
               <div className="text-xs text-text-tertiary">Personal OS</div>
             </div>
+          </div>
+
+          {/* Search / ⌘K — always visible, never a hidden-only shortcut */}
+          <div className="mb-6">
+            <CommandPalette />
           </div>
 
           {/* Navigation — grouped, animated active indicator */}
