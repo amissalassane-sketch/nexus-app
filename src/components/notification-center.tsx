@@ -2,7 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  FolderKanban,
+  Info,
+  Target,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/card";
+import { PillTabs } from "@/components/ui/tabs";
+import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 
 type NotificationItem = {
   id: string;
@@ -24,13 +40,60 @@ const entityRoutes: Record<string, string> = {
   workspace: "/dashboard",
 };
 
+function iconFor(notification: NotificationItem) {
+  const key = `${notification.entity_type ?? ""}${notification.type ?? ""}`.toLowerCase();
+  if (key.includes("project")) return FolderKanban;
+  if (key.includes("goal")) return Target;
+  if (key.includes("task") || key.includes("done") || key.includes("complete"))
+    return CheckCircle2;
+  if (key.includes("warn") || key.includes("limit") || key.includes("overdue"))
+    return AlertTriangle;
+  if (key.includes("info")) return Info;
+  return Bell;
+}
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 31_536_000_000],
+  ["month", 2_592_000_000],
+  ["week", 604_800_000],
+  ["day", 86_400_000],
+  ["hour", 3_600_000],
+  ["minute", 60_000],
+];
+
+function relativeTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = date.getTime() - Date.now();
+  const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  for (const [unit, ms] of RELATIVE_UNITS) {
+    if (Math.abs(diff) >= ms) return formatter.format(Math.round(diff / ms), unit);
+  }
+  return "just now";
+}
+
+function absoluteTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function NotificationCenter({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
+  const [tab, setTab] = useState<"all" | "unread">("all");
 
   const loadNotifications = async (activeWorkspaceId: string | null) => {
     if (!activeWorkspaceId) {
@@ -60,31 +123,43 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { data, error: workspaceError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        const { membership, error: membershipError } = await getActiveMembership(
+          supabase,
+          userId
+        );
 
-      if (workspaceError) {
-        setError(workspaceError.message);
+        if (membershipError) {
+          setError(membershipError);
+          setLoading(false);
+          return;
+        }
+
+        const nextWorkspaceId = membership?.workspaceId ?? null;
+        setWorkspaceId(nextWorkspaceId);
+        await loadNotifications(nextWorkspaceId);
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? `Could not load notifications: ${cause.message}`
+            : "Could not load notifications."
+        );
         setLoading(false);
-        return;
       }
-
-      const nextWorkspaceId = data?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await loadNotifications(nextWorkspaceId);
     };
 
     void loadWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read_at).length,
     [notifications]
+  );
+
+  const visible = useMemo(
+    () => (tab === "unread" ? notifications.filter((n) => !n.read_at) : notifications),
+    [notifications, tab]
   );
 
   const markAsRead = async (notificationId: string) => {
@@ -100,12 +175,11 @@ export function NotificationCenter({ userId }: { userId: string }) {
     }
 
     await loadNotifications(workspaceId);
+    router.refresh();
   };
 
   const markAllAsRead = async () => {
-    if (!workspaceId || unreadCount === 0) {
-      return;
-    }
+    if (!workspaceId || unreadCount === 0) return;
 
     setMarkingAll(true);
     const { error: updateError } = await supabase
@@ -115,112 +189,155 @@ export function NotificationCenter({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId)
       .is("read_at", null);
 
+    setMarkingAll(false);
+
     if (updateError) {
       setError(updateError.message);
-      setMarkingAll(false);
       return;
     }
 
-    setMarkingAll(false);
     await loadNotifications(workspaceId);
+    router.refresh();
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Notifications</h2>
-          <p className="mt-1 text-sm text-zinc-500">Your workspace updates and reminders.</p>
-        </div>
+    <div className="mx-auto w-full max-w-[720px] space-y-5">
+      <PageHeader
+        title="Inbox"
+        count={notifications.length}
+        description="Everything that happened in your workspace."
+        actions={
+          <Button
+            variant="secondary"
+            onClick={markAllAsRead}
+            disabled={!workspaceId || unreadCount === 0 || markingAll}
+          >
+            {markingAll ? "Updating..." : "Mark all as read"}
+          </Button>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={markAllAsRead}
-          disabled={!workspaceId || unreadCount === 0 || markingAll}
-          className="rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {markingAll ? "Updating..." : "Mark all as read"}
-        </button>
-      </div>
+      <PillTabs
+        label="Notification filter"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "all", label: `All${notifications.length ? ` · ${notifications.length}` : ""}` },
+          { id: "unread", label: `Unread${unreadCount ? ` · ${unreadCount}` : ""}` },
+        ]}
+      />
 
-      {error ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-          {error}
-        </div>
-      ) : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      {loading ? (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          Loading notifications...
-        </div>
-      ) : !workspaceId ? (
-        <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          No active workspace is linked to this account yet.
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-500">
-          No notifications yet.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {notifications.map((notification) => {
-            const href = notification.entity_type ? entityRoutes[notification.entity_type.toLowerCase()] ?? "/dashboard" : "/dashboard";
-            const isUnread = !notification.read_at;
+      <Panel bodyClassName="p-0">
+        {loading ? (
+          <div className="space-y-1.5 p-4">
+            {[0, 1, 2].map((index) => (
+              <Skeleton key={index} className="h-14 w-full" />
+            ))}
+          </div>
+        ) : !workspaceId ? (
+          <div className="p-4">
+            <EmptyState
+              title="No active workspace"
+              description="This account is not linked to an active workspace yet."
+            />
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title={tab === "unread" ? "No unread notifications" : "Aucune notification."}
+              description={
+                tab === "unread" ? "You are all caught up." : "C'est calme ici."
+              }
+              icon={<Bell size={18} strokeWidth={1.75} />}
+            />
+          </div>
+        ) : (
+          <ul>
+            {visible.map((notification) => {
+              const href = notification.entity_type
+                ? (entityRoutes[notification.entity_type.toLowerCase()] ?? "/dashboard")
+                : "/dashboard";
+              const isUnread = !notification.read_at;
+              const Icon = iconFor(notification);
 
-            return (
-              <div
-                key={notification.id}
-                className={`rounded-3xl border p-4 ${isUnread ? "border-white/20 bg-white/[0.04]" : "border-white/10 bg-black/10"}`}
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-zinc-400">
-                        {notification.type}
-                      </span>
-                      {isUnread ? (
-                        <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-zinc-200">
-                          Unread
-                        </span>
-                      ) : null}
-                    </div>
+              return (
+                <li
+                  key={notification.id}
+                  className={cn(
+                    "group flex min-h-14 items-start gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60",
+                    isUnread && "bg-bg-surface/30"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-nav border",
+                      isUnread
+                        ? "border-lavender-border bg-lavender-subtle text-lavender"
+                        : "border-border-subtle bg-bg-surface text-text-tertiary"
+                    )}
+                  >
+                    <Icon size={15} strokeWidth={1.75} />
+                  </span>
 
-                    <h3 className="mt-3 text-base font-semibold text-white">{notification.title}</h3>
-                    {notification.message ? <p className="mt-1 text-sm text-zinc-400">{notification.message}</p> : null}
-
-                    <div className="mt-2 text-xs text-zinc-500">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 md:flex-col md:items-end">
-                    {notification.entity_id ? (
-                      <Link
-                        href={href}
-                        className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <p
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-body",
+                          isUnread ? "text-text-primary" : "text-text-secondary"
+                        )}
                       >
-                        Open
-                      </Link>
+                        {notification.title}
+                      </p>
+                      <time
+                        dateTime={notification.created_at}
+                        title={absoluteTime(notification.created_at)}
+                        className="shrink-0 font-mono text-mono tabular-nums text-text-quaternary"
+                      >
+                        {relativeTime(notification.created_at)}
+                      </time>
+                    </div>
+
+                    {notification.message ? (
+                      <p className="mt-0.5 text-caption text-text-tertiary">
+                        {notification.message}
+                      </p>
                     ) : null}
 
-                    {!notification.read_at ? (
-                      <button
-                        type="button"
-                        onClick={() => markAsRead(notification.id)}
-                        className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                      >
-                        Mark as read
-                      </button>
-                    ) : (
-                      <span className="text-xs text-zinc-500">Read</span>
-                    )}
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                        {notification.type}
+                      </span>
+                      {notification.entity_id ? (
+                        <Link
+                          href={href}
+                          onClick={() => {
+                            if (isUnread) void markAsRead(notification.id);
+                          }}
+                          className="text-caption text-text-secondary underline decoration-border-strong underline-offset-4 transition-colors hover:text-text-primary"
+                        >
+                          Open
+                        </Link>
+                      ) : null}
+                      {isUnread ? (
+                        <button
+                          type="button"
+                          onClick={() => void markAsRead(notification.id)}
+                          className="text-caption text-text-secondary opacity-0 transition-opacity duration-150 focus-visible:opacity-100 group-hover:opacity-100 hover:text-text-primary"
+                        >
+                          Mark as read
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
     </div>
   );
 }

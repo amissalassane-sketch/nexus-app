@@ -1,5 +1,5 @@
 -- ============================================================
--- 007. FREEMIUM — SERVER-SIDE ENFORCEMENT
+-- 007. FREEMIUM -- SERVER-SIDE ENFORCEMENT
 -- Workspace-scoped plan limits enforced atomically in PostgreSQL.
 -- Plans are defined in code (plan-limits.ts); this migration
 -- only adds the subscription table and enforcement functions.
@@ -7,7 +7,7 @@
 
 -- 1. workspace_subscriptions table
 --    Stores the active plan per workspace.
---    No plans table — plan names are sourced from application code.
+--    No plans table -- plan names are sourced from application code.
 create table if not exists public.workspace_subscriptions (
   id                  uuid primary key default gen_random_uuid(),
   workspace_id        uuid not null references public.workspaces(id) on delete cascade,
@@ -15,7 +15,7 @@ create table if not exists public.workspace_subscriptions (
                         check (plan in ('FREE', 'PRO', 'TEAM')),
   status              text not null default 'active'
                         check (status in ('active', 'cancelled', 'past_due', 'trialing')),
-  -- billing stubs (unconnected for now — will be wired to FedaPay later)
+  -- billing stubs (unconnected for now -- will be wired to FedaPay later)
   billing_customer_id text,
   billing_subscription_id text,
   trial_ends_at       timestamptz,

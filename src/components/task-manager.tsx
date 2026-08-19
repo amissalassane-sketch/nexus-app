@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
 import { canCreateTask } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/ui/create-button";
+import { Badge } from "@/components/ui/badge";
+import { Panel } from "@/components/ui/card";
+import { Modal } from "@/components/ui/modal";
+import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 
 type TaskStatus = "todo" | "in_progress" | "in_review" | "blocked" | "done" | "cancelled";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -36,8 +48,42 @@ const blankTaskForm = (): TaskForm => ({
   due_at: "",
 });
 
-export function TaskManager({ userId }: { userId: string }) {
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "To do",
+  in_progress: "In progress",
+  in_review: "In review",
+  blocked: "Blocked",
+  done: "Done",
+  cancelled: "Cancelled",
+};
+
+const PRIORITY_TONE: Record<Priority, "neutral" | "warning" | "danger"> = {
+  low: "neutral",
+  medium: "neutral",
+  high: "warning",
+  urgent: "danger",
+};
+
+/** Groups shown in the list, in execution order. */
+const GROUPS: { id: "active" | "done"; label: string }[] = [
+  { id: "active", label: "Open" },
+  { id: "done", label: "Completed" },
+];
+
+const formatDate = (value: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit" }).format(date);
+};
+
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+function TaskManagerInner({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,12 +91,17 @@ export function TaskManager({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ status: "all", priority: "all" });
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState<TaskForm>(blankTaskForm());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  const submitting = useRef(false);
+
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
     [tasks]
   );
+
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
     canCreateTask,
@@ -83,34 +134,77 @@ export function TaskManager({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { data: memberships } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        const { membership, error: membershipError } = await getActiveMembership(
+          supabase,
+          userId
+        );
 
-      const nextWorkspaceId = memberships?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await fetchTasks(nextWorkspaceId);
+        if (membershipError) {
+          setError(membershipError);
+        }
+
+        const nextWorkspaceId = membership?.workspaceId ?? null;
+        setWorkspaceId(nextWorkspaceId);
+        await fetchTasks(nextWorkspaceId);
+      } catch (cause) {
+        // Network/config failure: surface it instead of spinning forever.
+        setError(
+          cause instanceof Error
+            ? `Could not load data from Supabase: ${cause.message}`
+            : "Could not load data from Supabase."
+        );
+        setLoading(false);
+      }
     };
 
     void loadWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId]);
 
+  /** Keeps the sidebar counters and the dashboard in sync after a write. */
+  const syncServerViews = () => router.refresh();
+
   const filteredTasks = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+
     return tasks.filter((task) => {
       const statusMatch = filters.status === "all" || task.status === filters.status;
       const priorityMatch = filters.priority === "all" || task.priority === filters.priority;
-      return statusMatch && priorityMatch;
+      const queryMatch =
+        needle.length === 0 ||
+        task.title.toLowerCase().includes(needle) ||
+        (task.description ?? "").toLowerCase().includes(needle);
+      return statusMatch && priorityMatch && queryMatch;
     });
-  }, [filters, tasks]);
+  }, [filters, query, tasks]);
+
+  const grouped = useMemo(() => {
+    return {
+      active: filteredTasks.filter(
+        (task) => task.status !== "done" && task.status !== "cancelled"
+      ),
+      done: filteredTasks.filter(
+        (task) => task.status === "done" || task.status === "cancelled"
+      ),
+    };
+  }, [filteredTasks]);
 
   const resetForm = () => {
     setForm(blankTaskForm());
     setEditingTaskId(null);
     setSuccess("");
+  };
+
+  const closeForm = () => {
+    resetForm();
+    setFormOpen(false);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setError("");
+    setFormOpen(true);
   };
 
   const createTask = async () => {
@@ -120,7 +214,13 @@ export function TaskManager({ userId }: { userId: string }) {
     }
 
     const allowed = await guardCreate();
-    if (!allowed) return;
+    if (!allowed) {
+      setError(
+        "You have reached your plan limit for tasks. See the upgrade options above."
+      );
+      setFormOpen(false);
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -142,14 +242,18 @@ export function TaskManager({ userId }: { userId: string }) {
     setSaving(false);
 
     if (createError) {
-      if (await handleMutationError(createError.message)) return;
+      if (await handleMutationError(createError.message)) {
+        setFormOpen(false);
+        return;
+      }
       setError(createError.message);
       return;
     }
 
-    setSuccess("Task created successfully.");
-    resetForm();
+    setSuccess("Task created.");
+    closeForm();
     await fetchTasks(workspaceId);
+    syncServerViews();
   };
 
   const updateTask = async () => {
@@ -183,22 +287,28 @@ export function TaskManager({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Task updated successfully.");
-    resetForm();
+    setSuccess("Task updated.");
+    closeForm();
     await fetchTasks(workspaceId);
+    syncServerViews();
   };
 
   const submitTask = async () => {
-    if (editingTaskId) {
-      await updateTask();
-      return;
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      if (editingTaskId) await updateTask();
+      else await createTask();
+    } finally {
+      submitting.current = false;
     }
-
-    await createTask();
   };
 
   const populateEditForm = (task: Task) => {
     setEditingTaskId(task.id);
+    setFormOpen(true);
+    setError("");
+    setSuccess("");
     setForm({
       title: task.title,
       description: task.description ?? "",
@@ -206,8 +316,6 @@ export function TaskManager({ userId }: { userId: string }) {
       status: task.status,
       due_at: task.due_at ? new Date(task.due_at).toISOString().slice(0, 10) : "",
     });
-    setError("");
-    setSuccess("");
   };
 
   const toggleTaskStatus = async (task: Task) => {
@@ -227,15 +335,19 @@ export function TaskManager({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Task status updated.");
     await fetchTasks(workspaceId);
+    syncServerViews();
   };
 
   const deleteTask = async (taskId: string) => {
     const confirmed = window.confirm("Delete this task?");
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabase.from("tasks").delete().eq("id", taskId).eq("workspace_id", workspaceId ?? "");
+    const { error: deleteError } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
       setError(deleteError.message);
@@ -243,203 +355,383 @@ export function TaskManager({ userId }: { userId: string }) {
     }
 
     setSuccess("Task deleted.");
-    if (editingTaskId === taskId) {
-      resetForm();
-    }
+    if (editingTaskId === taskId) closeForm();
     await fetchTasks(workspaceId);
+    syncServerViews();
   };
 
   const today = new Date();
-  const todayTasks = tasks.filter((task) => {
-    if (!task.due_at) return false;
-    const dueDate = new Date(task.due_at);
-    return dueDate.toDateString() === today.toDateString();
-  });
 
-  const overdueTasks = tasks.filter((task) => {
-    if (!task.due_at || task.status === "done") return false;
-    const dueDate = new Date(task.due_at);
-    return dueDate < today;
-  });
+  const dueToday = tasks.filter(
+    (task) => task.due_at && isSameDay(new Date(task.due_at), today)
+  ).length;
+
+  const overdue = tasks.filter(
+    (task) => task.due_at && task.status !== "done" && new Date(task.due_at) < today
+  ).length;
+
+  const filtersActive =
+    filters.status !== "all" || filters.priority !== "all" || query.trim().length > 0;
+
+  const renderRow = (task: Task) => {
+    const done = task.status === "done";
+    const isOverdue = !done && task.due_at ? new Date(task.due_at) < today : false;
+
+    return (
+      <li
+        key={task.id}
+        className="group flex min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-1.5 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
+      >
+        <Checkbox
+          checked={done}
+          onChange={() => void toggleTaskStatus(task)}
+          label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
+        />
+
+        <button
+          type="button"
+          onClick={() => populateEditForm(task)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <span
+            className={cn(
+              "block truncate text-body text-text-primary",
+              done && "text-text-tertiary line-through"
+            )}
+          >
+            {task.title}
+          </span>
+          {task.description ? (
+            <span className="block truncate text-caption text-text-tertiary">
+              {task.description}
+            </span>
+          ) : null}
+        </button>
+
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
+          <Badge tone={done ? "success" : "neutral"}>{STATUS_LABELS[task.status]}</Badge>
+        </div>
+
+        <span
+          className={cn(
+            "w-14 shrink-0 text-right font-mono text-mono tabular-nums",
+            isOverdue ? "text-danger" : "text-text-tertiary"
+          )}
+        >
+          {formatDate(task.due_at) ?? "—"}
+        </span>
+
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 ease-nexus focus-within:opacity-100 group-hover:opacity-100">
+          <Button
+            variant="icon"
+            aria-label={`Edit ${task.title}`}
+            onClick={() => populateEditForm(task)}
+          >
+            <Pencil size={15} strokeWidth={1.75} />
+          </Button>
+          <Button
+            variant="icon"
+            aria-label={`Delete ${task.title}`}
+            onClick={() => void deleteTask(task.id)}
+            className="hover:text-danger"
+          >
+            <Trash2 size={15} strokeWidth={1.75} />
+          </Button>
+        </div>
+      </li>
+    );
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <PageHeader
+        title="Tasks"
+        count={tasks.length}
+        description="Everything you are executing in this workspace."
+        actions={<CreateButton label="New Task" onClick={openCreateForm} />}
+      />
+
+      {/* Metrics strip */}
+      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
+        <div className="px-4 py-3">
+          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+            Open
+          </p>
+          <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
+            {activeTaskCount}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+            Due today
+          </p>
+          <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
+            {dueToday}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+            Overdue
+          </p>
+          <p
+            className={cn(
+              "mt-1 font-mono text-[20px] leading-none tabular-nums",
+              overdue > 0 ? "text-danger" : "text-text-primary"
+            )}
+          >
+            {overdue}
+          </p>
+        </div>
+      </div>
+
       {!editingTaskId && limitResult ? (
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Today</div>
-          <div className="mt-3 text-3xl font-semibold">{todayTasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tasks due today</div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Overdue</div>
-          <div className="mt-3 text-3xl font-semibold">{overdueTasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tasks requiring attention</div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm text-zinc-500">Total</div>
-          <div className="mt-3 text-3xl font-semibold">{tasks.length}</div>
-          <div className="mt-2 text-xs text-zinc-600">Tracked tasks</div>
-        </div>
-      </div>
+      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">{editingTaskId ? "Edit task" : "Create task"}</h2>
-          {editingTaskId ? (
-            <button type="button" onClick={resetForm} className="text-sm text-zinc-400 hover:text-white">
-              Cancel
-            </button>
-          ) : null}
-        </div>
+      <Panel
+        title="All tasks"
+        description={`${filteredTasks.length} shown`}
+        bodyClassName="p-0"
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative">
+              <Search
+                size={14}
+                strokeWidth={1.75}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
+              />
+              <Input
+                aria-label="Search tasks"
+                placeholder="Search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-8 w-[150px] pl-7 text-small"
+              />
+            </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            value={form.title}
-            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            placeholder="Task title"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-          />
-          <input
-            type="date"
-            value={form.due_at}
-            onChange={(event) => setForm((current) => ({ ...current, due_at: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          />
-          <select
-            value={form.priority}
-            onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as Priority }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          >
-            <option value="low">Low priority</option>
-            <option value="medium">Medium priority</option>
-            <option value="high">High priority</option>
-            <option value="urgent">Urgent</option>
-          </select>
-          <select
-            value={form.status}
-            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as TaskStatus }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          >
-            <option value="todo">To do</option>
-            <option value="in_progress">In progress</option>
-            <option value="in_review">In review</option>
-            <option value="blocked">Blocked</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Add notes for this task"
-          rows={3}
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-        />
-
-        {error ? <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div> : null}
-        {success ? <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">{success}</div> : null}
-
-        <button
-          type="button"
-          onClick={submitTask}
-          disabled={saving || !workspaceId || (!editingTaskId && Boolean(limitResult))}
-          className="mt-4 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (editingTaskId ? "Saving task..." : "Creating task...") : editingTaskId ? "Save task" : "Add task"}
-        </button>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-semibold">Tasks</h2>
-          <div className="flex flex-wrap gap-2">
-            <select
+            <Select
+              size="sm"
+              aria-label="Filter by status"
               value={filters.status}
-              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-              className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none focus:border-white/30"
+              onChange={(event) =>
+                setFilters((current) => ({ ...current, status: event.target.value }))
+              }
+              className="w-auto min-w-[128px]"
             >
               <option value="all">All statuses</option>
-              <option value="todo">To do</option>
-              <option value="in_progress">In progress</option>
-              <option value="in_review">In review</option>
-              <option value="blocked">Blocked</option>
-              <option value="done">Done</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select
+              {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              size="sm"
+              aria-label="Filter by priority"
               value={filters.priority}
-              onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}
-              className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none focus:border-white/30"
+              onChange={(event) =>
+                setFilters((current) => ({ ...current, priority: event.target.value }))
+              }
+              className="w-auto min-w-[120px]"
             >
               <option value="all">All priorities</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
-            </select>
-          </div>
-        </div>
+            </Select>
 
+            {filtersActive ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilters({ status: "all", priority: "all" });
+                  setQuery("");
+                }}
+              >
+                Reset
+              </Button>
+            ) : null}
+          </div>
+        }
+      >
         {loading ? (
-          <div className="text-sm text-zinc-500">Loading tasks...</div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-zinc-500">
-            No tasks yet. Create your first task above.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredTasks.map((task) => (
-              <div key={task.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-white">{task.title}</h3>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] text-zinc-400">
-                        {task.priority}
-                      </span>
-                    </div>
-                    {task.description ? <p className="mt-1 text-sm text-zinc-400">{task.description}</p> : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => populateEditForm(task)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleTaskStatus(task)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
-                    >
-                      {task.status === "done" ? "Reopen" : "Mark done"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTask(task.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                  <span>Status: {task.status}</span>
-                  {task.due_at ? <span>Due: {new Date(task.due_at).toLocaleDateString()}</span> : null}
-                </div>
-              </div>
+          <div className="space-y-1.5 p-4">
+            {[0, 1, 2, 3].map((index) => (
+              <Skeleton key={index} className="h-11 w-full" />
             ))}
           </div>
+        ) : !workspaceId ? (
+          <div className="p-4">
+            <EmptyState
+              title="No active workspace"
+              description="This account is not linked to an active workspace yet."
+            />
+          </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title={tasks.length === 0 ? "No tasks yet" : "Nothing matches these filters"}
+              description={
+                tasks.length === 0
+                  ? "Create your first task to start tracking execution."
+                  : "Adjust the search or reset the filters."
+              }
+              action={
+                tasks.length === 0 ? (
+                  <CreateButton label="New Task" onClick={openCreateForm} />
+                ) : null
+              }
+            />
+          </div>
+        ) : (
+          GROUPS.map((group) => {
+            const rows = grouped[group.id];
+            if (rows.length === 0) return null;
+
+            return (
+              <div key={group.id}>
+                <div className="flex items-center justify-between border-b border-border-subtle bg-bg-base/40 px-4 py-1.5">
+                  <span className="font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
+                    {group.label}
+                  </span>
+                  <span className="font-mono text-mono tabular-nums text-text-quaternary">
+                    {rows.length}
+                  </span>
+                </div>
+                <ul>{rows.map(renderRow)}</ul>
+              </div>
+            );
+          })
         )}
-      </div>
+      </Panel>
+
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editingTaskId ? "Edit task" : "New task"}
+        description={
+          editingTaskId
+            ? "Update the details of this task."
+            : "Add a task to your workspace."
+        }
+        footer={
+          <>
+            <Button onClick={submitTask} disabled={saving || !workspaceId}>
+              {saving
+                ? editingTaskId
+                  ? "Saving..."
+                  : "Creating..."
+                : editingTaskId
+                  ? "Save task"
+                  : "Add task"}
+            </Button>
+            <Button variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <Field label="Title" htmlFor="task-title">
+            <Input
+              id="task-title"
+              value={form.title}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, title: event.target.value }))
+              }
+              placeholder="What needs to be done?"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Status" htmlFor="task-status">
+              <Select
+                id="task-status"
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: event.target.value as TaskStatus,
+                  }))
+                }
+              >
+                {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Priority" htmlFor="task-priority">
+              <Select
+                id="task-priority"
+                value={form.priority}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    priority: event.target.value as Priority,
+                  }))
+                }
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </Select>
+            </Field>
+
+            <Field label="Due date" htmlFor="task-due">
+              <Input
+                id="task-due"
+                type="date"
+                value={form.due_at}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, due_at: event.target.value }))
+                }
+              />
+            </Field>
+          </div>
+
+          <Field label="Notes" htmlFor="task-notes">
+            <Textarea
+              id="task-notes"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
+              placeholder="Add context for this task"
+              rows={3}
+            />
+          </Field>
+
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+        </div>
+      </Modal>
     </div>
   );
 }
 
+export function TaskManager({ userId }: { userId: string }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+        </div>
+      }
+    >
+      <TaskManagerInner userId={userId} />
+    </Suspense>
+  );
+}

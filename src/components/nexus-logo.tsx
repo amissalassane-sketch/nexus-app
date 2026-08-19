@@ -1,74 +1,60 @@
-"use client";
+import Image from "next/image";
+import { cn } from "@/lib/cn";
 
-export function NexusLogo({ size = 32, className = "" }: { size?: number; className?: string }) {
-  /**
-   * NEXUS Logo — Convergence Cut
-   *
-   * Direction: N construit en espace négatif par découpe à 14°
-   * Grille: 32px conceptuelle
-   * Découpe: ~5px
-   * Lisible: 16px+
-   * Couleur: Adaptative (hérite de la couleur de texte ou se définit en prop)
-   */
-
-  const viewBox = `0 0 32 32`;
-  const strokeWidth = Math.max(1.5, size / 20); // Scales with size
-
+/**
+ * NEXUS logo — LOCKED ASSET.
+ *
+ * The mark is the white interlaced architectural "N" delivered in the official
+ * logo pack (design/NEXUS-V3-IMPLEMENTATION-BUNDLE/nexus-final-logo-pack).
+ * It is rendered from the master PNG, never redrawn: no gradient, no chrome,
+ * no rounded corners, no filled central gap, no geometry change.
+ *
+ * Sizes: 28px in the UI, 48px on auth screens.
+ */
+export function NexusLogo({
+  size = 28,
+  className,
+  variant = "white",
+  priority = false,
+}: {
+  size?: number;
+  className?: string;
+  variant?: "white" | "black";
+  priority?: boolean;
+}) {
   return (
-    <svg
+    <Image
+      src={variant === "black" ? "/logo/nexus-black.png" : "/logo/nexus.png"}
+      alt="NEXUS"
       width={size}
       height={size}
-      viewBox={viewBox}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="NEXUS"
-    >
-      {/* Carré avec coins arrondis — forme extérieure */}
-      <rect
-        x="2"
-        y="2"
-        width="28"
-        height="28"
-        rx="7"
-        ry="7"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-      />
+      priority={priority}
+      className={cn("select-none object-contain", className)}
+      style={{ width: size, height: size }}
+    />
+  );
+}
 
-      {/* N construit en espace négatif par découpe géométrique à 14° */}
-      {/* Trait diagonal principal (de haut-gauche à bas-droite) */}
-      <line
-        x1="10"
-        y1="8"
-        x2="22"
-        y2="24"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-      />
-
-      {/* Trait vertical gauche du N */}
-      <line
-        x1="10"
-        y1="8"
-        x2="10"
-        y2="24"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-      />
-
-      {/* Trait vertical droit du N */}
-      <line
-        x1="22"
-        y1="8"
-        x2="22"
-        y2="24"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-      />
-    </svg>
+/** Symbol + wordmark lockup (Inter 600, tracking -0.03em, uppercase). */
+export function NexusWordmark({
+  size = 28,
+  className,
+  showText = true,
+  priority = false,
+}: {
+  size?: number;
+  className?: string;
+  showText?: boolean;
+  priority?: boolean;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-2.5", className)}>
+      <NexusLogo size={size} priority={priority} />
+      {showText ? (
+        <span className="text-[13px] font-semibold uppercase tracking-[-0.03em] text-text-primary">
+          Nexus
+        </span>
+      ) : null}
+    </span>
   );
 }

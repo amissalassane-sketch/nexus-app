@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0A0A0A;
+  --bg-subtle: #111111;
+  --bg-surface: #171717;
+}
+
+html, body {
+  background: #0A0A0A;
+  color: #F5F5F5;
+  font-family: Inter, Geist Sans, -apple-system, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+/* DOT GRID - ressource principale */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 20px 20px;
+  z-index: -1;
+}
+
+/* Focus ring Volt/Lavender */
+:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px #0A0A0A, 0 0 0 3px rgba(233,228,255,0.24);
+  border-radius: 10px;
+}
+
+/* Scrollbar minimal */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #232323; border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Utilities */
+.quiet-separator {
+  height: 1px;
+  background: linear-gradient(to right, rgba(255,255,255,0.08), transparent);
+}
+.border-default { border-color: rgba(255,255,255,0.08); }

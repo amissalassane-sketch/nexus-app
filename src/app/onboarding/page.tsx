@@ -3,6 +3,11 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { isPlanLimitError } from "@/lib/plan-errors";
+import { NexusLogo } from "@/components/nexus-logo";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -74,7 +79,9 @@ export default function OnboardingPage() {
 
       if (!profile?.username) {
         const metadataUsername =
-          typeof user.user_metadata?.username === "string" ? user.user_metadata.username : "";
+          typeof user.user_metadata?.username === "string"
+            ? user.user_metadata.username
+            : "";
         setUsername(metadataUsername || fallbackUsername(user.email));
       }
 
@@ -121,16 +128,14 @@ export default function OnboardingPage() {
       return;
     }
 
-    const { error: upsertError } = await supabase
-      .from("profiles")
-      .upsert({
-        id: user.id,
-        display_name: cleanDisplayName,
-        username: cleanUsername,
-        bio: cleanBio,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
-      });
+    const { error: upsertError } = await supabase.from("profiles").upsert({
+      id: user.id,
+      display_name: cleanDisplayName,
+      username: cleanUsername,
+      bio: cleanBio,
+      onboarding_completed: true,
+      updated_at: new Date().toISOString(),
+    });
 
     if (upsertError) {
       if (upsertError.message.toLowerCase().includes("row-level security")) {
@@ -165,7 +170,11 @@ export default function OnboardingPage() {
       });
 
       if (workspaceError) {
-        setError(workspaceError.message);
+        setError(
+          isPlanLimitError(workspaceError.message)
+            ? "Your plan does not allow another workspace. Visit /upgrade to unlock more."
+            : workspaceError.message
+        );
         setSaving(false);
         return;
       }
@@ -177,77 +186,67 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
-        <p className="text-sm text-zinc-400">Loading your workspace...</p>
+      <main className="flex min-h-screen items-center justify-center bg-bg-base px-4">
+        <div className="flex flex-col items-center gap-3">
+          <NexusLogo size={32} className="opacity-60" priority />
+          <p className="text-small text-text-secondary">Loading your workspace...</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
-      <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-black">
-            N
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Complete your profile</h1>
-          <p className="mt-2 text-sm text-zinc-500">
+    <main className="flex min-h-screen items-center justify-center bg-bg-base px-4 py-10">
+      <div className="w-full max-w-[440px] rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <NexusLogo size={48} priority className="mb-5" />
+          <h1 className="text-h1 text-text-primary">Complete your profile</h1>
+          <p className="mt-1 text-small text-text-secondary">
             Finish setup so you can access your NEXUS dashboard.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-2 block text-sm text-zinc-400">Full name</label>
-            <input
-              type="text"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Field label="Full name" htmlFor="onboarding-name">
+            <Input
+              id="onboarding-name"
+              size="lg"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               placeholder="Your full name"
               required
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm text-zinc-400">Username</label>
-            <input
-              type="text"
+          <Field label="Username" htmlFor="onboarding-username">
+            <Input
+              id="onboarding-username"
+              size="lg"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               placeholder="yourusername"
-              required
               minLength={3}
               maxLength={30}
               pattern="[A-Za-z0-9_]+"
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
+              required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm text-zinc-400">Bio</label>
-            <textarea
+          <Field label="Bio" htmlFor="onboarding-bio">
+            <Textarea
+              id="onboarding-bio"
               value={bio}
               onChange={(event) => setBio(event.target.value)}
               placeholder="Tell people a little about yourself"
               rows={4}
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
             />
-          </div>
+          </Field>
 
-          {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
+          {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="submit" size="lg" disabled={saving} className="mt-1 w-full">
             {saving ? "Saving..." : "Continue to dashboard"}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

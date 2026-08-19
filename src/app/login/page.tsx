@@ -1,138 +1,164 @@
-﻿"use client";
+"use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { FormEvent, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { readSupabaseConfig } from "@/lib/supabase/config";
+import { validateCredentials } from "@/lib/auth-errors";
+import { NexusLogo } from "@/components/nexus-logo";
+import { Field, Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
 
+/**
+ * Sign in.
+ * The credentials are posted to /api/auth/signin, which authenticates against
+ * Supabase and writes the SSR cookies server-side. This page therefore has a
+ * single failure surface, and every outcome is displayed to the user.
+ */
 export default function LoginPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const { error: configError } = readSupabaseConfig();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submitting = useRef(false);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
 
+    if (configError) {
+      setError(configError);
+      return;
+    }
+
+    const validationError = validateCredentials(email, password);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    submitting.current = true;
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (error) {
-      setError(error.message);
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        redirectTo?: string;
+      } | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(payload?.error ?? "Sign in failed. Please try again.");
+        return;
+      }
+
+      router.replace(payload.redirectTo ?? "/dashboard");
+      router.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? `Could not reach the server: ${cause.message}`
+          : "Could not reach the server."
+      );
+    } finally {
+      submitting.current = false;
       setLoading(false);
-      return;
     }
-
-    if (!data.session) {
-      setError("Sign in succeeded, but no browser session was created. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    const sessionResponse = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      }),
-    });
-
-    if (!sessionResponse.ok) {
-      const payload = (await sessionResponse.json().catch(() => null)) as { error?: string } | null;
-      setError(payload?.error ?? "Session could not be synchronized with the server.");
-      setLoading(false);
-      return;
-    }
-
-    window.location.assign(new URL("/", window.location.origin).toString());
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-black">
-            N
+    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
+      <div className="w-full max-w-[400px]">
+        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+          <div className="mb-7 flex flex-col items-center text-center">
+            <NexusLogo size={48} priority className="mb-5" />
+            <h1 className="text-h1 text-text-primary">Sign in to NEXUS</h1>
+            <p className="mt-1 text-small text-text-secondary">
+              Enter your details to access your workspace.
+            </p>
           </div>
 
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome to NEXUS
-          </h1>
+          {configError ? (
+            <Alert tone="danger" className="mb-4">
+              {configError}
+            </Alert>
+          ) : null}
 
-          <p className="mt-2 text-sm text-zinc-500">
-            Your personal operating system.
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Email
-              </label>
-
-              <input
+          <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
+            <Field label="Email address" htmlFor="login-email">
+              <Input
+                id="login-email"
+                size="lg"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
+                disabled={loading}
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="mb-2 block text-sm text-zinc-400">
-                Password
-              </label>
-
-              <input
+            <Field label="Password" htmlFor="login-password">
+              <Input
+                id="login-password"
+                size="lg"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={loading}
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
               />
-            </div>
+            </Field>
 
-            {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-                {error}
-              </div>
-            )}
+            {error ? <Alert tone="danger">{error}</Alert> : null}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              size="lg"
+              disabled={loading || Boolean(configError)}
+              aria-busy={loading}
+              className="mt-1 w-full"
             >
               {loading ? "Signing in..." : "Sign in"}
-            </button>
+            </Button>
           </form>
 
           <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-zinc-600">NEXUS</span>
-            <div className="h-px flex-1 bg-white/10" />
+            <span className="h-px flex-1 bg-border-subtle" />
+            <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+              Nexus
+            </span>
+            <span className="h-px flex-1 bg-border-subtle" />
           </div>
 
-          <p className="text-center text-sm text-zinc-500">
+          <p className="text-center text-small text-text-secondary">
             Don&apos;t have an account?{" "}
-            <a
+            <Link
               href="/signup"
-              className="text-white underline underline-offset-4"
+              className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
             >
               Create one
-            </a>
+            </Link>
           </p>
         </div>
+
+        <p className="mt-5 text-center font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
+          Personal operating system
+        </p>
       </div>
     </main>
   );

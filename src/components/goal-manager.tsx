@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Pencil, Target, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMembership } from "@/lib/workspace";
 import { canCreateGoal } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/ui/create-button";
+import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Goal = {
   id: string;
@@ -32,8 +43,37 @@ const blankGoalForm = (): GoalForm => ({
   target_date: "",
 });
 
-export function GoalManager({ userId }: { userId: string }) {
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "on_track", label: "On track" },
+  { value: "paused", label: "Paused" },
+  { value: "completed", label: "Completed" },
+];
+
+const formatDate = (value: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const daysLeft = (value: string | null) => {
+  if (!value) return null;
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+  const diff = Math.ceil((target.getTime() - Date.now()) / 86_400_000);
+  return diff;
+};
+
+function GoalManagerInner({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +82,9 @@ export function GoalManager({ userId }: { userId: string }) {
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  const submitting = useRef(false);
+
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
     canCreateGoal,
@@ -74,26 +117,51 @@ export function GoalManager({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { data: memberships } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        const { membership, error: membershipError } = await getActiveMembership(
+          supabase,
+          userId
+        );
 
-      const nextWorkspaceId = memberships?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await fetchGoals(nextWorkspaceId);
+        if (membershipError) {
+          setError(membershipError);
+        }
+
+        const nextWorkspaceId = membership?.workspaceId ?? null;
+        setWorkspaceId(nextWorkspaceId);
+        await fetchGoals(nextWorkspaceId);
+      } catch (cause) {
+        // Network/config failure: surface it instead of spinning forever.
+        setError(
+          cause instanceof Error
+            ? `Could not load data from Supabase: ${cause.message}`
+            : "Could not load data from Supabase."
+        );
+        setLoading(false);
+      }
     };
 
     void loadWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId]);
+
+  const syncServerViews = () => router.refresh();
 
   const resetForm = () => {
     setForm(blankGoalForm());
     setEditingGoalId(null);
     setSuccess("");
+  };
+
+  const closeForm = () => {
+    resetForm();
+    setFormOpen(false);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setError("");
+    setFormOpen(true);
   };
 
   const createGoal = async () => {
@@ -103,7 +171,13 @@ export function GoalManager({ userId }: { userId: string }) {
     }
 
     const allowed = await guardCreate();
-    if (!allowed) return;
+    if (!allowed) {
+      setError(
+        "You have reached your plan limit for goals. See the upgrade options above."
+      );
+      setFormOpen(false);
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -122,14 +196,18 @@ export function GoalManager({ userId }: { userId: string }) {
     setSaving(false);
 
     if (createError) {
-      if (await handleMutationError(createError.message)) return;
+      if (await handleMutationError(createError.message)) {
+        setFormOpen(false);
+        return;
+      }
       setError(createError.message);
       return;
     }
 
-    setSuccess("Goal created successfully.");
-    resetForm();
+    setSuccess("Goal created.");
+    closeForm();
     await fetchGoals(workspaceId);
+    syncServerViews();
   };
 
   const updateGoal = async () => {
@@ -162,37 +240,46 @@ export function GoalManager({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Goal updated successfully.");
-    resetForm();
+    setSuccess("Goal updated.");
+    closeForm();
     await fetchGoals(workspaceId);
+    syncServerViews();
   };
 
   const submitGoal = async () => {
-    if (editingGoalId) {
-      await updateGoal();
-      return;
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      if (editingGoalId) await updateGoal();
+      else await createGoal();
+    } finally {
+      submitting.current = false;
     }
-
-    await createGoal();
   };
 
   const populateEditForm = (goal: Goal) => {
     setEditingGoalId(goal.id);
+    setFormOpen(true);
+    setError("");
+    setSuccess("");
     setForm({
       title: goal.title,
       description: goal.description ?? "",
       status: goal.status,
       progress: goal.progress,
-      target_date: goal.target_date ? new Date(goal.target_date).toISOString().slice(0, 10) : "",
+      target_date: goal.target_date
+        ? new Date(goal.target_date).toISOString().slice(0, 10)
+        : "",
     });
-    setError("");
-    setSuccess("");
   };
 
   const handleProgress = async (goalId: string, progress: number) => {
     const { error: updateError } = await supabase
       .from("goals")
-      .update({ progress: Math.min(100, Math.max(0, progress)), updated_at: new Date().toISOString() })
+      .update({
+        progress: Math.min(100, Math.max(0, progress)),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", goalId)
       .eq("workspace_id", workspaceId ?? "");
 
@@ -201,15 +288,19 @@ export function GoalManager({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Goal progress updated.");
     await fetchGoals(workspaceId);
+    syncServerViews();
   };
 
   const deleteGoal = async (goalId: string) => {
     const confirmed = window.confirm("Delete this goal?");
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabase.from("goals").delete().eq("id", goalId).eq("workspace_id", workspaceId ?? "");
+    const { error: deleteError } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
       setError(deleteError.message);
@@ -217,149 +308,280 @@ export function GoalManager({ userId }: { userId: string }) {
     }
 
     setSuccess("Goal deleted.");
-    if (editingGoalId === goalId) {
-      resetForm();
-    }
+    if (editingGoalId === goalId) closeForm();
     await fetchGoals(workspaceId);
+    syncServerViews();
   };
 
+  const completedCount = goals.filter((goal) => goal.status === "completed").length;
+  const averageProgress =
+    goals.length > 0
+      ? Math.round(
+          goals.reduce((sum, goal) => sum + Number(goal.progress ?? 0), 0) / goals.length
+        )
+      : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <PageHeader
+        title="Goals"
+        count={goals.length}
+        description="The outcomes this workspace is working towards."
+        actions={<CreateButton label="New Goal" onClick={openCreateForm} />}
+      />
+
+      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
+        {[
+          { label: "In progress", value: goals.length - completedCount },
+          { label: "Completed", value: completedCount },
+          { label: "Avg. progress", value: `${averageProgress}%` },
+        ].map((metric) => (
+          <div key={metric.label} className="px-4 py-3">
+            <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+              {metric.label}
+            </p>
+            <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
+              {metric.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
       {!editingGoalId && limitResult ? (
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="mb-4 text-xl font-semibold">{editingGoalId ? "Edit goal" : "Create goal"}</h2>
-          {editingGoalId ? (
-            <button type="button" onClick={resetForm} className="text-sm text-zinc-400 hover:text-white">
-              Cancel
-            </button>
-          ) : null}
-        </div>
+      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <input
-            value={form.title}
-            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            placeholder="Goal title"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
-          />
-          <input
-            type="date"
-            value={form.target_date}
-            onChange={(event) => setForm((current) => ({ ...current, target_date: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          />
-          <select
-            value={form.status}
-            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          >
-            <option value="active">Active</option>
-            <option value="on_track">On track</option>
-            <option value="paused">Paused</option>
-            <option value="completed">Completed</option>
-          </select>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={form.progress}
-            onChange={(event) => setForm((current) => ({ ...current, progress: Number(event.target.value) }))}
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30"
-          />
+      {loading ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[0, 1].map((index) => (
+            <Skeleton key={index} className="h-40 w-full rounded-[20px]" />
+          ))}
         </div>
-
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Goal description"
-          rows={3}
-          className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none placeholder:text-zinc-700 focus:border-white/30"
+      ) : !workspaceId ? (
+        <EmptyState
+          title="No active workspace"
+          description="This account is not linked to an active workspace yet."
         />
+      ) : goals.length === 0 ? (
+        <EmptyState
+          title="No goals yet"
+          description="Define what you are working towards, then track the progress."
+          icon={<Target size={18} strokeWidth={1.75} />}
+          action={<CreateButton label="New Goal" onClick={openCreateForm} />}
+        />
+      ) : (
+        <ul className="grid gap-4 lg:grid-cols-2">
+          {goals.map((goal) => {
+            const progress = Math.min(100, Math.max(0, Number(goal.progress ?? 0)));
+            const remaining = daysLeft(goal.target_date);
+            const completed = goal.status === "completed";
 
-        {error ? <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div> : null}
-        {success ? <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">{success}</div> : null}
-
-        <button
-          type="button"
-          onClick={submitGoal}
-          disabled={saving || !workspaceId || (!editingGoalId && Boolean(limitResult))}
-          className="mt-4 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (editingGoalId ? "Saving goal..." : "Creating goal...") : editingGoalId ? "Save goal" : "Add goal"}
-        </button>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <h2 className="mb-4 text-xl font-semibold">Goals</h2>
-
-        {loading ? (
-          <div className="text-sm text-zinc-500">Loading goals...</div>
-        ) : goals.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-zinc-500">
-            No goals yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {goals.map((goal) => (
-              <div key={goal.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-white">{goal.title}</h3>
-                    {goal.description ? <p className="mt-1 text-sm text-zinc-400">{goal.description}</p> : null}
-                  </div>
-                  <div className="flex items-center gap-2">
+            return (
+              <li
+                key={goal.id}
+                className="group rounded-[20px] border border-border-subtle bg-bg-subtle/60 p-5 transition-colors duration-150 ease-nexus hover:border-border-default"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <button
                       type="button"
                       onClick={() => populateEditForm(goal)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
+                      className="block min-w-0 max-w-full truncate text-h3 text-text-primary"
                     >
-                      Edit
+                      {goal.title}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteGoal(goal.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <Badge tone={completed ? "success" : "neutral"}>
+                        {goal.status.replace("_", " ")}
+                      </Badge>
+                      {goal.target_date ? (
+                        <span className="font-mono text-mono tabular-nums text-text-tertiary">
+                          {formatDate(goal.target_date)}
+                          {remaining !== null && !completed
+                            ? ` · ${remaining >= 0 ? `${remaining}d left` : `${Math.abs(remaining)}d late`}`
+                            : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+                    <Button
+                      variant="icon"
+                      aria-label={`Edit ${goal.title}`}
+                      onClick={() => populateEditForm(goal)}
                     >
-                      Delete
-                    </button>
+                      <Pencil size={15} strokeWidth={1.75} />
+                    </Button>
+                    <Button
+                      variant="icon"
+                      aria-label={`Delete ${goal.title}`}
+                      onClick={() => void deleteGoal(goal.id)}
+                      className="hover:text-danger"
+                    >
+                      <Trash2 size={15} strokeWidth={1.75} />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
-                    <span>Progress</span>
-                    <span>{Math.round(goal.progress)}%</span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-white"
-                      style={{ width: `${Math.min(100, Math.max(0, goal.progress))}%` }}
-                    />
-                  </div>
-                </div>
+                {goal.description ? (
+                  <p className="mt-3 line-clamp-2 text-small text-text-secondary">
+                    {goal.description}
+                  </p>
+                ) : null}
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="mt-5">
+                  <div className="flex items-end justify-between gap-3">
+                    <span
+                      className={cn(
+                        "font-mono text-[28px] leading-none tabular-nums",
+                        completed ? "text-success" : "text-text-primary"
+                      )}
+                    >
+                      {Math.round(progress)}
+                      <span className="text-[16px] text-text-tertiary">%</span>
+                    </span>
+                    <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-quaternary">
+                      Progress
+                    </span>
+                  </div>
+                  <Progress
+                    value={progress}
+                    label={`${goal.title} progress`}
+                    className="mt-2.5"
+                  />
                   <input
                     type="range"
                     min={0}
                     max={100}
-                    value={goal.progress}
-                    onChange={(event) => handleProgress(goal.id, Number(event.target.value))}
-                    className="w-full max-w-xs accent-white"
+                    value={progress}
+                    onChange={(event) =>
+                      void handleProgress(goal.id, Number(event.target.value))
+                    }
+                    aria-label={`Set ${goal.title} progress`}
+                    className="mt-3 h-1 w-full cursor-pointer accent-white"
                   />
-                  <span className="text-xs text-zinc-500">{goal.status}</span>
-                  {goal.target_date ? <span className="text-xs text-zinc-500">Due {new Date(goal.target_date).toLocaleDateString()}</span> : null}
                 </div>
-              </div>
-            ))}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editingGoalId ? "Edit goal" : "New goal"}
+        description={
+          editingGoalId ? "Update this goal." : "Define an outcome and track it."
+        }
+        footer={
+          <>
+            <Button onClick={submitGoal} disabled={saving || !workspaceId}>
+              {saving
+                ? editingGoalId
+                  ? "Saving..."
+                  : "Creating..."
+                : editingGoalId
+                  ? "Save goal"
+                  : "Add goal"}
+            </Button>
+            <Button variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <Field label="Title" htmlFor="goal-title">
+            <Input
+              id="goal-title"
+              value={form.title}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, title: event.target.value }))
+              }
+              placeholder="What do you want to achieve?"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Status" htmlFor="goal-status">
+              <Select
+                id="goal-status"
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, status: event.target.value }))
+                }
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Progress (%)" htmlFor="goal-progress">
+              <Input
+                id="goal-progress"
+                type="number"
+                min={0}
+                max={100}
+                value={form.progress}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    progress: Number(event.target.value),
+                  }))
+                }
+              />
+            </Field>
+
+            <Field label="Target date" htmlFor="goal-target">
+              <Input
+                id="goal-target"
+                type="date"
+                value={form.target_date}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, target_date: event.target.value }))
+                }
+              />
+            </Field>
           </div>
-        )}
-      </div>
+
+          <Field label="Description" htmlFor="goal-description">
+            <Textarea
+              id="goal-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
+              placeholder="Why does this goal matter?"
+              rows={3}
+            />
+          </Field>
+
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+        </div>
+      </Modal>
     </div>
   );
 }
 
+export function GoalManager({ userId }: { userId: string }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-40 w-full rounded-[20px]" />
+        </div>
+      }
+    >
+      <GoalManagerInner userId={userId} />
+    </Suspense>
+  );
+}
