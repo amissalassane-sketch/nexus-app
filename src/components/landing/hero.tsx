@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
+import { HeroAtmosphere } from "@/components/landing/hero-atmosphere";
 
 // ============================================================
 // NEXUS LANDING — HERO
@@ -15,8 +16,9 @@ const delay = (ms: number) =>
 
 export function Hero({ notice }: { notice?: ReactNode }) {
   return (
-    <section className="relative px-5 pb-14 pt-32 sm:px-6 sm:pb-16 sm:pt-40">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col items-center text-center">
+    <section className="relative isolate overflow-hidden px-5 pb-14 pt-32 sm:px-6 sm:pb-16 sm:pt-40">
+      <HeroAtmosphere />
+      <div className="relative z-10 mx-auto flex w-full max-w-[1120px] flex-col items-center text-center">
         {notice ? (
           <div
             className="landing-hero-item mb-8 w-full max-w-[460px] text-left"

@@ -18,16 +18,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
   const profile = await getProfileSummary();
 
-  // Signup -> onboarding -> workspace -> dashboard: the product stays behind
-  // a completed profile. /onboarding sends completed users straight back here.
-  if (!profile.onboardingCompleted) {
+  const supabase = await createClient();
+  const { membership } = await getActiveMembership(supabase, user.id);
+
+  // The product shell requires both confirmed onboarding and a real active
+  // workspace. If either side is missing, the onboarding workflow resumes and
+  // repairs only from existing user data instead of rendering a false-ready
+  // dashboard or inventing a workspace here.
+  if (!profile.onboardingCompleted || !membership?.workspaceId) {
     redirect("/onboarding");
   }
 
-  const supabase = await createClient();
-
-  const { membership } = await getActiveMembership(supabase, user.id);
-  const workspaceId = membership?.workspaceId ?? null;
+  const workspaceId = membership.workspaceId;
 
   const emptyCounts = {
     tasks: 0,

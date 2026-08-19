@@ -422,3 +422,216 @@ input[type="range"] {
     transition: none !important;
   }
 }
+
+/* ============================================================
+   LANDING — PRODUCT ACTIVATION + REACTIVE HERO
+   The official N mark remains unchanged. Motion uses only opacity and
+   transforms; pointer depth is isolated from content and interactive UI.
+   ============================================================ */
+
+.nexus-launch {
+  --launch-target-x: max(20px, calc((100vw - 1120px) / 2 + 24px));
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: all;
+  background: var(--color-bg-base);
+  animation: nexus-launch-out 180ms var(--ease-nexus) 1200ms both;
+}
+
+.nexus-launch-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  animation: nexus-launch-grid 900ms var(--ease-out-expo) 120ms both;
+}
+
+.nexus-launch-mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120px;
+  height: 120px;
+  filter: brightness(0.5);
+  transform-origin: top left;
+  animation: nexus-launch-mark 1200ms var(--ease-out-expo) both;
+  will-change: transform, opacity, filter;
+}
+
+.nexus-launch-signal {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 75px);
+  width: min(280px, 58vw);
+  height: 1px;
+  background: var(--color-lavender);
+  box-shadow: 0 0 14px rgba(233, 228, 255, 0.34);
+  transform: translateX(-50%) scaleX(0);
+  animation: nexus-launch-signal 660ms var(--ease-out-expo) 240ms both;
+}
+
+.nexus-launch-status {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 92px);
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.16em;
+  opacity: 0;
+  transform: translateX(-50%);
+  animation: nexus-launch-status 480ms var(--ease-nexus) 450ms both;
+}
+
+@keyframes nexus-launch-mark {
+  0% {
+    opacity: 0;
+    filter: brightness(0.35);
+    transform: translate(calc(50vw - 60px), calc(50vh - 48px)) scale(0.88) translateY(10px);
+  }
+  35%, 62% {
+    opacity: 1;
+    filter: brightness(1.18);
+    transform: translate(calc(50vw - 60px), calc(50vh - 60px)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translate(var(--launch-target-x), 14px) scale(0.233333);
+  }
+}
+
+@keyframes nexus-launch-signal {
+  0% { opacity: 0; transform: translateX(-50%) scaleX(0); }
+  42% { opacity: 0.8; transform: translateX(-50%) scaleX(1); }
+  100% { opacity: 0; transform: translateX(-50%) scaleX(1); }
+}
+
+@keyframes nexus-launch-status {
+  0% { opacity: 0; }
+  35%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes nexus-launch-grid {
+  0% { opacity: 0; transform: scale(1.025); }
+  55% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes nexus-launch-out {
+  to { opacity: 0; visibility: hidden; }
+}
+
+.nexus-hero-atmosphere {
+  --light-x: 0px;
+  --light-y: 0px;
+  --grid-x: 0px;
+  --grid-y: 0px;
+  --far-x: 0px;
+  --far-y: 0px;
+  --near-x: 0px;
+  --near-y: 0px;
+  --axis-x: 0px;
+  --axis-y: 0px;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 0%, black 74%, transparent 100%);
+}
+
+.nexus-hero-light {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(780px, 92vw);
+  aspect-ratio: 1.8;
+  border-radius: 50%;
+  opacity: 0.42;
+  background: radial-gradient(ellipse, rgba(233, 228, 255, 0.105), rgba(255, 255, 255, 0.025) 42%, transparent 70%);
+  transform: translate3d(calc(-50% + var(--light-x)), calc(-50% + var(--light-y)), 0);
+  will-change: transform;
+}
+
+.nexus-hero-grid {
+  position: absolute;
+  inset: 40px -40px -40px;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(520px) rotateX(62deg) translate3d(var(--grid-x), calc(80px + var(--grid-y)), 0) scale(1.3);
+  transform-origin: center 68%;
+  will-change: transform;
+}
+
+.nexus-hero-orbit {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.nexus-hero-orbit-one {
+  left: calc(50% - 430px);
+  top: 100px;
+  width: 860px;
+  height: 370px;
+  transform: translate3d(var(--far-x), var(--far-y), 0) rotate(-5deg);
+}
+
+.nexus-hero-orbit-two {
+  left: calc(50% - 310px);
+  top: 145px;
+  width: 620px;
+  height: 260px;
+  border-color: rgba(233, 228, 255, 0.08);
+  transform: translate3d(var(--near-x), var(--near-y), 0) rotate(8deg);
+}
+
+.nexus-hero-axis {
+  position: absolute;
+  left: 50%;
+  top: 80px;
+  width: 1px;
+  height: 360px;
+  opacity: 0.42;
+  background: linear-gradient(to bottom, transparent, rgba(233, 228, 255, 0.22), transparent);
+  transform: translate3d(var(--axis-x), var(--axis-y), 0);
+  will-change: transform;
+}
+
+html[data-nexus-launch-seen="true"] .nexus-launch {
+  display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .nexus-hero-light,
+  .nexus-hero-grid,
+  .nexus-hero-orbit,
+  .nexus-hero-axis {
+    transform: none;
+    will-change: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-launch { display: none; }
+  .nexus-hero-light,
+  .nexus-hero-grid,
+  .nexus-hero-orbit,
+  .nexus-hero-axis {
+    transform: none;
+    will-change: auto;
+  }
+}
+
+@media (scripting: none) {
+  .nexus-launch { display: none; }
+}
