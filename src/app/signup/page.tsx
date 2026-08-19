@@ -1,9 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClientSafe } from "@/lib/supabase/client";
 import { NexusLogo } from "@/components/nexus-logo";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
@@ -11,7 +11,10 @@ import { Button } from "@/components/ui/button";
 
 export default function SignupPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const { client: supabase, error: configError } = useMemo(
+    () => createClientSafe(),
+    []
+  );
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -21,13 +24,17 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const submitting = useRef(false);
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setLoading(true);
-    setError("");
-    setMessage("");
+    if (submitting.current) return;
+
+    if (!supabase) {
+      setError(configError ?? "Supabase is not configured.");
+      return;
+    }
 
     const cleanFullName = fullName.trim();
     const cleanUsername = username.trim().toLowerCase();
@@ -35,38 +42,78 @@ export default function SignupPage() {
 
     if (!cleanFullName) {
       setError("Please enter your full name.");
-      setLoading(false);
       return;
     }
 
     if (!cleanUsername) {
       setError("Please choose a username.");
-      setLoading(false);
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        data: {
-          full_name: cleanFullName,
-          username: cleanUsername,
+    submitting.current = true;
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            full_name: cleanFullName,
+            username: cleanUsername,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      setError(error.message);
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      // Email confirmation disabled -> Supabase already returned a session:
+      // sync it server-side and go straight into the product.
+      if (data.session) {
+        const sessionResponse = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }),
+        });
+
+        if (sessionResponse.redirected || !sessionResponse.ok) {
+          const payload = (await sessionResponse.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setError(
+            payload?.error ??
+              "Account created, but the session could not be synchronized. Try signing in."
+          );
+          return;
+        }
+
+        router.replace("/onboarding");
+        router.refresh();
+        return;
+      }
+
+      // Email confirmation enabled -> no session yet, say so explicitly.
+      setMessage(
+        "Account created. Confirm your email address, then sign in to access your workspace."
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? `Could not reach Supabase: ${cause.message}`
+          : "Could not reach Supabase."
+      );
+    } finally {
+      submitting.current = false;
       setLoading(false);
-      return;
     }
-
-    setMessage("Account created. Check your email if confirmation is required.");
-
-    setTimeout(() => {
-      router.push("/login");
-    }, 1500);
   }
 
   return (
@@ -80,6 +127,12 @@ export default function SignupPage() {
           </p>
         </div>
 
+        {configError ? (
+          <Alert tone="danger" className="mb-4">
+            {configError}
+          </Alert>
+        ) : null}
+
         <form onSubmit={handleSignup} className="flex flex-col gap-4">
           <Field label="Full name" htmlFor="signup-name">
             <Input
@@ -89,6 +142,7 @@ export default function SignupPage() {
               onChange={(event) => setFullName(event.target.value)}
               placeholder="Your full name"
               autoComplete="name"
+              disabled={loading}
               required
             />
           </Field>
@@ -105,6 +159,7 @@ export default function SignupPage() {
               pattern="[A-Za-z0-9_]+"
               title="Username can only contain letters, numbers and underscores."
               autoComplete="username"
+              disabled={loading}
               required
             />
           </Field>
@@ -118,6 +173,7 @@ export default function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
+              disabled={loading}
               required
             />
           </Field>
@@ -132,6 +188,7 @@ export default function SignupPage() {
               placeholder="Minimum 6 characters"
               minLength={6}
               autoComplete="new-password"
+              disabled={loading}
               required
             />
           </Field>
@@ -139,7 +196,13 @@ export default function SignupPage() {
           {error ? <Alert tone="danger">{error}</Alert> : null}
           {message ? <Alert tone="success">{message}</Alert> : null}
 
-          <Button type="submit" size="lg" disabled={loading} className="mt-1 w-full">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={loading || Boolean(configError)}
+            aria-busy={loading}
+            className="mt-1 w-full"
+          >
             {loading ? "Creating account..." : "Create account"}
           </Button>
         </form>

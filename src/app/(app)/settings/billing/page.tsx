@@ -1,9 +1,8 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { NexusShell } from "@/components/nexus-shell";
 import { BillingUpgradeButton } from "@/components/billing-upgrade-button";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,22 +26,8 @@ const USAGE_ROWS: { label: string; key: keyof UsageResult["usage"] }[] = [
 ];
 
 export default async function BillingPage() {
+  const user = await requireUser();
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, username, onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const userName = profile?.display_name || profile?.username || user.email || "User";
-  const username = profile?.username || undefined;
 
   const { membership } = await getActiveMembership(supabase, user.id);
 
@@ -72,13 +57,7 @@ export default async function BillingPage() {
   }
 
   return (
-    <NexusShell
-      title="Billing"
-      subtitle="Manage your plan and usage."
-      userName={userName}
-      username={username}
-    >
-      <div className="max-w-3xl space-y-5">
+    <div className="max-w-3xl space-y-5">
         <PageHeader
           title="Billing"
           description="Plan, usage and capacity for this workspace."
@@ -224,7 +203,6 @@ export default async function BillingPage() {
           <ArrowLeft size={14} strokeWidth={1.75} />
           Back to settings
         </Link>
-      </div>
-    </NexusShell>
+    </div>
   );
 }

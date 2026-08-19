@@ -1,65 +1,103 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { createClientSafe } from "@/lib/supabase/client";
 import { NexusLogo } from "@/components/nexus-logo";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  // Never throws during render: a missing/incorrect .env.local shows a real
+  // message instead of a blank page with a form that "does nothing".
+  const { client: supabase, error: configError } = useMemo(
+    () => createClientSafe(),
+    []
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submitting = useRef(false);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    // Guard against double submission (double click / Enter spam).
+    if (submitting.current) return;
+
+    if (!supabase) {
+      setError(configError ?? "Supabase is not configured.");
+      return;
+    }
+
+    submitting.current = true;
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
+      if (signInError) {
+        setError(
+          signInError.message === "Email not confirmed"
+            ? "This email address has not been confirmed yet. Check your inbox, or disable email confirmation in Supabase → Authentication → Providers."
+            : signInError.message
+        );
+        return;
+      }
 
-    if (!data.session) {
+      if (!data.session) {
+        setError(
+          "Sign in succeeded but Supabase returned no session. If email confirmation is enabled, confirm your address first."
+        );
+        return;
+      }
+
+      // Hand the tokens to the server so SSR cookies exist before we navigate.
+      const sessionResponse = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }),
+      });
+
+      // A redirect here would mean the request never reached the route
+      // handler (proxy misconfiguration) — treat it as a failure instead of
+      // navigating to a page that will bounce back to /login.
+      if (sessionResponse.redirected || !sessionResponse.ok) {
+        const payload = (await sessionResponse.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(
+          payload?.error ??
+            "Session could not be synchronized with the server. Please try again."
+        );
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (cause) {
+      // Network failure, wrong project URL, CORS, offline...
       setError(
-        "Sign in succeeded, but no browser session was created. Please try again."
+        cause instanceof Error
+          ? `Could not reach Supabase: ${cause.message}`
+          : "Could not reach Supabase."
       );
+    } finally {
+      submitting.current = false;
       setLoading(false);
-      return;
     }
-
-    const sessionResponse = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      }),
-    });
-
-    if (!sessionResponse.ok) {
-      const payload = (await sessionResponse.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      setError(payload?.error ?? "Session could not be synchronized with the server.");
-      setLoading(false);
-      return;
-    }
-
-    window.location.assign(new URL("/", window.location.origin).toString());
   }
 
   return (
@@ -73,6 +111,12 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {configError ? (
+          <Alert tone="danger" className="mb-4">
+            {configError}
+          </Alert>
+        ) : null}
+
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <Field label="Email address" htmlFor="login-email">
             <Input
@@ -83,6 +127,7 @@ export default function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
+              disabled={loading}
               required
             />
           </Field>
@@ -96,6 +141,7 @@ export default function LoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
+              disabled={loading}
               required
             />
           </Field>
@@ -105,7 +151,8 @@ export default function LoginPage() {
           <Button
             type="submit"
             size="lg"
-            disabled={loading}
+            disabled={loading || Boolean(configError)}
+            aria-busy={loading}
             className="mt-1 w-full"
           >
             {loading ? "Signing in..." : "Sign in"}

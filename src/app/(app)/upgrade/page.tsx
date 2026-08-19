@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { NexusLogo } from "@/components/nexus-logo";
 import { BillingUpgradeButton } from "@/components/billing-upgrade-button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
@@ -25,13 +24,8 @@ const USAGE_ROWS: { label: string; key: keyof UsageResult["usage"] }[] = [
 ];
 
 export default async function UpgradePage() {
+  const user = await requireUser();
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
 
   const { membership } = await getActiveMembership(supabase, user.id);
 
@@ -58,23 +52,7 @@ export default async function UpgradePage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-base">
-      <header className="flex h-14 items-center justify-between px-6">
-        <Link href="/dashboard" className="flex items-center gap-2.5" aria-label="NEXUS">
-          <NexusLogo size={28} priority />
-          <span className="text-[13px] font-semibold uppercase tracking-[-0.03em] text-text-primary">
-            Nexus
-          </span>
-        </Link>
-        <Link
-          href="/dashboard"
-          className="text-small text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
-        >
-          Back to dashboard
-        </Link>
-      </header>
-
-      <div className="mx-auto w-full max-w-[960px] px-6 py-14 sm:px-8 sm:py-20">
+    <div className="mx-auto w-full max-w-[960px]">
         {/* HERO */}
         <div className="text-center">
           <span className="inline-flex h-[22px] items-center rounded-pill border border-lavender-border bg-lavender-subtle px-2.5 font-mono text-mono uppercase tracking-[0.08em] text-lavender">
@@ -231,7 +209,6 @@ export default async function UpgradePage() {
             See detailed usage and billing
           </Link>
         </div>
-      </div>
-    </main>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { readSupabaseConfig } from "@/lib/supabase/config";
 
 /**
  * Refreshes the Supabase session cookies on every request and enforces
@@ -11,9 +12,18 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const { config } = readSupabaseConfig();
+
+  // Without configuration there is no session to read: let the request
+  // through so the pages can display an explicit configuration error
+  // instead of an infinite redirect loop towards /login.
+  if (!config) {
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll() {

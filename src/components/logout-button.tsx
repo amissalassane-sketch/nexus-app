@@ -9,14 +9,17 @@ export function LogoutButton() {
   const supabase = createClient();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Logout error:", error.message);
-      return;
+    try {
+      const client = supabase ?? createClient();
+      await client.auth.signOut();
+    } catch (cause) {
+      console.error("Logout error:", cause);
     }
 
-    router.push("/login");
+    // Clear the SSR cookies too, so Server Components stop seeing the user.
+    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => null);
+
+    router.replace("/login");
     router.refresh();
   };
 

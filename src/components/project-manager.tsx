@@ -1,20 +1,22 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { FolderKanban, Pencil, Trash2, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FolderKanban, Pencil, Search, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateProject } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Panel } from "@/components/ui/card";
+import { Modal } from "@/components/ui/modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
-import { PageHeader, StatLine } from "@/components/ui/page-header";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Project = {
   id: string;
@@ -50,6 +52,14 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ];
 
+const STATUS_TONE: Record<string, "neutral" | "success" | "warning" | "info"> = {
+  planning: "info",
+  active: "success",
+  paused: "warning",
+  completed: "neutral",
+  archived: "neutral",
+};
+
 const formatDate = (value: string | null) => {
   if (!value) return null;
   const date = new Date(value);
@@ -60,23 +70,52 @@ const formatDate = (value: string | null) => {
 function ProjectManagerInner({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [taskCounts, setTaskCounts] = useState<Record<string, number> | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [form, setForm] = useState<ProjectForm>(blankProjectForm());
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
-  const nameRef = useRef<HTMLInputElement>(null);
+  const submitting = useRef(false);
 
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
     workspaceId,
     canCreateProject,
     projects.length
   );
+
+  /**
+   * Task counts per project are only shown when the schema actually links
+   * tasks to projects. If the column is absent the query errors and we
+   * simply omit the metric — never a fabricated zero.
+   */
+  const fetchTaskCounts = async (activeWorkspaceId: string) => {
+    const { data, error: countError } = await supabase
+      .from("tasks")
+      .select("project_id")
+      .eq("workspace_id", activeWorkspaceId)
+      .not("project_id", "is", null);
+
+    if (countError || !data) {
+      setTaskCounts(null);
+      return;
+    }
+
+    const counts: Record<string, number> = {};
+    for (const row of data as { project_id: string | null }[]) {
+      if (!row.project_id) continue;
+      counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+    }
+    setTaskCounts(counts);
+  };
 
   const fetchProjects = async (activeWorkspaceId: string | null) => {
     if (!activeWorkspaceId) {
@@ -100,6 +139,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
 
     setProjects((data as Project[]) ?? []);
     setLoading(false);
+    await fetchTaskCounts(activeWorkspaceId);
   };
 
   useEffect(() => {
@@ -122,9 +162,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, userId]);
 
-  useEffect(() => {
-    if (formOpen) nameRef.current?.focus();
-  }, [formOpen]);
+  const syncServerViews = () => router.refresh();
 
   const resetForm = () => {
     setForm(blankProjectForm());
@@ -135,6 +173,12 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   const closeForm = () => {
     resetForm();
     setFormOpen(false);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setError("");
+    setFormOpen(true);
   };
 
   const createProject = async () => {
@@ -148,6 +192,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       setError(
         "You have reached your plan limit for projects. See the upgrade options above."
       );
+      setFormOpen(false);
       return;
     }
 
@@ -171,14 +216,18 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     setSaving(false);
 
     if (createError) {
-      if (await handleMutationError(createError.message)) return;
+      if (await handleMutationError(createError.message)) {
+        setFormOpen(false);
+        return;
+      }
       setError(createError.message);
       return;
     }
 
-    setSuccess("Project created successfully.");
-    resetForm();
+    setSuccess("Project created.");
+    closeForm();
     await fetchProjects(workspaceId);
+    syncServerViews();
   };
 
   const updateProject = async () => {
@@ -214,23 +263,28 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Project updated successfully.");
-    resetForm();
+    setSuccess("Project updated.");
+    closeForm();
     await fetchProjects(workspaceId);
+    syncServerViews();
   };
 
   const submitProject = async () => {
-    if (editingProjectId) {
-      await updateProject();
-      return;
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      if (editingProjectId) await updateProject();
+      else await createProject();
+    } finally {
+      submitting.current = false;
     }
-
-    await createProject();
   };
 
   const populateEditForm = (project: Project) => {
     setEditingProjectId(project.id);
     setFormOpen(true);
+    setError("");
+    setSuccess("");
     setForm({
       name: project.name,
       description: project.description ?? "",
@@ -240,8 +294,6 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         ? new Date(project.due_date).toISOString().slice(0, 10)
         : "",
     });
-    setError("");
-    setSuccess("");
   };
 
   const handleProgress = async (projectId: string, progress: number) => {
@@ -259,8 +311,8 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Project progress updated.");
     await fetchProjects(workspaceId);
+    syncServerViews();
   };
 
   const deleteProject = async (projectId: string) => {
@@ -279,85 +331,270 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     }
 
     setSuccess("Project deleted.");
-    if (editingProjectId === projectId) {
-      resetForm();
-    }
+    if (editingProjectId === projectId) closeForm();
     await fetchProjects(workspaceId);
+    syncServerViews();
   };
 
+  const filteredProjects = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return projects.filter((project) => {
+      const statusMatch = statusFilter === "all" || project.status === statusFilter;
+      const queryMatch =
+        needle.length === 0 ||
+        project.name.toLowerCase().includes(needle) ||
+        (project.description ?? "").toLowerCase().includes(needle);
+      return statusMatch && queryMatch;
+    });
+  }, [projects, query, statusFilter]);
+
   const activeCount = projects.filter((project) => project.status === "active").length;
-  const completedCount = projects.filter(
-    (project) => project.status === "completed"
-  ).length;
+  const completedCount = projects.filter((p) => p.status === "completed").length;
+  const averageProgress =
+    projects.length > 0
+      ? Math.round(
+          projects.reduce((sum, p) => sum + Number(p.progress ?? 0), 0) / projects.length
+        )
+      : 0;
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Projects"
         count={projects.length}
-        description="Prioritize work across initiatives and milestones."
-        actions={
-          <CreateButton
-            label="New Project"
-            onClick={() => {
-              if (formOpen && !editingProjectId) {
-                closeForm();
-                return;
-              }
-              resetForm();
-              setFormOpen(true);
-            }}
-          />
-        }
+        description="Initiatives grouping the work of this workspace."
+        actions={<CreateButton label="New Project" onClick={openCreateForm} />}
       />
 
-      <StatLine
-        items={[
-          { value: activeCount, label: "active" },
-          { value: completedCount, label: "completed" },
-          { value: projects.length, label: "total" },
-        ]}
-      />
+      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
+        {[
+          { label: "Active", value: activeCount },
+          { label: "Completed", value: completedCount },
+          { label: "Avg. progress", value: `${averageProgress}%` },
+        ].map((metric) => (
+          <div key={metric.label} className="px-4 py-3">
+            <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+              {metric.label}
+            </p>
+            <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
+              {metric.value}
+            </p>
+          </div>
+        ))}
+      </div>
 
       {!editingProjectId && limitResult ? (
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      {formOpen ? (
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-h2 text-text-primary">
-              {editingProjectId ? "Edit project" : "New project"}
-            </h2>
-            <Button variant="icon" onClick={closeForm} aria-label="Close project form">
-              <X size={16} strokeWidth={1.75} />
-            </Button>
+      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
+
+      <Panel
+        title="All projects"
+        description={`${filteredProjects.length} shown`}
+        bodyClassName="p-0"
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative">
+              <Search
+                size={14}
+                strokeWidth={1.75}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
+              />
+              <Input
+                aria-label="Search projects"
+                placeholder="Search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-8 w-[150px] pl-7 text-small"
+              />
+            </div>
+            <Select
+              size="sm"
+              aria-label="Filter by status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="w-auto min-w-[128px]"
+            >
+              <option value="all">All statuses</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
           </div>
+        }
+      >
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {[0, 1, 2].map((index) => (
+              <Skeleton key={index} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : !workspaceId ? (
+          <div className="p-4">
+            <EmptyState
+              title="No active workspace"
+              description="This account is not linked to an active workspace yet."
+            />
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title={projects.length === 0 ? "No projects yet" : "Nothing matches"}
+              description={
+                projects.length === 0
+                  ? "Group your work into projects to keep execution readable."
+                  : "Adjust the search or the status filter."
+              }
+              icon={<FolderKanban size={18} strokeWidth={1.75} />}
+              action={
+                projects.length === 0 ? (
+                  <CreateButton label="New Project" onClick={openCreateForm} />
+                ) : null
+              }
+            />
+          </div>
+        ) : (
+          <ul>
+            {filteredProjects.map((project) => {
+              const progress = Math.min(100, Math.max(0, Number(project.progress ?? 0)));
+              const taskCount = taskCounts?.[project.id];
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Name" htmlFor="project-name">
-              <Input
-                id="project-name"
-                ref={nameRef}
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
-                }
-                placeholder="Project name"
-              />
-            </Field>
+              return (
+                <li
+                  key={project.id}
+                  className="group border-b border-border-subtle px-4 py-3 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-bg-surface text-text-secondary">
+                      <FolderKanban size={16} strokeWidth={1.75} />
+                    </span>
 
-            <Field label="Due date" htmlFor="project-due">
-              <Input
-                id="project-due"
-                type="date"
-                value={form.due_date}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, due_date: event.target.value }))
-                }
-              />
-            </Field>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => populateEditForm(project)}
+                          className="min-w-0 truncate text-body-medium text-text-primary"
+                        >
+                          {project.name}
+                        </button>
+                        <Badge tone={STATUS_TONE[project.status] ?? "neutral"}>
+                          {project.status}
+                        </Badge>
+                        {taskCount !== undefined ? (
+                          <span className="font-mono text-mono tabular-nums text-text-quaternary">
+                            {taskCount} tasks
+                          </span>
+                        ) : null}
+                      </div>
 
+                      {project.description ? (
+                        <p className="mt-0.5 line-clamp-1 text-caption text-text-tertiary">
+                          {project.description}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-2.5 flex items-center gap-3">
+                        <Progress
+                          value={progress}
+                          label={`${project.name} progress`}
+                          className="max-w-sm"
+                        />
+                        <span className="shrink-0 font-mono text-mono tabular-nums text-text-secondary">
+                          {Math.round(progress)}%
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={progress}
+                          onChange={(event) =>
+                            void handleProgress(project.id, Number(event.target.value))
+                          }
+                          aria-label={`Set ${project.name} progress`}
+                          className="hidden h-1 w-24 cursor-pointer accent-white sm:block"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={cn(
+                          "hidden w-14 text-right font-mono text-mono tabular-nums text-text-tertiary sm:block"
+                        )}
+                      >
+                        {formatDate(project.due_date) ?? "—"}
+                      </span>
+                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+                        <Button
+                          variant="icon"
+                          aria-label={`Edit ${project.name}`}
+                          onClick={() => populateEditForm(project)}
+                        >
+                          <Pencil size={15} strokeWidth={1.75} />
+                        </Button>
+                        <Button
+                          variant="icon"
+                          aria-label={`Delete ${project.name}`}
+                          onClick={() => void deleteProject(project.id)}
+                          className="hover:text-danger"
+                        >
+                          <Trash2 size={15} strokeWidth={1.75} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
+
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editingProjectId ? "Edit project" : "New project"}
+        description={
+          editingProjectId
+            ? "Update this project."
+            : "Create a project to group related work."
+        }
+        footer={
+          <>
+            <Button onClick={submitProject} disabled={saving || !workspaceId}>
+              {saving
+                ? editingProjectId
+                  ? "Saving..."
+                  : "Creating..."
+                : editingProjectId
+                  ? "Save project"
+                  : "Add project"}
+            </Button>
+            <Button variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <Field label="Name" htmlFor="project-name">
+            <Input
+              id="project-name"
+              value={form.name}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, name: event.target.value }))
+              }
+              placeholder="Project name"
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Status" htmlFor="project-status">
               <Select
                 id="project-status"
@@ -389,9 +626,20 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                 }
               />
             </Field>
+
+            <Field label="Due date" htmlFor="project-due">
+              <Input
+                id="project-due"
+                type="date"
+                value={form.due_date}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, due_date: event.target.value }))
+                }
+              />
+            </Field>
           </div>
 
-          <Field label="Summary" htmlFor="project-summary" className="mt-4">
+          <Field label="Summary" htmlFor="project-summary">
             <Textarea
               id="project-summary"
               value={form.description}
@@ -403,146 +651,9 @@ function ProjectManagerInner({ userId }: { userId: string }) {
             />
           </Field>
 
-          {error ? (
-            <Alert tone="danger" className="mt-4">
-              {error}
-            </Alert>
-          ) : null}
-          {success ? (
-            <Alert tone="success" className="mt-4">
-              {success}
-            </Alert>
-          ) : null}
-
-          <div className="mt-4 flex items-center gap-2">
-            <Button onClick={submitProject} disabled={saving || !workspaceId}>
-              {saving
-                ? editingProjectId
-                  ? "Saving..."
-                  : "Creating..."
-                : editingProjectId
-                  ? "Save project"
-                  : "Add project"}
-            </Button>
-            <Button variant="ghost" onClick={closeForm}>
-              Cancel
-            </Button>
-          </div>
-        </Card>
-      ) : null}
-
-      {!formOpen && error ? <Alert tone="danger">{error}</Alert> : null}
-      {!formOpen && success ? <Alert tone="success">{success}</Alert> : null}
-
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[0, 1].map((index) => (
-            <Skeleton key={index} className="h-36 w-full rounded-card" />
-          ))}
+          {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
-      ) : !workspaceId ? (
-        <EmptyState
-          title="No active workspace"
-          description="This account is not linked to an active workspace yet."
-        />
-      ) : projects.length === 0 ? (
-        <EmptyState
-          title="No projects yet"
-          description="Group your work into projects to keep execution readable."
-          icon={<FolderKanban size={18} strokeWidth={1.75} />}
-          action={
-            <CreateButton
-              label="New Project"
-              onClick={() => {
-                resetForm();
-                setFormOpen(true);
-              }}
-            />
-          }
-        />
-      ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {projects.map((project) => {
-            const progress = Math.min(100, Math.max(0, Number(project.progress ?? 0)));
-
-            return (
-              <Card as="li" key={project.id} className="p-5" interactive>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-bg-surface text-text-secondary">
-                    <FolderKanban size={17} strokeWidth={1.75} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="truncate text-h3 text-text-primary">
-                        {project.name}
-                      </h3>
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <Button
-                          variant="icon"
-                          aria-label={`Edit ${project.name}`}
-                          onClick={() => populateEditForm(project)}
-                        >
-                          <Pencil size={15} strokeWidth={1.75} />
-                        </Button>
-                        <Button
-                          variant="icon"
-                          aria-label={`Delete ${project.name}`}
-                          onClick={() => void deleteProject(project.id)}
-                          className="hover:text-danger"
-                        >
-                          <Trash2 size={15} strokeWidth={1.75} />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {project.description ? (
-                      <p className="mt-1 line-clamp-2 text-small text-text-secondary">
-                        {project.description}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <Badge tone={project.status === "active" ? "success" : "neutral"}>
-                        {project.status}
-                      </Badge>
-                      {project.due_date ? (
-                        <span className="font-mono text-mono tabular-nums text-text-tertiary">
-                          {formatDate(project.due_date)}
-                        </span>
-                      ) : null}
-                      <span className="ml-auto font-mono text-mono tabular-nums text-text-secondary">
-                        {Math.round(progress)}%
-                      </span>
-                    </div>
-
-                    <Progress
-                      value={progress}
-                      label={`${project.name} progress`}
-                      className="mt-2"
-                    />
-
-                    <label className="mt-3 flex items-center gap-2">
-                      <span className="sr-only">Update {project.name} progress</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={progress}
-                        onChange={(event) =>
-                          void handleProgress(project.id, Number(event.target.value))
-                        }
-                        aria-label={`Set ${project.name} progress`}
-                        className="h-1 w-full cursor-pointer accent-white"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </ul>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -553,7 +664,7 @@ export function ProjectManager({ userId }: { userId: string }) {
       fallback={
         <div className="space-y-3">
           <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-36 w-full rounded-card" />
+          <Skeleton className="h-16 w-full" />
         </div>
       }
     >

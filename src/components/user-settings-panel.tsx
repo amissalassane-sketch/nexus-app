@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { Alert, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
-import { PillTabs } from "@/components/ui/tabs";
+import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 
 type ProfileState = {
@@ -26,6 +26,11 @@ type StatusState = {
 };
 
 type TabId = "profile" | "workspace";
+
+const SECTIONS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
+  { id: "workspace", label: "Workspace", icon: <Layers size={15} strokeWidth={1.75} /> },
+];
 
 export function UserSettingsPanel({ userId }: { userId: string }) {
   const router = useRouter();
@@ -168,22 +173,31 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
         description="Customize your workspace and preferences."
       />
 
-      <PillTabs
-        label="Settings sections"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
-          {
-            id: "workspace",
-            label: "Workspace",
-            icon: <Layers size={15} strokeWidth={1.75} />,
-          },
-        ]}
-      />
 
+      <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <nav aria-label="Settings sections" className="flex flex-col gap-0.5">
+          {SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => setTab(section.id)}
+              aria-current={tab === section.id ? "true" : undefined}
+              className={cn(
+                "flex h-8 items-center gap-2.5 rounded-nav px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
+                tab === section.id
+                  ? "bg-accent-ghost-hover font-medium text-text-primary"
+                  : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+              )}
+            >
+              {section.icon}
+              {section.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="min-w-0">
       {tab === "profile" ? (
-        <Card className="max-w-2xl p-6">
+        <Card className="p-6">
           <h2 className="text-h2 text-text-primary">Profile</h2>
           <p className="mt-1 text-small text-text-secondary">
             Update the public profile associated with your account.
@@ -251,7 +265,7 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
           )}
         </Card>
       ) : (
-        <div className="grid max-w-2xl gap-4">
+        <div className="grid gap-4">
           <Card className="p-6">
             <h2 className="text-h2 text-text-primary">Workspace</h2>
             <p className="mt-1 text-small text-text-secondary">
@@ -307,6 +321,8 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
           </Card>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

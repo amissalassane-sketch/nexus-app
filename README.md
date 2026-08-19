@@ -43,6 +43,18 @@ every number, date, counter and identifier.
 Radius hierarchy: pill buttons `9999px`, inputs/nav/rows `10px`, cards/dropdowns `16px`,
 empty states `20px`, auth and pricing cards `24px`.
 
+## Navigation architecture
+
+Two-level shell, composed in `src/app/(app)/layout.tsx` (one server layout that
+resolves the user, the workspace, the live counters and the plan usage once):
+
+- `src/components/layout/app-rail.tsx` — 56px icon rail, global destinations.
+- `src/components/layout/workspace-sidebar.tsx` — 244px workspace sidebar:
+  account menu, Create action, grouped navigation with real counters, plan usage.
+- `src/components/layout/app-shell.tsx` — composition + mobile drawer + content surface.
+
+Below `lg`, both levels collapse into a single drawer opened from a compact header.
+
 ## Routing & session
 
 `src/proxy.ts` (Next.js 16 file convention — formerly `middleware.ts`) refreshes the
@@ -70,6 +82,12 @@ Plans are `FREE`, `PRO`, `TEAM`.
 ## Database verification
 
 ```bash
+# End-to-end auth pipeline (sign-in -> SSR cookies -> proxy -> pages -> sign-out)
+# against a stubbed Supabase service (test double, never used at runtime):
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=stub-key npm run dev -- --port 3000 &
+node supabase/tests/auth-flow.test.mjs
+
 # Executes migrations 006-012 against a real Postgres engine (WASM) on top of a
 # minimal schema fixture and asserts the freemium/security behaviour.
 npm install --no-save @electric-sql/pglite
