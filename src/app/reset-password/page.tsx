@@ -1,0 +1,150 @@
+"use client";
+
+import { FormEvent, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { readSupabaseConfig } from "@/lib/supabase/config";
+import { NexusLogo } from "@/components/nexus-logo";
+import { Field, Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
+
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const { error: configError } = readSupabaseConfig();
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const submitting = useRef(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting.current) return;
+
+    if (configError) {
+      setError(configError);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirm) {
+      setError("The two passwords do not match.");
+      return;
+    }
+
+    submitting.current = true;
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        redirectTo?: string;
+      } | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(payload?.error ?? "Could not update the password.");
+        return;
+      }
+
+      router.replace(payload.redirectTo ?? "/dashboard");
+      router.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? `Could not reach the server: ${cause.message}`
+          : "Could not reach the server."
+      );
+    } finally {
+      submitting.current = false;
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
+      <div className="w-full max-w-[400px]">
+        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+          <div className="mb-7 flex flex-col items-center text-center">
+            <NexusLogo size={48} priority className="mb-5" />
+            <h1 className="text-h1 text-text-primary">Choose a new password</h1>
+            <p className="mt-1 text-small text-text-secondary">
+              You arrived here from a reset link. Set a new password to continue.
+            </p>
+          </div>
+
+          {configError ? (
+            <Alert tone="danger" className="mb-4">
+              {configError}
+            </Alert>
+          ) : null}
+
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+            <Field label="New password" htmlFor="reset-password" hint="Minimum 6 characters">
+              <Input
+                id="reset-password"
+                size="lg"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                disabled={loading}
+                required
+              />
+            </Field>
+
+            <Field label="Confirm password" htmlFor="reset-confirm">
+              <Input
+                id="reset-confirm"
+                size="lg"
+                type="password"
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                disabled={loading}
+                required
+              />
+            </Field>
+
+            {error ? <Alert tone="danger">{error}</Alert> : null}
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={loading || Boolean(configError)}
+              aria-busy={loading}
+              className="mt-1 w-full"
+            >
+              {loading ? "Saving..." : "Update password"}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-small text-text-secondary">
+            Link expired?{" "}
+            <Link
+              href="/forgot-password"
+              className="text-text-primary underline decoration-border-strong underline-offset-4"
+            >
+              Request a new one
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}

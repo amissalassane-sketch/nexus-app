@@ -101,7 +101,7 @@ console.log(`Supabase stub: ${stub.url}\nApplication:   ${APP_URL}\n`);
 // ============ 1. ROUTE PROTECTION (no session) ============
 console.log("-- protection (anonymous) -----------------------------");
 
-for (const path of ["/", ...PRODUCT_ROUTES, "/onboarding"]) {
+for (const path of [...PRODUCT_ROUTES, "/onboarding"]) {
   const response = await visit(path);
   assert(
     `anonymous ${path} -> /login`,
@@ -110,8 +110,29 @@ for (const path of ["/", ...PRODUCT_ROUTES, "/onboarding"]) {
   );
 }
 
+const landing = await visit("/");
+const landingHtml = await landing.text();
+assert("anonymous / renders the public homepage", landing.status === 200, `status=${landing.status}`);
+assert(
+  "public homepage offers sign in and sign up",
+  landingHtml.includes("Everything important, connected.") &&
+    landingHtml.includes("Create your NEXUS") &&
+    landingHtml.includes("Sign in"),
+  "landing copy missing"
+);
+
 assert("anonymous /login renders", (await visit("/login")).status === 200);
 assert("anonymous /signup renders", (await visit("/signup")).status === 200);
+assert("anonymous /forgot-password renders", (await visit("/forgot-password")).status === 200);
+assert("anonymous /check-email renders", (await visit("/check-email")).status === 200);
+
+const health = await visit("/api/health");
+const healthBody = await health.json().catch(() => null);
+assert(
+  "/api/health is public and reports ok",
+  health.status === 200 && healthBody?.ok === true && healthBody?.service === "nexus",
+  JSON.stringify(healthBody)
+);
 
 // ============ 2. SIGNUP ============
 console.log("\n-- signup ---------------------------------------------");
@@ -346,6 +367,33 @@ const upgradeBadPlan = await visit("/api/billing/upgrade", {
   body: { targetPlan: "FREE" },
 });
 assert("/api/billing/upgrade rejects FREE (400)", upgradeBadPlan.status === 400);
+
+const forgotInvalid = await visit("/api/auth/forgot-password", {
+  method: "POST",
+  body: { email: "not-an-email" },
+});
+assert("forgot-password validates its input (400)", forgotInvalid.status === 400);
+
+const forgot = await visit("/api/auth/forgot-password", {
+  method: "POST",
+  body: { email: "owner@nexus.test" },
+});
+const forgotBody = await forgot.json().catch(() => null);
+assert(
+  "forgot-password accepts a valid email",
+  forgot.status === 200 && forgotBody?.ok === true,
+  JSON.stringify(forgotBody)
+);
+
+const updateAnonymous = await visit("/api/auth/update-password", {
+  method: "POST",
+  body: { password: "newsecret" },
+});
+assert(
+  "update-password -> 401 without a recovery session",
+  updateAnonymous.status === 401,
+  `status=${updateAnonymous.status}`
+);
 
 // ============ 8. LOGOUT ============
 console.log("\n-- logout ---------------------------------------------");

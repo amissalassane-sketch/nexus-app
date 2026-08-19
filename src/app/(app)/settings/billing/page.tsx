@@ -9,16 +9,11 @@ import { Card } from "@/components/ui/card";
 import { Alert, Progress } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { PLAN_ORDER, PLAN_PRESENTATION, planRank } from "@/lib/billing/plans";
+import { parseWorkspaceUsage, type WorkspaceUsage } from "@/lib/billing/usage";
 import { type PlanName } from "@/lib/plan-limits";
 import { canManageBilling, getActiveMembership } from "@/lib/workspace";
 
-type UsageResult = {
-  plan: string;
-  usage: { projects: number; active_tasks: number; goals: number; members: number };
-  limits: { projects: number; active_tasks: number; goals: number; members: number };
-};
-
-const USAGE_ROWS: { label: string; key: keyof UsageResult["usage"] }[] = [
+const USAGE_ROWS: { label: string; key: keyof WorkspaceUsage["usage"] }[] = [
   { label: "Projects", key: "projects" },
   { label: "Active tasks", key: "active_tasks" },
   { label: "Goals", key: "goals" },
@@ -45,15 +40,15 @@ export default async function BillingPage() {
 
   const currentPlan = ((subscription?.plan as PlanName) ?? "FREE") as PlanName;
 
-  let usage: UsageResult | null = null;
+  let usage: WorkspaceUsage | null = null;
   let usageError: string | null = null;
 
   if (workspaceId) {
     const { data, error } = await supabase.rpc("get_workspace_usage", {
       p_workspace_id: workspaceId,
     });
-    usage = (data as UsageResult | null) ?? null;
-    usageError = error?.message ?? null;
+    usage = parseWorkspaceUsage(data);
+    usageError = error?.message ?? (data && !usage ? "Usage data could not be read." : null);
   }
 
   return (

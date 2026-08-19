@@ -19,7 +19,7 @@ export function humanizeAuthError(error: AuthErrorShape): string {
     return "Incorrect email or password.";
   }
   if (key.includes("email not confirmed")) {
-    return "This email address is not confirmed yet. Check your inbox, or disable email confirmation in Supabase → Authentication → Sign In / Providers.";
+    return "This email address is not confirmed yet. Open the link we sent you, then sign in.";
   }
   if (key.includes("user already registered") || key.includes("already been registered")) {
     return "An account already exists with this email address. Sign in instead.";

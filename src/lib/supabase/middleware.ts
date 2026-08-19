@@ -60,15 +60,26 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
-  const isAuthRoute =
+  const isPublicRoute =
+    pathname === "/" ||
     pathname.startsWith("/login") ||
-    pathname.startsWith("/signup");
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/check-email") ||
+    pathname.startsWith("/auth/");
 
-  if (!user && !isAuthRoute) {
+  const isAuthForm =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/check-email");
+
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthForm) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

@@ -25,7 +25,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const submitting = useRef(false);
 
@@ -58,7 +57,6 @@ export default function SignupPage() {
     submitting.current = true;
     setLoading(true);
     setError("");
-    setMessage("");
 
     try {
       const response = await fetch("/api/auth/signup", {
@@ -81,10 +79,7 @@ export default function SignupPage() {
       }
 
       if (payload.requiresConfirmation) {
-        setMessage(
-          payload.message ??
-            "Account created. Confirm your email address, then sign in."
-        );
+        router.replace(`/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
         return;
       }
 
@@ -176,7 +171,6 @@ export default function SignupPage() {
             </Field>
 
             {error ? <Alert tone="danger">{error}</Alert> : null}
-            {message ? <Alert tone="success">{message}</Alert> : null}
 
             <Button
               type="submit"
