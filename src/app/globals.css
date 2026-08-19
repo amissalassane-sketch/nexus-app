@@ -357,3 +357,68 @@ input[type="range"] {
     animation: none;
   }
 }
+
+/* ============================================================
+   LANDING — SCROLL REVEAL & HERO ENTRANCE
+   The landing page motion system. GPU-friendly (opacity +
+   transform only), driven by the NEXUS tokens, and strictly
+   gated by `prefers-reduced-motion`. The no-JS fallback keeps
+   content visible even when hydration never runs.
+   ============================================================ */
+
+/* Entrance for hero elements (applies on mount, delay per item). */
+.landing-hero-item {
+  opacity: 0;
+  animation: landing-hero-in 560ms var(--ease-out-expo) both;
+  animation-delay: var(--landing-hero-delay, 0ms);
+}
+
+@keyframes landing-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scroll reveal — `.is-visible` is added by LandingReveal when the
+   element enters the viewport. A short stagger is applied via
+   --landing-reveal-delay. */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 420ms var(--ease-out-expo),
+    transform 420ms var(--ease-out-expo);
+  transition-delay: var(--landing-reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-item,
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Without JavaScript the reveal would never fire — show everything. */
+@media (scripting: none) {
+  .landing-hero-item,
+  .landing-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,29 +1,46 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CheckSquare, FolderKanban, Target } from "lucide-react";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { NexusWordmark } from "@/components/nexus-logo";
-import { ButtonLink } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
+import { LandingNav } from "@/components/landing/landing-nav";
+import { LandingReveal } from "@/components/landing/landing-reveal";
+import { Hero } from "@/components/landing/hero";
+import { ProductPreview } from "@/components/landing/product-preview";
+import { ValueBand } from "@/components/landing/value-band";
+import { ModelSection } from "@/components/landing/model-section";
+import { IntelligenceSection } from "@/components/landing/intelligence-section";
+import { HowItWorksSection } from "@/components/landing/how-it-works";
+import { FeaturesSection } from "@/components/landing/features";
+import { TrustSection } from "@/components/landing/trust";
+import { PricingSection } from "@/components/landing/pricing";
+import { FaqSection } from "@/components/landing/faq";
+import { FinalCtaSection } from "@/components/landing/final-cta";
+import { LandingFooter } from "@/components/landing/footer";
 
-const FEATURES = [
-  {
-    title: "Tasks",
-    body: "Capture what needs attention. Priorities, due dates and a focus list — nothing decorative.",
-    icon: CheckSquare,
+// ============================================================
+// NEXUS — PUBLIC LANDING PAGE
+// Composition (composition only — the branding is 100% NEXUS V3):
+//   NAVBAR → HERO → PRODUCT PREVIEW → VALUE → THE NEXUS MODEL →
+//   INTELLIGENCE → HOW IT WORKS → FEATURES → TRUST → PRICING →
+//   FAQ → FINAL CTA → FOOTER
+// Every section uses real NEXUS data or real product behaviour.
+// ============================================================
+
+export const metadata: Metadata = {
+  title: "NEXUS — Everything important, one connected system",
+  description:
+    "NEXUS is a quiet personal operating system that connects goals, projects, tasks and activity in one workspace — then tells you what to do next.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "NEXUS",
+    title: "NEXUS — Everything important, one connected system",
+    description:
+      "Goals, projects, tasks and activity in one connected workspace. NEXUS tells you what to do next.",
   },
-  {
-    title: "Projects",
-    body: "Group the work that belongs together. Progress is counted from real tasks, not from a slider.",
-    icon: FolderKanban,
-  },
-  {
-    title: "Goals",
-    body: "Keep outcomes visible next to the work. One workspace, one system.",
-    icon: Target,
-  },
-] as const;
+  robots: { index: true, follow: true },
+};
 
 export default async function Home({
   searchParams,
@@ -46,70 +63,45 @@ export default async function Home({
   }
 
   return (
-    <main className="min-h-dvh bg-bg-base text-text-primary">
-      <header className="mx-auto flex h-14 w-full max-w-[1120px] items-center justify-between px-5">
-        <NexusWordmark size={28} priority />
-        <nav className="flex items-center gap-2">
-          <ButtonLink href="/login" variant="ghost" size="sm">
-            Sign in
-          </ButtonLink>
-          <ButtonLink href="/signup" size="sm">
-            Get started
-          </ButtonLink>
-        </nav>
-      </header>
+    <div className="min-h-dvh bg-bg-base text-text-primary">
+      <LandingNav />
 
-      <section className="mx-auto flex w-full max-w-[720px] flex-col items-center px-5 pb-20 pt-20 text-center sm:pt-28">
-        {justConfirmed ? (
-          <Alert tone="success" className="mb-8 w-full max-w-[460px] text-left">
-            Your email is confirmed. Sign in to enter your workspace, or create
-            an account.
-          </Alert>
-        ) : null}
-        <p className="font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
-          Personal operating system
-        </p>
-        <h1 className="mt-4 max-w-[18ch] text-[40px] font-medium leading-[1.05] tracking-[-0.04em] text-text-primary sm:text-[52px]">
-          Everything important, connected.
-        </h1>
-        <p className="mt-5 max-w-[460px] text-body text-text-secondary">
-          NEXUS keeps tasks, projects and goals in one quiet workspace.
-          Built for operators who want a system, not another board.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <ButtonLink href="/signup" size="lg">
-            Create your NEXUS
-          </ButtonLink>
-          <ButtonLink href="/login" variant="secondary" size="lg">
-            Sign in
-          </ButtonLink>
-        </div>
-      </section>
+      <main>
+        <Hero
+          notice={
+            justConfirmed ? (
+              <Alert tone="success">
+                Your email is confirmed. Sign in to enter your workspace, or
+                create an account.
+              </Alert>
+            ) : undefined
+          }
+        />
 
-      <section className="mx-auto grid w-full max-w-[1120px] gap-3 px-5 pb-24 sm:grid-cols-3">
-        {FEATURES.map((feature) => {
-          const Icon = feature.icon;
-          return (
-            <article
-              key={feature.title}
-              className="rounded-card border border-border-default bg-bg-subtle p-5 text-left"
-            >
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-              </div>
-              <h2 className="text-h3 text-text-primary">{feature.title}</h2>
-              <p className="mt-1.5 text-small text-text-secondary">{feature.body}</p>
-            </article>
-          );
-        })}
-      </section>
+        {/* Product preview — the real NEXUS workspace surface */}
+        <section id="product" className="scroll-mt-20 px-5 sm:px-6">
+          <LandingReveal>
+            <div className="mx-auto w-full max-w-[1080px]">
+              <ProductPreview />
+              <p className="mt-6 text-center font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+                The workspace — goals, projects, tasks and activity, connected
+              </p>
+            </div>
+          </LandingReveal>
+        </section>
 
-      <footer className="mx-auto flex w-full max-w-[1120px] items-center justify-between px-5 pb-10 text-caption text-text-tertiary">
-        <span className="font-mono uppercase tracking-[0.1em]">Nexus</span>
-        <Link href="/login" className="hover:text-text-secondary">
-          Already have an account?
-        </Link>
-      </footer>
-    </main>
+        <ValueBand />
+        <ModelSection />
+        <IntelligenceSection />
+        <HowItWorksSection />
+        <FeaturesSection />
+        <TrustSection />
+        <PricingSection />
+        <FaqSection />
+        <FinalCtaSection />
+      </main>
+
+      <LandingFooter />
+    </div>
   );
 }
