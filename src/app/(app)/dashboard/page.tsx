@@ -221,16 +221,16 @@ export default async function DashboardPage() {
 
   return (
     <NexusShell title="Overview" userName={userName} username={username}>
-      <div className="mx-auto max-w-6xl space-y-8 py-2">
+      <div className="space-y-8">
         {/* HEADER GREETING */}
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between border-b border-border-subtle pb-6">
           <div>
             <div className="font-mono text-xs font-medium text-text-tertiary tracking-wider uppercase mb-1">
               {todayFormatted}
             </div>
-            <h1 className="text-display font-semibold text-text-primary">
+            <p className="text-display font-semibold text-text-primary">
               Bonjour, {userName}
-            </h1>
+            </p>
             <p className="text-small text-text-secondary mt-1">
               {focusItems.length > 0
                 ? `${focusItems.length} ${focusItems.length === 1 ? "item needs" : "items need"} your attention today.`

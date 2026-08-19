@@ -7,6 +7,8 @@ type BillingUpgradeButtonProps = {
   targetPlan: PlanName;
 };
 
+// P4: sober disabled state — transparent background, 8% border,
+// tertiary text. No heavy gray blocks.
 export function BillingUpgradeButton({ targetPlan }: BillingUpgradeButtonProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -39,16 +41,16 @@ export function BillingUpgradeButton({ targetPlan }: BillingUpgradeButtonProps) 
   };
 
   return (
-    <div className="mt-4 space-y-2">
+    <div className="space-y-2">
       <button
         type="button"
         onClick={startUpgrade}
         disabled={loading}
-        className="rounded-md bg-[#F2F1ED] px-3 py-1.5 text-xs font-semibold text-[#0C0C0E] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-md bg-accent-primary px-3 py-2 text-button font-medium text-accent-primary-fg transition-all duration-[120ms] ease-out hover:bg-accent-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:border disabled:border-white/10 disabled:bg-transparent disabled:text-text-tertiary disabled:active:scale-100"
       >
-        {loading ? "Starting..." : `Upgrade to ${targetPlan}`}
+        {loading ? "Starting…" : `Upgrade to ${targetPlan}`}
       </button>
-      {message ? <p className="text-xs text-text-tertiary">{message}</p> : null}
+      {message ? <p className="text-xs leading-4 text-text-tertiary">{message}</p> : null}
     </div>
   );
 }
