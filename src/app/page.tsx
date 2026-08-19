@@ -28,15 +28,17 @@ const FEATURES = [
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ confirmed?: string }>;
+  searchParams: Promise<{ confirmed?: string; from?: string }>;
 }) {
   const params = await searchParams;
   const justConfirmed = params.confirmed === "1";
+  const fromOnboarding = params.from === "onboarding";
 
-  // After an email confirmation link we always show this page so the
-  // visitor can choose Sign in or Create account — even if a leftover
-  // session would otherwise bounce them into /onboarding.
-  if (isSupabaseConfigured() && !justConfirmed) {
+  // After an email confirmation link — or when a user was just bounced here
+  // from /onboarding after a page refresh — we always show this page so the
+  // visitor can choose Sign in or Create account, instead of an authenticated
+  // session bouncing them straight back into /dashboard -> /onboarding.
+  if (isSupabaseConfigured() && !justConfirmed && !fromOnboarding) {
     const user = await getAuthenticatedUser();
     if (user) {
       redirect("/dashboard");

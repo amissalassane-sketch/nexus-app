@@ -119,6 +119,21 @@ export default function OnboardingPage() {
     return `${base || "workspace"}-${suffix}`;
   };
 
+  // A hard reload (F5) of /onboarding used to silently restart the flow at
+  // step 1, discarding everything typed so far. Detect the reload via the
+  // Navigation Timing API and send the user back to the landing page, where
+  // `from=onboarding` prevents the auth bounce into /dashboard -> /onboarding.
+  // Client-side navigation (the normal signup -> onboarding flow) reports
+  // type "navigate", never "reload", so that path is untouched.
+  useEffect(() => {
+    const entry = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    if (entry?.type === "reload") {
+      router.replace("/?from=onboarding");
+    }
+  }, [router]);
+
   useEffect(() => {
     const loadProfile = async () => {
       const {
