@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { NexusShell } from "@/components/nexus-shell";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileSummary } from "@/lib/profile";
+import { collectWorkspaceIntel } from "@/lib/intelligence/server";
+import type { Insight, Severity } from "@/lib/intelligence/engine";
 import { CheckSquare, FolderKanban } from "lucide-react";
 
 type DashboardTask = {
@@ -12,10 +14,6 @@ type DashboardTask = {
   priority: string;
   due_at: string | null;
   created_at: string;
-};
-
-type FocusTask = DashboardTask & {
-  reason: "Overdue" | "Blocked" | "High priority";
 };
 
 const formatDate = (value: string | null | undefined) => {
@@ -161,31 +159,20 @@ export default async function DashboardPage() {
   const recentGoals = recentGoalsResult.data ?? [];
   const recentActivities = recentActivitiesResult.data ?? [];
 
-  // Focus Block Logic (Level 1)
-  const nowStr = new Date().toISOString();
-  
-  // 1. Overdue
-  const focusOverdue = activeTasksList.filter((task) => task.due_at && task.due_at < nowStr);
-  
-  // 2. Blocked (not already in overdue)
-  const focusBlocked = activeTasksList.filter(
-    (task) => task.status === "blocked" && !focusOverdue.some((overdueTask) => overdueTask.id === task.id)
-  );
-  
-  // 3. High priority / urgent (not already in overdue or blocked)
-  const focusHighPriority = activeTasksList.filter(
-    (task) =>
-      (task.priority === "high" || task.priority === "urgent") &&
-      !focusOverdue.some((overdueTask) => overdueTask.id === task.id) &&
-      !focusBlocked.some((blockedTask) => blockedTask.id === task.id)
-  );
-  
-  // Combine in order: Overdue -> Blocked -> High Priority, limit to 3 items
-  const focusItems: FocusTask[] = [
-    ...focusOverdue.map((task): FocusTask => ({ ...task, reason: "Overdue" })),
-    ...focusBlocked.map((task): FocusTask => ({ ...task, reason: "Blocked" })),
-    ...focusHighPriority.map((task): FocusTask => ({ ...task, reason: "High priority" })),
-  ].slice(0, 3);
+  // FOCUS (Level 1) — driven by the deterministic intelligence engine (P3)
+  const intel = workspaceId ? await collectWorkspaceIntel(workspaceId) : null;
+  const nextAction = intel?.result.nextAction ?? null;
+  const topInsights: Insight[] = intel ? intel.result.insights.slice(0, 3) : [];
+  const attentionCount = intel
+    ? intel.result.insights.filter((item) => item.severity === "critical" || item.severity === "warning").length
+    : 0;
+
+  const SEVERITY_BADGE: Record<Severity, string> = {
+    critical: "bg-danger-bg text-danger-fg border-danger-border",
+    warning: "bg-warning-bg text-warning-fg border-warning-border",
+    info: "bg-info-bg text-info-fg border-info-border",
+    positive: "bg-success-bg text-success-fg border-success-border",
+  };
 
   // Priority Tasks list (Level 3 Left)
   const priorityWeight = {
@@ -232,9 +219,9 @@ export default async function DashboardPage() {
               Bonjour, {userName}
             </p>
             <p className="text-small text-text-secondary mt-1">
-              {focusItems.length > 0
-                ? `${focusItems.length} ${focusItems.length === 1 ? "item needs" : "items need"} your attention today.`
-                : "Everything is under control today."}
+              {attentionCount > 0
+                ? `${attentionCount} ${attentionCount === 1 ? "signal needs" : "signals need"} your arbitration today.`
+                : "Nothing requires arbitration today."}
             </p>
           </div>
           {workspace && (
@@ -250,57 +237,80 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* LEVEL 1 — FOCUS BLOCK */}
+        {/* LEVEL 1 — FOCUS BLOCK (next best action + its reason) */}
         <div className="rounded-xl border border-border-default bg-bg-surface-2 p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-body font-semibold text-text-primary uppercase tracking-wide">
-              What needs attention today?
+            <h2 className="text-body font-semibold uppercase tracking-wide text-text-primary">
+              What should you work on?
             </h2>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
-              Focus
-            </span>
+            <Link
+              href="/intelligence"
+              className="font-mono text-[10px] uppercase tracking-wider text-text-tertiary transition-colors duration-[120ms] hover:text-text-primary"
+            >
+              All signals →
+            </Link>
           </div>
 
-          {focusItems.length === 0 ? (
+          {nextAction ? (
+            <div className="animate-rise-in mb-4 rounded-lg border border-volt-border bg-bg-surface p-4">
+              <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-volt">
+                Next best action
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="text-body font-medium text-text-primary">
+                    {nextAction.insight.title}
+                  </div>
+                  {/* The reason is ALWAYS displayed */}
+                  <p className="mt-0.5 text-small text-text-secondary">
+                    {nextAction.insight.reason}
+                  </p>
+                </div>
+                <Link
+                  href={nextAction.insight.href}
+                  className="flex min-h-9 shrink-0 items-center justify-center rounded-md bg-accent-primary px-3 text-button font-medium text-accent-primary-fg transition-all duration-[120ms] ease-out hover:bg-accent-primary-hover active:scale-[0.98]"
+                >
+                  {nextAction.insight.cta}
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
+          {topInsights.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-bg-surface text-volt">
                 <CheckSquare size={18} strokeWidth={1.75} />
               </div>
-              <h3 className="text-body font-medium text-text-primary">Everything is under control.</h3>
-              <p className="mt-1 text-xs text-text-secondary">Nothing urgent needs your attention right now.</p>
+              <h3 className="text-body font-medium text-text-primary">
+                Nothing requires arbitration.
+              </h3>
+              <p className="mt-1 text-xs text-text-secondary">
+                No overdue, blocked or at-risk item. Give a project its next action while it is calm.
+              </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {focusItems.map((task) => {
-                let badgeClass = "bg-danger-bg text-danger-fg border-danger-border";
-                let labelText = "Overdue";
-                if (task.reason === "Blocked") {
-                  badgeClass = "bg-warning-bg text-warning-fg border-warning-border";
-                  labelText = "Blocked";
-                } else if (task.reason === "High priority") {
-                  badgeClass = "bg-volt-subtle text-volt border-volt-border";
-                  labelText = "Priority";
-                }
-
-                return (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 transition duration-120 hover:border-border-strong"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`rounded px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider border ${badgeClass}`}>
-                        {labelText}
-                      </span>
-                      <span className="text-body font-medium text-text-primary">{task.title}</span>
-                    </div>
-                    {task.due_at && (
-                      <span className="font-mono text-xs text-text-tertiary">
-                        {formatDate(task.due_at)}
-                      </span>
-                    )}
+            <div className="stagger-list space-y-2">
+              {topInsights.map((insight) => (
+                <Link
+                  key={insight.id}
+                  href={insight.href}
+                  className="group flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 transition-all duration-[160ms] ease-out hover:border-border-strong hover:bg-bg-surface-2"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={`shrink-0 rounded border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${SEVERITY_BADGE[insight.severity]}`}
+                    >
+                      {insight.signal.replace(/_/g, " ")}
+                    </span>
+                    <span className="truncate text-body font-medium text-text-primary">
+                      {insight.title}
+                    </span>
                   </div>
-                );
-              })}
+                  <span className="hidden shrink-0 font-mono text-xs text-text-tertiary transition-colors duration-[120ms] group-hover:text-text-primary md:block">
+                    {insight.cta}
+                  </span>
+                </Link>
+              ))}
             </div>
           )}
         </div>

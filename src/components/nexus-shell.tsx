@@ -15,6 +15,7 @@ import {
   SquarePen,
   FolderPlus,
   Crosshair,
+  Sparkles,
 } from "lucide-react";
 import { NexusLogo } from "@/components/nexus-logo";
 import { LogoutButton } from "@/components/logout-button";
@@ -50,6 +51,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Activity",
     items: [
+      { name: "Intelligence", href: "/intelligence", icon: Sparkles, exact: true },
       { name: "Notifications", href: "/notifications", icon: Bell, exact: true },
       { name: "Settings", href: "/settings", icon: Settings2 },
     ],
