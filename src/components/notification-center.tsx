@@ -24,9 +24,34 @@ const entityRoutes: Record<string, string> = {
   workspace: "/dashboard",
 };
 
-export function NotificationCenter({ userId }: { userId: string }) {
+
+async function loadNotificationsForUser(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  workspaceId: string
+): Promise<{ data: NotificationItem[] | null; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  return {
+    data: (data as NotificationItem[]) ?? null,
+    error: error as { message: string } | null,
+  };
+}
+
+export function NotificationCenter({
+  userId,
+  workspaceId,
+}: {
+  userId: string;
+  /** Resolved server-side by the (app) layout — never null in practice. */
+  workspaceId: string | null;
+}) {
   const supabase = useMemo(() => createClient(), []);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,8 +59,6 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
   const loadNotifications = async (activeWorkspaceId: string | null) => {
     if (!activeWorkspaceId) {
-      setNotifications([]);
-      setLoading(false);
       return;
     }
 
@@ -59,28 +82,25 @@ export function NotificationCenter({ userId }: { userId: string }) {
   };
 
   useEffect(() => {
-    const loadWorkspace = async () => {
-      const { data, error: workspaceError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (workspaceError) {
-        setError(workspaceError.message);
+    const load = async () => {
+      if (!workspaceId) return;
+      const { data, error: loadError } = await loadNotificationsForUser(
+        supabase,
+        userId,
+        workspaceId
+      );
+      if (loadError) {
+        setError(loadError.message);
+        setNotifications([]);
         setLoading(false);
         return;
       }
-
-      const nextWorkspaceId = data?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await loadNotifications(nextWorkspaceId);
+      setNotifications(data ?? []);
+      setError("");
+      setLoading(false);
     };
-
-    void loadWorkspace();
-  }, [supabase, userId]);
+    void load();
+  }, [supabase, userId, workspaceId]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read_at).length,

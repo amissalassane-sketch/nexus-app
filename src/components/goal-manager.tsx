@@ -32,10 +32,35 @@ const blankGoalForm = (): GoalForm => ({
   target_date: "",
 });
 
-export function GoalManager({ userId }: { userId: string }) {
+
+// Module-level loader: setState stays behind an await (React Compiler rule
+// react-hooks/set-state-in-effect — known pitfall #5).
+async function loadGoalsForWorkspace(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .from("goals")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("target_date", { ascending: true });
+
+  return {
+    data: (data as Array<Record<string, unknown>>) ?? null,
+    error: error as { message: string } | null,
+  };
+}
+
+export function GoalManager({
+  userId,
+  workspaceId,
+}: {
+  userId: string;
+  /** Resolved server-side by the (app) layout — never null in practice. */
+  workspaceId: string | null;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,8 +75,6 @@ export function GoalManager({ userId }: { userId: string }) {
 
   const fetchGoals = async (activeWorkspaceId: string | null) => {
     if (!activeWorkspaceId) {
-      setGoals([]);
-      setLoading(false);
       return;
     }
 
@@ -73,22 +96,20 @@ export function GoalManager({ userId }: { userId: string }) {
   };
 
   useEffect(() => {
-    const loadWorkspace = async () => {
-      const { data: memberships } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      const nextWorkspaceId = memberships?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await fetchGoals(nextWorkspaceId);
+    const load = async () => {
+      if (!workspaceId) return;
+      const { data, error: loadError } = await loadGoalsForWorkspace(supabase, workspaceId);
+      if (loadError) {
+        setError(loadError.message);
+        setGoals([]);
+        setLoading(false);
+        return;
+      }
+      setGoals((data as never[]) ?? []);
+      setLoading(false);
     };
-
-    void loadWorkspace();
-  }, [supabase, userId]);
+    void load();
+  }, [supabase, workspaceId]);
 
   const resetForm = () => {
     setForm(blankGoalForm());

@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- 006. AUTOMATIC PERSONAL WORKSPACE
 -- ============================================================
 
@@ -43,6 +43,7 @@ end;
 $$;
 
 
+drop trigger if exists on_auth_user_created_workspace on auth.users;
 create trigger on_auth_user_created_workspace
 after insert on auth.users
 for each row

@@ -36,10 +36,35 @@ const blankTaskForm = (): TaskForm => ({
   due_at: "",
 });
 
-export function TaskManager({ userId }: { userId: string }) {
+
+// Module-level loader: setState stays behind an await (React Compiler rule
+// react-hooks/set-state-in-effect — known pitfall #5).
+async function loadTasksForWorkspace(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string
+): Promise<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("due_at", { ascending: true });
+
+  return {
+    data: (data as Array<Record<string, unknown>>) ?? null,
+    error: error as { message: string } | null,
+  };
+}
+
+export function TaskManager({
+  userId,
+  workspaceId,
+}: {
+  userId: string;
+  /** Resolved server-side by the (app) layout — never null in practice. */
+  workspaceId: string | null;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -59,8 +84,7 @@ export function TaskManager({ userId }: { userId: string }) {
 
   const fetchTasks = async (activeWorkspaceId: string | null) => {
     if (!activeWorkspaceId) {
-      setTasks([]);
-      setLoading(false);
+      // The (app) layout guarantees a workspace; nothing to load otherwise.
       return;
     }
 
@@ -82,22 +106,20 @@ export function TaskManager({ userId }: { userId: string }) {
   };
 
   useEffect(() => {
-    const loadWorkspace = async () => {
-      const { data: memberships } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      const nextWorkspaceId = memberships?.[0]?.workspace_id ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await fetchTasks(nextWorkspaceId);
+    const load = async () => {
+      if (!workspaceId) return;
+      const { data, error: loadError } = await loadTasksForWorkspace(supabase, workspaceId);
+      if (loadError) {
+        setError(loadError.message);
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+      setTasks((data as never[]) ?? []);
+      setLoading(false);
     };
-
-    void loadWorkspace();
-  }, [supabase, userId]);
+    void load();
+  }, [supabase, workspaceId]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {

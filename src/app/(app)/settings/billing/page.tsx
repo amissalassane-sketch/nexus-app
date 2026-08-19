@@ -3,37 +3,19 @@ import Link from "next/link";
 import { NexusShell } from "@/components/nexus-shell";
 import { BillingUpgradeButton } from "@/components/billing-upgrade-button";
 import { createClient } from "@/lib/supabase/server";
+import { getProfileSummary } from "@/lib/profile";
 import { PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
 
 export default async function BillingPage() {
+  const summary = await getProfileSummary();
+
+  if (!summary) redirect("/login");
+
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, username, onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const userName = profile?.display_name || profile?.username || user.email || "User";
-  const username = profile?.username || undefined;
-
-  // Get active workspace
-  const { data: membership } = await supabase
-    .from("workspace_members")
-    .select("workspace_id")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const workspaceId = membership?.workspace_id ?? null;
+  const userName = summary.displayName;
+  const username = summary.username ?? undefined;
+  const workspaceId = summary.workspaceId;
 
   // Get subscription
   const { data: subscription } = workspaceId

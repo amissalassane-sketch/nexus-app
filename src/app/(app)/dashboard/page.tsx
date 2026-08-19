@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { NexusShell } from "@/components/nexus-shell";
 import { createClient } from "@/lib/supabase/server";
+import { getProfileSummary } from "@/lib/profile";
 import { CheckSquare, FolderKanban } from "lucide-react";
 
 type DashboardTask = {
@@ -31,52 +32,30 @@ const formatDate = (value: string | null | undefined) => {
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const summary = await getProfileSummary();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  if (!summary) {
     redirect("/login");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("display_name, username, bio, onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
+  const supabase = await createClient();
 
-  if (profileError) {
-    return (
-      <NexusShell title="Overview" userName="User">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center text-zinc-400">
-          We could not load your profile right now. Please try again in a moment.
-        </div>
-      </NexusShell>
-    );
-  }
+  const userName = summary.displayName;
+  const username = summary.username ?? undefined;
 
-  const userName = profile?.display_name || profile?.username || user.email || "User";
-  const username = profile?.username || undefined;
+  const workspaceId = summary.workspaceId;
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("workspace_members")
-    .select("workspace_id, role, status")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
+  const membership = workspaceId
+    ? { workspace_id: workspaceId, role: summary.role, status: "active" as const }
+    : null;
 
-  const workspaceId = membership?.workspace_id ?? null;
-
-  const { data: workspace, error: workspaceError } = workspaceId
+  const { data: workspace } = workspaceId
     ? await supabase
         .from("workspaces")
         .select("id, name, slug, description, icon, color")
         .eq("id", workspaceId)
         .maybeSingle()
-    : { data: null, error: null };
+    : { data: null };
 
   const statsPromise = workspaceId
     ? (async () => {
@@ -236,7 +215,9 @@ export default async function DashboardPage() {
 
   const workspaceName = workspace?.name ?? "No workspace";
 
-  const showWorkspaceWarning = membershipError || workspaceError || !workspaceId || !workspace;
+  // The (app) layout already guarantees a verified workspace; this only
+  // remains as a defensive net against mid-session data loss.
+  const showWorkspaceWarning = !workspaceId || !workspace;
 
   return (
     <NexusShell title="Overview" userName={userName} username={username}>

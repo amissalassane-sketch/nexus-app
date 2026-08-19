@@ -79,8 +79,21 @@ export default function OnboardingPage() {
       }
 
       if (profile?.onboarding_completed === true) {
-        router.replace("/dashboard");
-        return;
+        // Only leave the repair path when the account actually works:
+        // onboarding completed AND an active workspace membership exists.
+        const { data: activeMemberships } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (activeMemberships && activeMemberships.length > 0) {
+          router.replace("/dashboard");
+          return;
+        }
+        // Broken account (P0 repair path): stay here and re-run the form.
       }
 
       setLoading(false);
@@ -128,31 +141,33 @@ export default function OnboardingPage() {
         display_name: cleanDisplayName,
         username: cleanUsername,
         bio: cleanBio,
-        onboarding_completed: true,
+        onboarding_completed: false,
         updated_at: new Date().toISOString(),
       });
 
     if (upsertError) {
-      if (upsertError.message.toLowerCase().includes("row-level security")) {
-        router.replace("/dashboard");
-        router.refresh();
-        return;
-      }
-
-      setError(upsertError.message);
+      setError(
+        `Your profile could not be saved: ${upsertError.message}. Nothing was lost — correct the field and try again.`
+      );
       setSaving(false);
       return;
     }
 
+    // Repair path: ensure a workspace exists AND the owner membership row
+    // exists in the database. A workspace without a membership row is the
+    // known P0 failure — never redirect in that state.
     const { data: memberships, error: membershipError } = await supabase
       .from("workspace_members")
       .select("workspace_id")
       .eq("user_id", user.id)
       .eq("status", "active")
+      .order("created_at", { ascending: false })
       .limit(1);
 
     if (membershipError) {
-      setError(membershipError.message);
+      setError(
+        `Your workspace link could not be verified: ${membershipError.message}. Please try again.`
+      );
       setSaving(false);
       return;
     }
@@ -165,10 +180,51 @@ export default function OnboardingPage() {
       });
 
       if (workspaceError) {
-        setError(workspaceError.message);
+        setError(
+          `Workspace creation failed: ${workspaceError.message}. You can retry — nothing is duplicated.`
+        );
         setSaving(false);
         return;
       }
+
+      // RE-READ after creation: only trust the database, never the insert result.
+      const { data: refreshed, error: refreshError } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (refreshError) {
+        setError(
+          `Workspace was created but your membership could not be read back: ${refreshError.message}.`
+        );
+        setSaving(false);
+        return;
+      }
+
+      if (!refreshed || refreshed.length === 0) {
+        setError(
+          "The workspace was created but your owner membership was not linked automatically. Please contact support with this message — do not retry signup, your account is fine."
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Membership verified — NOW onboarding is complete.
+    const { error: completeError } = await supabase
+      .from("profiles")
+      .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+
+    if (completeError) {
+      setError(
+        `Your workspace is ready, but completing onboarding failed: ${completeError.message}.`
+      );
+      setSaving(false);
+      return;
     }
 
     router.replace("/dashboard");
