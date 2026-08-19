@@ -115,8 +115,8 @@ const landingHtml = await landing.text();
 assert("anonymous / renders the public homepage", landing.status === 200, `status=${landing.status}`);
 assert(
   "public homepage offers sign in and sign up",
-  landingHtml.includes("Everything important, connected.") &&
-    landingHtml.includes("Create your NEXUS") &&
+  landingHtml.includes("Everything important, one connected system.") &&
+    landingHtml.includes("Get started") &&
     landingHtml.includes("Sign in"),
   "landing copy missing"
 );

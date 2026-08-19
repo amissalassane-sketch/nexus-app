@@ -2,7 +2,8 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClientSafe } from "@/lib/supabase/client";
 import { isPlanLimitError } from "@/lib/plan-errors";
 import { isMissingColumnError } from "@/lib/schema-errors";
 import { NexusLogo } from "@/components/nexus-logo";
@@ -90,13 +91,29 @@ const DEFAULT_STEP3 = STEP3_BY_INTENT.everything;
 const TOTAL_STEPS = 3;
 
 export default function OnboardingPage() {
+  const clientResult = useMemo(() => createClientSafe(), []);
+
+  if (!clientResult.client) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg-base px-4">
+        <div className="w-full max-w-[440px]">
+          <Alert tone="danger">{clientResult.error}</Alert>
+        </div>
+      </main>
+    );
+  }
+
+  return <OnboardingFlow supabase={clientResult.client} />;
+}
+
+function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
+  const [onboardingUserId, setOnboardingUserId] = useState("");
 
   // All answers live at component level: moving between steps only
   // changes `step`, so nothing typed is ever lost.
@@ -119,21 +136,6 @@ export default function OnboardingPage() {
     return `${base || "workspace"}-${suffix}`;
   };
 
-  // A hard reload (F5) of /onboarding used to silently restart the flow at
-  // step 1, discarding everything typed so far. Detect the reload via the
-  // Navigation Timing API and send the user back to the landing page, where
-  // `from=onboarding` prevents the auth bounce into /dashboard -> /onboarding.
-  // Client-side navigation (the normal signup -> onboarding flow) reports
-  // type "navigate", never "reload", so that path is untouched.
-  useEffect(() => {
-    const entry = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    if (entry?.type === "reload") {
-      router.replace("/?from=onboarding");
-    }
-  }, [router]);
-
   useEffect(() => {
     const loadProfile = async () => {
       const {
@@ -145,39 +147,104 @@ export default function OnboardingPage() {
         router.replace("/login");
         return;
       }
+      setOnboardingUserId(user.id);
 
-      // Never select onboarding_intent here: that column is added by
-      // migrations 013/014 and is missing on some hosted databases.
-      // Selecting it used to freeze the page on
-      // "column profiles.onboarding_intent does not exist".
-      const { data: profile, error: profileError } = await supabase
+      // Read the most precise persisted progress available. Older hosted
+      // schemas may not have onboarding_intent yet, so fall back without
+      // making the whole route unusable.
+      let profileResult = await supabase
         .from("profiles")
-        .select("display_name, username, onboarding_completed")
+        .select("display_name, username, onboarding_completed, onboarding_intent")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileError) {
-        setError(profileError.message);
+      if (
+        profileResult.error &&
+        isMissingColumnError(profileResult.error.message, "onboarding_intent")
+      ) {
+        profileResult = await supabase
+          .from("profiles")
+          .select("display_name, username, onboarding_completed")
+          .eq("id", user.id)
+          .maybeSingle();
+      }
+
+      const profile = profileResult.data as
+        | {
+            display_name?: string | null;
+            username?: string | null;
+            onboarding_completed?: boolean | null;
+            onboarding_intent?: string | null;
+          }
+        | null;
+
+      if (profileResult.error) {
+        setError(profileResult.error.message);
         setLoading(false);
         return;
       }
 
+      // Completion alone is not enough: only a real active membership makes
+      // the dashboard valid. A damaged/missing membership stays in this safe
+      // workflow, where finalisation can reconnect an owned workspace.
       if (profile?.onboarding_completed === true) {
-        router.replace("/dashboard");
-        return;
+        const { data: activeMembership } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .limit(1)
+          .maybeSingle();
+
+        if (activeMembership?.workspace_id) {
+          router.replace("/dashboard");
+          return;
+        }
       }
 
       if (profile?.display_name) setDisplayName(profile.display_name);
       if (profile?.username) setUsername(profile.username);
 
-      const savedIntent =
+      const metadataIntent =
         typeof user.user_metadata?.onboarding_intent === "string"
           ? user.user_metadata.onboarding_intent
           : "";
+      const savedIntent = profile?.onboarding_intent || metadataIntent;
+      const hasIdentity = Boolean(profile?.display_name?.trim() && profile?.username?.trim());
+
+      let furthestSafeStep = hasIdentity ? 2 : 1;
       if (savedIntent in STEP3_BY_INTENT) {
         const known = savedIntent as IntentId;
         setIntent(known);
         setFirstKind(STEP3_BY_INTENT[known].defaultKind);
+        if (hasIdentity) furthestSafeStep = 3;
+      }
+
+      // Session storage remembers deliberate Back navigation and unsent UI
+      // position, but can never advance beyond database-backed progress.
+      let resumeStep = furthestSafeStep;
+      try {
+        const remembered = Number(sessionStorage.getItem(`nexus:onboarding-step:${user.id}`));
+        if (remembered >= 1 && remembered <= furthestSafeStep) resumeStep = remembered;
+      } catch {
+        // Storage is optional; persisted profile state remains authoritative.
+      }
+      setStep(resumeStep);
+
+      try {
+        const firstValueDraft = localStorage.getItem(`nexus:onboarding-first:${user.id}`);
+        if (firstValueDraft) {
+          const parsed = JSON.parse(firstValueDraft) as {
+            kind?: FirstKind;
+            title?: string;
+          };
+          if (parsed.kind === "project" || parsed.kind === "task") {
+            setFirstKind(parsed.kind);
+          }
+          if (typeof parsed.title === "string") setFirstTitle(parsed.title);
+        }
+      } catch {
+        // Draft storage is optional and never overrides database truth.
       }
 
       if (!profile?.display_name) {
@@ -210,26 +277,113 @@ export default function OnboardingPage() {
     return true; // step 3 can always skip
   };
 
-  const next = () => {
+  // Continue commits only the answers from the completed step. This makes a
+  // refresh deterministic without creating a workspace, project, or task
+  // before the user explicitly finishes the workflow.
+  const next = async () => {
     setError("");
-    if (step < TOTAL_STEPS) setStep((current) => current + 1);
+    if (!canContinue() || step >= TOTAL_STEPS) return;
+
+    setSaving(true);
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        router.replace("/login");
+        return;
+      }
+
+      const base = {
+        id: user.id,
+        display_name: displayName.trim(),
+        username: username.trim().toLowerCase(),
+        updated_at: new Date().toISOString(),
+      };
+      const payload = step === 2 && intent ? { ...base, onboarding_intent: intent } : base;
+      let saved = await supabase.from("profiles").upsert(payload).select("id").maybeSingle();
+      let intentSavedInProfile = step !== 2;
+
+      if (saved.error && isMissingColumnError(saved.error.message, "onboarding_intent")) {
+        saved = await supabase.from("profiles").upsert(base).select("id").maybeSingle();
+        intentSavedInProfile = false;
+      } else if (step === 2) {
+        intentSavedInProfile = true;
+      }
+
+      if (saved.error || !saved.data?.id) {
+        setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
+        return;
+      }
+
+      if (step === 2 && intent) {
+        const metadata = await supabase.auth.updateUser({
+          data: { onboarding_intent: intent },
+        });
+        if (metadata.error && !intentSavedInProfile) {
+          setError(`Your choice could not be saved: ${metadata.error.message}`);
+          return;
+        }
+      }
+
+      const nextStep = Math.min(step + 1, TOTAL_STEPS);
+      setStep(nextStep);
+      try {
+        sessionStorage.setItem(`nexus:onboarding-step:${user.id}`, String(nextStep));
+      } catch {
+        // Persisted profile fields still determine a safe refresh route.
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Your progress could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Local state only — no router call, no history entry, no reload.
   // Every answer already given stays exactly as it was.
   const back = () => {
     setError("");
-    if (step > 1) setStep((current) => current - 1);
+    if (step > 1) {
+      const previousStep = step - 1;
+      setStep(previousStep);
+      if (onboardingUserId) {
+        try {
+          sessionStorage.setItem(
+            `nexus:onboarding-step:${onboardingUserId}`,
+            String(previousStep)
+          );
+        } catch {
+          // Back still works in memory when storage is unavailable.
+        }
+      }
+    }
   };
 
   // Choosing an intent re-targets step 3 (default unit of work), but
   // never destroys a title the user already typed.
+  const rememberFirstValue = (kind: FirstKind, title: string) => {
+    if (!onboardingUserId) return;
+    try {
+      localStorage.setItem(
+        `nexus:onboarding-first:${onboardingUserId}`,
+        JSON.stringify({ kind, title })
+      );
+    } catch {
+      // The form remains fully usable without local draft storage.
+    }
+  };
+
   const selectIntent = (nextIntent: IntentId) => {
     setError("");
     setIntent(nextIntent);
     // Only the *default* unit of work follows the intent — `firstTitle`
     // is user-authored content and is never touched.
-    setFirstKind(STEP3_BY_INTENT[nextIntent].defaultKind);
+    const defaultKind = STEP3_BY_INTENT[nextIntent].defaultKind;
+    setFirstKind(defaultKind);
+    rememberFirstValue(defaultKind, firstTitle);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -326,17 +480,19 @@ export default function OnboardingPage() {
           .maybeSingle();
 
         if (owned?.id) {
-          await supabase.from("workspace_members").insert({
+          const { error: linkError } = await supabase.from("workspace_members").insert({
             workspace_id: owned.id,
             user_id: user.id,
             role: "owner",
             status: "active",
           });
-          membership = (await rereadMembership()) ?? {
-            workspace_id: owned.id,
-            role: "owner",
-            status: "active",
-          };
+          membership = await rereadMembership();
+          if (!membership) {
+            setError(
+              `Your existing workspace could not be connected${linkError ? `: ${linkError.message}` : "."}`
+            );
+            return;
+          }
         }
       }
 
@@ -368,11 +524,21 @@ export default function OnboardingPage() {
           return;
         }
 
-        membership = (await rereadMembership()) ?? {
-          workspace_id: workspace.id,
-          role: "owner",
-          status: "active",
-        };
+        const { error: newMembershipError } = await supabase
+          .from("workspace_members")
+          .insert({
+            workspace_id: workspace.id,
+            user_id: user.id,
+            role: "owner",
+            status: "active",
+          });
+        membership = await rereadMembership();
+        if (!membership) {
+          setError(
+            `Your workspace was created but could not be connected${newMembershipError ? `: ${newMembershipError.message}` : ". Please try again."}`
+          );
+          return;
+        }
       }
 
       // 3. Verify membership is real and usable before declaring success.
@@ -390,62 +556,109 @@ export default function OnboardingPage() {
 
       const workspaceId = membership.workspace_id as string;
 
-      // 4. Create the first value (project or task) when provided, and read
-      //    the row back: an insert without a returned id is NOT a success.
+      // 4. Create the first value at most once. A stable client-generated id
+      //    is stored before insertion, then verified on every retry/refresh.
+      //    This closes the duplicate project/task window if profile completion
+      //    fails after the value itself was committed.
       if (firstTitle.trim()) {
-        if (firstKind === "project") {
-          const { data: project, error: projectError } = await supabase
-            .from("projects")
-            .insert({
-              workspace_id: workspaceId,
-              owner_id: user.id,
-              name: firstTitle.trim(),
-            })
-            .select("id")
-            .single();
+        const firstValueKey = `nexus:onboarding-first:${user.id}`;
+        type FirstValueDraft = {
+          id?: string;
+          kind: FirstKind;
+          title: string;
+          created?: boolean;
+        };
 
-          if (projectError) {
-            setError(
-              isPlanLimitError(projectError.message)
-                ? "Your plan does not allow another project. Visit /upgrade to unlock more."
-                : `We couldn't finish setting up your workspace — your project was not created: ${projectError.message}`
-            );
-            return;
+        let draft: FirstValueDraft = {
+          kind: firstKind,
+          title: firstTitle.trim(),
+        };
+        try {
+          const stored = localStorage.getItem(firstValueKey);
+          if (stored) {
+            const parsed = JSON.parse(stored) as FirstValueDraft;
+            if (
+              (parsed.kind === "project" || parsed.kind === "task") &&
+              typeof parsed.title === "string"
+            ) {
+              draft = parsed;
+            }
           }
+        } catch {
+          // Continue with the visible, user-authored values.
+        }
 
-          if (!project?.id) {
-            setError(
-              "We couldn't finish setting up your workspace — your project was not saved. Your answers are kept, please try again."
-            );
-            return;
-          }
-        } else {
-          const { data: task, error: taskError } = await supabase
-            .from("tasks")
-            .insert({
-              workspace_id: workspaceId,
-              title: firstTitle.trim(),
-              assignee_id: user.id,
-              created_by: user.id,
-            })
-            .select("id")
-            .single();
+        draft.id ||= crypto.randomUUID();
+        draft.title = draft.title.trim() || firstTitle.trim();
+        try {
+          localStorage.setItem(firstValueKey, JSON.stringify(draft));
+        } catch {
+          // Database verification below remains authoritative.
+        }
 
-          if (taskError) {
-            setError(
-              isPlanLimitError(taskError.message)
-                ? "Your plan does not allow another task. Visit /upgrade to unlock more."
-                : `We couldn't finish setting up your workspace — your task was not created: ${taskError.message}`
-            );
-            return;
-          }
+        const table = draft.kind === "project" ? "projects" : "tasks";
+        const { data: existingValue, error: existingError } = await supabase
+          .from(table)
+          .select("id")
+          .eq("id", draft.id)
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
 
-          if (!task?.id) {
-            setError(
-              "We couldn't finish setting up your workspace — your task was not saved. Your answers are kept, please try again."
-            );
-            return;
+        if (existingError) {
+          setError(`We couldn't verify your first ${draft.kind}: ${existingError.message}`);
+          return;
+        }
+
+        if (!existingValue?.id) {
+          if (draft.kind === "project") {
+            const { data: project, error: projectError } = await supabase
+              .from("projects")
+              .insert({
+                id: draft.id,
+                workspace_id: workspaceId,
+                owner_id: user.id,
+                name: draft.title,
+              })
+              .select("id")
+              .single();
+
+            if (projectError || !project?.id) {
+              setError(
+                projectError && isPlanLimitError(projectError.message)
+                  ? "Your plan does not allow another project. Visit /upgrade to unlock more."
+                  : `We couldn't finish setting up your workspace — your project was not created${projectError ? `: ${projectError.message}` : "."}`
+              );
+              return;
+            }
+          } else {
+            const { data: task, error: taskError } = await supabase
+              .from("tasks")
+              .insert({
+                id: draft.id,
+                workspace_id: workspaceId,
+                title: draft.title,
+                assignee_id: user.id,
+                created_by: user.id,
+              })
+              .select("id")
+              .single();
+
+            if (taskError || !task?.id) {
+              setError(
+                taskError && isPlanLimitError(taskError.message)
+                  ? "Your plan does not allow another task. Visit /upgrade to unlock more."
+                  : `We couldn't finish setting up your workspace — your task was not created${taskError ? `: ${taskError.message}` : "."}`
+              );
+              return;
+            }
           }
+        }
+
+        draft.created = true;
+        try {
+          localStorage.setItem(firstValueKey, JSON.stringify(draft));
+        } catch {
+          // The row has already been read back from the database.
         }
       }
 
@@ -477,6 +690,12 @@ export default function OnboardingPage() {
         return;
       }
 
+      try {
+        sessionStorage.removeItem(`nexus:onboarding-step:${user.id}`);
+        localStorage.removeItem(`nexus:onboarding-first:${user.id}`);
+      } catch {
+        // Completion is database-backed; stale local drafts are non-authoritative.
+      }
       router.replace("/dashboard");
       router.refresh();
     } catch (cause) {
@@ -625,7 +844,10 @@ export default function OnboardingPage() {
                     type="button"
                     role="tab"
                     aria-selected={firstKind === kind}
-                    onClick={() => setFirstKind(kind)}
+                    onClick={() => {
+                      setFirstKind(kind);
+                      rememberFirstValue(kind, firstTitle);
+                    }}
                     className={cn(
                       "h-9 rounded-pill border text-button transition-colors duration-150 ease-nexus",
                       firstKind === kind
@@ -646,7 +868,10 @@ export default function OnboardingPage() {
                   id="onboarding-first"
                   size="lg"
                   value={firstTitle}
-                  onChange={(event) => setFirstTitle(event.target.value)}
+                  onChange={(event) => {
+                    setFirstTitle(event.target.value);
+                    rememberFirstValue(firstKind, event.target.value);
+                  }}
                   placeholder={
                     firstKind === "project"
                       ? step3.projectPlaceholder
@@ -677,8 +902,8 @@ export default function OnboardingPage() {
                 type="button"
                 size="lg"
                 className="flex-1"
-                onClick={next}
-                disabled={!canContinue()}
+                onClick={() => void next()}
+                disabled={!canContinue() || saving}
               >
                 Continue
               </Button>
