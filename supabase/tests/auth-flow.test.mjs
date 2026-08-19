@@ -90,7 +90,12 @@ const PRODUCT_ROUTES = [
   "/upgrade",
 ];
 
-const stub = await startSupabaseStub(54321);
+// Reuse an already-running stub (e.g. one backing a preview server).
+const stub = await startSupabaseStub(54321).catch((cause) => {
+  if (cause?.code !== "EADDRINUSE") throw cause;
+  console.log("(reusing the Supabase stub already listening on 54321)");
+  return { url: "http://127.0.0.1:54321", calls: [], close: async () => {} };
+});
 console.log(`Supabase stub: ${stub.url}\nApplication:   ${APP_URL}\n`);
 
 // ============ 1. ROUTE PROTECTION (no session) ============

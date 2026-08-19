@@ -123,20 +123,29 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { membership, error: membershipError } = await getActiveMembership(
-        supabase,
-        userId
-      );
+      try {
+        const { membership, error: membershipError } = await getActiveMembership(
+          supabase,
+          userId
+        );
 
-      if (membershipError) {
-        setError(membershipError);
+        if (membershipError) {
+          setError(membershipError);
+          setLoading(false);
+          return;
+        }
+
+        const nextWorkspaceId = membership?.workspaceId ?? null;
+        setWorkspaceId(nextWorkspaceId);
+        await loadNotifications(nextWorkspaceId);
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? `Could not load notifications: ${cause.message}`
+            : "Could not load notifications."
+        );
         setLoading(false);
-        return;
       }
-
-      const nextWorkspaceId = membership?.workspaceId ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await loadNotifications(nextWorkspaceId);
     };
 
     void loadWorkspace();

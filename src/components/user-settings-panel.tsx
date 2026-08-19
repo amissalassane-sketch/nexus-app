@@ -88,7 +88,16 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
       setLoading(false);
     };
 
-    void loadProfile();
+    void loadProfile().catch((cause: unknown) => {
+      setStatus({
+        type: "error",
+        message:
+          cause instanceof Error
+            ? `Could not load your profile: ${cause.message}`
+            : "Could not load your profile.",
+      });
+      setLoading(false);
+    });
   }, [supabase, userId]);
 
   const validate = () => {

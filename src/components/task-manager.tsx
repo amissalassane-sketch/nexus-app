@@ -134,18 +134,28 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
   useEffect(() => {
     const loadWorkspace = async () => {
-      const { membership, error: membershipError } = await getActiveMembership(
-        supabase,
-        userId
-      );
+      try {
+        const { membership, error: membershipError } = await getActiveMembership(
+          supabase,
+          userId
+        );
 
-      if (membershipError) {
-        setError(membershipError);
+        if (membershipError) {
+          setError(membershipError);
+        }
+
+        const nextWorkspaceId = membership?.workspaceId ?? null;
+        setWorkspaceId(nextWorkspaceId);
+        await fetchTasks(nextWorkspaceId);
+      } catch (cause) {
+        // Network/config failure: surface it instead of spinning forever.
+        setError(
+          cause instanceof Error
+            ? `Could not load data from Supabase: ${cause.message}`
+            : "Could not load data from Supabase."
+        );
+        setLoading(false);
       }
-
-      const nextWorkspaceId = membership?.workspaceId ?? null;
-      setWorkspaceId(nextWorkspaceId);
-      await fetchTasks(nextWorkspaceId);
     };
 
     void loadWorkspace();

@@ -260,7 +260,8 @@ export function startSupabaseStub(port = 54321) {
     return json(404, { message: "stub: not found" });
   });
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
     server.listen(port, "127.0.0.1", () =>
       resolve({
         url: `http://127.0.0.1:${port}`,
