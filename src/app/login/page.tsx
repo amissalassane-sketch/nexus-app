@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, Suspense, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { validateCredentials } from "@/lib/auth-errors";
 import { NexusLogo } from "@/components/nexus-logo";
@@ -17,13 +17,22 @@ import { Button } from "@/components/ui/button";
  * single failure surface, and every outcome is displayed to the user.
  */
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { error: configError } = readSupabaseConfig();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(searchParams.get("error") ?? "");
   const submitting = useRef(false);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -110,7 +119,18 @@ export default function LoginPage() {
               />
             </Field>
 
-            <Field label="Password" htmlFor="login-password">
+            <Field
+              label="Password"
+              htmlFor="login-password"
+              action={
+                <Link
+                  href="/forgot-password"
+                  className="text-caption text-text-tertiary transition-colors hover:text-text-secondary"
+                >
+                  Forgot password?
+                </Link>
+              }
+            >
               <Input
                 id="login-password"
                 size="lg"
