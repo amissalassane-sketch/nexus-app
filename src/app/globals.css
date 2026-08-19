@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Self-hosted Geist (see src/app/layout.tsx). Tailwind v4 is CSS-first, so
+   the font-sans / font-mono utilities are wired to the next/font variables
+   here. `@theme inline` keeps the var() reference instead of resolving it. */
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", SFMono-Regular,
+    Menlo, Monaco, monospace;
+}
+
 /* NEXUS Design Tokens */
 :root {
   /* Dark theme (default) */
@@ -46,7 +56,7 @@ body {
   flex-direction: column;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
-  font-family: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-geist-sans), Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

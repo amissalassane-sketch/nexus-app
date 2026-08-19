@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Design/reference bundles are not part of the app and must not be
+    // type-checked or linted by the deployment build.
+    "design/**",
   ]),
 ]);
 
