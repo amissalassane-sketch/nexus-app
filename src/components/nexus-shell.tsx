@@ -59,6 +59,14 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+const MOBILE_NAV: { name: string; href: string; icon: typeof LayoutDashboard }[] = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Projects", href: "/projects", icon: FolderKanban },
+  { name: "Goals", href: "/goals", icon: Target },
+  { name: "Alerts", href: "/notifications", icon: Bell },
+];
+
 const CREATE_ITEMS = [
   { label: "New task", href: "/tasks?new=1", icon: SquarePen },
   { label: "New project", href: "/projects?new=1", icon: FolderPlus },
@@ -271,17 +279,18 @@ export function NexusShell({
                 Settings
               </Link>
 
-              <div
-                aria-hidden="true"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border-default bg-bg-surface text-sm font-medium text-text-primary"
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border-default bg-bg-surface text-sm font-medium text-text-primary transition-colors duration-[120ms] hover:border-border-strong md:h-9 md:w-9"
               >
                 {userName.slice(0, 1).toUpperCase()}
-              </div>
+              </Link>
             </div>
           </header>
 
           {/* PAGE CONTENT — one container, identical everywhere (optical alignment) */}
-          <div className="flex-1 p-6 md:p-8">
+          <div className="flex-1 p-6 pb-24 md:p-8 md:pb-8">
             <div className="mx-auto w-full max-w-[1180px]">
               {subtitle ? (
                 <p className="mb-6 text-small text-text-secondary">{subtitle}</p>
@@ -293,6 +302,37 @@ export function NexusShell({
           </div>
         </section>
       </div>
+
+      {/* MOBILE BOTTOM NAV — the sidebar does not exist below md */}
+      <nav
+        aria-label="Mobile"
+        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border-subtle bg-bg-subtle/95 backdrop-blur md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {MOBILE_NAV.map((item) => {
+          const active = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] transition-colors duration-[160ms] ease-out ${
+                active ? "text-text-primary" : "text-text-tertiary"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute top-0 h-[2px] w-8 rounded-full bg-volt transition-all duration-[160ms] ease-out ${
+                  active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                }`}
+              />
+              <Icon size={19} strokeWidth={1.75} />
+              {item.name}
+            </Link>
+          );
+        })}
+      </nav>
     </main>
   );
 }

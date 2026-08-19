@@ -184,4 +184,34 @@ test("no NEXT_PUBLIC_ env var ever holds a secret", () => {
   }
 });
 
+
+test("AUDIT: middleware lets /auth/callback reach its PKCE route handler", () => {
+  const mw = read("src/lib/supabase/middleware.ts");
+  assert.match(mw, /isCallbackRoute/);
+  // Both the unauth bounce AND the auth-route bounce must exclude it.
+  assert.match(mw, /!user && !isAuthRoute && !isCallbackRoute/);
+  assert.match(mw, /user && isAuthRoute && !isCallbackRoute/);
+  const cb = read("src/app/auth/callback/route.ts");
+  assert.match(cb, /exchangeCodeForSession/);
+  // Redirects are relative + next is sanitized (no open redirect).
+  assert.ok(cb.includes('startsWith("/")'), "next path must be sanitized");
+  assert.ok(!/\$\{origin\}/.test(cb), "callback must not guess the origin");
+});
+
+test("AUDIT: mobile has real navigation (sidebar is desktop-only)", () => {
+  const shell = read("src/components/nexus-shell.tsx");
+  assert.match(shell, /MOBILE_NAV/);
+  assert.match(shell, /md:hidden/); // bottom nav hidden on desktop
+  assert.match(shell, /h-14/); // ≥ 44px touch targets
+});
+
+test("AUDIT: auth pages use the official logo and DA tokens (no zinc)", () => {
+  for (const page of ["src/app/login/page.tsx", "src/app/signup/page.tsx"]) {
+    const src = read(page);
+    assert.ok(src.includes("NexusLogo"), `${page}: official logo missing`);
+    assert.ok(!src.includes("zinc-"), `${page}: zinc classes leftover`);
+    assert.ok(!src.includes("bg-white"), `${page}: raw white leftover`);
+  }
+});
+
 console.log(`\nauth-flow: ${passed} assertions passed`);

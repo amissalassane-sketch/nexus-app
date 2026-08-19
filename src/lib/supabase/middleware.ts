@@ -37,15 +37,19 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // /auth/callback carries the PKCE code WITHOUT a session yet:
+  // it must reach its route handler in every case (pitfall #3).
+  const isCallbackRoute = pathname.startsWith("/auth/callback");
+
   const isAuthRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup");
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isAuthRoute && !isCallbackRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !isCallbackRoute) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

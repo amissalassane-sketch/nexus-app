@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { NexusLogo } from "@/components/nexus-logo";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
@@ -67,26 +68,26 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090b] px-5 text-white">
+    <main className="flex min-h-screen items-center justify-center bg-bg-base px-5 py-10 text-text-primary">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-bold text-black">
-            N
+          <div className="mx-auto mb-5 flex justify-center text-text-primary">
+            <NexusLogo size={40} />
           </div>
 
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <h1 className="text-h1 font-semibold">
             Create your NEXUS
           </h1>
 
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-small text-text-secondary">
             Start building your personal operating system.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
+        <div className="rounded-xl border border-border-default bg-bg-surface p-6 shadow-md">
           <form onSubmit={handleSignup} className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm text-zinc-400">
+              <label className="mb-2 block text-label text-text-secondary">
                 Full name
               </label>
 
@@ -96,12 +97,12 @@ export default function SignupPage() {
                 onChange={(event) => setFullName(event.target.value)}
                 placeholder="Your full name"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
+                className="w-full min-h-11 rounded-md border border-border-default bg-bg-subtle px-3 text-body text-text-primary outline-none transition-all duration-[160ms] ease-out placeholder:text-text-quaternary focus:border-border-focus"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-400">
+              <label className="mb-2 block text-label text-text-secondary">
                 Username
               </label>
 
@@ -115,12 +116,12 @@ export default function SignupPage() {
                 maxLength={30}
                 pattern="[A-Za-z0-9_]+"
                 title="Username can only contain letters, numbers and underscores."
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
+                className="w-full min-h-11 rounded-md border border-border-default bg-bg-subtle px-3 text-body text-text-primary outline-none transition-all duration-[160ms] ease-out placeholder:text-text-quaternary focus:border-border-focus"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-400">
+              <label className="mb-2 block text-label text-text-secondary">
                 Email
               </label>
 
@@ -130,12 +131,12 @@ export default function SignupPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
+                className="w-full min-h-11 rounded-md border border-border-default bg-bg-subtle px-3 text-body text-text-primary outline-none transition-all duration-[160ms] ease-out placeholder:text-text-quaternary focus:border-border-focus"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-zinc-400">
+              <label className="mb-2 block text-label text-text-secondary">
                 Password
               </label>
 
@@ -146,18 +147,18 @@ export default function SignupPage() {
                 placeholder="Minimum 6 characters"
                 minLength={6}
                 required
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition placeholder:text-zinc-700 focus:border-white/30"
+                className="w-full min-h-11 rounded-md border border-border-default bg-bg-subtle px-3 text-body text-text-primary outline-none transition-all duration-[160ms] ease-out placeholder:text-text-quaternary focus:border-border-focus"
               />
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+              <div className="animate-fade-in rounded-md border border-danger-border bg-danger-bg px-4 py-3 text-small text-danger-fg">
                 {error}
               </div>
             )}
 
             {message && (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+              <div className="animate-fade-in rounded-md border border-success-border bg-success-bg px-4 py-3 text-small text-success-fg">
                 {message}
               </div>
             )}
@@ -165,17 +166,17 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full min-h-11 rounded-md bg-accent-primary px-4 py-3 text-button font-medium text-accent-primary-fg transition-all duration-[120ms] ease-out hover:bg-accent-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:border disabled:border-white/10 disabled:bg-transparent disabled:text-text-tertiary"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-zinc-500">
+          <p className="mt-6 text-center text-small text-text-secondary">
             Already have an account?{" "}
             <a
               href="/login"
-              className="text-white underline underline-offset-4"
+              className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors duration-[120ms] hover:decoration-text-primary"
             >
               Sign in
             </a>
