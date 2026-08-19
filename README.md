@@ -63,7 +63,7 @@ created by the same client — there is no token relay that can silently fail:
 | Route | Purpose |
 | --- | --- |
 | `POST /api/auth/signin` | email + password, writes the SSR cookies, returns `redirectTo` |
-| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` and emails `/auth/callback` |
+| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` and emails `/auth/callback` (the callback confirms the address, signs the visitor out and sends them to the public landing page — never `/onboarding`) |
 | `POST /api/auth/signout` | ends the session and clears the cookies |
 | `POST /api/auth/forgot-password` | sends a recovery email (same success copy whether the address exists) |
 | `POST /api/auth/update-password` | completes recovery after `/auth/callback?next=/reset-password` |
@@ -108,10 +108,13 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=stub-key npm run dev -- --port 3000 &
 node supabase/tests/auth-flow.test.mjs
 
-# Executes migrations 006-012 against a real Postgres engine (WASM) on top of a
+# Executes migrations 006-014 against a real Postgres engine (WASM) on top of a
 # minimal schema fixture and asserts the freemium/security behaviour.
 npm install --no-save @electric-sql/pglite
 node supabase/tests/migration-logic.test.mjs
+
+# Onboarding must tolerate a missing profiles.onboarding_intent column:
+node supabase/tests/schema-errors.test.mjs
 ```
 
 `supabase/tests/rls_audit.sql` is a read-only script to run in the Supabase SQL editor:

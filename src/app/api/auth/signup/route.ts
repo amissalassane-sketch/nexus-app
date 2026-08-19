@@ -64,7 +64,10 @@ export async function POST(request: Request) {
       password,
       options: {
         data: { full_name: fullName, username },
-        emailRedirectTo: `${getRequestOrigin(request)}/auth/callback?next=/onboarding`,
+        // Confirmation must land on /auth/callback with NO next=/onboarding.
+        // The callback verifies the address, drops the session and sends
+        // the visitor to the public landing page — in any browser.
+        emailRedirectTo: `${getRequestOrigin(request)}/auth/callback`,
       },
     });
   } catch (cause) {

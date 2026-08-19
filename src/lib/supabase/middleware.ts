@@ -21,6 +21,27 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
+  const pathname = request.nextUrl.pathname;
+
+  // Email links sometimes land on Site URL (/), /onboarding or /login with
+  // `?code=` / `?token_hash=` instead of /auth/callback. Catch them here so
+  // confirmation is handled in one place — and never dumps a visitor into
+  // onboarding before they choose Sign in or Create account.
+  const authCode = request.nextUrl.searchParams.get("code");
+  const tokenHash = request.nextUrl.searchParams.get("token_hash");
+  if (
+    (authCode || tokenHash) &&
+    !pathname.startsWith("/auth/callback") &&
+    !pathname.startsWith("/api/")
+  ) {
+    const target = request.nextUrl.clone();
+    target.pathname = "/auth/callback";
+    if (pathname.startsWith("/reset-password") && !target.searchParams.get("next")) {
+      target.searchParams.set("next", "/reset-password");
+    }
+    return NextResponse.redirect(target);
+  }
+
   const supabase = createServerClient(
     config.url,
     config.key,
@@ -49,8 +70,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Route handlers must answer with their own status codes (401/403/400)
   // instead of being redirected to an HTML page. The session cookies are

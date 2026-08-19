@@ -105,10 +105,13 @@ function readBody(req) {
 
 export function startSupabaseStub(port = 54321) {
   const calls = [];
+  const redirectTos = [];
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     calls.push(`${req.method} ${url.pathname}`);
+    const redirectTo = url.searchParams.get("redirect_to");
+    if (redirectTo) redirectTos.push(redirectTo);
 
     const json = (status, body, headers = {}) => {
       const payload = JSON.stringify(body);
@@ -129,6 +132,19 @@ export function startSupabaseStub(port = 54321) {
         const user = String(body.refresh_token ?? "").includes(FRESH_USER.id)
           ? FRESH_USER
           : ONBOARDED_USER;
+        return json(200, makeSession(user));
+      }
+
+      if (grant === "pkce" || grant === "authorization_code") {
+        const authCode = String(body.auth_code ?? body.code ?? "");
+        if (authCode === "invalid" || authCode === "") {
+          return json(400, {
+            error: "invalid_grant",
+            error_description: "Invalid PKCE code verifier",
+            message: "Invalid PKCE code verifier",
+          });
+        }
+        const user = authCode.includes("recover") ? ONBOARDED_USER : FRESH_USER;
         return json(200, makeSession(user));
       }
 
@@ -180,6 +196,11 @@ export function startSupabaseStub(port = 54321) {
     }
 
     if (url.pathname === "/auth/v1/user") {
+      if (req.method === "PUT" || req.method === "PATCH") {
+        await readBody(req);
+        return json(200, FRESH_USER);
+      }
+
       const auth = req.headers.authorization ?? "";
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
       const claims = decodeJwt(token);
@@ -202,6 +223,12 @@ export function startSupabaseStub(port = 54321) {
     if (url.pathname === "/auth/v1/recover") {
       await readBody(req);
       return json(200, {});
+    }
+
+    if (url.pathname === "/auth/v1/verify") {
+      const body = await readBody(req);
+      const user = String(body.type ?? "") === "recovery" ? ONBOARDED_USER : FRESH_USER;
+      return json(200, makeSession(user));
     }
 
     if (url.pathname === "/auth/v1/.well-known/jwks.json") {
@@ -271,6 +298,7 @@ export function startSupabaseStub(port = 54321) {
       resolve({
         url: `http://127.0.0.1:${port}`,
         calls,
+        redirectTos,
         close: () => new Promise((done) => server.close(done)),
       })
     );

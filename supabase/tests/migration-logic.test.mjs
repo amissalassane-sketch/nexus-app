@@ -79,6 +79,16 @@ for (const file of migrations) {
   }
 }
 
+const intentCol = await db.query(
+  `select 1 as ok from information_schema.columns
+   where table_schema = 'public' and table_name = 'profiles' and column_name = 'onboarding_intent'`
+);
+assert(
+  "profiles.onboarding_intent exists (013/014)",
+  intentCol.rows.length === 1,
+  JSON.stringify(intentCol.rows)
+);
+
 console.log("\n-- signup bootstrap ------------------------------------");
 
 // 006/008: inserting an auth user must create their default workspace,
