@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
+import { getRequestOrigin } from "@/lib/request-origin";
 import {
   humanizeAuthError,
   validateCredentials,
@@ -61,7 +62,10 @@ export async function POST(request: Request) {
     result = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, username } },
+      options: {
+        data: { full_name: fullName, username },
+        emailRedirectTo: `${getRequestOrigin(request)}/auth/callback?next=/onboarding`,
+      },
     });
   } catch (cause) {
     return NextResponse.json(
