@@ -23,9 +23,18 @@ const geistMono = localFont({
   fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
 });
 
+/**
+ * Canonical origin for absolute URLs in metadata (Open Graph, sitemap...).
+ * Override with NEXT_PUBLIC_SITE_URL once the production domain is final.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nexus.app";
+
 export const metadata: Metadata = {
-  title: "NEXUS",
-  description: "NEXUS personal operating system",
+  metadataBase: new URL(SITE_URL),
+  title: "NEXUS — Personal operating system",
+  description:
+    "NEXUS is a quiet personal operating system that connects goals, projects, tasks and activity in one workspace — then tells you what to do next.",
+  applicationName: "NEXUS",
 };
 
 export const viewport: Viewport = {
