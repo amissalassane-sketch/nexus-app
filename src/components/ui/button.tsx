@@ -22,18 +22,18 @@ export type ButtonVariant =
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,color,border-color,transform] duration-150 ease-nexus disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,color,border-color,transform] duration-[120ms] ease-nexus disabled:pointer-events-none disabled:cursor-not-allowed";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "rounded-pill bg-accent text-accent-fg hover:bg-accent-hover active:scale-[0.98]",
+    "rounded-pill bg-accent text-accent-fg hover:bg-accent-hover active:scale-[0.98] disabled:bg-transparent disabled:text-text-tertiary disabled:border disabled:border-border-subtle",
   secondary:
-    "rounded-pill border border-border-default bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary",
+    "rounded-pill border border-border-default bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40",
   ghost:
-    "rounded-pill bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary",
+    "rounded-pill bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40",
   danger:
-    "rounded-pill border border-danger-border bg-transparent text-danger hover:bg-danger-bg",
-  icon: "h-8 w-8 rounded-pill bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary",
+    "rounded-pill border border-danger-border bg-transparent text-danger hover:bg-danger-bg disabled:opacity-40",
+  icon: "h-8 w-8 rounded-pill bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40",
 };
 
 const sizes: Record<ButtonSize, string> = {

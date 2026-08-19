@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Bell,
+  BrainCircuit,
   CheckSquare,
   CreditCard,
   FolderKanban,
@@ -26,6 +27,7 @@ export const RAIL_ITEMS = [
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/goals", label: "Goals", icon: Target },
+  { href: "/intelligence", label: "Intelligence", icon: BrainCircuit },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 

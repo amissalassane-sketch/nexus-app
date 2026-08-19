@@ -41,12 +41,19 @@ export function NavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-8 items-center gap-2.5 rounded-nav px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
+        "group relative flex h-8 items-center gap-2.5 rounded-nav px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
         active
           ? "bg-accent-ghost-hover font-medium text-text-primary"
           : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
       )}
     >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-pill bg-accent transition-all duration-[220ms] ease-out-expo",
+          active ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
+        )}
+      />
       <span
         className={cn(
           "shrink-0 transition-colors duration-150",

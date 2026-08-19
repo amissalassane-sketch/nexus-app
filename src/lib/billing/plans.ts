@@ -47,7 +47,7 @@ export const PLAN_PRESENTATION: Record<PlanName, PlanPresentation> = {
     name: "FREE",
     tagline: "Start",
     description: "Run your personal system and learn how NEXUS thinks.",
-    priceLabel: "0",
+    priceLabel: "$0",
     pricePeriod: "forever",
     featured: false,
     highlights: limitLines("FREE"),
