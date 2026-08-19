@@ -481,6 +481,19 @@ export function GoalManager({
                         </p>
                       ) : (
                         <div className="space-y-2">
+                          <div className="mb-1 flex items-center justify-between text-caption">
+                            <span className="text-text-tertiary">Aggregated project progress</span>
+                            <span className="font-mono text-text-secondary">
+                              {Math.round(
+                                projectsOf(goal).reduce(
+                                  (sum, project) =>
+                                    sum + Math.min(100, Math.max(0, Number(project.progress ?? 0))),
+                                  0
+                                ) / projectsOf(goal).length
+                              )}
+                              %
+                            </span>
+                          </div>
                           {projectsOf(goal).map((project) => {
                             const projectProgress = Math.min(
                               100,
