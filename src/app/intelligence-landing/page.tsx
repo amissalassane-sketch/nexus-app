@@ -1,0 +1,61 @@
+import type { Metadata } from "next";
+import { LandingNav } from "@/components/landing/landing-nav";
+import { LandingFooter } from "@/components/landing/footer";
+import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
+import { IntelligenceHero } from "@/components/intelligence/intelligence-hero";
+import { WhatIntelligenceSees } from "@/components/intelligence/what-intelligence-sees";
+import { IntelligenceSignals } from "@/components/intelligence/intelligence-signals";
+import { NextBestAction } from "@/components/intelligence/next-best-action";
+import { ExplainableIntelligence } from "@/components/intelligence/explainable-intelligence";
+import { WorkspaceToAction } from "@/components/intelligence/workspace-to-action";
+import { IntelligenceClosing } from "@/components/intelligence/intelligence-closing";
+
+// ============================================================
+// NEXUS INTELLIGENCE — DEDICATED PRODUCT LANDING
+//
+// Served at /intelligence for visitors (see src/lib/supabase/middleware.ts:
+// signed-in users keep the workspace Intelligence page at the same URL).
+// Composition:
+//   NAV → HERO (the mark forms) → WHAT IT SEES → WHAT IT SURFACES →
+//   NEXT BEST ACTION → EXPLAINABLE → WORKSPACE TO ACTION → CTA → FOOTER
+//
+// Every claim on this page maps to src/lib/intelligence/engine.ts.
+// Every example signal is labelled as a product visualisation.
+// ============================================================
+
+export const metadata: Metadata = {
+  title: "NEXUS Intelligence — It reads the work, not the chat",
+  description:
+    "NEXUS Intelligence analyzes the work already happening in your workspace and surfaces what is drifting, blocked or at risk — and what deserves your attention next.",
+  alternates: { canonical: "/intelligence" },
+  openGraph: {
+    type: "website",
+    siteName: "NEXUS",
+    url: "/intelligence",
+    title: "NEXUS Intelligence — It reads the work, not the chat",
+    description:
+      "The intelligence layer inside NEXUS. It reads your tasks, projects, goals and activity, then tells you what deserves attention next — and why.",
+  },
+  robots: { index: true, follow: true },
+};
+
+export default function IntelligenceLandingPage() {
+  return (
+    <div className="nexus-intel nexus-landing min-h-dvh bg-bg-base text-text-primary">
+      <LandingAtmosphere />
+      <LandingNav context="intelligence" />
+
+      <main id="main">
+        <IntelligenceHero />
+        <WhatIntelligenceSees />
+        <IntelligenceSignals />
+        <NextBestAction />
+        <ExplainableIntelligence />
+        <WorkspaceToAction />
+        <IntelligenceClosing />
+      </main>
+
+      <LandingFooter context="intelligence" />
+    </div>
+  );
+}

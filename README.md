@@ -56,6 +56,30 @@ empty states `20px`, auth and pricing cards `24px`.
   orbits). Transform-only, lerped via `requestAnimationFrame`, disabled on touch
   devices and reduced motion. Content and controls never move.
 
+## NEXUS Intelligence landing (`/intelligence`)
+
+A dedicated public product page for the intelligence layer — not a section of the
+main landing, and not a replacement for it. `/` is untouched.
+
+- **Page**: `src/app/intelligence-landing/page.tsx`, sections in
+  `src/components/intelligence/` (hero field, what it sees, the six signals,
+  next best action, explainable, workspace → action, closing CTA).
+- **One URL, two audiences**: `src/lib/supabase/middleware.ts` rewrites
+  `/intelligence` to the public page for visitors, while signed-in users keep the
+  workspace Intelligence page (`src/app/(app)/intelligence/page.tsx`) at the same
+  URL. Nothing in the app rail, sidebar or command menu had to move.
+- **Navbar / footer**: the existing `LandingNav` and `LandingFooter` take a
+  `context` prop (`"landing" | "intelligence"`); section anchors resolve back to
+  `/#…` and the Intelligence item is marked `aria-current="page"`.
+- **Hero visual**: the locked N is used as a CSS `mask-image`, never redrawn — the
+  light, the texture and the sweep travel through the real geometry, and the mark
+  forms out of signal points and connected lines like the launch signature.
+  All motion is CSS/SVG (no WebGL, no canvas, no animation library); pointer depth
+  runs through a single `pointermove` listener and one rAF loop
+  (`src/components/intelligence/intelligence-field.tsx`).
+- **Copy discipline**: every claim maps to `src/lib/intelligence/engine.ts`, and
+  every example signal is labelled as a product visualisation.
+
 ## Navigation architecture
 
 Two-level shell, composed in `src/app/(app)/layout.tsx` (one server layout that

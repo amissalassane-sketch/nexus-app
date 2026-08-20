@@ -3,6 +3,34 @@ import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 
 /**
+ * `/intelligence` serves two audiences at one URL:
+ *   - a visitor gets the public NEXUS Intelligence product landing page,
+ *   - a signed-in user keeps the workspace Intelligence page unchanged.
+ *
+ * The public page lives at its own file route and is rewritten in — the URL
+ * the visitor sees stays `/intelligence`, and no existing product route,
+ * layout or navigation entry has to move.
+ */
+const INTELLIGENCE_PATH = "/intelligence";
+const INTELLIGENCE_LANDING_PATH = "/intelligence-landing";
+
+function isIntelligencePath(pathname: string) {
+  return pathname === INTELLIGENCE_PATH || pathname === `${INTELLIGENCE_PATH}/`;
+}
+
+function rewriteToIntelligenceLanding(
+  request: NextRequest,
+  refreshed?: NextResponse
+) {
+  const url = request.nextUrl.clone();
+  url.pathname = INTELLIGENCE_LANDING_PATH;
+  const response = NextResponse.rewrite(url);
+  // Keep any refreshed Supabase cookies from the request above.
+  refreshed?.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+  return response;
+}
+
+/**
  * Refreshes the Supabase session cookies on every request and enforces
  * route-level authentication. Invoked from `proxy.ts` (Next.js 16 file
  * convention, previously `middleware.ts`).
@@ -18,6 +46,10 @@ export async function updateSession(request: NextRequest) {
   // through so the pages can display an explicit configuration error
   // instead of an infinite redirect loop towards /login.
   if (!config) {
+    if (isIntelligencePath(request.nextUrl.pathname)) {
+      // No session is possible without Supabase — serve the public page.
+      return rewriteToIntelligenceLanding(request);
+    }
     return response;
   }
 
@@ -79,8 +111,15 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
+  // Public NEXUS Intelligence landing: visitors see the product page at
+  // /intelligence, signed-in users continue to the workspace page.
+  if (!user && isIntelligencePath(pathname)) {
+    return rewriteToIntelligenceLanding(request, response);
+  }
+
   const isPublicRoute =
     pathname === "/" ||
+    pathname.startsWith(INTELLIGENCE_LANDING_PATH) ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||
