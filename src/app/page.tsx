@@ -18,6 +18,7 @@ import { FaqSection } from "@/components/landing/faq";
 import { FinalCtaSection } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/footer";
 import { LaunchExperience } from "@/components/landing/launch-experience";
+import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
 
 // ============================================================
 // NEXUS — PUBLIC LANDING PAGE
@@ -66,6 +67,7 @@ export default async function Home({
   return (
     <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
       <LaunchExperience />
+      <LandingAtmosphere />
       <LandingNav />
 
       <main>

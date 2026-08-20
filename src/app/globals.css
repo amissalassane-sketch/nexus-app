@@ -366,9 +366,17 @@ input[type="range"] {
    content visible even when hydration never runs.
    ============================================================ */
 
-/* Entrance for hero elements (applies on mount, delay per item). */
+/* Entrance for hero elements (staggered per item).
+   Gated behind the launch sequence: the hero only rises in once the N
+   signature reaches its landing position and the overlay starts to fade,
+   so the landing appears progressively *behind* the transition — "the
+   product just activated" — instead of already sitting there fully formed.
+   On repeat visits and under reduced motion the gate opens immediately. */
 .landing-hero-item {
   opacity: 0;
+}
+
+html[data-nexus-launch-reveal="true"] .landing-hero-item {
   animation: landing-hero-in 560ms var(--ease-out-expo) both;
   animation-delay: var(--landing-hero-delay, 0ms);
 }
@@ -409,6 +417,11 @@ input[type="range"] {
     transform: none;
     animation: none;
     transition: none;
+  }
+
+  /* The gate above (opacity: 0) must never hold content back. */
+  html[data-nexus-launch-reveal="true"] .landing-hero-item {
+    animation: none;
   }
 }
 
@@ -605,6 +618,44 @@ input[type="range"] {
   background: linear-gradient(to bottom, transparent, rgba(233, 228, 255, 0.22), transparent);
   transform: translate3d(var(--axis-x), var(--axis-y), 0);
   will-change: transform;
+}
+
+/* Landing-wide ambient light. A single faint source that drifts with the
+   cursor across the whole page (driven by LandingAtmosphere writing
+   --nexus-glow-x / --nexus-glow-y on <html>). It sits behind every section
+   — never above content, never affecting readability — and stays static
+   when there is no pointer or motion is reduced. */
+.nexus-landing {
+  isolation: isolate;
+}
+
+.nexus-landing-light {
+  position: fixed;
+  inset: -80px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 46% 40% at 50% 46%,
+    rgba(233, 228, 255, 0.065),
+    rgba(255, 255, 255, 0.02) 48%,
+    transparent 72%
+  );
+  transform: translate3d(var(--nexus-glow-x, 0px), var(--nexus-glow-y, 0px), 0);
+  will-change: transform;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .nexus-landing-light {
+    transform: none;
+    will-change: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-landing-light {
+    transform: none;
+    will-change: auto;
+  }
 }
 
 html[data-nexus-launch-seen="true"] .nexus-launch {

@@ -34,14 +34,27 @@ every number, date, counter and identifier.
   `button`, `create-button`, `dropdown`, `input` (Input/Textarea/Select/Field/Checkbox),
   `card`, `badge`, `feedback` (EmptyState/ListRow/Progress/Alert/Skeleton),
   `page-header` (PageHeader/StatLine) and `tabs`.
-- **Shell** components live in `src/components/layout/` (`top-bar`, `sidebar`) and are
-  composed by `src/components/nexus-shell.tsx`.
+- **Shell** components live in `src/components/layout/` (`app-rail`, `workspace-sidebar`)
+  and are composed by `src/components/layout/app-shell.tsx`.
 - **Logo**: the interlaced white "N" is a locked asset (`public/logo/nexus.png`,
   `src/app/icon.png`). It is never redrawn, recolored beyond the black/white variants,
   or geometrically modified. Use `NexusLogo` / `NexusWordmark`.
 
 Radius hierarchy: pill buttons `9999px`, inputs/nav/rows `10px`, cards/dropdowns `16px`,
 empty states `20px`, auth and pricing cards `24px`.
+
+## Landing motion
+
+- **Launch signature** — `src/components/landing/launch-experience.tsx` (+ CSS in
+  `globals.css`): on first load the locked N builds at the centre of a dark frame, the
+  lavender signal line fires, and the mark shrinks into its real nav position while the
+  hero rises in behind the fade (~1.4s total, once per tab, skipped under
+  `prefers-reduced-motion`). The landing is rendered underneath from the first frame —
+  nothing waits on JavaScript or the network.
+- **Pointer depth** — `src/components/landing/landing-atmosphere.tsx` (landing-wide
+  ambient light) and `src/components/landing/hero-atmosphere.tsx` (hero grid, light,
+  orbits). Transform-only, lerped via `requestAnimationFrame`, disabled on touch
+  devices and reduced motion. Content and controls never move.
 
 ## Navigation architecture
 
