@@ -12,16 +12,28 @@ import { cn } from "@/lib/cn";
 // Fixed, compact (56px), transparent at the top of the page and
 // switching to a blurred surface once the visitor scrolls. The
 // primary action ("Get started") stays visible on every breakpoint.
+//
+// One navbar for both public surfaces:
+//   context="landing"      → on / , section links stay anchors
+//   context="intelligence" → on /intelligence, the same links point
+//                            back to the landing sections and the
+//                            Intelligence item is marked as current.
 // ============================================================
 
+type LandingNavContext = "landing" | "intelligence";
+
 const NAV_LINKS = [
-  { href: "#product", label: "Product" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#intelligence", label: "Intelligence" },
-  { href: "#pricing", label: "Pricing" },
+  { id: "product", hash: "product", label: "Product" },
+  { id: "how-it-works", hash: "how-it-works", label: "How it works" },
+  { id: "intelligence", route: "/intelligence", label: "Intelligence" },
+  { id: "pricing", hash: "pricing", label: "Pricing" },
 ] as const;
 
-export function LandingNav() {
+export function LandingNav({
+  context = "landing",
+}: {
+  context?: LandingNavContext;
+} = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -39,6 +51,18 @@ export function LandingNav() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Anchors stay anchors on the landing page; from /intelligence the same
+  // items navigate back to the corresponding section of the landing page.
+  const linkHref = (link: (typeof NAV_LINKS)[number]) =>
+    "route" in link
+      ? link.route
+      : context === "intelligence"
+        ? `/#${link.hash}`
+        : `#${link.hash}`;
+
+  const isCurrent = (link: (typeof NAV_LINKS)[number]) =>
+    context === "intelligence" && link.id === "intelligence";
 
   return (
     <header
@@ -59,15 +83,34 @@ export function LandingNav() {
         </Link>
 
         <nav aria-label="Landing sections" className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="rounded-pill px-3.5 py-2 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
-            >
-              {link.label}
-            </a>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const current = isCurrent(link);
+            const className = cn(
+              "rounded-pill px-3.5 py-2 text-button transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary",
+              current
+                ? "bg-accent-ghost text-text-primary"
+                : "text-text-secondary"
+            );
+
+            if ("route" in link) {
+              return (
+                <Link
+                  key={link.id}
+                  href={link.route}
+                  aria-current={current ? "page" : undefined}
+                  className={className}
+                >
+                  {link.label}
+                </Link>
+              );
+            }
+
+            return (
+              <a key={link.id} href={linkHref(link)} className={className}>
+                {link.label}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -106,16 +149,38 @@ export function LandingNav() {
             aria-label="Landing sections"
             className="mx-auto flex w-full max-w-[1120px] flex-col px-5 pb-5 pt-2"
           >
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="flex h-12 items-center rounded-input px-3 text-body text-text-primary transition-colors duration-150 ease-nexus hover:bg-accent-ghost"
-              >
-                {link.label}
-              </a>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const current = isCurrent(link);
+              const className = cn(
+                "flex h-12 items-center rounded-input px-3 text-body transition-colors duration-150 ease-nexus hover:bg-accent-ghost",
+                current ? "bg-accent-ghost text-text-primary" : "text-text-primary"
+              );
+
+              if ("route" in link) {
+                return (
+                  <Link
+                    key={link.id}
+                    href={link.route}
+                    onClick={() => setOpen(false)}
+                    aria-current={current ? "page" : undefined}
+                    className={className}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              }
+
+              return (
+                <a
+                  key={link.id}
+                  href={linkHref(link)}
+                  onClick={() => setOpen(false)}
+                  className={className}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
             <div className="mt-2 flex items-center gap-2 border-t border-border-subtle pt-4">
               <ButtonLink
                 href="/login"

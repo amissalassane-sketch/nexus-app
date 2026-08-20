@@ -4,14 +4,17 @@ import { NexusWordmark } from "@/components/nexus-logo";
 // ============================================================
 // NEXUS LANDING — FOOTER
 // Product anchors + real account routes. No dead links, no
-// invented pages.
+// invented pages. From /intelligence the section anchors point
+// back to the landing page instead of resolving to nothing.
 // ============================================================
+
+type LandingFooterContext = "landing" | "intelligence";
 
 const PRODUCT_LINKS = [
   { href: "#product", label: "Product" },
   { href: "#model", label: "The model" },
   { href: "#how-it-works", label: "How it works" },
-  { href: "#intelligence", label: "Intelligence" },
+  { href: "/intelligence", label: "Intelligence" },
   { href: "#pricing", label: "Pricing" },
 ] as const;
 
@@ -32,7 +35,16 @@ const COLUMNS = [
   { title: "System", links: SYSTEM_LINKS },
 ] as const;
 
-export function LandingFooter() {
+export function LandingFooter({
+  context = "landing",
+}: {
+  context?: LandingFooterContext;
+} = {}) {
+  // Hash links are relative to the landing page: prefix them when the
+  // footer is rendered on a dedicated route.
+  const resolve = (href: string) =>
+    context === "intelligence" && href.startsWith("#") ? `/${href}` : href;
+
   return (
     <footer className="border-t border-border-subtle px-5 pb-10 pt-14 sm:px-6">
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 md:flex-row md:items-start md:justify-between">
@@ -58,7 +70,7 @@ export function LandingFooter() {
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <Link
-                      href={link.href}
+                      href={resolve(link.href)}
                       className="text-small text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
                     >
                       {link.label}
