@@ -9,6 +9,11 @@
  * Only the EXTERNAL SERVICE is stubbed. No NEXUS logic and no UI data is
  * mocked: pages render their genuine empty states.
  *
+ * PostgREST tables are kept in an in-memory store (seeded with the rows the
+ * tests expect) so signup → onboarding → dashboard can be walked end-to-end
+ * in a local sandbox preview. CORS is permissive for the same reason: the
+ * browser preview may reach this stub from a different origin.
+ *
  * Deterministic behaviours used by the tests:
  *   password "wrong-password"        -> invalid credentials
  *   email    unknown@...             -> invalid credentials
@@ -18,7 +23,8 @@
  * ============================================================
  */
 
-import { createServer } from "node:http";
+import { createServer as createHttpServer } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 
 export const ONBOARDED_USER = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -103,21 +109,81 @@ function readBody(req) {
   });
 }
 
-export function startSupabaseStub(port = 54321) {
+export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = null, serverOptions = {}) {
   const calls = [];
   const redirectTos = [];
 
-  const server = createServer(async (req, res) => {
+  // In-memory PostgREST tables. Seeded with exactly the rows the tests
+  // expect; writes during a preview mutate this store for the process
+  // lifetime only (nothing is persisted anywhere).
+  // `shared` lets several listeners (e.g. an HTTP + an HTTPS instance of
+  // this stub in a sandbox preview) serve the same store.
+  const tables = shared?.tables ?? {
+    profiles: new Map([
+      [
+        ONBOARDED_USER.id,
+        {
+          id: ONBOARDED_USER.id,
+          display_name: "Owner One",
+          username: "ownerone",
+          bio: null,
+          onboarding_completed: true,
+        },
+      ],
+    ]),
+    workspace_members: new Map([
+      [
+        "seed-membership",
+        {
+          workspace_id: WORKSPACE_ID,
+          user_id: ONBOARDED_USER.id,
+          role: "owner",
+          status: "active",
+        },
+      ],
+    ]),
+    workspaces: new Map([
+      [WORKSPACE_ID, { id: WORKSPACE_ID, name: "Test Workspace", slug: "test-workspace" }],
+    ]),
+    projects: new Map(),
+    tasks: new Map(),
+    goals: new Map(),
+    notifications: new Map(),
+    workspace_subscriptions: new Map(),
+  };
+
+  if (shared) shared.tables = tables;
+
+  // TLS options turn this instance into an HTTPS listener (sandbox preview).
+  const tlsConfigured = Boolean(serverOptions?.key && serverOptions?.cert);
+  const create = tlsConfigured ? createHttpsServer : createHttpServer;
+
+  const server = create(serverOptions, async (req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     calls.push(`${req.method} ${url.pathname}`);
     const redirectTo = url.searchParams.get("redirect_to");
     if (redirectTo) redirectTos.push(redirectTo);
+
+    const corsHeaders = {
+      "access-control-allow-origin": "*",
+      "access-control-allow-headers": "*",
+      "access-control-allow-methods": "*",
+      "access-control-expose-headers": "*",
+    };
+
+    // Browser previews reach this stub cross-origin: answer preflights.
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, corsHeaders);
+      res.end();
+      return;
+    }
 
     const json = (status, body, headers = {}) => {
       const payload = JSON.stringify(body);
       res.writeHead(status, {
         "content-type": "application/json",
         "content-length": Buffer.byteLength(payload),
+        ...corsHeaders,
         ...headers,
       });
       res.end(payload);
@@ -242,12 +308,30 @@ export function startSupabaseStub(port = 54321) {
 
     if (url.pathname.startsWith("/rest/v1/")) {
       const table = url.pathname.replace("/rest/v1/", "");
+      const store = tables[table] ?? new Map();
       const accept = req.headers.accept ?? "";
       const wantsObject = accept.includes("vnd.pgrst.object");
-      const idFilter = (url.searchParams.get("id") ?? "").replace("eq.", "");
+
+      // Minimal PostgREST filter support: eq., is.null and in.(...) on the
+      // query columns NEXUS actually filters by. select/order/limit/offset
+      // are ignored — rows come back whole.
+      const filters = [];
+      for (const [key, raw] of url.searchParams) {
+        if (["select", "order", "limit", "offset", "on_conflict"].includes(key)) continue;
+        if (raw === "is.null") {
+          filters.push((row) => row[key] == null);
+        } else if (raw.startsWith("eq.")) {
+          const expected = raw.slice(3);
+          filters.push((row) => String(row[key]) === expected);
+        } else if (raw.startsWith("in.(")) {
+          const allowed = raw.slice(4, -1).split(",");
+          filters.push((row) => allowed.includes(String(row[key])));
+        }
+      }
+      const rows = [...store.values()].filter((row) => filters.every((f) => f(row)));
 
       if (req.method === "HEAD") {
-        res.writeHead(200, { "content-range": "*/0" }).end();
+        res.writeHead(200, { "content-range": `*/${rows.length}`, ...corsHeaders }).end();
         return;
       }
 
@@ -259,34 +343,33 @@ export function startSupabaseStub(port = 54321) {
         });
 
       if (req.method === "GET") {
-        const rows = [];
-
-        if (table === "profiles") {
-          // The brand new account has no profile row yet.
-          if (idFilter !== FRESH_USER.id) {
-            rows.push({
-              id: ONBOARDED_USER.id,
-              display_name: "Owner One",
-              username: "ownerone",
-              bio: null,
-              onboarding_completed: true,
-            });
-          }
-        } else if (table === "workspace_members") {
-          rows.push({ workspace_id: WORKSPACE_ID, role: "owner", status: "active" });
-        } else if (table === "workspaces") {
-          rows.push({ id: WORKSPACE_ID, name: "Test Workspace", slug: "test-workspace" });
-        }
-
         if (wantsObject) {
           return rows.length === 1 ? json(200, rows[0]) : notFound();
         }
         return json(200, rows, { "content-range": `*/${rows.length}` });
       }
 
-      // Writes (profile upsert during onboarding, workspace creation...)
+      // Writes (profile upsert during onboarding, workspace creation...).
+      // Upsert semantics keep the onboarding flow idempotent — a retried
+      // insert with the same client-generated id never duplicates a row.
       const body = await readBody(req);
-      return json(200, Array.isArray(body) ? body : [body]);
+      const incoming = Array.isArray(body) ? body : [body];
+      const written = incoming.map((row) => {
+        const next = { ...row };
+        let key = typeof next.id === "string" ? next.id : null;
+        if (table === "workspace_members" && !key && next.workspace_id && next.user_id) {
+          key = `${next.workspace_id}:${next.user_id}`;
+        }
+        if (!key) {
+          key = crypto.randomUUID();
+          if (table !== "workspace_members") next.id = key;
+        }
+        store.set(key, next);
+        return next;
+      });
+
+      if (wantsObject) return json(200, written[0]);
+      return json(200, written);
     }
 
     return json(404, { message: "stub: not found" });
@@ -294,9 +377,9 @@ export function startSupabaseStub(port = 54321) {
 
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(port, "127.0.0.1", () =>
+    server.listen(port, host, () =>
       resolve({
-        url: `http://127.0.0.1:${port}`,
+        url: `http://${host}:${port}`,
         calls,
         redirectTos,
         close: () => new Promise((done) => server.close(done)),

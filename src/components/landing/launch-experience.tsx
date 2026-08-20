@@ -5,6 +5,15 @@ import { NexusLogo } from "@/components/nexus-logo";
 
 const LAUNCH_KEY = "nexus:launch-seen";
 
+// Sequence (CSS in globals.css owns every keyframe):
+//   0–1200ms   the N builds at the centre, the Volt signal line fires
+//   1200ms     `data-nexus-launch-reveal` opens → the hero starts rising
+//              in while the overlay fades (the landing appears behind
+//              the transition, not after it)
+//   1380ms     `data-nexus-launch-seen` dismisses the overlay
+const REVEAL_MS = 1200;
+const FINISH_MS = 1380;
+
 /**
  * Product activation signature shown once per browser tab.
  * The official locked mark is the only visual asset; CSS handles the short
@@ -27,17 +36,27 @@ export function LaunchExperience() {
     }
 
     if (seen || reducedMotion) {
+      // Repeat visit or reduced motion: the landing enters immediately with
+      // its own short stagger — no intro, no waiting.
+      document.documentElement.dataset.nexusLaunchReveal = "true";
       document.documentElement.dataset.nexusLaunchSeen = "true";
       const skipTimer = window.setTimeout(() => setFinished(true), 0);
       return () => window.clearTimeout(skipTimer);
     }
 
-    const timer = window.setTimeout(() => {
+    const revealTimer = window.setTimeout(() => {
+      document.documentElement.dataset.nexusLaunchReveal = "true";
+    }, REVEAL_MS);
+
+    const finishTimer = window.setTimeout(() => {
       document.documentElement.dataset.nexusLaunchSeen = "true";
       setFinished(true);
-    }, 1380);
+    }, FINISH_MS);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(finishTimer);
+    };
   }, []);
 
   if (finished) return null;

@@ -19,6 +19,10 @@ import { cn } from "@/lib/cn";
 // Refinements:
 // - `← Back` on steps 2 and 3: pure local state, never browser
 //   navigation, so every field typed so far survives.
+// - `← Back` on step 1 exits the journey to the public landing
+//   (`/?from=onboarding`) — a deliberate workflow destination, never
+//   history.back() — and parks the typed identity as a local draft so
+//   nothing is lost when the user comes back in.
 // - Step 3 adapts to the intent chosen at step 2 (STEP3_BY_INTENT).
 // - Visual 3-segment progress bar.
 // - Nothing is declared "done" on optimism: every write is read back
@@ -247,6 +251,19 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         // Draft storage is optional and never overrides database truth.
       }
 
+      // A draft identity survives "Back to the landing" from step 1, so
+      // nothing typed is lost on the way back in. Prefill only — persisted
+      // profile fields and signup metadata always win over it.
+      let identityDraft: { displayName?: unknown; username?: unknown } = {};
+      try {
+        const storedIdentity = localStorage.getItem(`nexus:onboarding-identity:${user.id}`);
+        if (storedIdentity) {
+          identityDraft = JSON.parse(storedIdentity) as typeof identityDraft;
+        }
+      } catch {
+        // Draft storage is optional; the form remains fully usable.
+      }
+
       if (!profile?.display_name) {
         const metadataName =
           typeof user.user_metadata?.full_name === "string"
@@ -254,7 +271,14 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
             : typeof user.user_metadata?.name === "string"
               ? user.user_metadata.name
               : "";
-        setDisplayName(metadataName || user.email?.split("@")[0] || "");
+        setDisplayName(
+          metadataName ||
+            (typeof identityDraft.displayName === "string"
+              ? identityDraft.displayName.trim()
+              : "") ||
+            user.email?.split("@")[0] ||
+            ""
+        );
       }
 
       if (!profile?.username) {
@@ -262,7 +286,13 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           typeof user.user_metadata?.username === "string"
             ? user.user_metadata.username
             : "";
-        setUsername(metadataUsername || fallbackUsername(user.email));
+        setUsername(
+          metadataUsername ||
+            (typeof identityDraft.username === "string"
+              ? identityDraft.username.trim()
+              : "") ||
+            fallbackUsername(user.email)
+        );
       }
 
       setLoading(false);
@@ -328,6 +358,16 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         }
       }
 
+      // Step 1 is now persisted in the database — the identity draft has
+      // done its job and must not shadow fresher edits later.
+      if (step === 1) {
+        try {
+          localStorage.removeItem(`nexus:onboarding-identity:${user.id}`);
+        } catch {
+          // Storage is optional; the database row is the truth now.
+        }
+      }
+
       const nextStep = Math.min(step + 1, TOTAL_STEPS);
       setStep(nextStep);
       try {
@@ -360,6 +400,26 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         }
       }
     }
+  };
+
+  // Step 1 has no previous *step* — the page before it in the journey is
+  // the public landing. The workflow owns this navigation (never
+  // history.back(), which could land on login, an external page or an
+  // invalid state): we park the typed identity as a draft and go to the
+  // landing with `from=onboarding` so an authenticated session is not
+  // bounced straight back into the dashboard → onboarding loop.
+  const exitToLanding = () => {
+    if (onboardingUserId) {
+      try {
+        localStorage.setItem(
+          `nexus:onboarding-identity:${onboardingUserId}`,
+          JSON.stringify({ displayName, username })
+        );
+      } catch {
+        // Draft storage is optional; navigation still proceeds.
+      }
+    }
+    router.replace("/?from=onboarding");
   };
 
   // Choosing an intent re-targets step 3 (default unit of work), but
@@ -693,6 +753,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       try {
         sessionStorage.removeItem(`nexus:onboarding-step:${user.id}`);
         localStorage.removeItem(`nexus:onboarding-first:${user.id}`);
+        localStorage.removeItem(`nexus:onboarding-identity:${user.id}`);
       } catch {
         // Completion is database-backed; stale local drafts are non-authoritative.
       }
@@ -885,17 +946,16 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           {error ? <Alert tone="danger">{error}</Alert> : null}
 
           <div className="mt-1 flex items-center gap-2">
-            {step > 1 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                onClick={back}
-                disabled={saving}
-              >
-                ← Back
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              onClick={() => (step > 1 ? back() : exitToLanding())}
+              disabled={saving}
+              aria-label={step > 1 ? "Back to the previous step" : "Back to the NEXUS landing page"}
+            >
+              ← Back
+            </Button>
 
             {step < TOTAL_STEPS ? (
               <Button
