@@ -22,10 +22,13 @@ export function LandingReveal({
   children,
   className,
   delay = 0,
+  amount = 0.12,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
+  /** Visible proportion required before revealing. */
+  amount?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
@@ -51,12 +54,12 @@ export function LandingReveal({
           }
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
+      { threshold: amount, rootMargin: "0px 0px -48px 0px" }
     );
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [amount]);
 
   const style = delay
     ? ({ "--landing-reveal-delay": `${delay}ms` } as CSSProperties)
