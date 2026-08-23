@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
-import { Panel } from "@/components/ui/card";
+import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -191,6 +191,14 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     setFormOpen(true);
   };
 
+  // The global "C" shortcut creates in the context of the current page.
+  useEffect(() => {
+    const onCreate = () => openCreateForm();
+    window.addEventListener("nexus:create", onCreate);
+    return () => window.removeEventListener("nexus:create", onCreate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const createProject = async () => {
     if (!workspaceId || !form.name.trim()) {
       setError("Please provide a project name.");
@@ -368,29 +376,18 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="page-enter space-y-5">
       <PageHeader
         title="Projects"
         count={projects.length}
-        description="Initiatives grouping the work of this workspace."
+        description="The initiatives NEXUS tracks for risk, momentum and deadlines."
         actions={<CreateButton label="New Project" onClick={openCreateForm} />}
       />
 
-      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
-        {[
-          { label: "Active", value: activeCount },
-          { label: "Completed", value: completedCount },
-          { label: "Avg. progress", value: `${averageProgress}%` },
-        ].map((metric) => (
-          <div key={metric.label} className="px-4 py-3">
-            <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-              {metric.label}
-            </p>
-            <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
-              {metric.value}
-            </p>
-          </div>
-        ))}
+      <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+        <Metric label="Active" value={activeCount} />
+        <Metric label="Completed" value={completedCount} />
+        <Metric label="Avg. progress" value={`${averageProgress}%`} />
       </div>
 
       {!editingProjectId && limitResult ? (
@@ -439,28 +436,44 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         }
       >
         {loading ? (
-          <div className="space-y-2 p-4">
-            {[0, 1, 2].map((index) => (
-              <Skeleton key={index} className="h-16 w-full" />
+          <div className="flex flex-col" aria-hidden="true">
+            {[0, 1, 2, 3].map((index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 border-b border-border-subtle px-4 py-3.5 last:border-b-0"
+              >
+                <Skeleton className="h-8 w-8 rounded-input" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton
+                    className="h-2.5 rounded-pill"
+                    style={{ width: `${40 + index * 12}%` }}
+                  />
+                  <Skeleton className="h-[3px] w-full rounded-pill" />
+                </div>
+                <Skeleton className="h-2.5 w-8 rounded-pill" />
+              </div>
             ))}
           </div>
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
               title="No active workspace"
-              description="This account is not linked to an active workspace yet."
+              description="This account is not linked to an active workspace yet, so projects cannot be created."
+              icon={<FolderKanban size={17} strokeWidth={1.75} />}
             />
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              title={projects.length === 0 ? "No projects yet" : "Nothing matches"}
+              title={
+                projects.length === 0 ? "No projects yet" : "Nothing matches those filters"
+              }
               description={
                 projects.length === 0
-                  ? "Group your work into projects to keep execution readable."
-                  : "Adjust the search or the status filter."
+                  ? "Create your first project to give NEXUS the context it needs to detect drift, deadline pressure and stalled work."
+                  : "Adjust the search or the status filter to see the rest of the workspace."
               }
-              icon={<FolderKanban size={18} strokeWidth={1.75} />}
+              icon={<FolderKanban size={17} strokeWidth={1.75} />}
               action={
                 projects.length === 0 ? (
                   <CreateButton label="New Project" onClick={openCreateForm} />
@@ -480,7 +493,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                   className="group border-b border-border-subtle px-4 py-3 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-bg-surface text-text-secondary">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary">
                       <FolderKanban size={16} strokeWidth={1.75} />
                     </span>
 

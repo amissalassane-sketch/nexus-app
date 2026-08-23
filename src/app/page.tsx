@@ -30,16 +30,25 @@ import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "NEXUS — Everything important, one connected system",
+  title: {
+    absolute: "NEXUS — Operational Intelligence for Modern Teams",
+  },
   description:
-    "NEXUS is a quiet personal operating system that connects goals, projects, tasks and activity in one workspace — then tells you what to do next.",
+    "NEXUS analyses the work already happening in your workspace and surfaces what is drifting, what is blocked, what is at risk — and what deserves your attention next.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "NEXUS",
-    title: "NEXUS — Everything important, one connected system",
+    url: "/",
+    title: "NEXUS — Operational Intelligence for Modern Teams",
     description:
-      "Goals, projects, tasks and activity in one connected workspace. NEXUS tells you what to do next.",
+      "It reads the work, not the chat. NEXUS turns the activity already in your workspace into signals, evidence and a clear next action.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NEXUS — Operational Intelligence for Modern Teams",
+    description:
+      "It reads the work, not the chat. NEXUS turns workspace activity into signals and a clear next action.",
   },
   robots: { index: true, follow: true },
 };
@@ -87,7 +96,7 @@ export default async function Home({
           <LandingReveal>
             <div className="mx-auto w-full max-w-[1080px]">
               <ProductPreview />
-              <p className="mt-6 text-center font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+              <p className="mt-6 text-center eyebrow text-text-tertiary">
                 The workspace — goals, projects, tasks and activity, connected
               </p>
             </div>

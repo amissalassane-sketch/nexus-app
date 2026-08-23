@@ -21,7 +21,7 @@ export function IntelligenceClosing() {
 
       <LandingReveal>
         <div className="mx-auto flex w-full max-w-[720px] flex-col items-center text-center">
-          <span className="inline-flex h-[22px] items-center rounded-pill border border-border-default bg-bg-subtle px-2.5 font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+          <span className="inline-flex h-[22px] items-center rounded-pill border border-border-default bg-bg-subtle px-2.5 eyebrow text-text-tertiary">
             Nexus Intelligence
           </span>
 
@@ -44,7 +44,7 @@ export function IntelligenceClosing() {
             </ButtonLink>
           </div>
 
-          <p className="mt-5 font-mono text-mono uppercase tracking-[0.08em] text-text-quaternary">
+          <p className="mt-5 eyebrow text-text-quaternary">
             Free to start — no card required
           </p>
         </div>

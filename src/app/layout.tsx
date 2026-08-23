@@ -29,16 +29,43 @@ const geistMono = localFont({
  */
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nexus.app";
 
+const DESCRIPTION =
+  "NEXUS analyses the work already happening in your workspace and surfaces what is drifting, what is blocked, what is at risk — and what deserves your attention next.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "NEXUS — Personal operating system",
-  description:
-    "NEXUS is a quiet personal operating system that connects goals, projects, tasks and activity in one workspace — then tells you what to do next.",
+  title: {
+    default: "NEXUS — Operational Intelligence for Modern Teams",
+    template: "%s — NEXUS",
+  },
+  description: DESCRIPTION,
   applicationName: "NEXUS",
+  keywords: [
+    "operational intelligence",
+    "workspace intelligence",
+    "project risk",
+    "team coordination",
+    "work signals",
+  ],
+  authors: [{ name: "NEXUS" }],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "NEXUS",
+    url: SITE_URL,
+    title: "NEXUS — Operational Intelligence for Modern Teams",
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NEXUS — Operational Intelligence for Modern Teams",
+    description: DESCRIPTION,
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A0A0A",
+  themeColor: "#000000",
   colorScheme: "dark",
 };
 

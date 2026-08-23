@@ -772,10 +772,21 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-base px-4">
-        <div className="flex flex-col items-center gap-3">
-          <NexusLogo size={32} className="opacity-60" priority />
-          <p className="text-small text-text-secondary">Loading your workspace...</p>
+      <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4">
+        <div className="w-full max-w-[420px]">
+          <div className="mb-6 flex justify-center">
+            <NexusLogo size={32} className="opacity-70" priority />
+          </div>
+          <div className="flex flex-col gap-3" aria-hidden="true">
+            <div className="skeleton h-1 rounded-pill" />
+            <div className="skeleton mx-auto h-4 w-40 rounded-pill" />
+            <div className="skeleton mt-4 h-11 rounded-input" />
+            <div className="skeleton h-11 rounded-input" />
+            <div className="skeleton mt-2 h-10 rounded-input" />
+          </div>
+          <p className="sr-only" role="status">
+            Preparing your workspace
+          </p>
         </div>
       </main>
     );
@@ -783,23 +794,27 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
   const heading =
     step === 1
-      ? "Who are you?"
+      ? "Welcome to NEXUS"
       : step === 2
         ? "What are you trying to get under control?"
         : step3.title;
 
   const subheading =
     step === 1
-      ? "This is how your workspace will recognise you."
+      ? "First, how should your workspace recognise you?"
       : step === 2
         ? "NEXUS adapts the experience to how you work."
         : step3.description;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-[440px] rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
+    <main className="relative flex min-h-dvh items-center justify-center bg-bg-base px-4 py-12">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[380px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(233,228,255,0.05),transparent_70%)]"
+      />
+      <div className="w-full max-w-[440px] rounded-auth border border-border-subtle bg-bg-subtle p-7 shadow-auth sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
-          <NexusLogo size={48} priority className="mb-5" />
+          <NexusLogo size={34} priority className="mb-6" />
 
           {/* Progress — 3 segments, filled up to the current step. */}
           <div
@@ -815,17 +830,21 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
                 key={segment}
                 className={cn(
                   "h-1 flex-1 rounded-pill transition-colors duration-300 ease-out-expo",
-                  segment <= step ? "bg-accent" : "bg-bg-surface-3"
+                  segment <= step ? "bg-accent" : "bg-white/[0.08]"
                 )}
               />
             ))}
           </div>
 
-          <p className="mt-3 font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
+          <p className="eyebrow mt-3.5 text-text-quaternary">
             Step {step} of {TOTAL_STEPS}
           </p>
-          <h1 className="mt-2 text-h1 text-text-primary">{heading}</h1>
-          <p className="mt-1 text-small text-text-secondary">{subheading}</p>
+          <h1 className="mt-2 text-[20px] font-semibold leading-[26px] tracking-[-0.025em] text-text-primary">
+            {heading}
+          </h1>
+          <p className="mt-1.5 max-w-[38ch] text-small text-text-secondary">
+            {subheading}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -869,10 +888,10 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
                     onClick={() => selectIntent(option.id)}
                     aria-pressed={active}
                     className={cn(
-                      "flex items-center justify-between gap-3 rounded-input border px-4 py-3 text-left transition-colors duration-150 ease-nexus",
+                      "flex items-center justify-between gap-3 rounded-input border px-3.5 py-3 text-left transition-colors duration-150 ease-nexus",
                       active
-                        ? "border-border-focus bg-accent-ghost"
-                        : "border-border-default bg-bg-surface hover:border-border-strong"
+                        ? "border-border-strong bg-accent-ghost-hover"
+                        : "border-border-subtle bg-bg-surface/50 hover:border-border-default hover:bg-bg-surface"
                     )}
                   >
                     <span>
@@ -910,7 +929,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
                       rememberFirstValue(kind, firstTitle);
                     }}
                     className={cn(
-                      "h-9 rounded-pill border text-button transition-colors duration-150 ease-nexus",
+                      "h-9 rounded-input border text-button transition-colors duration-150 ease-nexus",
                       firstKind === kind
                         ? "border-transparent bg-accent text-accent-fg"
                         : "border-border-default text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
@@ -968,8 +987,8 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
                 Continue
               </Button>
             ) : (
-              <Button type="submit" size="lg" className="flex-1" disabled={saving}>
-                {saving ? "Finishing…" : firstTitle.trim() ? "Create & enter NEXUS" : "Skip & enter NEXUS"}
+              <Button type="submit" size="lg" className="flex-1" loading={saving}>
+                {firstTitle.trim() ? "Create and enter NEXUS" : "Enter NEXUS"}
               </Button>
             )}
           </div>

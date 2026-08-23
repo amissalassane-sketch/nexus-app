@@ -45,7 +45,7 @@ export function TrustSection() {
         </LandingReveal>
 
         <LandingReveal delay={100}>
-          <div className="mt-12 grid gap-px overflow-hidden rounded-[20px] border border-border-default bg-border-subtle sm:grid-cols-2 lg:mt-14 lg:grid-cols-4">
+          <div className="mt-12 grid gap-px overflow-hidden rounded-card border border-border-subtle bg-border-subtle sm:grid-cols-2 lg:mt-14 lg:grid-cols-4">
             {TRUST_POINTS.map((point) => {
               const Icon = point.icon;
               return (

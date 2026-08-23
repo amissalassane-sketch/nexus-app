@@ -88,7 +88,7 @@ export function IntelligenceSection() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Sparkles size={14} strokeWidth={1.75} className="text-lavender" aria-hidden="true" />
-              <span className="font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+              <span className="eyebrow text-text-tertiary">
                 What it looks like in the workspace
               </span>
             </div>
@@ -97,7 +97,7 @@ export function IntelligenceSection() {
             <article className="rounded-card border border-danger-border bg-danger-bg/40 p-5">
               <div className="flex items-center justify-between gap-3">
                 <Badge tone="danger">Critical</Badge>
-                <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                <span className="eyebrow text-text-quaternary">
                   task
                 </span>
               </div>
@@ -115,7 +115,7 @@ export function IntelligenceSection() {
             <article className="rounded-card border border-warning-border bg-warning-bg/30 p-5">
               <div className="flex items-center justify-between gap-3">
                 <Badge tone="warning">Warning</Badge>
-                <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                <span className="eyebrow text-text-quaternary">
                   goal
                 </span>
               </div>

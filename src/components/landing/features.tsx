@@ -22,7 +22,7 @@ const FEATURES = [
   {
     icon: LayoutDashboard,
     title: "Workspace",
-    body: "One quiet place for everything important — no tabs, no context switching.",
+    body: "One surface for everything operational — no tabs, no context switching.",
   },
   {
     icon: Target,
@@ -47,7 +47,7 @@ const FEATURES = [
   {
     icon: BrainCircuit,
     title: "NEXUS Intelligence",
-    body: "Reads the workspace and tells you the next best action.",
+    body: "Reads the workspace, explains the evidence, and names the next action.",
   },
   {
     icon: Command,

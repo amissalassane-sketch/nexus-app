@@ -52,14 +52,14 @@ export default async function BillingPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="page-enter space-y-5">
         <PageHeader
           title="Billing"
-          description="Plan, usage and capacity for this workspace."
+          description="The plan on this workspace, and how much of it you are using."
           actions={
             <Link
               href="/upgrade"
-              className="inline-flex h-9 items-center rounded-pill bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
+              className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
             >
               Compare plans
             </Link>
@@ -76,7 +76,7 @@ export default async function BillingPage() {
         <Card className="p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+              <p className="eyebrow text-text-tertiary">
                 Current plan
               </p>
               <h2 className="mt-1 text-display text-text-primary">{currentPlan}</h2>

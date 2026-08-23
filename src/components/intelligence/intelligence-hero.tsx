@@ -58,7 +58,7 @@ export function IntelligenceHero() {
       {/* ---- Layer 4: hero content ---- */}
       <div className="relative z-10 mx-auto flex w-full max-w-[1120px] flex-col items-center px-5 text-center sm:px-6">
         <span
-          className="nexus-intel-item inline-flex h-[26px] items-center gap-2 rounded-pill border border-border-default bg-bg-subtle/80 px-3 font-mono text-mono uppercase tracking-[0.12em] text-text-secondary backdrop-blur-sm"
+          className="nexus-intel-item inline-flex h-[26px] items-center gap-2 rounded-pill border border-border-default bg-bg-subtle/80 px-3 eyebrow text-text-secondary backdrop-blur-sm"
           style={delay(120)}
         >
           <span className="nexus-intel-eyebrow-dot" aria-hidden="true" />
@@ -121,7 +121,7 @@ export function IntelligenceHero() {
                   className="shrink-0 text-text-tertiary"
                   aria-hidden="true"
                 />
-                <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+                <span className="eyebrow text-text-tertiary">
                   {item.label}
                 </span>
                 <span className="hidden text-small text-text-secondary lg:inline">

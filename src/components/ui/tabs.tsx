@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS V3 — PILL TABS
-// Container #111111 with 4px padding, active item = white pill.
+// NEXUS — TABS
+// A segmented control on a dark track. The active segment is a raised
+// surface with a border, not a white pill: tabs are navigation, not the
+// primary action of the screen.
 // ============================================================
 
 export type TabItem<T extends string> = {
@@ -32,7 +34,7 @@ export function PillTabs<T extends string>({
       role="tablist"
       aria-label={label}
       className={cn(
-        "inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-pill border border-border-subtle bg-bg-subtle p-1",
+        "inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-input border border-border-subtle bg-bg-subtle p-1",
         className
       )}
     >
@@ -46,9 +48,9 @@ export function PillTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(item.id)}
             className={cn(
-              "inline-flex h-8 shrink-0 items-center gap-2 rounded-pill px-3.5 text-button transition-colors duration-150 ease-nexus",
+              "inline-flex h-7 shrink-0 items-center gap-2 rounded-[6px] px-3 text-button transition-colors duration-150 ease-nexus",
               active
-                ? "bg-accent text-accent-fg"
+                ? "bg-accent-ghost-hover text-text-primary"
                 : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
             )}
           >

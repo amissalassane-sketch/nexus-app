@@ -50,7 +50,7 @@ export function UpgradePrompt({ limitResult, onDismiss }: UpgradePromptProps) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-mono uppercase tracking-[0.08em] text-lavender">
+          <p className="eyebrow text-lavender">
             Plan limit reached
           </p>
           <h3 className="mt-1 text-h2 text-text-primary">
@@ -104,7 +104,7 @@ export function UpgradePrompt({ limitResult, onDismiss }: UpgradePromptProps) {
             type="button"
             aria-label="Dismiss upgrade notice"
             onClick={onDismiss}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
           >
             <X size={16} strokeWidth={1.75} />
           </button>

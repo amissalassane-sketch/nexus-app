@@ -68,7 +68,7 @@ export function Modal({
         aria-label="Close dialog"
         tabIndex={-1}
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 animate-fade-in"
+        className="fixed inset-0 bg-black/70 backdrop-blur-[2px] animate-fade-in"
       />
 
       <div
@@ -77,7 +77,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative my-8 w-full rounded-card border border-border-default bg-bg-subtle p-6 shadow-dropdown animate-scale-in",
+          "relative my-8 w-full rounded-card border border-border-default bg-bg-surface p-5 shadow-overlay animate-scale-in sm:p-6",
           size === "lg" ? "max-w-2xl" : "max-w-lg"
         )}
       >

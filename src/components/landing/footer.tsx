@@ -53,17 +53,17 @@ export function LandingFooter({
             <NexusWordmark size={28} />
           </Link>
           <p className="mt-3 text-small text-text-secondary">
-            Everything important, connected.
+            It reads the work, not the chat.
           </p>
-          <p className="mt-4 font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
-            Personal operating system
+          <p className="eyebrow mt-4 text-text-quaternary">
+            Operational intelligence
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
-              <h2 className="font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+              <h2 className="eyebrow text-text-tertiary">
                 {column.title}
               </h2>
               <ul className="mt-3 flex flex-col gap-2">
@@ -84,7 +84,7 @@ export function LandingFooter({
       </div>
 
       <div className="mx-auto mt-14 flex w-full max-w-[1120px] flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <span className="font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
+        <span className="eyebrow text-text-quaternary">
           © 2026 NEXUS
         </span>
         <span className="text-caption text-text-quaternary">

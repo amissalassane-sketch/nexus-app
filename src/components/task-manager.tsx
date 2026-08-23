@@ -12,14 +12,26 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
-import { Panel } from "@/components/ui/card";
+import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
-import { Alert, EmptyState, Skeleton } from "@/components/ui/feedback";
+import { Alert, EmptyState, Skeleton, SkeletonRows } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
+import { useToast } from "@/components/ui/toast";
 
 type TaskStatus = "todo" | "in_progress" | "in_review" | "blocked" | "done" | "cancelled";
 type Priority = "low" | "medium" | "high" | "urgent";
+
+/** Saved views — the same vocabulary the Intelligence signals use. */
+type TaskView = "all" | "today" | "overdue" | "blocked" | "unscheduled";
+
+const VIEWS: { id: TaskView; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "today", label: "Today" },
+  { id: "overdue", label: "Overdue" },
+  { id: "blocked", label: "Blocked" },
+  { id: "unscheduled", label: "No date" },
+];
 
 type Task = {
   id: string;
@@ -91,6 +103,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ status: "all", priority: "all" });
+  // Saved views. Intelligence signals deep-link here (?filter=overdue etc.),
+  // so a recommended action lands on exactly the work it described.
+  const [view, setView] = useState<TaskView>(
+    (searchParams.get("filter") as TaskView) ?? "all"
+  );
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<TaskForm>(blankTaskForm());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -103,14 +120,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [quickSaving, setQuickSaving] = useState(false);
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
   const [inlineTitle, setInlineTitle] = useState("");
-  const [toast, setToast] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = (tone: "success" | "danger", message: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ tone, message });
-    toastTimer.current = setTimeout(() => setToast(null), 3200);
-  };
+  const { toast } = useToast();
+  const showToast = (tone: "success" | "danger", message: string) =>
+    toast(tone, message);
 
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
@@ -180,19 +192,38 @@ function TaskManagerInner({ userId }: { userId: string }) {
   /** Keeps the sidebar counters and the dashboard in sync after a write. */
   const syncServerViews = () => router.refresh();
 
+
   const filteredTasks = useMemo(() => {
     const needle = query.trim().toLowerCase();
+    const now = new Date();
+    const open = (task: Task) =>
+      task.status !== "done" && task.status !== "cancelled";
 
     return tasks.filter((task) => {
       const statusMatch = filters.status === "all" || task.status === filters.status;
-      const priorityMatch = filters.priority === "all" || task.priority === filters.priority;
+      const priorityMatch =
+        filters.priority === "all" || task.priority === filters.priority;
       const queryMatch =
         needle.length === 0 ||
         task.title.toLowerCase().includes(needle) ||
         (task.description ?? "").toLowerCase().includes(needle);
-      return statusMatch && priorityMatch && queryMatch;
+
+      const viewMatch =
+        view === "all"
+          ? true
+          : view === "overdue"
+            ? open(task) && Boolean(task.due_at) && new Date(task.due_at!) < now
+            : view === "today"
+              ? open(task) &&
+                Boolean(task.due_at) &&
+                isSameDay(new Date(task.due_at!), now)
+              : view === "blocked"
+                ? task.status === "blocked"
+                : open(task) && !task.due_at;
+
+      return statusMatch && priorityMatch && queryMatch && viewMatch;
     });
-  }, [filters, query, tasks]);
+  }, [filters, query, tasks, view]);
 
   const grouped = useMemo(() => {
     return {
@@ -221,6 +252,14 @@ function TaskManagerInner({ userId }: { userId: string }) {
     setError("");
     setFormOpen(true);
   };
+
+  // The global "C" shortcut creates in the context of the current page.
+  useEffect(() => {
+    const onCreate = () => openCreateForm();
+    window.addEventListener("nexus:create", onCreate);
+    return () => window.removeEventListener("nexus:create", onCreate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createTask = async () => {
     if (!workspaceId || !form.title.trim()) {
@@ -500,8 +539,13 @@ function TaskManagerInner({ userId }: { userId: string }) {
     (task) => task.due_at && task.status !== "done" && new Date(task.due_at) < today
   ).length;
 
+  const blockedCount = tasks.filter((task) => task.status === "blocked").length;
+
   const filtersActive =
-    filters.status !== "all" || filters.priority !== "all" || query.trim().length > 0;
+    filters.status !== "all" ||
+    filters.priority !== "all" ||
+    view !== "all" ||
+    query.trim().length > 0;
 
   const renderRow = (task: Task) => {
     const done = task.status === "done";
@@ -599,37 +643,16 @@ function TaskManagerInner({ userId }: { userId: string }) {
         actions={<CreateButton label="New Task" onClick={openCreateForm} />}
       />
 
-      {/* Metrics strip */}
-      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
-        <div className="px-4 py-3">
-          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-            Open
-          </p>
-          <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
-            {activeTaskCount}
-          </p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-            Due today
-          </p>
-          <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
-            {dueToday}
-          </p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-            Overdue
-          </p>
-          <p
-            className={cn(
-              "mt-1 font-mono text-[20px] leading-none tabular-nums",
-              overdue > 0 ? "text-danger" : "text-text-primary"
-            )}
-          >
-            {overdue}
-          </p>
-        </div>
+      {/* Workspace state — real counts, not decoration */}
+      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-4 [&>*]:border-b [&>*]:border-r [&>*]:border-border-subtle">
+        <Metric label="Open" value={activeTaskCount} />
+        <Metric label="Due today" value={dueToday} />
+        <Metric
+          label="Overdue"
+          value={overdue}
+          tone={overdue > 0 ? "danger" : "default"}
+        />
+        <Metric label="Blocked" value={blockedCount} tone={blockedCount > 0 ? "warning" : "default"} />
       </div>
 
       {!editingTaskId && limitResult ? (
@@ -639,9 +662,37 @@ function TaskManagerInner({ userId }: { userId: string }) {
       {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
+      {/* Saved views — the destinations Intelligence recommendations link to */}
+      <div
+        role="tablist"
+        aria-label="Task views"
+        className="flex flex-wrap items-center gap-1"
+      >
+        {VIEWS.map((entry) => {
+          const active = view === entry.id;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setView(entry.id)}
+              className={cn(
+                "inline-flex h-7 items-center rounded-input border px-2.5 text-caption transition-colors duration-150 ease-nexus",
+                active
+                  ? "border-border-strong bg-accent-ghost-hover text-text-primary"
+                  : "border-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-secondary"
+              )}
+            >
+              {entry.label}
+            </button>
+          );
+        })}
+      </div>
+
       <Panel
-        title="All tasks"
-        description={`${filteredTasks.length} shown`}
+        title={VIEWS.find((entry) => entry.id === view)?.label ?? "All"}
+        description={`${filteredTasks.length} of ${tasks.length} tasks`}
         bodyClassName="p-0"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -701,6 +752,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                 onClick={() => {
                   setFilters({ status: "all", priority: "all" });
                   setQuery("");
+                  setView("all");
                 }}
               >
                 Reset
@@ -710,11 +762,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
         }
       >
         {loading ? (
-          <div className="space-y-1.5 p-4">
-            {[0, 1, 2, 3].map((index) => (
-              <Skeleton key={index} className="h-11 w-full" />
-            ))}
-          </div>
+          <SkeletonRows rows={6} />
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
@@ -725,11 +773,19 @@ function TaskManagerInner({ userId }: { userId: string }) {
         ) : filteredTasks.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              title={tasks.length === 0 ? "No tasks yet" : "Nothing matches these filters"}
+              title={
+                tasks.length === 0
+                  ? "No tasks yet"
+                  : view !== "all"
+                    ? `Nothing in ${VIEWS.find((entry) => entry.id === view)?.label.toLowerCase()}`
+                    : "Nothing matches these filters"
+              }
               description={
                 tasks.length === 0
-                  ? "Create your first task to start tracking execution."
-                  : "Adjust the search or reset the filters."
+                  ? "Create your first task so NEXUS can start tracking dates, priority and what is blocking progress."
+                  : view !== "all"
+                    ? "This view is clear. Switch back to All to see the rest of the workspace."
+                    : "Adjust the search or reset the filters to see the rest of the workspace."
               }
               action={
                 tasks.length === 0 ? (
@@ -747,7 +803,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
             return (
               <div key={group.id}>
                 <div className="flex items-center justify-between border-b border-border-subtle bg-bg-base/40 px-4 py-1.5">
-                  <span className="font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
+                  <span className="eyebrow text-text-quaternary">
                     {group.label}
                   </span>
                   <span className="font-mono text-mono tabular-nums text-text-quaternary">
@@ -898,19 +954,6 @@ function TaskManagerInner({ userId }: { userId: string }) {
         </div>
       </Modal>
 
-      {toast ? (
-        <div
-          role="status"
-          className={cn(
-            "fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 animate-toast-in rounded-pill border px-4 py-2.5 text-small shadow-dropdown",
-            toast.tone === "success"
-              ? "border-success-border bg-bg-surface text-success"
-              : "border-danger-border bg-bg-surface text-danger"
-          )}
-        >
-          {toast.message}
-        </div>
-      ) : null}
     </div>
   );
 }

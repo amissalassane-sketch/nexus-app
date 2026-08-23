@@ -2,13 +2,14 @@ import type { ComponentPropsWithRef, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS V3 — FORM CONTROLS
-// height 40px (44px on auth), bg #171717, border 8%, radius 10px,
-// placeholder #3A3A3A, focus border 16% + lavender ring.
+// NEXUS — FORM CONTROLS
+// 40px (44px on auth), 8px radius, near-black surface, 8% border.
+// Labels are always present — placeholders never carry the meaning.
+// Focus is a border shift plus a restrained lavender ring.
 // ============================================================
 
 const field =
-  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-strong focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.16)] disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.14)] disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Input({
   className,

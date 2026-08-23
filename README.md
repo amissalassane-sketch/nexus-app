@@ -1,7 +1,13 @@
 # NEXUS
 
-NEXUS is a personal operating system built with Next.js (App Router), React, TypeScript,
-Tailwind CSS v4 and Supabase (Auth + Postgres + RLS).
+NEXUS is an **AI operational intelligence platform** built with Next.js (App Router),
+React, TypeScript, Tailwind CSS v4 and Supabase (Auth + Postgres + RLS).
+
+It is not a chatbot. NEXUS reads the work already happening in a workspace — projects,
+tasks, goals, deadlines and the activity log — and turns it into **signals**: what is
+blocked, what is drifting, what is at risk, and what deserves attention next. Every
+signal carries the evidence it was derived from, so a recommendation is always
+explainable from the workspace itself.
 
 ## Getting started
 
@@ -19,29 +25,47 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Design system — NEXUS V3 "Pill Atelier Noir"
+## Design system — "Quiet intelligence"
 
-The visual language is monochrome, dense and hardware-like: `#0A0A0A` base with a subtle
-dot grid, white pill CTAs, lavender (`#E9E4FF`) used only as a rare accent, mono type for
-every number, date, counter and identifier.
+The visual language is monochrome, dense and precise: a pure black (`#000000`) base with
+a subtle dot grid, near-black surfaces, borders that are discovered rather than
+announced, and lavender (`#E9E4FF`) reserved for the intelligence layer alone. Numbers,
+dates, counters and identifiers are always mono.
 
 - **Tokens** live in `src/app/globals.css` inside the Tailwind v4 `@theme` block
   (colors, typography scale, radius hierarchy, shadows, motion). There is no
   `tailwind.config.*`: Tailwind v4 reads the CSS theme directly.
+- **Surface ramp**: `#000000` → `#080808` → `#0F0F0F` → `#151515` → `#1C1C1C`.
+- **Borders**: `rgba(255,255,255,0.06 / 0.08 / 0.14 / 0.22)`. Never thick, never white.
+- **Radius**: micro `4–6px`, controls/inputs/nav `8px`, cards/dropdowns `12px`,
+  panels `14px`, auth `16px`, pills `9999px` (badges and progress only).
+- **Contrast**: every text token clears WCAG AA against the darkest app surface —
+  primary 16.3:1, secondary 6.6:1, tertiary 4.8:1. `text-quaternary` (3.4:1) is
+  restricted to metadata that is never the only carrier of meaning.
+- **Motion**: `cubic-bezier(0.22, 1, 0.36, 1)`; micro 120–180ms, UI 200–300ms,
+  panels 300–450ms, page entrance ~420ms. Everything is gated by
+  `prefers-reduced-motion`.
 - **Fonts** are self-hosted in `src/fonts/` (Inter Variable + Geist Mono Variable) and
   wired through `next/font/local` in `src/app/layout.tsx` — no external font CDN.
-- **Shared components** live in `src/components/ui/`:
-  `button`, `create-button`, `dropdown`, `input` (Input/Textarea/Select/Field/Checkbox),
-  `card`, `badge`, `feedback` (EmptyState/ListRow/Progress/Alert/Skeleton),
-  `page-header` (PageHeader/StatLine) and `tabs`.
-- **Shell** components live in `src/components/layout/` (`app-rail`, `workspace-sidebar`)
-  and are composed by `src/components/layout/app-shell.tsx`.
 - **Logo**: the interlaced white "N" is a locked asset (`public/logo/nexus.png`,
   `src/app/icon.png`). It is never redrawn, recolored beyond the black/white variants,
   or geometrically modified. Use `NexusLogo` / `NexusWordmark`.
 
-Radius hierarchy: pill buttons `9999px`, inputs/nav/rows `10px`, cards/dropdowns `16px`,
-empty states `20px`, auth and pricing cards `24px`.
+### Shared components
+
+`src/components/ui/` — `button` (Button/ButtonLink/IconButton, with loading state),
+`create-button`, `dropdown`, `input` (Input/Textarea/Select/Field/Checkbox), `card`
+(Card/Panel/Metric/SectionHeader), `badge` (Badge/CountBadge/StatusDot), `feedback`
+(EmptyState/ErrorState/ListRow/Progress/Alert/Skeleton/SkeletonRows/RefreshingDot),
+`page-header` (PageHeader/StatLine), `page-skeleton`, `tabs`, `modal`, `toast`,
+`navigation` (SectionLabel/NavItem/MobileNavItem).
+
+`src/components/intelligence/` — `signal-icons` (the shared signal vocabulary),
+`signal-card`, `signal-detail`, `intelligence-canvas`, `intelligence-view`,
+`intelligence-network` (the canvas engine).
+
+Every data-driven surface implements **loading · success · empty · error · refreshing**.
+Empty states always answer three questions: what is missing, why it matters, what to do.
 
 ## Landing motion
 
@@ -80,17 +104,45 @@ main landing, and not a replacement for it. `/` is untouched.
 - **Copy discipline**: every claim maps to `src/lib/intelligence/engine.ts`, and
   every example signal is labelled as a product visualisation.
 
-## Navigation architecture
+## Application shell
 
-Two-level shell, composed in `src/app/(app)/layout.tsx` (one server layout that
-resolves the user, the workspace, the live counters and the plan usage once):
+One server layout (`src/app/(app)/layout.tsx`) resolves the user, the workspace, the
+live counters and the plan usage once for every product route. Nothing is hardcoded.
 
-- `src/components/layout/app-rail.tsx` — 56px icon rail, global destinations.
-- `src/components/layout/workspace-sidebar.tsx` — 244px workspace sidebar:
-  account menu, Create action, grouped navigation with real counters, plan usage.
-- `src/components/layout/app-shell.tsx` — composition + mobile drawer + content surface.
+- `src/components/layout/nav-config.ts` — **the single declaration of the information
+  architecture**. The sidebar, the mobile navigation, the breadcrumb and the command
+  palette all read from it, so a destination is added in exactly one place.
+- `src/components/layout/workspace-sidebar.tsx` — 248px sidebar: brand, workspace
+  switcher, search, Create, grouped navigation with real counters, plan usage.
+- `src/components/layout/topbar.tsx` — breadcrumb, command interface, workspace status,
+  notifications, account menu.
+- `src/components/layout/app-shell.tsx` — composition, mobile drawer, bottom navigation,
+  toast provider and keyboard shortcuts.
 
-Below `lg`, both levels collapse into a single drawer opened from a compact header.
+Below `lg` the sidebar becomes a drawer and a compact bottom navigation carries
+Overview · Intelligence · Tasks · Activity · More — the hierarchy is redesigned for
+small screens rather than shrunk.
+
+### Keyboard
+
+`⌘K` / `/` command palette · `G` then `O I P T G A N S` to navigate · `C` to create ·
+`?` for the shortcut reference · `Esc` closes any overlay. Shortcuts are ignored while
+typing in a field. See `src/components/keyboard-shortcuts.tsx`.
+
+## Intelligence
+
+`src/lib/intelligence/engine.ts` is a pure, deterministic, dependency-free engine. The
+same snapshot always produces the same signals — no external service, no invented data.
+
+Signal kinds: `blocked · at-risk · deadline · drifting · inactive · dependency ·
+opportunity · momentum`, each with a severity, a one-sentence reason, an `evidence[]`
+array of verifiable facts, the affected entity, and a recommended action that is always
+a verb. `describeWorkspace()` produces the factual context read shown on the canvas, and
+`summarizeForLLM()` is the only shape that may ever leave the server to a model provider
+(aggregated signals — never raw rows, never secrets).
+
+Recommended actions deep-link into real saved views (`/tasks?filter=overdue|blocked|
+today`), so acting on a signal lands on exactly the work it described.
 
 ## Authentication
 

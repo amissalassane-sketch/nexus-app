@@ -3,7 +3,7 @@
 import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { readSupabaseConfig } from "@/lib/supabase/config";
-import { NexusLogo } from "@/components/nexus-logo";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
@@ -71,63 +71,55 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-[400px]">
-        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
-          <div className="mb-7 flex flex-col items-center text-center">
-            <NexusLogo size={48} priority className="mb-5" />
-            <h1 className="text-h1 text-text-primary">Reset your password</h1>
-            <p className="mt-1 text-small text-text-secondary">
-              Enter the email on your account. We will send a reset link if it exists.
-            </p>
-          </div>
+    <AuthLayout
+      title="Reset your password"
+      description="Enter the email on your account. If it exists, a reset link is on its way."
+      footer={
+        <>
+          Remembered it?{" "}
+          <Link
+            href="/login"
+            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+          >
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {configError ? (
+        <Alert tone="danger" className="mb-4">
+          {configError}
+        </Alert>
+      ) : null}
 
-          {configError ? (
-            <Alert tone="danger" className="mb-4">
-              {configError}
-            </Alert>
-          ) : null}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <Field label="Email address" htmlFor="forgot-email">
+          <Input
+            id="forgot-email"
+            size="lg"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@company.com"
+            autoComplete="email"
+            disabled={loading}
+            required
+          />
+        </Field>
 
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-            <Field label="Email address" htmlFor="forgot-email">
-              <Input
-                id="forgot-email"
-                size="lg"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                disabled={loading}
-                required
-              />
-            </Field>
+        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {message ? <Alert tone="success">{message}</Alert> : null}
 
-            {error ? <Alert tone="danger">{error}</Alert> : null}
-            {message ? <Alert tone="success">{message}</Alert> : null}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || Boolean(configError)}
-              aria-busy={loading}
-              className="mt-1 w-full"
-            >
-              {loading ? "Sending..." : "Send reset link"}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-small text-text-secondary">
-            Remembered it?{" "}
-            <Link
-              href="/login"
-              className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-    </main>
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={Boolean(configError)}
+          className="mt-1 w-full"
+        >
+          Send reset link
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

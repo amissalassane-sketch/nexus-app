@@ -4,7 +4,7 @@ import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
-import { NexusLogo } from "@/components/nexus-logo";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
@@ -75,76 +75,72 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-[400px]">
-        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
-          <div className="mb-7 flex flex-col items-center text-center">
-            <NexusLogo size={48} priority className="mb-5" />
-            <h1 className="text-h1 text-text-primary">Choose a new password</h1>
-            <p className="mt-1 text-small text-text-secondary">
-              You arrived here from a reset link. Set a new password to continue.
-            </p>
-          </div>
+    <AuthLayout
+      title="Choose a new password"
+      description="You arrived from a reset link. Set a new password to continue."
+      footer={
+        <>
+          Link expired?{" "}
+          <Link
+            href="/forgot-password"
+            className="text-text-primary underline decoration-border-strong underline-offset-4"
+          >
+            Request a new one
+          </Link>
+        </>
+      }
+    >
+      {configError ? (
+        <Alert tone="danger" className="mb-4">
+          {configError}
+        </Alert>
+      ) : null}
 
-          {configError ? (
-            <Alert tone="danger" className="mb-4">
-              {configError}
-            </Alert>
-          ) : null}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <Field
+          label="New password"
+          htmlFor="reset-password"
+          hint="At least 6 characters."
+        >
+          <Input
+            id="reset-password"
+            size="lg"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="New password"
+            autoComplete="new-password"
+            disabled={loading}
+            required
+          />
+        </Field>
 
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-            <Field label="New password" htmlFor="reset-password" hint="Minimum 6 characters">
-              <Input
-                id="reset-password"
-                size="lg"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                disabled={loading}
-                required
-              />
-            </Field>
+        <Field label="Confirm password" htmlFor="reset-confirm">
+          <Input
+            id="reset-confirm"
+            size="lg"
+            type="password"
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            placeholder="Repeat the password"
+            autoComplete="new-password"
+            disabled={loading}
+            required
+          />
+        </Field>
 
-            <Field label="Confirm password" htmlFor="reset-confirm">
-              <Input
-                id="reset-confirm"
-                size="lg"
-                type="password"
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                disabled={loading}
-                required
-              />
-            </Field>
+        {error ? <Alert tone="danger">{error}</Alert> : null}
 
-            {error ? <Alert tone="danger">{error}</Alert> : null}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || Boolean(configError)}
-              aria-busy={loading}
-              className="mt-1 w-full"
-            >
-              {loading ? "Saving..." : "Update password"}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-small text-text-secondary">
-            Link expired?{" "}
-            <Link
-              href="/forgot-password"
-              className="text-text-primary underline decoration-border-strong underline-offset-4"
-            >
-              Request a new one
-            </Link>
-          </p>
-        </div>
-      </div>
-    </main>
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={Boolean(configError)}
+          className="mt-1 w-full"
+        >
+          Update password
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

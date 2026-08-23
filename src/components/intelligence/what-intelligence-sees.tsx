@@ -93,7 +93,7 @@ export function WhatIntelligenceSees() {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               <div className="nexus-intel-glass flex items-center gap-2.5 rounded-pill px-4 py-2.5">
                 <NexusLogo size={16} />
-                <span className="font-mono text-mono uppercase tracking-[0.12em] text-text-secondary">
+                <span className="eyebrow text-text-secondary">
                   Nexus Intelligence
                 </span>
               </div>
