@@ -26,7 +26,7 @@ export default function NotFound() {
       </div>
       <p className="mt-10 text-caption text-text-quaternary">
         Lost?{" "}
-        <Link href="/intelligence" className="text-text-tertiary hover:text-text-secondary">
+        <Link href="/app/intelligence" className="text-text-tertiary hover:text-text-secondary">
           See what NEXUS detected
         </Link>
       </p>

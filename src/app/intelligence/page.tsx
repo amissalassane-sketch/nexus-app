@@ -11,10 +11,10 @@ import { WorkspaceToAction } from "@/components/intelligence/workspace-to-action
 import { IntelligenceClosing } from "@/components/intelligence/intelligence-closing";
 
 // ============================================================
-// NEXUS INTELLIGENCE — DEDICATED PRODUCT LANDING
+// NEXUS INTELLIGENCE — PUBLIC PRODUCT LANDING (/intelligence)
 //
-// Served at /intelligence for visitors (see src/lib/supabase/middleware.ts:
-// signed-in users keep the workspace Intelligence page at the same URL).
+// A plain public marketing route: it never depends on auth or onboarding
+// state. The authenticated Intelligence workspace lives at /app/intelligence.
 // Composition:
 //   NAV → HERO (the mark forms) → WHAT IT SEES → WHAT IT SURFACES →
 //   NEXT BEST ACTION → EXPLAINABLE → WORKSPACE TO ACTION → CTA → FOOTER

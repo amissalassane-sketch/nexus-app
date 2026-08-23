@@ -83,7 +83,7 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
           <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
         </Link>
         <Link
-          href="/intelligence"
+          href="/app/intelligence"
           className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
         >
           All signals
