@@ -59,10 +59,10 @@ export function ModelSection() {
               <>
                 Not a todo list.
                 <br />
-                A connected system.
+                An operating layer.
               </>
             }
-            sub="A todo list stores tasks. NEXUS connects four levels: a goal sets the direction, a project moves it forward, a task is the next concrete step, and activity records what actually happened."
+            sub="A todo list stores tasks. NEXUS reads the relationships between them: a goal sets the direction, a project moves it forward, a task is the next concrete step, and activity records what actually happened — which is exactly what makes risk detectable."
           />
 
           <ul className="mt-7 flex flex-col gap-3">
@@ -85,8 +85,8 @@ export function ModelSection() {
         </LandingReveal>
 
         <LandingReveal delay={90}>
-          <div className="rounded-[20px] border border-border-default bg-bg-subtle/60 p-5 sm:p-6">
-            <p className="font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
+          <div className="rounded-card border border-border-subtle bg-bg-subtle/60 p-5 sm:p-6">
+            <p className="eyebrow text-text-tertiary">
               Goal → Project → Task → Activity
             </p>
 
@@ -112,7 +112,7 @@ export function ModelSection() {
                     <div className={index < LEVELS.length - 1 ? "min-w-0 flex-1 pb-7" : "min-w-0 flex-1"}>
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                         <h3 className="flex items-baseline gap-2 text-h2 text-text-primary">
-                          <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-quaternary">
+                          <span className="eyebrow text-text-quaternary">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           {level.name}

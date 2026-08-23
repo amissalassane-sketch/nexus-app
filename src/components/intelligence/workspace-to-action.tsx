@@ -69,7 +69,7 @@ export function WorkspaceToAction() {
                       <span className="font-mono text-mono tabular-nums text-text-quaternary">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <h3 className="font-mono text-mono uppercase tracking-[0.12em] text-text-primary">
+                      <h3 className="eyebrow text-text-primary">
                         {step.label}
                       </h3>
                     </div>

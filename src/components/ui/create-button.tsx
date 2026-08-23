@@ -6,23 +6,18 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS V3 — CREATE BUTTON
-// 36px height, pill, white bg, black fg,
-// padding 4px 14px 4px 4px, internal 28x28 lavender badge (#EDE8FF),
-// 16px plus icon, label 13px/500.
-// Variants: Create · New Task · New Project · New Goal
+// NEXUS — CREATE BUTTON
+// The single primary action of a page: 36px, 8px radius, white surface.
+// Same geometry as Button/primary so headers stay on one baseline.
 // ============================================================
 
 const shell =
-  "group inline-flex h-9 items-center gap-2.5 rounded-pill bg-accent py-1 pl-1 pr-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-150 ease-nexus hover:bg-accent-hover active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40";
+  "group inline-flex h-9 items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-40";
 
 function Badge({ icon }: { icon?: ReactNode }) {
   return (
-    <span
-      aria-hidden="true"
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-accent-badge text-accent-fg"
-    >
-      {icon ?? <Plus size={16} strokeWidth={1.75} />}
+    <span aria-hidden="true" className="shrink-0">
+      {icon ?? <Plus size={15} strokeWidth={2} />}
     </span>
   );
 }

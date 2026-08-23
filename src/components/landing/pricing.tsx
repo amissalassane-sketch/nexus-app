@@ -123,7 +123,7 @@ function PricingCard({
             className="pricing-card-stage flex min-h-5 items-center justify-between gap-3"
             style={stageDelay(0)}
           >
-            <h3 className="font-mono text-mono uppercase tracking-[0.12em] text-text-secondary">
+            <h3 className="eyebrow text-text-secondary">
               {plan.name}
             </h3>
             {isBusiness ? (
@@ -213,7 +213,7 @@ export function PricingSection() {
         <div className="mb-14 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <LandingReveal amount={0.25} className="pricing-reveal w-fit">
-              <span className="inline-flex h-7 items-center gap-2 rounded-pill border border-white/[0.09] bg-white/[0.035] px-3 font-mono text-mono uppercase tracking-[0.1em] text-text-secondary backdrop-blur-sm">
+              <span className="inline-flex h-7 items-center gap-2 rounded-pill border border-white/[0.09] bg-white/[0.035] px-3 eyebrow text-text-secondary backdrop-blur-sm">
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-text-secondary shadow-[0_0_8px_rgba(255,255,255,0.16)]"
                   aria-hidden="true"

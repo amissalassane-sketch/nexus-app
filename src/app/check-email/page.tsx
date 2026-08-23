@@ -1,6 +1,11 @@
 import Link from "next/link";
-import { NexusLogo } from "@/components/nexus-logo";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { ButtonLink } from "@/components/ui/button";
+
+export const metadata = {
+  title: "Check your inbox — NEXUS",
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckEmailPage({
   searchParams,
@@ -11,44 +16,36 @@ export default async function CheckEmailPage({
   const email = params.email?.trim();
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-[400px]">
-        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
-          <div className="mb-7 flex flex-col items-center text-center">
-            <NexusLogo size={48} priority className="mb-5" />
-            <h1 className="text-h1 text-text-primary">Check your inbox</h1>
-            <p className="mt-2 text-small text-text-secondary">
-              {email ? (
-                <>
-                  We sent a confirmation link to{" "}
-                  <span className="text-text-primary">{email}</span>. Open it
-                  (any browser) to activate your account — you will land on the
-                  NEXUS homepage, then sign in.
-                </>
-              ) : (
-                <>
-                  We sent a confirmation link to your email. Open it to activate
-                  your account, then sign in.
-                </>
-              )}
-            </p>
-          </div>
+    <AuthLayout
+      title="Check your inbox"
+      description={
+        email
+          ? undefined
+          : "We sent a confirmation link to your email. Open it to activate your account, then sign in."
+      }
+      footer={
+        <>
+          Wrong address?{" "}
+          <Link
+            href="/signup"
+            className="text-text-primary underline decoration-border-strong underline-offset-4"
+          >
+            Create another account
+          </Link>
+        </>
+      }
+    >
+      {email ? (
+        <p className="mb-6 text-center text-small text-text-secondary">
+          We sent a confirmation link to{" "}
+          <span className="text-text-primary">{email}</span>. Open it in any
+          browser to activate your account, then sign in.
+        </p>
+      ) : null}
 
-          <ButtonLink href="/login" size="lg" className="w-full">
-            Back to sign in
-          </ButtonLink>
-
-          <p className="mt-6 text-center text-small text-text-tertiary">
-            Wrong address?{" "}
-            <Link
-              href="/signup"
-              className="text-text-primary underline decoration-border-strong underline-offset-4"
-            >
-              Create another account
-            </Link>
-          </p>
-        </div>
-      </div>
-    </main>
+      <ButtonLink href="/login" size="lg" className="w-full">
+        Back to sign in
+      </ButtonLink>
+    </AuthLayout>
   );
 }

@@ -73,7 +73,7 @@ export function ExplainableIntelligence() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="warning">At risk</Badge>
-                  <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                  <span className="eyebrow text-text-quaternary">
                     goal
                   </span>
                 </div>
@@ -84,7 +84,7 @@ export function ExplainableIntelligence() {
             </div>
 
             <div className="mt-5 pl-4">
-              <p className="font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+              <p className="eyebrow text-text-tertiary">
                 Computed from
               </p>
 
@@ -101,7 +101,7 @@ export function ExplainableIntelligence() {
                         <span className="numeric text-small text-text-primary">
                           {row.value}
                         </span>
-                        <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                        <span className="eyebrow text-text-quaternary">
                           {row.meta}
                         </span>
                       </span>

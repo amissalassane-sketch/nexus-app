@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { validateCredentials } from "@/lib/auth-errors";
-import { NexusLogo } from "@/components/nexus-logo";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
@@ -87,99 +87,81 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg-base px-4 py-10">
-      <div className="w-full max-w-[400px]">
-        <div className="rounded-auth border border-border-default bg-bg-subtle p-8 shadow-auth">
-          <div className="mb-7 flex flex-col items-center text-center">
-            <NexusLogo size={48} priority className="mb-5" />
-            <h1 className="text-h1 text-text-primary">Sign in to NEXUS</h1>
-            <p className="mt-1 text-small text-text-secondary">
-              Enter your details to access your workspace.
-            </p>
-          </div>
+    <AuthLayout
+      title="Sign in to NEXUS"
+      description="Enter your details to open your workspace."
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+          >
+            Create one
+          </Link>
+        </>
+      }
+    >
+      {configError ? (
+        <Alert tone="danger" className="mb-4">
+          {configError}
+        </Alert>
+      ) : null}
 
-          {configError ? (
-            <Alert tone="danger" className="mb-4">
-              {configError}
-            </Alert>
-          ) : null}
+      <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
+        <Field label="Email address" htmlFor="login-email">
+          <Input
+            id="login-email"
+            size="lg"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@company.com"
+            autoComplete="email"
+            disabled={loading}
+            aria-invalid={error ? true : undefined}
+            required
+          />
+        </Field>
 
-          <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
-            <Field label="Email address" htmlFor="login-email">
-              <Input
-                id="login-email"
-                size="lg"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                disabled={loading}
-                required
-              />
-            </Field>
-
-            <Field
-              label="Password"
-              htmlFor="login-password"
-              action={
-                <Link
-                  href="/forgot-password"
-                  className="text-caption text-text-tertiary transition-colors hover:text-text-secondary"
-                >
-                  Forgot password?
-                </Link>
-              }
-            >
-              <Input
-                id="login-password"
-                size="lg"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                disabled={loading}
-                required
-              />
-            </Field>
-
-            {error ? <Alert tone="danger">{error}</Alert> : null}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading || Boolean(configError)}
-              aria-busy={loading}
-              className="mt-1 w-full"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </Button>
-          </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1 bg-border-subtle" />
-            <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-              Nexus
-            </span>
-            <span className="h-px flex-1 bg-border-subtle" />
-          </div>
-
-          <p className="text-center text-small text-text-secondary">
-            Don&apos;t have an account?{" "}
+        <Field
+          label="Password"
+          htmlFor="login-password"
+          action={
             <Link
-              href="/signup"
-              className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+              href="/forgot-password"
+              className="text-caption text-text-tertiary transition-colors hover:text-text-secondary"
             >
-              Create one
+              Forgot password?
             </Link>
-          </p>
-        </div>
+          }
+        >
+          <Input
+            id="login-password"
+            size="lg"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Your password"
+            autoComplete="current-password"
+            disabled={loading}
+            aria-invalid={error ? true : undefined}
+            required
+          />
+        </Field>
 
-        <p className="mt-5 text-center font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
-          Personal operating system
-        </p>
-      </div>
-    </main>
+        {error ? <Alert tone="danger">{error}</Alert> : null}
+
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={Boolean(configError)}
+          className="mt-1 w-full"
+        >
+          Continue with email
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

@@ -8,52 +8,58 @@
    ============================================================ */
 
 @theme {
-  /* ---------- Backgrounds ---------- */
-  --color-bg-base: #0a0a0a;
-  --color-bg-subtle: #111111;
-  --color-bg-surface: #171717;
-  --color-bg-surface-2: #1c1c1c;
-  --color-bg-surface-3: #232323;
+  /* ---------- Surface ramp — near-black, never gray dashboard ---------- */
+  --color-bg-base: #000000;
+  --color-bg-subtle: #080808;
+  --color-bg-surface: #0f0f0f;
+  --color-bg-surface-2: #151515;
+  --color-bg-surface-3: #1c1c1c;
 
-  /* ---------- Borders ---------- */
+  /* ---------- Borders — discovered, never announced ---------- */
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-default: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.12);
-  --color-border-focus: rgba(255, 255, 255, 0.2);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-border-focus: rgba(255, 255, 255, 0.22);
 
   /* ---------- Text ---------- */
-  --color-text-primary: #f5f5f5;
-  --color-text-secondary: #8f8f8f;
-  --color-text-tertiary: #5a5a5a;
-  --color-text-quaternary: #3a3a3a;
+  --color-text-primary: #f2f2f2;
+  --color-text-secondary: #9b9b9b;
+  /* Contrast against the darkest app surface (#151515):
+     primary 16.3:1 · secondary 6.6:1 · tertiary 4.8:1 (AA body)
+     quaternary 3.4:1 — reserved for metadata that is never the only
+     carrier of meaning (AA large text / non-text contrast). */
+  --color-text-tertiary: #828282;
+  --color-text-quaternary: #6b6b6b;
 
   /* ---------- Accent ---------- */
   --color-accent: #ffffff;
-  --color-accent-fg: #0a0a0a;
-  --color-accent-hover: #e8e8e8;
+  --color-accent-fg: #000000;
+  --color-accent-hover: #e6e6e6;
   --color-accent-badge: #ede8ff;
-  --color-accent-ghost: rgba(255, 255, 255, 0.06);
-  --color-accent-ghost-hover: rgba(255, 255, 255, 0.1);
+  --color-accent-ghost: rgba(255, 255, 255, 0.05);
+  --color-accent-ghost-hover: rgba(255, 255, 255, 0.09);
+
+  /* Intelligence accent — restrained violet/blue-white, used sparingly */
   --color-lavender: #e9e4ff;
-  --color-lavender-subtle: rgba(233, 228, 255, 0.12);
-  --color-lavender-border: rgba(233, 228, 255, 0.24);
+  --color-lavender-subtle: rgba(233, 228, 255, 0.1);
+  --color-lavender-border: rgba(233, 228, 255, 0.22);
 
   /* ---------- Semantic (desaturated, discreet) ---------- */
-  --color-success: #7ade9b;
-  --color-success-bg: rgba(122, 222, 155, 0.1);
-  --color-success-border: rgba(122, 222, 155, 0.2);
+  --color-success: #6fcf97;
+  --color-success-bg: rgba(111, 207, 151, 0.09);
+  --color-success-border: rgba(111, 207, 151, 0.2);
 
-  --color-warning: #e8c574;
-  --color-warning-bg: rgba(232, 197, 116, 0.1);
-  --color-warning-border: rgba(232, 197, 116, 0.2);
+  --color-warning: #dcb463;
+  --color-warning-bg: rgba(220, 180, 99, 0.09);
+  --color-warning-border: rgba(220, 180, 99, 0.2);
 
-  --color-danger: #ff7a7a;
-  --color-danger-bg: rgba(255, 122, 122, 0.1);
-  --color-danger-border: rgba(255, 122, 122, 0.2);
+  --color-danger: #e87b7b;
+  --color-danger-bg: rgba(232, 123, 123, 0.09);
+  --color-danger-border: rgba(232, 123, 123, 0.2);
 
-  --color-info: #8aa8ff;
-  --color-info-bg: rgba(138, 168, 255, 0.1);
-  --color-info-border: rgba(138, 168, 255, 0.2);
+  --color-info: #7f9dee;
+  --color-info-bg: rgba(127, 157, 238, 0.09);
+  --color-info-border: rgba(127, 157, 238, 0.2);
 
   /* ---------- Typography ---------- */
   --font-sans: var(--font-inter), Inter, "Geist Sans", -apple-system,
@@ -61,24 +67,26 @@
   --font-mono: var(--font-geist-mono), "Geist Mono", "JetBrains Mono",
     "SF Mono", Menlo, monospace;
 
-  --text-display: 30px;
-  --text-display--line-height: 32px;
-  --text-display--letter-spacing: -0.03em;
+  /* Display is reserved for public pages; application screens never use it. */
+  --text-display: 34px;
+  --text-display--line-height: 38px;
+  --text-display--letter-spacing: -0.035em;
   --text-display--font-weight: 500;
 
-  --text-h1: 20px;
+  --text-h1: 22px;
   --text-h1--line-height: 28px;
-  --text-h1--letter-spacing: -0.02em;
-  --text-h1--font-weight: 550;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h1--font-weight: 600;
 
   --text-h2: 16px;
   --text-h2--line-height: 24px;
   --text-h2--letter-spacing: -0.015em;
-  --text-h2--font-weight: 550;
+  --text-h2--font-weight: 600;
 
   --text-h3: 14px;
   --text-h3--line-height: 20px;
-  --text-h3--font-weight: 550;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 600;
 
   --text-body: 13.5px;
   --text-body--line-height: 21px;
@@ -101,29 +109,34 @@
   --text-mono: 11.5px;
   --text-mono--line-height: 16px;
 
-  /* ---------- Radius hierarchy ---------- */
-  --radius-input: 10px;
-  --radius-nav: 10px;
-  --radius-row: 10px;
-  --radius-card: 16px;
-  --radius-dropdown: 16px;
-  --radius-empty: 20px;
-  --radius-auth: 24px;
-  --radius-pricing: 24px;
+  /* ---------- Radius hierarchy — software, not marshmallows ---------- */
+  --radius-xs: 4px;
+  --radius-input: 8px;
+  --radius-nav: 8px;
+  --radius-row: 8px;
+  --radius-card: 12px;
+  --radius-dropdown: 12px;
+  --radius-panel: 14px;
+  --radius-empty: 12px;
+  --radius-auth: 16px;
+  --radius-pricing: 16px;
   --radius-pill: 9999px;
 
-  /* ---------- Elevation ---------- */
-  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.48);
-  --shadow-auth: 0 16px 40px rgba(0, 0, 0, 0.48);
+  /* ---------- Elevation — contrast first, shadow last ---------- */
+  --shadow-dropdown: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+  --shadow-overlay: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
+  --shadow-auth: 0 20px 50px -20px rgba(0, 0, 0, 0.9);
 
   /* ---------- Motion ---------- */
-  --ease-nexus: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-nexus: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --animate-fade-in: fade-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  --animate-scale-in: scale-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-toast-in: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  --animate-list-in: list-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-in: fade-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-scale-in: scale-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-toast-in: toast-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-list-in: list-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-panel-in: panel-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
   @keyframes fade-in {
     from {
@@ -166,6 +179,27 @@
       transform: translateY(0);
     }
   }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
 }
 
 /* ============================================================
@@ -175,18 +209,18 @@
    ============================================================ */
 
 :root {
-  --background: #0a0a0a; /* = bg-base */
-  --foreground: #f5f5f5; /* = text-primary */
-  --muted: #171717; /* = bg-surface */
-  --muted-foreground: #8f8f8f; /* = text-secondary */
+  --background: #000000; /* = bg-base */
+  --foreground: #f2f2f2; /* = text-primary */
+  --muted: #0f0f0f; /* = bg-surface */
+  --muted-foreground: #9b9b9b; /* = text-secondary */
   --border: rgba(255, 255, 255, 0.08); /* = border-default */
 
   /* Neutral chart palette — derived from the NEXUS text ramp. */
-  --chart-1: #f5f5f5;
-  --chart-2: #b3b3b3;
-  --chart-3: #8f8f8f;
-  --chart-4: #5a5a5a;
-  --chart-5: #333333;
+  --chart-1: #f2f2f2;
+  --chart-2: #b0b0b0;
+  --chart-3: #9b9b9b;
+  --chart-4: #6a6a6a;
+  --chart-5: #303030;
 }
 
 @theme inline {
@@ -232,10 +266,10 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image: radial-gradient(
-    rgba(255, 255, 255, 0.035) 1px,
+    rgba(255, 255, 255, 0.028) 1px,
     transparent 1px
   );
-  background-size: 20px 20px;
+  background-size: 22px 22px;
   z-index: -1;
 }
 
@@ -244,8 +278,8 @@ body::before {
   outline: none;
   box-shadow:
     0 0 0 1px var(--color-bg-base),
-    0 0 0 3px rgba(233, 228, 255, 0.24);
-  border-radius: 10px;
+    0 0 0 3px rgba(233, 228, 255, 0.34);
+  border-radius: 8px;
 }
 
 ::selection {
@@ -254,13 +288,20 @@ body::before {
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-bg-surface-3);
+  background: rgba(255, 255, 255, 0.09);
+  border: 3px solid transparent;
+  background-clip: padding-box;
   border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-track {
@@ -269,8 +310,8 @@ body::before {
 
 /* Native controls kept legible on the dark surface */
 select option {
-  background-color: #171717;
-  color: #f5f5f5;
+  background-color: #0f0f0f;
+  color: #f2f2f2;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -310,6 +351,88 @@ input[type="range"] {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
+}
+
+/* Eyebrow / label: the quiet uppercase mono caption used across NEXUS. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   APPLICATION SURFACES
+   The shell paints three levels: base (#000), chrome (navigation)
+   and content. Cards sit on content, never on the base directly.
+   ============================================================ */
+
+@utility surface-chrome {
+  background-color: color-mix(in srgb, var(--color-bg-subtle) 88%, transparent);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Page entrance — one calm rise per route, not per element. */
+@utility page-enter {
+  animation: page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton — a slow breath, never a spinner. */
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.035)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Severity pulse used by the highest-priority signal only. */
+@utility signal-pulse {
+  animation: signal-pulse 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes signal-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .signal-pulse,
+  .page-enter {
+    animation: none;
+  }
 }
 
 /* ============================================================

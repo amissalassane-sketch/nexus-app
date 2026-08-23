@@ -6,13 +6,16 @@ import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS — NAVIGATION PRIMITIVES
-// SectionLabel + NavItem + RailItem, shared by the rail, the workspace
-// sidebar and the mobile drawer. One definition, one behaviour.
+// SectionLabel + NavItem, shared by the sidebar, the mobile drawer and
+// the settings navigation. One definition, one behaviour.
+//
+// Active state = subtle surface + subtle border + white text + brighter
+// icon + a 2px intelligence accent. Inactive = muted text and icon.
 // ============================================================
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="px-2.5 pb-1.5 pt-4 font-mono text-mono uppercase tracking-[0.1em] text-text-quaternary">
+    <p className="eyebrow px-2.5 pb-1.5 pt-5 text-text-quaternary select-none">
       {children}
     </p>
   );
@@ -41,23 +44,25 @@ export function NavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex h-8 items-center gap-2.5 rounded-nav px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
+        "group relative flex h-[34px] items-center gap-2.5 rounded-nav border px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
         active
-          ? "bg-accent-ghost-hover font-medium text-text-primary"
-          : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+          ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary"
+          : "border-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-pill bg-accent transition-all duration-[220ms] ease-out-expo",
-          active ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
+          "absolute left-[-9px] top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-pill bg-lavender transition-[opacity,transform] duration-[200ms] ease-nexus",
+          active ? "scale-y-100 opacity-90" : "scale-y-0 opacity-0"
         )}
       />
       <span
         className={cn(
           "shrink-0 transition-colors duration-150",
-          active ? "text-text-primary" : "text-text-tertiary group-hover:text-text-secondary"
+          active
+            ? "text-text-primary"
+            : "text-text-tertiary group-hover:text-text-secondary"
         )}
       >
         {icon}
@@ -77,39 +82,49 @@ export function NavItem({
   );
 }
 
-export function RailItem({
+/** Compact bottom-navigation item used below `md`. */
+export function MobileNavItem({
   href,
   label,
   icon,
   active,
   badge,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: ReactNode;
   active?: boolean;
   badge?: number;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
-      title={label}
-      aria-label={label}
+      onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-9 w-9 items-center justify-center rounded-nav transition-colors duration-150 ease-nexus",
-        active
-          ? "bg-accent-ghost-hover text-text-primary"
-          : "text-text-tertiary hover:bg-accent-ghost hover:text-text-secondary"
+        "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 transition-colors duration-150 ease-nexus",
+        active ? "text-text-primary" : "text-text-tertiary"
       )}
     >
-      {icon}
-      {badge !== undefined && badge > 0 ? (
-        <span
-          aria-hidden="true"
-          className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-lavender"
-        />
-      ) : null}
+      <span className="relative">
+        {icon}
+        {badge !== undefined && badge > 0 ? (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-pill bg-lavender"
+          />
+        ) : null}
+      </span>
+      <span className="max-w-full truncate text-[10.5px] leading-none">{label}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute -top-px h-[2px] w-8 rounded-pill bg-lavender transition-opacity duration-150",
+          active ? "opacity-80" : "opacity-0"
+        )}
+      />
     </Link>
   );
 }

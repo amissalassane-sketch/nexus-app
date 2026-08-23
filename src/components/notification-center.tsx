@@ -204,29 +204,36 @@ export function NotificationCenter({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[720px] space-y-5">
+    <div className="page-enter mx-auto w-full max-w-[760px] space-y-5">
       <PageHeader
-        title="Inbox"
+        title="Notifications"
         count={notifications.length}
-        description="Everything that happened in your workspace."
+        description="What changed in this workspace, and what NEXUS wants you to see."
         actions={
           <Button
             variant="secondary"
             onClick={markAllAsRead}
-            disabled={!workspaceId || unreadCount === 0 || markingAll}
+            loading={markingAll}
+            disabled={!workspaceId || unreadCount === 0}
           >
-            {markingAll ? "Updating..." : "Mark all as read"}
+            Mark all as read
           </Button>
         }
       />
 
       <PillTabs
-        label="Notification filter"
+        label="Filter notifications"
         value={tab}
         onChange={setTab}
         items={[
-          { id: "all", label: `All${notifications.length ? ` · ${notifications.length}` : ""}` },
-          { id: "unread", label: `Unread${unreadCount ? ` · ${unreadCount}` : ""}` },
+          {
+            id: "all",
+            label: `All${notifications.length ? ` · ${notifications.length}` : ""}`,
+          },
+          {
+            id: "unread",
+            label: `Unread${unreadCount ? ` · ${unreadCount}` : ""}`,
+          },
         ]}
       />
 
@@ -234,26 +241,49 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
       <Panel bodyClassName="p-0">
         {loading ? (
-          <div className="space-y-1.5 p-4">
-            {[0, 1, 2].map((index) => (
-              <Skeleton key={index} className="h-14 w-full" />
+          <div className="flex flex-col" aria-hidden="true">
+            {[0, 1, 2, 3].map((index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 border-b border-border-subtle px-4 py-3.5 last:border-b-0"
+              >
+                <Skeleton className="h-8 w-8 rounded-input" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-2.5 w-1/2 rounded-pill" />
+                  <Skeleton className="h-2.5 w-3/4 rounded-pill" />
+                </div>
+              </div>
             ))}
           </div>
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
               title="No active workspace"
-              description="This account is not linked to an active workspace yet."
+              description="This account is not linked to an active workspace yet, so there is nothing to notify you about."
+              icon={<Bell size={17} strokeWidth={1.75} />}
             />
           </div>
         ) : visible.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              title={tab === "unread" ? "No unread notifications" : "Aucune notification."}
+              title={tab === "unread" ? "Nothing unread" : "No notifications yet"}
               description={
-                tab === "unread" ? "You are all caught up." : "C'est calme ici."
+                tab === "unread"
+                  ? "You have read everything in this workspace."
+                  : "When work changes or NEXUS detects something new, it lands here."
               }
-              icon={<Bell size={18} strokeWidth={1.75} />}
+              icon={<Bell size={17} strokeWidth={1.75} />}
+              action={
+                tab === "unread" ? (
+                  <button
+                    type="button"
+                    onClick={() => setTab("all")}
+                    className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                  >
+                    Show all
+                  </button>
+                ) : null
+              }
             />
           </div>
         ) : (
@@ -269,20 +299,27 @@ export function NotificationCenter({ userId }: { userId: string }) {
                 <li
                   key={notification.id}
                   className={cn(
-                    "group flex min-h-14 items-start gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60",
-                    isUnread && "bg-bg-surface/30"
+                    "group relative flex min-h-14 items-start gap-3 border-b border-border-subtle px-4 py-3.5 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]",
+                    isUnread && "bg-white/[0.015]"
                   )}
                 >
                   <span
                     className={cn(
-                      "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-nav border",
+                      "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border",
                       isUnread
                         ? "border-lavender-border bg-lavender-subtle text-lavender"
                         : "border-border-subtle bg-bg-surface text-text-tertiary"
                     )}
                   >
-                    <Icon size={15} strokeWidth={1.75} />
+                    <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
                   </span>
+
+                  {isUnread ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-pill bg-lavender"
+                    />
+                  ) : null}
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
@@ -323,7 +360,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
                           {notification.severity}
                         </Badge>
                       ) : (
-                        <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-quaternary">
+                        <span className="eyebrow text-text-quaternary">
                           {notification.type}
                         </span>
                       )}

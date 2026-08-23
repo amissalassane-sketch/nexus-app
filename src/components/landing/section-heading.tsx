@@ -27,7 +27,7 @@ export function SectionHeading({
         className
       )}
     >
-      <span className="inline-flex h-[22px] items-center rounded-pill border border-border-default bg-bg-subtle px-2.5 font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+      <span className="eyebrow inline-flex h-[22px] items-center rounded-pill border border-border-subtle bg-bg-subtle px-2.5 text-text-tertiary">
         {eyebrow}
       </span>
       <h2

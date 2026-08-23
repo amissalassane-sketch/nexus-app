@@ -140,7 +140,7 @@ export function Dropdown({
             onKeyDown={onMenuKeyDown}
             style={{ width }}
             className={cn(
-              "absolute top-[calc(100%+8px)] z-[60] rounded-dropdown border border-border-default bg-bg-surface p-1.5 shadow-dropdown animate-scale-in",
+              "absolute top-[calc(100%+6px)] z-[60] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown animate-scale-in",
               align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left"
             )}
           >
@@ -153,10 +153,9 @@ export function Dropdown({
 }
 
 const itemClasses =
-  "relative flex h-9 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-body text-text-secondary outline-none transition-colors duration-200 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-40";
+  "relative flex h-8 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-[13px] text-text-secondary outline-none transition-colors duration-200 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-40";
 
-const activeClasses =
-  "bg-accent-ghost-hover text-text-primary before:absolute before:left-0.5 before:top-1/2 before:h-3.5 before:w-0.5 before:-translate-y-1/2 before:rounded-pill before:bg-white before:content-['']";
+const activeClasses = "bg-accent-ghost-hover text-text-primary";
 
 export function DropdownItem({
   children,
@@ -242,7 +241,7 @@ export function DropdownSeparator() {
 
 export function DropdownLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="px-2.5 pb-1 pt-1.5 font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
+    <div className="eyebrow px-2.5 pb-1 pt-2 text-text-quaternary">
       {children}
     </div>
   );

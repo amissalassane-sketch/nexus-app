@@ -13,13 +13,13 @@ export function FinalCtaSection() {
     <section className="px-5 py-24 sm:px-6 sm:py-32">
       <LandingReveal>
         <div className="mx-auto w-full max-w-[1120px]">
-          <div className="relative overflow-hidden rounded-[24px] border border-border-default bg-bg-subtle/60 px-6 py-16 text-center sm:px-12 sm:py-24">
+          <div className="relative overflow-hidden rounded-[16px] border border-border-subtle bg-bg-subtle/60 px-6 py-16 text-center sm:px-12 sm:py-24">
             <span
               className="absolute left-1/2 top-0 h-px w-24 -translate-x-1/2 bg-lavender/40"
               aria-hidden="true"
             />
 
-            <span className="font-mono text-mono uppercase tracking-[0.12em] text-text-tertiary">
+            <span className="eyebrow text-text-tertiary">
               Start
             </span>
             <h2 className="mx-auto mt-4 max-w-[18ch] text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-text-primary sm:text-[44px]">

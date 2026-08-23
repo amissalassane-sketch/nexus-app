@@ -1,276 +1,277 @@
 import {
+  Activity,
   Bell,
-  BrainCircuit,
+  CalendarClock,
   CheckSquare,
   FolderKanban,
   LayoutDashboard,
+  Pause,
+  Radar,
   Target,
+  Waves,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
 
 // ============================================================
 // NEXUS LANDING — PRODUCT PREVIEW
-// A faithful, static representation of the real NEXUS workspace
-// (rail + workspace sidebar + dashboard), rendered with the actual
-// NEXUS V3 tokens and shared components. No invented UI language:
-// this is the same surface an account-holder lands on, scaled down.
+// A faithful, static representation of the real NEXUS shell
+// (sidebar + top bar + Overview), rendered with the actual NEXUS
+// tokens and components. Same information architecture, same signal
+// vocabulary — this is a product visualisation, clearly labelled as
+// such by the section around it, not a screenshot of live data.
 // ============================================================
 
-const RAIL = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: CheckSquare, label: "Tasks", active: false },
-  { icon: FolderKanban, label: "Projects", active: false },
-  { icon: Target, label: "Goals", active: false },
-  { icon: BrainCircuit, label: "Intelligence", active: false },
-  { icon: Bell, label: "Notifications", active: false },
+const NAV_PRIMARY = [
+  { icon: LayoutDashboard, label: "Overview", count: null, active: true },
+  { icon: Radar, label: "Intelligence", count: null, active: false },
 ];
 
-const SIDEBAR_ITEMS = [
-  { label: "Dashboard", count: null as number | null, active: true },
-  { label: "Tasks", count: 12, active: false },
-  { label: "Projects", count: 3, active: false },
-  { label: "Goals", count: 2, active: false },
-  { label: "Intelligence", count: null, active: false },
-  { label: "Notifications", count: 1, active: false },
+const NAV_WORK = [
+  { icon: FolderKanban, label: "Projects", count: 3, active: false },
+  { icon: CheckSquare, label: "Tasks", count: 12, active: false },
+  { icon: Target, label: "Goals", count: 2, active: false },
 ];
 
-const TASKS = [
-  { title: "Ship onboarding emails", due: "Aug 16", tone: "danger" as const, done: false },
-  { title: "Finalize Q3 goal review", due: "Today", tone: "warning" as const, done: false },
-  { title: "Update project roadmap", due: "Aug 21", tone: "neutral" as const, done: false },
-  { title: "Draft launch notes", due: "Done", tone: "success" as const, done: true },
+const NAV_WORKSPACE = [
+  { icon: Activity, label: "Activity", count: null, active: false },
+  { icon: Bell, label: "Notifications", count: 1, active: false },
 ];
 
-const ACTIVITY = [
-  { text: "Completed \"Draft launch notes\"", at: "09:41" },
-  { text: "Added 3 tasks to \"Launch\"", at: "09:12" },
-  { text: "Moved \"Launch\" to In progress", at: "08:57" },
+const SIGNALS = [
+  {
+    icon: CalendarClock,
+    kind: "Deadline",
+    tone: "danger" as const,
+    title: "2 tasks are past their due date",
+    body: "The oldest is “Ship onboarding emails”, due 5 days ago and still open.",
+  },
+  {
+    icon: Pause,
+    kind: "Blocked",
+    tone: "danger" as const,
+    title: "“Migrate auth cookies” is blocked",
+    body: "This task is marked blocked, so nothing downstream of it can move.",
+  },
+  {
+    icon: Waves,
+    kind: "At risk",
+    tone: "warning" as const,
+    title: "“Website redesign” may miss its date",
+    body: "The deadline is in 3 days and 4 tasks remain incomplete.",
+  },
 ];
+
+function NavGroup({
+  label,
+  items,
+}: {
+  label?: string;
+  items: {
+    icon: typeof LayoutDashboard;
+    label: string;
+    count: number | null;
+    active: boolean;
+  }[];
+}) {
+  return (
+    <div>
+      {label ? (
+        <p className="px-2 pb-1 pt-3 font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+          {label}
+        </p>
+      ) : null}
+      <div className="flex flex-col gap-0.5">
+        {items.map((item) => (
+          <span
+            key={item.label}
+            className={`flex h-7 items-center gap-2 rounded-nav border px-2 text-[11px] ${
+              item.active
+                ? "border-border-subtle bg-white/[0.09] font-medium text-text-primary"
+                : "border-transparent text-text-secondary"
+            }`}
+          >
+            <item.icon
+              size={12}
+              strokeWidth={1.75}
+              className={item.active ? "text-text-primary" : "text-text-tertiary"}
+            />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.count !== null ? (
+              <span className="font-mono text-[9.5px] tabular-nums text-text-quaternary">
+                {item.count}
+              </span>
+            ) : null}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function ProductPreview() {
   return (
     <div className="group/preview relative" aria-hidden="true">
-      <div className="overflow-hidden rounded-[20px] border border-border-strong bg-bg-surface shadow-[0_32px_80px_-16px_rgba(0,0,0,0.65)] transition-transform duration-500 ease-out-expo sm:rounded-[24px] sm:[transform:perspective(1600px)_rotateX(2.5deg)] sm:group-hover/preview:[transform:perspective(1600px)_rotateX(0deg)_translateY(-4px)]">
+      <div className="overflow-hidden rounded-[14px] border border-border-strong bg-bg-surface shadow-[0_32px_80px_-16px_rgba(0,0,0,0.7)] transition-transform duration-500 ease-out-expo sm:rounded-[16px] sm:[transform:perspective(1600px)_rotateX(2.5deg)] sm:group-hover/preview:[transform:perspective(1600px)_rotateX(0deg)_translateY(-4px)]">
         {/* Browser chrome */}
         <div className="flex items-center gap-3 border-b border-border-subtle bg-bg-subtle px-4 py-2.5">
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="h-2.5 w-2.5 rounded-full bg-bg-surface-3" />
-            <span className="h-2.5 w-2.5 rounded-full bg-bg-surface-3" />
-            <span className="h-2.5 w-2.5 rounded-full bg-bg-surface-3" />
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
           </div>
           <span className="mx-auto inline-flex h-6 min-w-0 items-center rounded-pill border border-border-subtle bg-bg-surface px-3 font-mono text-[10.5px] text-text-tertiary">
             nexus.app/dashboard
           </span>
-          <span className="w-10 shrink-0" aria-hidden="true" />
+          <span className="w-10 shrink-0" />
         </div>
 
         {/* App surface */}
-        <div className="grid grid-cols-1 bg-bg-base lg:grid-cols-[56px_210px_minmax(0,1fr)]">
-          {/* Level 1 — rail */}
-          <div
-            aria-hidden="true"
-            className="hidden flex-col items-center gap-1 border-r border-border-subtle bg-bg-subtle/60 py-4 lg:flex"
-          >
-            {RAIL.map((item) => (
-              <span
-                key={item.label}
-                className={`flex h-8 w-8 items-center justify-center rounded-nav ${
-                  item.active ? "bg-accent text-accent-fg" : "text-text-tertiary"
-                }`}
-              >
-                <item.icon size={15} strokeWidth={1.75} />
+        <div className="grid grid-cols-1 bg-bg-base lg:grid-cols-[196px_minmax(0,1fr)]">
+          {/* Sidebar */}
+          <div className="hidden flex-col border-r border-border-subtle bg-bg-subtle/50 p-2.5 lg:flex">
+            <div className="flex h-9 items-center gap-2 rounded-nav border border-border-subtle bg-bg-surface/50 px-2">
+              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-[5px] border border-border-default bg-bg-surface-2 text-[10px] font-semibold text-text-primary">
+                S
               </span>
-            ))}
-          </div>
-
-          {/* Level 2 — workspace sidebar */}
-          <div
-            aria-hidden="true"
-            className="hidden flex-col border-r border-border-subtle bg-bg-subtle/40 p-3 lg:flex"
-          >
-            <div className="flex h-9 items-center rounded-input border border-border-default bg-bg-surface px-2.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-text-secondary">
-              Studio
-            </div>
-            <div className="mt-3 flex flex-col gap-0.5">
-              {SIDEBAR_ITEMS.map((item) => (
-                <span
-                  key={item.label}
-                  className={`flex h-7 items-center justify-between rounded-nav px-2 text-[11px] ${
-                    item.active
-                      ? "bg-accent font-medium text-accent-fg"
-                      : "text-text-secondary"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {item.count !== null ? (
-                    <span className="font-mono text-[10px] tabular-nums opacity-60">
-                      {item.count}
-                    </span>
-                  ) : null}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[11px] font-medium text-text-primary">
+                  Studio
                 </span>
-              ))}
-            </div>
-            <span className="mt-auto inline-flex h-[22px] w-fit items-center rounded-pill border border-border-default bg-bg-surface px-2 font-mono text-[10px] uppercase tracking-[0.04em] text-text-secondary">
-              Free plan
-            </span>
-          </div>
-
-          {/* Main dashboard surface */}
-          <div className="min-w-0 border-r-0 bg-bg-base p-4 sm:p-5">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-quaternary">
-                  Tue, Aug 19
-                </p>
-                <p className="mt-1 truncate text-[15px] font-medium tracking-[-0.02em] text-text-primary">
-                  Good morning.
-                </p>
-              </div>
-              <Badge>Free</Badge>
-            </div>
-
-            {/* Focus */}
-            <div className="mt-3 rounded-card border border-border-subtle bg-bg-subtle/60 p-3.5">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-lavender" aria-hidden="true" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
-                  Focus
+                <span className="block font-mono text-[9px] uppercase tracking-[0.1em] text-text-quaternary">
+                  owner
                 </span>
-              </div>
-              <p className="mt-2 text-[12.5px] font-medium text-text-primary">
-                2 tasks are overdue.
-              </p>
-              <p className="mt-0.5 text-[11px] text-text-secondary">
-                The oldest is &ldquo;Ship onboarding emails&rdquo;, due Aug 16 and still open.
-              </p>
-              <span className="mt-2.5 inline-flex h-7 items-center gap-1.5 rounded-pill bg-accent px-3 text-[11px] font-medium text-accent-fg">
-                Open task
               </span>
             </div>
 
-            {/* Metrics strip */}
-            <div className="mt-3 grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60 sm:grid-cols-5">
-              {[
-                { label: "Open tasks", value: "12", tone: "" },
-                { label: "Overdue", value: "2", tone: "text-danger" },
-                { label: "In progress", value: "4", tone: "" },
-                { label: "Projects", value: "3", tone: "" },
-                { label: "Goals", value: "2", tone: "" },
-              ].map((metric) => (
-                <div key={metric.label} className="flex flex-col gap-0.5 px-2.5 py-2.5">
-                  <span className="truncate font-mono text-[9.5px] uppercase tracking-[0.08em] text-text-tertiary">
-                    {metric.label}
-                  </span>
-                  <span className={`font-mono text-[15px] leading-none tabular-nums text-text-primary ${metric.tone}`}>
-                    {metric.value}
+            <div className="mt-1.5 flex h-7 items-center gap-2 rounded-nav border border-border-subtle px-2 text-[10.5px] text-text-quaternary">
+              <span className="flex-1">Search NEXUS…</span>
+              <span className="font-mono text-[9px]">⌘K</span>
+            </div>
+
+            <div className="mt-2.5">
+              <NavGroup items={NAV_PRIMARY} />
+              <NavGroup label="Work" items={NAV_WORK} />
+              <NavGroup label="Workspace" items={NAV_WORKSPACE} />
+            </div>
+
+            <div className="mt-auto border-t border-border-subtle pt-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                  Plan
+                </span>
+                <span className="font-mono text-[9.5px] text-text-secondary">FREE</span>
+              </div>
+              <Progress value={60} className="mt-2" />
+            </div>
+          </div>
+
+          {/* Main surface */}
+          <div className="min-w-0 bg-bg-base">
+            {/* Top bar */}
+            <div className="flex h-9 items-center gap-2 border-b border-border-subtle px-4">
+              <span className="text-[10.5px] font-medium text-text-primary">
+                Overview
+              </span>
+              <span className="ml-auto inline-flex items-center gap-1.5 rounded-pill border border-border-subtle px-1.5 py-0.5">
+                <span className="h-1 w-1 rounded-pill bg-success" />
+                <span className="font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-tertiary">
+                  Observing
+                </span>
+              </span>
+              <span className="h-5 w-5 rounded-pill border border-border-default bg-bg-surface-2" />
+            </div>
+
+            <div className="p-4 sm:p-5">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                    Tuesday, August 19
+                  </p>
+                  <p className="mt-1.5 truncate text-[15px] font-semibold tracking-[-0.025em] text-text-primary">
+                    Good morning, Alex.
+                  </p>
+                  <p className="mt-0.5 text-[10.5px] text-text-secondary">
+                    3 signals need a decision.
+                  </p>
+                </div>
+                <Badge tone="quiet">Free</Badge>
+              </div>
+
+              {/* Next action */}
+              <div className="mt-3.5 rounded-card border border-border-subtle bg-bg-subtle/70 p-3.5">
+                <div className="flex items-center gap-2">
+                  <CalendarClock size={11} strokeWidth={1.75} className="text-danger" />
+                  <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                    Next action
                   </span>
                 </div>
-              ))}
-            </div>
-
-            {/* Two columns */}
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1.4fr_1fr]">
-              {/* Tasks */}
-              <div className="rounded-card border border-border-subtle bg-bg-subtle/40 p-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-                  Today
+                <p className="mt-2 text-[12.5px] font-medium text-text-primary">
+                  Finish “Ship onboarding emails”
                 </p>
-                <div className="mt-2 flex flex-col">
-                  {TASKS.map((task) => (
-                    <div
-                      key={task.title}
-                      className="flex h-9 items-center gap-2.5 border-b border-border-subtle last:border-b-0"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[6px] border ${
-                          task.done
-                            ? "border-transparent bg-accent"
-                            : "border-border-strong"
-                        }`}
-                      >
-                        {task.done ? (
-                          <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                            <path
-                              d="M2 5.2 4 7l4-4"
-                              stroke="#0A0A0A"
-                              strokeWidth="1.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        ) : null}
-                      </span>
-                      <span
-                        className={`min-w-0 flex-1 truncate text-[11.5px] ${
-                          task.done ? "text-text-tertiary line-through" : "text-text-primary"
-                        }`}
-                      >
-                        {task.title}
-                      </span>
-                      <span
-                        className={`shrink-0 font-mono text-[10px] tabular-nums ${
-                          task.tone === "danger"
-                            ? "text-danger"
-                            : task.tone === "warning"
-                              ? "text-warning"
-                              : task.tone === "success"
-                                ? "text-success"
-                                : "text-text-tertiary"
-                        }`}
-                      >
-                        {task.due}
-                      </span>
+                <p className="mt-0.5 text-[10.5px] text-text-secondary">
+                  It is the oldest overdue task in the workspace (5 days ago).
+                </p>
+                <span className="mt-2.5 inline-flex h-6 items-center rounded-input bg-accent px-2.5 text-[10.5px] font-medium text-accent-fg">
+                  Open task
+                </span>
+              </div>
+
+              {/* Needs attention */}
+              <div className="mt-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70">
+                <div className="border-b border-border-subtle px-3 py-2">
+                  <p className="text-[10.5px] font-semibold text-text-primary">
+                    Needs attention
+                  </p>
+                </div>
+                {SIGNALS.map((signal) => (
+                  <div
+                    key={signal.title}
+                    className="flex items-start gap-2.5 border-b border-border-subtle px-3 py-2.5 last:border-b-0"
+                  >
+                    <signal.icon
+                      size={11}
+                      strokeWidth={1.75}
+                      className={`mt-0.5 shrink-0 ${
+                        signal.tone === "danger" ? "text-danger" : "text-warning"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <Badge tone={signal.tone}>{signal.kind}</Badge>
+                      <p className="mt-1 truncate text-[11px] font-medium text-text-primary">
+                        {signal.title}
+                      </p>
+                      <p className="truncate text-[10px] text-text-tertiary">
+                        {signal.body}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Goals + Activity */}
-              <div className="flex flex-col gap-3">
-                <div className="rounded-card border border-border-subtle bg-bg-subtle/40 p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-                    Goals
-                  </p>
-                  <div className="mt-2.5 space-y-3">
-                    {[
-                      { label: "Ship v1", value: 72 },
-                      { label: "Grow to 100 tasks", value: 45 },
-                    ].map((goal) => (
-                      <div key={goal.label}>
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className="truncate text-[11px] text-text-secondary">
-                            {goal.label}
-                          </span>
-                          <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
-                            {goal.value}%
-                          </span>
-                        </div>
-                        <Progress value={goal.value} label={goal.label} />
-                      </div>
-                    ))}
+              {/* Metrics */}
+              <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-5 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+                {[
+                  { label: "Open", value: "12", tone: "" },
+                  { label: "Overdue", value: "2", tone: "text-danger" },
+                  { label: "Blocked", value: "1", tone: "text-warning" },
+                  { label: "This week", value: "4", tone: "" },
+                  { label: "Completed", value: "68%", tone: "" },
+                ].map((metric) => (
+                  <div key={metric.label} className="flex flex-col gap-1.5 px-2.5 py-2.5">
+                    <span className="truncate font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-quaternary">
+                      {metric.label}
+                    </span>
+                    <span
+                      className={`font-mono text-[14px] leading-none tabular-nums ${
+                        metric.tone || "text-text-primary"
+                      }`}
+                    >
+                      {metric.value}
+                    </span>
                   </div>
-                </div>
-
-                <div className="hidden rounded-card border border-border-subtle bg-bg-subtle/40 p-3 sm:block">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-                    Activity
-                  </p>
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {ACTIVITY.map((entry) => (
-                      <div key={entry.at} className="flex items-baseline gap-2">
-                        <span className="font-mono text-[9.5px] tabular-nums text-text-quaternary">
-                          {entry.at}
-                        </span>
-                        <span className="min-w-0 truncate text-[10.5px] text-text-secondary">
-                          {entry.text}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>

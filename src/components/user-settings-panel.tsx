@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CreditCard, KeyRound, Layers, LogOut, Mail, ShieldAlert, User } from "lucide-react";
+import {
+  CreditCard,
+  KeyRound,
+  Layers,
+  LogOut,
+  Mail,
+  Radar,
+  ShieldAlert,
+  User,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership, canManageBilling } from "@/lib/workspace";
@@ -25,12 +34,17 @@ type StatusState = {
   message: string;
 };
 
-type TabId = "profile" | "account" | "workspace";
+type TabId = "profile" | "account" | "workspace" | "intelligence";
 
 const SECTIONS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
   { id: "account", label: "Account", icon: <KeyRound size={15} strokeWidth={1.75} /> },
   { id: "workspace", label: "Workspace", icon: <Layers size={15} strokeWidth={1.75} /> },
+  {
+    id: "intelligence",
+    label: "Intelligence",
+    icon: <Radar size={15} strokeWidth={1.75} />,
+  },
 ];
 
 export function UserSettingsPanel({ userId }: { userId: string }) {
@@ -241,23 +255,26 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     <div className="space-y-5">
       <PageHeader
         title="Settings"
-        description="Customize your workspace and preferences."
+        description="Your profile, this workspace, and what NEXUS is allowed to read."
       />
 
-
-      <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label="Settings sections" className="flex flex-col gap-0.5">
+      <div className="grid gap-5 lg:grid-cols-[188px_minmax(0,1fr)]">
+        {/* Desktop: a settings sidebar. Mobile: a scrollable row. */}
+        <nav
+          aria-label="Settings sections"
+          className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible lg:px-0 lg:pb-0"
+        >
           {SECTIONS.map((section) => (
             <button
               key={section.id}
               type="button"
               onClick={() => setTab(section.id)}
-              aria-current={tab === section.id ? "true" : undefined}
+              aria-current={tab === section.id ? "page" : undefined}
               className={cn(
-                "flex h-8 items-center gap-2.5 rounded-nav px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
+                "flex h-8 shrink-0 items-center gap-2.5 rounded-nav border px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
                 tab === section.id
-                  ? "bg-accent-ghost-hover font-medium text-text-primary"
-                  : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+                  ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary"
+                  : "border-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
               )}
             >
               {section.icon}
@@ -329,8 +346,8 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
                 </Alert>
               ) : null}
 
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save changes"}
+              <Button onClick={handleSave} loading={saving}>
+                Save changes
               </Button>
             </div>
           )}
@@ -347,8 +364,8 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
                 <Mail size={15} strokeWidth={1.75} className="text-text-tertiary" />
                 {loading ? "…" : email || "Not available"}
               </span>
-              <span className="font-mono text-mono uppercase tracking-[0.06em] text-text-tertiary">
-                Change email — requires backend evolution
+              <span className="eyebrow text-text-quaternary">
+                Managed by your auth provider
               </span>
             </div>
           </Card>
@@ -371,12 +388,84 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
               <ShieldAlert size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-text-tertiary" />
               <div>
                 <h2 className="text-h2 text-text-primary">Danger zone</h2>
-                <p className="mt-1 text-small text-text-secondary">
-                  Password change and account deletion are not yet exposed in this
-                  build. They depend on a backend evolution of the auth service and
-                  are intentionally not simulated.
+                <p className="mt-1 max-w-[58ch] text-small text-text-secondary">
+                  Password changes and account deletion are handled by the auth
+                  service and are not exposed here yet. Nothing is simulated in this
+                  interface: when the capability exists, the control appears.
                 </p>
               </div>
+            </div>
+          </Card>
+        </div>
+      ) : tab === "intelligence" ? (
+        <div className="grid gap-4">
+          <Card className="p-6">
+            <h2 className="text-h2 text-text-primary">What NEXUS reads</h2>
+            <p className="mt-1 max-w-[60ch] text-small text-text-secondary">
+              NEXUS derives every signal from the work already stored in this
+              workspace. It runs on your data, in your session — nothing is sent
+              to an external model provider.
+            </p>
+
+            <ul className="mt-5 flex flex-col divide-y divide-border-subtle border-y border-border-subtle">
+              {[
+                ["Tasks", "Status, priority, due dates and completion times"],
+                ["Projects", "Status, deadlines, progress and recent changes"],
+                ["Goals", "Progress and target dates"],
+                ["Activity", "The workspace event log written by the database"],
+              ].map(([source, detail]) => (
+                <li
+                  key={source}
+                  className="flex items-baseline justify-between gap-4 py-2.5"
+                >
+                  <span className="text-body text-text-primary">{source}</span>
+                  <span className="max-w-[52%] text-right text-caption text-text-tertiary">
+                    {detail}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-4 text-caption text-text-tertiary">
+              Access is enforced by row-level security in Postgres: NEXUS can only
+              read rows this account is already allowed to read.
+            </p>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-h2 text-text-primary">Signal thresholds</h2>
+            <p className="mt-1 max-w-[60ch] text-small text-text-secondary">
+              The rules NEXUS applies when deciding what is worth surfacing.
+              These are deterministic — the same workspace always produces the
+              same signals.
+            </p>
+
+            <dl className="mt-5 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+              {[
+                ["Deadline pressure", "Project due within 7 days with open tasks"],
+                ["Drifting", "No change in a project for 10+ days"],
+                ["Goal at risk", "Under 80% with 14 days or less remaining"],
+                ["Unscheduled", "Over 60% of open tasks without a date"],
+              ].map(([rule, threshold]) => (
+                <div
+                  key={rule}
+                  className="flex items-baseline justify-between gap-3 border-b border-border-subtle pb-2"
+                >
+                  <dt className="text-caption text-text-secondary">{rule}</dt>
+                  <dd className="shrink-0 text-right font-mono text-mono text-text-tertiary">
+                    {threshold}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="mt-5">
+              <Link
+                href="/intelligence"
+                className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
+              >
+                Open Intelligence
+              </Link>
             </div>
           </Card>
         </div>
@@ -428,9 +517,10 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
               <div className="mt-4">
                 <Button
                   onClick={handleRenameWorkspace}
-                  disabled={savingWorkspace || !canManageBilling(workspaceRole)}
+                  loading={savingWorkspace}
+                  disabled={!canManageBilling(workspaceRole)}
                 >
-                  {savingWorkspace ? "Renaming…" : "Rename workspace"}
+                  Rename workspace
                 </Button>
               </div>
             </div>
@@ -455,13 +545,13 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href="/settings/billing"
-                className="inline-flex h-9 items-center rounded-pill border border-border-default px-4 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+                className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
               >
                 Usage &amp; billing
               </Link>
               <Link
                 href="/upgrade"
-                className="inline-flex h-9 items-center rounded-pill bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
+                className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
               >
                 Compare plans
               </Link>

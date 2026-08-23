@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
+import { Metric } from "@/components/ui/card";
 
 type Goal = {
   id: string;
@@ -163,6 +164,14 @@ function GoalManagerInner({ userId }: { userId: string }) {
     setError("");
     setFormOpen(true);
   };
+
+  // The global "C" shortcut creates in the context of the current page.
+  useEffect(() => {
+    const onCreate = () => openCreateForm();
+    window.addEventListener("nexus:create", onCreate);
+    return () => window.removeEventListener("nexus:create", onCreate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createGoal = async () => {
     if (!workspaceId || !form.title.trim()) {
@@ -322,29 +331,18 @@ function GoalManagerInner({ userId }: { userId: string }) {
       : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="page-enter space-y-5">
       <PageHeader
         title="Goals"
         count={goals.length}
-        description="The outcomes this workspace is working towards."
+        description="The outcomes this workspace is working towards, and how far along they are."
         actions={<CreateButton label="New Goal" onClick={openCreateForm} />}
       />
 
-      <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-card border border-border-subtle bg-bg-subtle/60">
-        {[
-          { label: "In progress", value: goals.length - completedCount },
-          { label: "Completed", value: completedCount },
-          { label: "Avg. progress", value: `${averageProgress}%` },
-        ].map((metric) => (
-          <div key={metric.label} className="px-4 py-3">
-            <p className="font-mono text-mono uppercase tracking-[0.08em] text-text-tertiary">
-              {metric.label}
-            </p>
-            <p className="mt-1 font-mono text-[20px] leading-none tabular-nums text-text-primary">
-              {metric.value}
-            </p>
-          </div>
-        ))}
+      <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+        <Metric label="In progress" value={goals.length - completedCount} />
+        <Metric label="Completed" value={completedCount} />
+        <Metric label="Avg. progress" value={`${averageProgress}%`} />
       </div>
 
       {!editingGoalId && limitResult ? (
@@ -355,21 +353,22 @@ function GoalManagerInner({ userId }: { userId: string }) {
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
       {loading ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2" aria-hidden="true">
           {[0, 1].map((index) => (
-            <Skeleton key={index} className="h-40 w-full rounded-[20px]" />
+            <Skeleton key={index} className="h-40 w-full rounded-card" />
           ))}
         </div>
       ) : !workspaceId ? (
         <EmptyState
           title="No active workspace"
-          description="This account is not linked to an active workspace yet."
+          description="This account is not linked to an active workspace yet, so goals cannot be created."
+          icon={<Target size={17} strokeWidth={1.75} />}
         />
       ) : goals.length === 0 ? (
         <EmptyState
           title="No goals yet"
-          description="Define what you are working towards, then track the progress."
-          icon={<Target size={18} strokeWidth={1.75} />}
+          description="Define what this workspace is working towards. NEXUS measures progress against goals and flags the ones falling behind their target date."
+          icon={<Target size={17} strokeWidth={1.75} />}
           action={<CreateButton label="New Goal" onClick={openCreateForm} />}
         />
       ) : (
@@ -382,7 +381,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
             return (
               <li
                 key={goal.id}
-                className="group rounded-[20px] border border-border-subtle bg-bg-subtle/60 p-5 transition-colors duration-150 ease-nexus hover:border-border-default"
+                className="group rounded-card border border-border-subtle bg-bg-subtle/70 p-5 transition-colors duration-150 ease-nexus hover:border-border-default"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -444,7 +443,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
                       {Math.round(progress)}
                       <span className="text-[16px] text-text-tertiary">%</span>
                     </span>
-                    <span className="font-mono text-mono uppercase tracking-[0.08em] text-text-quaternary">
+                    <span className="eyebrow text-text-quaternary">
                       Progress
                     </span>
                   </div>
@@ -577,7 +576,7 @@ export function GoalManager({ userId }: { userId: string }) {
       fallback={
         <div className="space-y-3">
           <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-40 w-full rounded-[20px]" />
+          <Skeleton className="h-40 w-full rounded-card" />
         </div>
       }
     >

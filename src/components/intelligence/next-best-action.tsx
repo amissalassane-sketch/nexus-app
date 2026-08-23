@@ -68,7 +68,7 @@ export function NextBestAction() {
             <div className="relative flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
               <div className="flex items-center gap-2.5">
                 <NexusLogo size={15} />
-                <span className="font-mono text-mono uppercase tracking-[0.12em] text-text-secondary">
+                <span className="eyebrow text-text-secondary">
                   Nexus Intelligence
                 </span>
               </div>
@@ -77,7 +77,7 @@ export function NextBestAction() {
 
             <div className="relative grid lg:grid-cols-[1.05fr_1fr]">
               <div className="border-b border-border-subtle p-5 sm:p-7 lg:border-b-0 lg:border-r">
-                <p className="font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+                <p className="eyebrow text-text-tertiary">
                   Reading the workspace
                 </p>
 
@@ -92,7 +92,7 @@ export function NextBestAction() {
                           { "--cycle-delay": `${index * 2600}ms` } as CSSProperties
                         }
                       >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border border-border-default bg-bg-surface text-text-tertiary">
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface text-text-tertiary">
                           <Icon size={12} strokeWidth={1.75} aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
@@ -113,7 +113,7 @@ export function NextBestAction() {
               </div>
 
               <div className="flex flex-col justify-center p-5 sm:p-7">
-                <p className="font-mono text-mono uppercase tracking-[0.12em] text-lavender">
+                <p className="eyebrow text-lavender">
                   Next best action
                 </p>
 
@@ -122,7 +122,7 @@ export function NextBestAction() {
                 </h3>
 
                 <div className="mt-5 border-l border-border-default pl-4">
-                  <p className="font-mono text-mono uppercase tracking-[0.1em] text-text-tertiary">
+                  <p className="eyebrow text-text-tertiary">
                     Why
                   </p>
                   <ul className="mt-2 flex flex-col gap-1.5">
@@ -154,7 +154,7 @@ export function NextBestAction() {
             </div>
           </div>
 
-          <p className="mt-4 text-center font-mono text-mono uppercase tracking-[0.08em] text-text-quaternary">
+          <p className="mt-4 text-center eyebrow text-text-quaternary">
             Example signals — your workspace produces its own
           </p>
         </LandingReveal>
