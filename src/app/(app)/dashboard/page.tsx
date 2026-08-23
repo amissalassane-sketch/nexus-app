@@ -220,7 +220,7 @@ export default async function DashboardPage() {
         </div>
 
         <Link
-          href="/intelligence"
+          href="/app/intelligence"
           className="group inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary md:self-auto"
         >
           Open Intelligence
@@ -250,7 +250,7 @@ export default async function DashboardPage() {
         bodyClassName="p-0"
         actions={
           <Link
-            href="/intelligence"
+            href="/app/intelligence"
             className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
           >
             All signals

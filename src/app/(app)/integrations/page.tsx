@@ -237,7 +237,7 @@ export default async function IntegrationsPage() {
           do not depend on any external tool.
         </p>
         <div className="mt-4">
-          <ButtonLink href="/intelligence" variant="secondary">
+          <ButtonLink href="/app/intelligence" variant="secondary">
             See what NEXUS detected
           </ButtonLink>
         </div>

@@ -99,7 +99,7 @@ export default async function IntelligencePage() {
         <ErrorState
           title="We couldn't read this workspace"
           description="Your session may have expired, or the workspace is no longer reachable. Nothing has been changed."
-          action={<ButtonLink href="/intelligence">Retry</ButtonLink>}
+          action={<ButtonLink href="/app/intelligence">Retry</ButtonLink>}
         />
       ) : (
         <IntelligenceView insights={insights} context={context} />

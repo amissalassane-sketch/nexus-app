@@ -83,7 +83,7 @@ const CREATE_COMMANDS: Command[] = [
     label: "Review what needs attention",
     hint: "Intelligence",
     icon: <Radar size={15} strokeWidth={1.75} />,
-    href: "/intelligence",
+    href: "/app/intelligence",
     keywords: "signals blocked risk attention review",
   },
 ];

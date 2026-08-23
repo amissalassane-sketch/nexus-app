@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         // Product surfaces are behind auth and have no public value.
         disallow: [
           "/dashboard",
+          "/app/",
           "/tasks",
           "/projects",
           "/goals",

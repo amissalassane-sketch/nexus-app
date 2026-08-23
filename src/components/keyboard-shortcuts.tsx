@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 
 const GOTO: Record<string, string> = {
   o: "/dashboard",
-  i: "/intelligence",
+  i: "/app/intelligence",
   p: "/projects",
   t: "/tasks",
   g: "/goals",

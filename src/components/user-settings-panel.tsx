@@ -461,7 +461,7 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
 
             <div className="mt-5">
               <Link
-                href="/intelligence"
+                href="/app/intelligence"
                 className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
               >
                 Open Intelligence

@@ -53,7 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: "home dashboard overview start",
       },
       {
-        href: "/intelligence",
+        href: "/app/intelligence",
         label: "Intelligence",
         icon: Radar,
         hint: "Signals detected in your workspace",
@@ -155,7 +155,7 @@ export const MOBILE_NAV: NavEntry[] = [
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Overview",
-  "/intelligence": "Intelligence",
+  "/app/intelligence": "Intelligence",
   "/projects": "Projects",
   "/tasks": "Tasks",
   "/goals": "Goals",
