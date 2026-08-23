@@ -12,7 +12,7 @@ const FAQ_ITEMS = [
   {
     question: "Is NEXUS free?",
     answer:
-      "Yes. The Free plan includes one workspace, two projects, one hundred active tasks and three goals — no card required. PRO and TEAM pricing will be announced when a payment provider is connected; nothing is ever charged before that.",
+      "Yes. Free is $0 forever and includes the core workspace, projects and tasks, basic collaboration, limited AI Intelligence and basic automations — no card required. Pro is $19 per user per month, and Business is $49 per user per month.",
   },
   {
     question: "How does NEXUS Intelligence work?",
