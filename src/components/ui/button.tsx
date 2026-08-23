@@ -81,6 +81,7 @@ export function ButtonLink({
   size = "md",
   className,
   children,
+  ref,
   ...props
 }: {
   href: string;
@@ -88,10 +89,14 @@ export function ButtonLink({
   size?: ButtonSize;
   className?: string;
   children: ReactNode;
-} & Omit<React.ComponentProps<typeof Link>, "href" | "className">) {
+  /** React 19 forwards refs through props — used by callers that need
+   *  the rendered anchor (e.g. to measure it for a motion effect). */
+  ref?: React.Ref<HTMLAnchorElement>;
+} & Omit<React.ComponentProps<typeof Link>, "href" | "className" | "ref">) {
   return (
     <Link
       href={href}
+      ref={ref}
       className={buttonClasses({ variant, size, className })}
       {...props}
     >
