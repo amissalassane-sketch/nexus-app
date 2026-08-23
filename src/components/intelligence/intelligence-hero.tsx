@@ -1,13 +1,19 @@
 import type { CSSProperties } from "react";
 import { ArrowRight, Layers, Radar, Zap } from "lucide-react";
-import { ButtonLink } from "@/components/ui/button";
-import { IntelligenceField } from "@/components/intelligence/intelligence-field";
+import { IntelligenceCTA } from "@/components/intelligence/intelligence-cta";
+import { IntelligenceNetwork } from "@/components/intelligence/intelligence-network";
 
 // ============================================================
 // NEXUS INTELLIGENCE — HERO
-// One deliberate viewport: the mark forms out of signal points,
-// the statement lands underneath it, two NEXUS actions, and a
-// single quiet line of product truth along the bottom edge.
+//
+// One deliberate viewport. The intelligence network runs behind
+// everything; the statement, the two NEXUS actions and a single
+// quiet line of product truth sit on top of it.
+//
+// Layer order (§8):
+//   network canvas → atmospheric glow → scrim → content → nav
+// The scrim is what guarantees the copy stays readable no matter
+// what the field is doing behind it.
 // ============================================================
 
 const delay = (ms: number) => ({ "--intel-delay": `${ms}ms` }) as CSSProperties;
@@ -36,22 +42,31 @@ const FOOTNOTES = [
 export function IntelligenceHero() {
   return (
     <section className="relative isolate flex min-h-[100svh] flex-col overflow-hidden pt-14">
-      <IntelligenceField />
+      {/* ---- Layer 1: the computational field ---- */}
+      <div className="nexus-intel-network" aria-hidden="true">
+        <IntelligenceNetwork className="nexus-intel-canvas" />
+      </div>
 
-      {/* The mark occupies this space — it is deliberately empty. */}
-      <div className="pointer-events-none min-h-[24vh] flex-1 sm:min-h-[32vh]" />
+      {/* ---- Layer 2: atmospheric glow ---- */}
+      <div className="nexus-intel-atmosphere" aria-hidden="true" />
 
+      {/* ---- Layer 3: the scrim that protects the copy ---- */}
+      <div className="nexus-intel-scrim" aria-hidden="true" />
+
+      <div className="pointer-events-none min-h-[16vh] flex-1 sm:min-h-[20vh]" />
+
+      {/* ---- Layer 4: hero content ---- */}
       <div className="relative z-10 mx-auto flex w-full max-w-[1120px] flex-col items-center px-5 text-center sm:px-6">
         <span
           className="nexus-intel-item inline-flex h-[26px] items-center gap-2 rounded-pill border border-border-default bg-bg-subtle/80 px-3 font-mono text-mono uppercase tracking-[0.12em] text-text-secondary backdrop-blur-sm"
           style={delay(120)}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-lavender" aria-hidden="true" />
+          <span className="nexus-intel-eyebrow-dot" aria-hidden="true" />
           Nexus Intelligence
         </span>
 
         <h1
-          className="nexus-intel-item mt-7 text-[36px] font-medium leading-[1.03] tracking-[-0.04em] text-text-primary sm:text-[56px] lg:text-[66px]"
+          className="nexus-intel-item mt-7 text-[38px] font-medium leading-[1.03] tracking-[-0.04em] text-text-primary sm:text-[56px] lg:text-[68px]"
           style={delay(220)}
         >
           It reads <span className="nexus-intel-accent">the work</span>.
@@ -72,18 +87,17 @@ export function IntelligenceHero() {
           className="nexus-intel-item mt-9 flex flex-wrap items-center justify-center gap-3"
           style={delay(420)}
         >
-          <ButtonLink href="/signup" size="lg" className="nexus-intel-sweep">
+          <IntelligenceCTA href="/signup" className="nexus-intel-sweep">
             Get started
             <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
-          </ButtonLink>
-          <ButtonLink
+          </IntelligenceCTA>
+          <IntelligenceCTA
             href="#in-action"
             variant="secondary"
-            size="lg"
-            className="nexus-intel-sweep bg-white/[0.02] backdrop-blur-sm"
+            className="nexus-intel-sweep"
           >
             See it in action
-          </ButtonLink>
+          </IntelligenceCTA>
         </div>
       </div>
 

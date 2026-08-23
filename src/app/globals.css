@@ -840,173 +840,190 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 }
 
 /* ============================================================
-   HERO — THE INTELLIGENCE FIELD
-   A single interaction layer (one pointermove listener writing
-   CSS variables through rAF) drives every parallax layer below.
+   HERO — THE INTELLIGENCE NETWORK
+   The field itself is drawn on a single <canvas> (see
+   components/intelligence/intelligence-network.tsx). Everything
+   here is the surrounding atmosphere and the scrim that keeps the
+   typography readable, in the layer order of the spec:
+
+     network canvas → atmospheric glow → scrim → content → nav
+
+   No layer here ever captures a pointer event.
    ============================================================ */
 
-.nexus-intel-field {
-  --field-light-x: 0px;
-  --field-light-y: 0px;
-  --field-mark-x: 0px;
-  --field-mark-y: 0px;
-  --field-node-x: 0px;
-  --field-node-y: 0px;
-  --field-dust-x: 0px;
-  --field-dust-y: 0px;
-  --field-line-x: 0px;
-  --field-cursor-x: 50%;
-  --field-cursor-y: 34%;
+.nexus-intel-network {
   position: absolute;
-  inset: -6% -4% 0;
+  inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  /* The field fades out before the section ends so it never collides
+     with the footnote rule or the section below. */
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 4%,
-    black 34%,
-    transparent 76%
+    black 7%,
+    black 82%,
+    transparent 99%
   );
-}
-
-/* Deep radial light — the room the mark sits in. */
-.nexus-intel-halo {
-  position: absolute;
-  left: 50%;
-  top: 34%;
-  width: min(1500px, 132vw);
-  aspect-ratio: 1.55;
-  border-radius: 50%;
-  opacity: 0.85;
-  background: radial-gradient(
-    ellipse,
-    rgba(255, 255, 255, 0.055),
-    rgba(233, 228, 255, 0.035) 34%,
-    transparent 68%
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 7%,
+    black 82%,
+    transparent 99%
   );
-  transform: translate3d(
-    calc(-50% + var(--field-light-x)),
-    calc(-50% + var(--field-light-y)),
-    0
-  );
-  will-change: transform;
-}
-
-/* Cursor illumination — light follows the pointer, never content. */
-.nexus-intel-cursor-light {
-  position: absolute;
-  inset: 0;
-  opacity: 0.9;
-  background: radial-gradient(
-    420px circle at var(--field-cursor-x) var(--field-cursor-y),
-    rgba(233, 228, 255, 0.05),
-    transparent 62%
-  );
-}
-
-/* Fine measurement grid, horizon-anchored. */
-.nexus-intel-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.5;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 72px 72px;
-  background-position: center;
-  mask-image: radial-gradient(ellipse 64% 58% at 50% 32%, black, transparent 78%);
-  transform: translate3d(var(--field-dust-x), var(--field-dust-y), 0);
-  will-change: transform;
-}
-
-/* Full-bleed data paths running through the mark. */
-.nexus-intel-paths {
-  position: absolute;
-  left: 50%;
-  top: 34%;
-  width: 200%;
-  max-width: 2600px;
-  height: 1px;
-  transform: translate3d(calc(-50% + var(--field-line-x)), -50%, 0);
-  will-change: transform;
-}
-
-.nexus-intel-path {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.07) 28%,
-    rgba(233, 228, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.07) 72%,
-    transparent
-  );
+  /* The network materialises rather than switching on. */
   opacity: 0;
-  animation: nexus-intel-path-in 1400ms var(--ease-out-expo) both;
-  animation-delay: var(--path-delay, 0ms);
+  animation: nexus-intel-network-in 1200ms var(--ease-out-expo) 80ms both;
 }
 
-@keyframes nexus-intel-path-in {
+.nexus-intel-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Non-negotiable: the field must never intercept a click, a text
+     selection or a scroll gesture. */
+  pointer-events: none;
+}
+
+@keyframes nexus-intel-network-in {
   from {
     opacity: 0;
-    transform: scaleX(0.55);
   }
   to {
     opacity: 1;
-    transform: scaleX(1);
   }
 }
 
-/* A single signal travelling along one of the data paths. */
-.nexus-intel-pulse {
-  position: absolute;
-  top: -1px;
-  left: 0;
-  width: 96px;
-  height: 3px;
-  border-radius: 9999px;
-  background: linear-gradient(to right, transparent, rgba(233, 228, 255, 0.6), transparent);
-  opacity: 0;
-  animation: nexus-intel-pulse-run 9s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  animation-delay: var(--pulse-delay, 0ms);
-}
-
-@keyframes nexus-intel-pulse-run {
-  0% {
-    opacity: 0;
-    transform: translateX(24%);
-  }
-  8% {
-    opacity: 0.75;
-  }
-  46% {
-    opacity: 0.75;
-  }
-  60%,
-  100% {
-    opacity: 0;
-    transform: translateX(76%);
-  }
-}
-
-/* ---------- The N -------------------------------------------
-   The locked mark is never redrawn: the official PNG is used as
-   a mask so the exact geometry carries the light. */
-.nexus-intel-mark {
+/* ---------- Atmospheric glow ---------------------------------
+   One very faint light behind the copy. This is the only gradient
+   in the hero, and it exists to give the black some depth — not to
+   decorate. */
+.nexus-intel-atmosphere {
   position: absolute;
   left: 50%;
-  top: 34%;
-  height: min(96vh, 1040px, 130vw);
-  aspect-ratio: 1;
-  transform: translate3d(calc(-50% + var(--field-mark-x)), calc(-50% + var(--field-mark-y)), 0);
-  will-change: transform;
+  top: 46%;
+  z-index: 1;
+  width: min(1280px, 128vw);
+  aspect-ratio: 1.7;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0);
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 255, 255, 0.038),
+    rgba(199, 201, 255, 0.022) 38%,
+    transparent 70%
+  );
+  opacity: 0;
+  animation:
+    nexus-intel-atmosphere-in 1600ms var(--ease-out-expo) 200ms both,
+    nexus-intel-breathe 14s ease-in-out 2400ms infinite;
 }
 
+@keyframes nexus-intel-atmosphere-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, -50%, 0) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+}
+
+@keyframes nexus-intel-breathe {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- Scrim --------------------------------------------
+   The contract with the reader: whatever the network is doing, the
+   headline sits on near-black. Elliptical so the field stays fully
+   visible at the edges of the viewport. */
+.nexus-intel-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 46% 40% at 50% 54%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.62) 42%,
+    rgba(0, 0, 0, 0.24) 70%,
+    transparent 100%
+  );
+}
+
+/* The eyebrow marker — the one lavender pixel in the hero. */
+.nexus-intel-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #c7c9ff;
+  box-shadow: 0 0 8px rgba(199, 201, 255, 0.5);
+  animation: nexus-intel-eyebrow-dot 5.5s ease-in-out 1800ms infinite;
+}
+
+@keyframes nexus-intel-eyebrow-dot {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- Hero actions -------------------------------------
+   The NEXUS pill, unchanged in shape and colour. Only the hover
+   response is tuned for this page: a slight lift and a soft white
+   bloom, no aggressive motion. */
+.nexus-intel-cta {
+  height: 46px;
+  padding-inline: 20px;
+  transition:
+    transform 320ms var(--ease-out-expo),
+    box-shadow 320ms var(--ease-out-expo),
+    filter 320ms var(--ease-out-expo),
+    background-color 200ms var(--ease-nexus),
+    border-color 200ms var(--ease-nexus),
+    color 200ms var(--ease-nexus);
+}
+
+.nexus-intel-cta-primary:hover {
+  transform: scale(1.02);
+  filter: brightness(1.04);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 6px 28px rgba(255, 255, 255, 0.16);
+}
+
+.nexus-intel-cta-primary:active {
+  transform: scale(0.99);
+}
+
+.nexus-intel-cta-secondary {
+  border-color: rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px);
+}
+
+.nexus-intel-cta-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+/* The closing section reuses the locked mark as a static watermark;
+   the mask geometry stays defined here for it. */
 .nexus-intel-mark-layer {
   position: absolute;
   inset: 0;
@@ -1020,285 +1037,6 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   -webkit-mask-repeat: no-repeat;
 }
 
-/* The halo lives on a wrapper: masking is applied after filters, so a
-   blur set on the masked layer itself would be clipped back to the mark
-   and never radiate. */
-.nexus-intel-mark-halo {
-  position: absolute;
-  inset: 0;
-  filter: blur(30px);
-  opacity: 0;
-  animation:
-    nexus-intel-mark-glow-in 1500ms var(--ease-out-expo) 420ms both,
-    nexus-intel-breathe 11s ease-in-out 2200ms infinite;
-}
-
-.nexus-intel-mark-glow {
-  background: linear-gradient(
-    155deg,
-    rgba(233, 228, 255, 0.5),
-    rgba(255, 255, 255, 0.2) 46%,
-    rgba(255, 255, 255, 0.05)
-  );
-}
-
-.nexus-intel-mark-core {
-  background:
-    linear-gradient(
-      152deg,
-      rgba(255, 255, 255, 0.38) 0%,
-      rgba(240, 238, 255, 0.19) 36%,
-      rgba(255, 255, 255, 0.085) 62%,
-      rgba(255, 255, 255, 0.14) 100%
-    );
-  opacity: 0;
-  animation: nexus-intel-mark-in 1700ms var(--ease-out-expo) 380ms both;
-}
-
-/* The workspace texture, read *inside* the mark. */
-.nexus-intel-mark-texture {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
-  background-size: 14px 14px;
-  opacity: 0;
-  animation: nexus-intel-texture-in 1200ms var(--ease-nexus) 900ms both;
-}
-
-/* Slow light sweep — liquid metal, not a gradient wash. */
-/* The sweep travels inside the mark: the mask stays on the wrapper so
-   the geometry never moves, only the light does. */
-.nexus-intel-mark-sweep {
-  overflow: hidden;
-}
-
-.nexus-intel-mark-sheen {
-  position: absolute;
-  inset: -10% -40%;
-  background: linear-gradient(
-    104deg,
-    transparent 38%,
-    rgba(255, 255, 255, 0.36) 48%,
-    rgba(233, 228, 255, 0.22) 54%,
-    transparent 64%
-  );
-  opacity: 0;
-  animation: nexus-intel-sheen 12s cubic-bezier(0.5, 0, 0.5, 1) 2000ms infinite;
-  will-change: transform;
-}
-
-/* Precision edge: a hairline of the same geometry, one pixel out. */
-.nexus-intel-mark-edge {
-  background: linear-gradient(
-    150deg,
-    rgba(255, 255, 255, 0.55),
-    rgba(233, 228, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.1)
-  );
-  opacity: 0;
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  mask-image: url("/logo/nexus.png"), url("/logo/nexus.png");
-  mask-size: contain, calc(100% - 3px) calc(100% - 3px);
-  mask-position: center, center;
-  mask-repeat: no-repeat, no-repeat;
-  -webkit-mask-image: url("/logo/nexus.png"), url("/logo/nexus.png");
-  -webkit-mask-size: contain, calc(100% - 3px) calc(100% - 3px);
-  -webkit-mask-position: center, center;
-  -webkit-mask-repeat: no-repeat, no-repeat;
-  animation: nexus-intel-edge-in 1100ms var(--ease-out-expo) 220ms both;
-}
-
-@keyframes nexus-intel-mark-in {
-  from {
-    opacity: 0;
-    transform: scale(1.045);
-  }
-  60% {
-    opacity: 1;
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes nexus-intel-mark-glow-in {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-}
-
-@keyframes nexus-intel-edge-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.72;
-  }
-}
-
-@keyframes nexus-intel-texture-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.5;
-  }
-}
-
-@keyframes nexus-intel-breathe {
-  0%,
-  100% {
-    opacity: 0.44;
-  }
-  50% {
-    opacity: 0.72;
-  }
-}
-
-@keyframes nexus-intel-sheen {
-  0% {
-    opacity: 0;
-    transform: translateX(-38%);
-  }
-  12% {
-    opacity: 0.65;
-  }
-  46% {
-    opacity: 0.65;
-  }
-  62%,
-  100% {
-    opacity: 0;
-    transform: translateX(38%);
-  }
-}
-
-/* ---------- Signal nodes + connections (SVG) ------------------ */
-.nexus-intel-svg {
-  position: absolute;
-  left: 50%;
-  top: 34%;
-  height: min(96vh, 1040px, 130vw);
-  aspect-ratio: 1;
-  overflow: visible;
-  transform: translate3d(calc(-50% + var(--field-node-x)), calc(-50% + var(--field-node-y)), 0);
-  will-change: transform;
-}
-
-/* `pathLength="1"` normalises every segment, so the draw-in reads at the
-   same speed whatever the length of the line. */
-.nexus-intel-link {
-  stroke: rgba(255, 255, 255, 0.14);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  fill: none;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: nexus-intel-draw 1100ms var(--ease-out-expo) both;
-  animation-delay: var(--link-delay, 0ms);
-}
-
-@keyframes nexus-intel-draw {
-  from {
-    stroke-dashoffset: 1;
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-}
-
-.nexus-intel-node {
-  fill: rgba(233, 228, 255, 0.9);
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation:
-    nexus-intel-node-in 520ms var(--ease-out-expo) both,
-    nexus-intel-node-pulse 6s ease-in-out infinite;
-  animation-delay: var(--node-delay, 0ms), calc(var(--node-delay, 0ms) + 900ms);
-}
-
-.nexus-intel-node-ring {
-  fill: none;
-  stroke: rgba(233, 228, 255, 0.3);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: nexus-intel-ring 6s ease-out infinite;
-  animation-delay: var(--node-delay, 0ms);
-}
-
-@keyframes nexus-intel-node-in {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-
-@keyframes nexus-intel-node-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
-
-@keyframes nexus-intel-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  14% {
-    opacity: 0.7;
-  }
-  60%,
-  100% {
-    opacity: 0;
-    transform: scale(2.4);
-  }
-}
-
-/* ---------- Ambient dust -------------------------------------- */
-.nexus-intel-dust {
-  position: absolute;
-  inset: 0;
-  transform: translate3d(var(--field-dust-x), var(--field-dust-y), 0);
-  will-change: transform;
-}
-
-.nexus-intel-speck {
-  fill: rgba(255, 255, 255, 0.5);
-  animation: nexus-intel-speck 7s ease-in-out infinite;
-  animation-delay: var(--speck-delay, 0ms);
-}
-
-@keyframes nexus-intel-speck {
-  0%,
-  100% {
-    opacity: 0.12;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
 
 /* ============================================================
    SECTION SURFACES
@@ -1511,55 +1249,25 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
    FALLBACKS — the page is complete without motion or scripting
    ============================================================ */
 
-/* Coarse pointers: the parallax variables are never written (the field
-   never attaches a listener), so the layers simply stay at rest — only
-   the compositing hints and the cursor light are dropped. */
-@media (hover: none), (pointer: coarse) {
-  .nexus-intel-halo,
-  .nexus-intel-grid,
-  .nexus-intel-mark,
-  .nexus-intel-svg,
-  .nexus-intel-dust,
-  .nexus-intel-paths {
-    will-change: auto;
-  }
-
-  .nexus-intel-cursor-light {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
+  /* Every entrance resolves instantly to its final state. The network
+     canvas draws exactly one static frame (the engine never starts its
+     loop under reduced motion), so the field stays present and legible
+     without a single moving pixel. */
   .nexus-intel-item,
-  .nexus-intel-path,
-  .nexus-intel-mark-halo,
-  .nexus-intel-mark-core,
-  .nexus-intel-mark-texture,
-  .nexus-intel-mark-edge,
-  .nexus-intel-node,
-  .nexus-intel-link {
+  .nexus-intel-network,
+  .nexus-intel-atmosphere {
     opacity: 1;
     transform: none;
     filter: none;
     animation: none;
-    stroke-dashoffset: 0;
   }
 
-  .nexus-intel-mark-halo {
-    opacity: 0.5;
+  .nexus-intel-atmosphere {
+    transform: translate3d(-50%, -50%, 0);
   }
 
-  .nexus-intel-mark-texture {
-    opacity: 0.5;
-  }
-
-  .nexus-intel-mark-edge {
-    opacity: 0.7;
-  }
-
-  .nexus-intel-mark-sheen,
-  .nexus-intel-pulse,
-  .nexus-intel-node-ring,
+  .nexus-intel-eyebrow-dot,
   .nexus-intel-speck,
   .nexus-intel-scan::after,
   .nexus-intel-cycle,
@@ -1569,9 +1277,6 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
     animation: none;
   }
 
-  .nexus-intel-mark-sheen,
-  .nexus-intel-pulse,
-  .nexus-intel-node-ring,
   .nexus-intel-wire,
   .nexus-intel-scan::after,
   .nexus-intel-step-line::after {
@@ -1582,29 +1287,15 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
     background-color: var(--color-bg-surface-3);
   }
 
-  /* Positioning transforms are kept (they centre the layers); only the
-     pointer offsets are dropped — they are never written under reduced
-     motion, so the layers rest at their neutral position. */
-  .nexus-intel-halo,
-  .nexus-intel-grid,
-  .nexus-intel-dust,
-  .nexus-intel-mark,
-  .nexus-intel-svg,
-  .nexus-intel-paths {
-    will-change: auto;
-  }
-
-  .nexus-intel-cursor-light {
-    display: none;
+  .nexus-intel-cta,
+  .nexus-intel-cta-primary:hover {
+    transform: none;
+    transition: none;
+    box-shadow: none;
+    filter: none;
   }
 
   .nexus-intel-sweep::after {
-    display: none;
-  }
-}
-
-@media (scripting: none) {
-  .nexus-intel-cursor-light {
     display: none;
   }
 }
