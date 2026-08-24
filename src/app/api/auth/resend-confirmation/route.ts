@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${getRequestOrigin(request)}/auth/callback`,
+        emailRedirectTo: `${getRequestOrigin(request)}/auth/confirm`,
       },
     });
   } catch (cause) {

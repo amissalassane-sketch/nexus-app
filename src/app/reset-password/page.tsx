@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      router.replace(payload.redirectTo ?? "/dashboard");
+      router.replace(payload.redirectTo ?? "/app");
       router.refresh();
     } catch (cause) {
       setError(
@@ -105,6 +105,7 @@ export default function ResetPasswordPage() {
         >
           <PasswordInput
             id="reset-password"
+            name="password"
             size="lg"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -118,6 +119,7 @@ export default function ResetPasswordPage() {
         <Field label="Confirm password" htmlFor="reset-confirm">
           <PasswordInput
             id="reset-confirm"
+            name="confirm-password"
             size="lg"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}

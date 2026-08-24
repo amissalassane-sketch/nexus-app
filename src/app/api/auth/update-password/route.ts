@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { humanizeAuthError } from "@/lib/auth-errors";
+import { resolveUserAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Completes a password recovery. The user must already have a session
@@ -60,14 +61,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { destination } = await resolveUserAuthDestination(supabase, user.id);
 
   return NextResponse.json({
     ok: true,
-    redirectTo: profile?.onboarding_completed === true ? "/dashboard" : "/onboarding",
+    redirectTo: destination,
   });
 }

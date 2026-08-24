@@ -108,7 +108,7 @@ function CheckEmailInner() {
         }
 
         setMessage(
-          payload.message ?? "If an account exists for this address, a confirmation link is on its way."
+          "Verification email sent. Check your inbox and follow the verification link."
         );
         startCooldown();
       } catch (cause) {
@@ -127,7 +127,7 @@ function CheckEmailInner() {
   return (
     <AuthLayout
       title="Check your inbox"
-      description="We sent a verification link to your email. Open it to activate your account, then sign in."
+      description="We sent a NEXUS verification link to your email. Open it to activate your account, then continue to your workspace."
       footer={
         <>
           Wrong address?{" "}
@@ -148,17 +148,13 @@ function CheckEmailInner() {
 
       {email ? (
         <p className="mb-6 text-center text-small text-text-secondary">
-          We sent a confirmation link to{" "}
-          <span className="text-text-primary">{email}</span>. Open it in any browser
-          to activate your account, then sign in.
+          We sent a NEXUS verification link to{" "}
+          <span className="text-text-primary">{email}</span>. Open it to verify
+          your address and continue.
         </p>
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <ButtonLink href="mailto:" size="lg" variant="secondary" className="w-full">
-          Open email
-        </ButtonLink>
-
         <ButtonLink href="/login" size="lg" className="w-full">
           Back to sign in
         </ButtonLink>
@@ -173,8 +169,8 @@ function CheckEmailInner() {
           {cooldown > 0
             ? `Resend available in ${cooldown}s`
             : loading
-              ? "Resending…"
-              : "Didn't receive it? Resend email"}
+              ? "Sending verification email…"
+              : "Didn't receive it? Resend verification email"}
         </button>
       </form>
 

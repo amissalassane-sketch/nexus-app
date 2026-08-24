@@ -40,18 +40,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Email links sometimes land on Site URL (/), /onboarding or /login with
-  // `?code=` / `?token_hash=` instead of /auth/callback. Catch them here so
-  // confirmation is handled in one place — and never dumps a visitor into
-  // onboarding before they choose Sign in or Create account.
+  // `?code=` / `?token_hash=` instead of the canonical auth route. Catch them
+  // here so confirmation is handled in one place:
+  //   * token_hash (new NEXUS-branded email template) -> /auth/confirm
+  //   * code (legacy email links and Google OAuth callback) -> /auth/callback
   const authCode = request.nextUrl.searchParams.get("code");
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
   if (
     (authCode || tokenHash) &&
+    !pathname.startsWith("/auth/confirm") &&
     !pathname.startsWith("/auth/callback") &&
     !pathname.startsWith("/api/")
   ) {
     const target = request.nextUrl.clone();
-    target.pathname = "/auth/callback";
+    target.pathname = tokenHash ? "/auth/confirm" : "/auth/callback";
     if (pathname.startsWith("/reset-password") && !target.searchParams.get("next")) {
       target.searchParams.set("next", "/reset-password");
     }
