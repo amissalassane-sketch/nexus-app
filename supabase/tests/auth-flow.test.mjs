@@ -326,8 +326,13 @@ assert(
 const health = await visit("/api/health");
 const healthBody = await health.json().catch(() => null);
 assert(
-  "/api/health is public and reports ok",
-  health.status === 200 && healthBody?.ok === true && healthBody?.service === "nexus",
+  "/api/health is public and reports safe configuration metadata",
+  health.status === 200 &&
+    healthBody?.ok === true &&
+    healthBody?.service === "nexus" &&
+    healthBody?.configuration?.supabaseConfigured === true &&
+    typeof healthBody?.configuration?.supabaseHost === "string" &&
+    !JSON.stringify(healthBody).includes("stub-key"),
   JSON.stringify(healthBody)
 );
 
@@ -427,6 +432,46 @@ assert(
 
 const onboarding = await visit("/onboarding", { jar: signupJar });
 assert("authenticated /onboarding renders", onboarding.status === 200, `status=${onboarding.status}`);
+
+// Reproduce the production incident through the real server route: a signed-in
+// account reaches onboarding, Step 1 bootstraps the workspace, then persists
+// its identity. The stub only replaces Supabase; the route, cookies and RLS
+// request shape are the application code under test.
+const stepOneCallStart = stub.calls.length;
+const stepOne = await visit("/api/onboarding/step-1", {
+  jar: signupJar,
+  method: "POST",
+  body: { displayName: "Fresh Repaired", username: "fresh_repaired" },
+});
+const stepOneBody = await stepOne.json().catch(() => null);
+const stepOneCalls = stub.calls.slice(stepOneCallStart);
+const bootstrapCallIndex = stepOneCalls.findIndex((call) =>
+  call.includes("/rest/v1/rpc/get_or_create_personal_workspace")
+);
+const profileCallIndex = stepOneCalls.findIndex((call) =>
+  call.includes("/rest/v1/profiles")
+);
+assert(
+  "real Step 1 route succeeds for the incomplete account",
+  stepOne.status === 200 && stepOneBody?.ok === true,
+  JSON.stringify(stepOneBody)
+);
+assert(
+  "Step 1 calls the bootstrap RPC before any profile operation",
+  bootstrapCallIndex >= 0 && profileCallIndex > bootstrapCallIndex,
+  JSON.stringify(stepOneCalls)
+);
+
+const stepOneRetry = await visit("/api/onboarding/step-1", {
+  jar: signupJar,
+  method: "POST",
+  body: { displayName: "Fresh Repaired Again", username: "fresh_repaired_again" },
+});
+assert(
+  "repeating Step 1 remains idempotent and updates the same profile",
+  stepOneRetry.status === 200,
+  `status=${stepOneRetry.status}`
+);
 
 // ============ 4. LOGIN ============
 console.log("\n-- login ----------------------------------------------");

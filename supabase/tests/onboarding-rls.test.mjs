@@ -230,6 +230,15 @@ console.log("\n-- 8. RPC rejects cross-user bootstrap --");
 // Direct call to ensure_personal_workspace(ALICE) as Carol must throw.
 await expectDenied("RPC rejects cross-user call", () =>
   asUser(CAROL, () => db.query(`select public.ensure_personal_workspace($1)`, [ALICE])));
+await expectDenied("RPC rejects an unauthenticated caller", () =>
+  asUser(null, () => db.query(`select public.ensure_personal_workspace()`)));
+await asUser(CAROL, async () => {
+  const ownerProbe = await db.query(
+    `select public.is_workspace_owner($1, $2) as is_owner`,
+    [aliceWsId, ALICE]
+  );
+  ok("ownership helper cannot be used to probe another user", ownerProbe.rows[0]?.is_owner === false);
+});
 
 console.log("\n-- 9. onboarding_completed flag persists --");
 await asUser(ALICE, async () => {
@@ -245,6 +254,165 @@ ok("reload does not duplicate workspace", finalCount.rows[0].c === 1);
 const memCount = await db.query(`select count(*)::int as c from workspace_members where user_id = $1`, [ALICE]);
 ok("reload does not duplicate membership", memCount.rows[0].c === 1);
 
+console.log("\n-- 11. Exact historical Step 1 sequence -----------------");
+// This is the incident state: auth user + profile exist, but the signup
+// bootstrap left no workspace/membership. The order below is deliberately
+// the order the production API route uses: bootstrap first, profile update
+// second, read-back third.
+const HISTORICAL = "55555555-5555-5555-5555-555555555555";
+await signup(HISTORICAL, "historical@nexus.test", { full_name: "Historical" });
+const historicalBefore = await db.query(
+  `select id from public.workspaces where owner_id = $1`,
+  [HISTORICAL]
+);
+if (historicalBefore.rows[0]) {
+  await db.query(`delete from public.workspace_members where user_id = $1`, [HISTORICAL]);
+  await db.query(`delete from public.workspaces where id = $1`, [historicalBefore.rows[0].id]);
+}
+const historicalState = await db.query(
+  `select p.id, p.onboarding_completed,
+          count(distinct w.id)::int as workspaces,
+          count(distinct wm.id)::int as memberships
+     from public.profiles p
+     left join public.workspaces w on w.owner_id = p.id
+     left join public.workspace_members wm on wm.user_id = p.id
+    where p.id = $1
+    group by p.id, p.onboarding_completed`,
+  [HISTORICAL]
+);
+ok(
+  "incident fixture has profile but no workspace or membership",
+  historicalState.rows[0]?.id === HISTORICAL &&
+    historicalState.rows[0]?.workspaces === 0 &&
+    historicalState.rows[0]?.memberships === 0
+);
+
+await asUser(HISTORICAL, async () => {
+  const bootstrapped = await db.query(
+    `select workspace_id, role, status from public.get_or_create_personal_workspace()`
+  );
+  const row = bootstrapped.rows[0];
+  ok(
+    "historical Step 1 bootstrap returns an active owner",
+    Boolean(row?.workspace_id) && row.role === "owner" && row.status === "active"
+  );
+
+  const profileUpdate = await db.query(
+    `update public.profiles
+        set display_name = 'Historical Repaired', username = 'historical_repaired'
+      where id = $1
+      returning id, display_name, username`,
+    [HISTORICAL]
+  );
+  ok(
+    "historical Step 1 profile update follows bootstrap without RLS denial",
+    profileUpdate.rows[0]?.id === HISTORICAL &&
+      profileUpdate.rows[0]?.display_name === "Historical Repaired"
+  );
+
+  const readBack = await db.query(
+    `select w.owner_id, wm.role, wm.status, s.status as subscription_status
+       from public.workspaces w
+       join public.workspace_members wm on wm.workspace_id = w.id and wm.user_id = $1
+       left join public.workspace_subscriptions s on s.workspace_id = w.id and s.status = 'active'
+      where w.owner_id = $1`,
+    [HISTORICAL]
+  );
+  ok(
+    "historical Step 1 read-back has coherent workspace context",
+    readBack.rows[0]?.owner_id === HISTORICAL &&
+      readBack.rows[0]?.role === "owner" &&
+      readBack.rows[0]?.status === "active" &&
+      readBack.rows[0]?.subscription_status === "active"
+  );
+});
+
+console.log("\n-- 12. Partial historical repair + foreign membership --------");
+const PARTIAL = "66666666-6666-6666-6666-666666666666";
+const FOREIGN_OWNER = "77777777-7777-7777-7777-777777777777";
+await signup(PARTIAL, "partial@nexus.test", { full_name: "Partial" });
+const partialWorkspace = await db.query(
+  `select id from public.workspaces where owner_id = $1`,
+  [PARTIAL]
+);
+const partialWorkspaceId = partialWorkspace.rows[0].id;
+await db.query(`delete from public.workspace_members where user_id = $1`, [PARTIAL]);
+await db.query(`delete from public.workspace_subscriptions where workspace_id = $1`, [partialWorkspaceId]);
+await asUser(PARTIAL, async () => {
+  const repaired = await db.query(
+    `select workspace_id, role, status from public.get_or_create_personal_workspace()`
+  );
+  ok(
+    "workspace-without-membership repair returns the owned workspace",
+    repaired.rows[0]?.workspace_id === partialWorkspaceId &&
+      repaired.rows[0]?.role === "owner" &&
+      repaired.rows[0]?.status === "active"
+  );
+});
+const repairedSubscription = await db.query(
+  `select plan, status from public.workspace_subscriptions where workspace_id = $1 and status = 'active'`,
+  [partialWorkspaceId]
+);
+ok(
+  "partial historical repair restores the active subscription",
+  repairedSubscription.rows[0]?.plan === "FREE" && repairedSubscription.rows[0]?.status === "active"
+);
+
+await signup(FOREIGN_OWNER, "foreign@nexus.test", { full_name: "Foreign Owner" });
+const foreignWorkspace = await db.query(
+  `select id from public.workspaces where owner_id = $1`,
+  [FOREIGN_OWNER]
+);
+const foreignWorkspaceId = foreignWorkspace.rows[0].id;
+await asUser(PARTIAL, async () => {
+  const ownContext = await db.query(
+    `select workspace_id, role from public.get_or_create_personal_workspace()`
+  );
+  ok(
+    "an invited user never receives a foreign workspace as personal context",
+    ownContext.rows[0]?.workspace_id === partialWorkspaceId && ownContext.rows[0]?.role === "owner"
+  );
+});
+await asUser(PARTIAL, async () => {
+  const attemptedRename = await db.query(
+    `update public.workspaces set name = 'foreign hacked' where id = $1`,
+    [foreignWorkspaceId]
+  );
+  ok("foreign workspace rename affects zero rows", attemptedRename.rowCount === 0);
+});
+
+console.log("\n-- 13. New account with no profile + bootstrap ------------");
+const NO_PROFILE = "88888888-8888-8888-8888-888888888888";
+await signup(NO_PROFILE, "noprofile@nexus.test", {});
+const noProfileWorkspace = await db.query(
+  `select id from public.workspaces where owner_id = $1`,
+  [NO_PROFILE]
+);
+await db.query(`delete from public.workspace_members where user_id = $1`, [NO_PROFILE]);
+await db.query(`delete from public.workspace_subscriptions where workspace_id = $1`, [noProfileWorkspace.rows[0].id]);
+await db.query(`delete from public.workspaces where id = $1`, [noProfileWorkspace.rows[0].id]);
+await db.query(`delete from public.profiles where id = $1`, [NO_PROFILE]);
+await asUser(NO_PROFILE, async () => {
+  const bootstrapped = await db.query(
+    `select workspace_id, role, status from public.get_or_create_personal_workspace()`
+  );
+  ok(
+    "new account with no profile bootstraps before profile insert",
+    bootstrapped.rows[0]?.role === "owner" && bootstrapped.rows[0]?.status === "active"
+  );
+  const profileInsert = await db.query(
+    `insert into public.profiles (id, display_name, username)
+     values ($1, 'New User', 'new_user')
+     returning id`,
+    [NO_PROFILE]
+  );
+  ok(
+    "new account can insert its own profile after bootstrap",
+    profileInsert.rows[0]?.id === NO_PROFILE
+  );
+});
+
 await db.close();
+
 console.log(`\n================ ${passed} passed / ${failed} failed ================`);
 process.exit(failed === 0 ? 0 : 1);

@@ -3,7 +3,7 @@
 -- ============================================================
 -- Migrations 001-005 (base schema + RLS policies) are NOT versioned in
 -- this repository. To be able to execute and verify the logic of the
--- migrations that ARE versioned (006 -> 016), this fixture recreates a
+-- migrations that ARE versioned (006 -> 018), this fixture recreates a
 -- minimal approximation of the base schema, limited to the columns the
 -- application actually reads/writes.
 --
