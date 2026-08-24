@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { getRequestOrigin } from "@/lib/request-origin";
-import {
-  humanizeAuthError,
-  validateCredentials,
-  validateUsername,
-} from "@/lib/auth-errors";
+import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
 
 /**
  * Account creation, performed ON THE SERVER.
+ *
+ * Signup collects ONLY what is required to create the account: the email
+ * and password. Everything else — display name, workspace name, goals — is
+ * collected later, in the onboarding workflow. Mixing the two would couple
+ * account creation to product configuration and make both harder to reason
+ * about.
  *
  * Two legitimate outcomes are handled explicitly:
  *   1. email confirmation disabled -> Supabase returns a session, the SSR
@@ -26,8 +28,6 @@ export async function POST(request: Request) {
   let body: {
     email?: unknown;
     password?: unknown;
-    fullName?: unknown;
-    username?: unknown;
   };
 
   try {
@@ -41,19 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: credentialsError }, { status: 400 });
   }
 
-  const usernameError = validateUsername(body.username);
-  if (usernameError) {
-    return NextResponse.json({ error: usernameError }, { status: 400 });
-  }
-
-  const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
-  if (!fullName) {
-    return NextResponse.json({ error: "Please enter your full name." }, { status: 400 });
-  }
-
   const email = (body.email as string).trim().toLowerCase();
   const password = body.password as string;
-  const username = (body.username as string).trim().toLowerCase();
 
   const supabase = await createClient();
 
@@ -63,7 +52,6 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        data: { full_name: fullName, username },
         // Confirmation must land on /auth/callback with NO next=/onboarding.
         // The callback verifies the address, drops the session and sends
         // the visitor to the public landing page — in any browser.

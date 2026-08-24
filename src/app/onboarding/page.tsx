@@ -13,86 +13,39 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS — ONBOARDING (3 STEPS)
-// 1. Identity (name + username)  2. Intent  3. First value
+// NEXUS — ONBOARDING (4 STEPS)
+// 1. Identity (name + username)  2. Workspace  3. Goal  4. Ready
 //
 // Refinements:
-// - `← Back` on steps 2 and 3: pure local state, never browser
-//   navigation, so every field typed so far survives.
+// - `← Back` on steps 2–4: pure local state, never browser navigation, so
+//   every field typed so far survives.
 // - `← Back` on step 1 exits the journey to the public landing
 //   (`/?from=onboarding`) — a deliberate workflow destination, never
-//   history.back() — and parks the typed identity as a local draft so
-//   nothing is lost when the user comes back in.
-// - Step 3 adapts to the intent chosen at step 2 (STEP3_BY_INTENT).
-// - Visual 3-segment progress bar.
-// - Nothing is declared "done" on optimism: every write is read back
-//   from the database (`.select(...).single()`) and verified before
-//   the user is redirected. On any failure we STAY here, with the
-//   data intact, and explain what happened.
+//   history.back() — and parks the typed identity as a local draft so nothing
+//   is lost when the user comes back in.
+// - Every "Continue" commits only the answers from the completed step. This
+//   makes a refresh deterministic without creating a workspace, project, or
+//   task before the user explicitly finishes the workflow.
+// - Nothing is declared "done" on optimism: every write is read back from the
+//   database and verified before the user is redirected. On any failure we
+//   STAY here, with the data intact, and explain what happened.
+// - The workspace is created idempotently at completion, never duplicated by a
+//   refresh, and the profile's onboarding_completed flag is only set after the
+//   workspace is verified — and only after the database confirms the write.
 // ============================================================
 
-const INTENT_OPTIONS = [
-  { id: "personal", label: "Personal work", description: "Your own tasks and projects" },
-  { id: "project", label: "A project", description: "One defined outcome" },
-  { id: "studies", label: "Studies", description: "Courses, deadlines, revision" },
-  { id: "team", label: "A team", description: "Shared work with others" },
-  { id: "everything", label: "Everything", description: "The whole system, in one place" },
+const GOAL_OPTIONS = [
+  { id: "visibility", label: "Project visibility", description: "See what is moving and what is stuck" },
+  { id: "coordination", label: "Team coordination", description: "Keep shared work aligned" },
+  { id: "automation", label: "Workflow automation", description: "Remove repetitive manual steps" },
+  { id: "decisions", label: "Decision making", description: "Surface the risks that need you" },
+  { id: "intelligence", label: "AI-powered intelligence", description: "Let NEXUS read the work and act" },
+  { id: "everything", label: "All of the above", description: "The whole system, connected" },
 ] as const;
 
-type IntentId = (typeof INTENT_OPTIONS)[number]["id"];
-type FirstKind = "project" | "task";
+type GoalId = (typeof GOAL_OPTIONS)[number]["id"];
 
-type Step3Config = {
-  defaultKind: FirstKind;
-  title: string;
-  description: string;
-  projectPlaceholder: string;
-  taskPlaceholder: string;
-};
-
-// Step 3 is not a generic form: it speaks the language of the intent
-// selected at step 2, and pre-selects the unit of work that matches it.
-const STEP3_BY_INTENT: Record<IntentId, Step3Config> = {
-  personal: {
-    defaultKind: "task",
-    title: "What's the first thing you want to get under control?",
-    description: "One task you keep carrying around. Write it down and let NEXUS hold it.",
-    projectPlaceholder: "e.g. Reorganise my personal admin",
-    taskPlaceholder: "e.g. Renew my passport",
-  },
-  project: {
-    defaultKind: "project",
-    title: "Set up your project",
-    description: "Name the outcome you are driving. Tasks will live underneath it.",
-    projectPlaceholder: "e.g. Launch my portfolio",
-    taskPlaceholder: "e.g. Draft the project brief",
-  },
-  studies: {
-    defaultKind: "project",
-    title: "Set up your study goal",
-    description: "A course, a semester, an exam — give it a home before the deadlines arrive.",
-    projectPlaceholder: "e.g. Semester 1 — Data Structures",
-    taskPlaceholder: "e.g. Revise chapter 3",
-  },
-  team: {
-    defaultKind: "project",
-    title: "Structure your team's first project",
-    description: "Start with the work everyone is already talking about.",
-    projectPlaceholder: "e.g. Q3 product launch",
-    taskPlaceholder: "e.g. Share the kickoff notes",
-  },
-  everything: {
-    defaultKind: "project",
-    title: "Set up your first workflow",
-    description: "Start anywhere. One project or one task is enough to make the system real.",
-    projectPlaceholder: "e.g. Build my NEXUS system",
-    taskPlaceholder: "e.g. Capture everything on my mind",
-  },
-};
-
-const DEFAULT_STEP3 = STEP3_BY_INTENT.everything;
-
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 export default function OnboardingPage() {
   const clientResult = useMemo(() => createClientSafe(), []);
@@ -119,23 +72,23 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
   const [step, setStep] = useState(1);
   const [onboardingUserId, setOnboardingUserId] = useState("");
 
-  // All answers live at component level: moving between steps only
-  // changes `step`, so nothing typed is ever lost.
+  // All answers live at component level: moving between steps only changes
+  // `step`, so nothing typed is ever lost.
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
-  const [intent, setIntent] = useState<IntentId | null>(null);
-  const [firstKind, setFirstKind] = useState<FirstKind>("project");
-  const [firstTitle, setFirstTitle] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [goal, setGoal] = useState<GoalId | null>(null);
 
-  const step3 = intent ? STEP3_BY_INTENT[intent] : DEFAULT_STEP3;
-
-  const fallbackUsername = (email?: string | null) => {
-    const base = email?.split("@")[0] ?? "user";
+  const fallbackUsername = (value?: string | null) => {
+    const base = value?.split("@")[0] ?? "user";
     return base.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30);
   };
 
   const createSlug = (value: string) => {
-    const base = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const base = value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
     const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
     return `${base || "workspace"}-${suffix}`;
   };
@@ -188,8 +141,8 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
 
-      // Completion alone is not enough: only a real active membership makes
-      // the dashboard valid. A damaged/missing membership stays in this safe
+      // Completion alone is not enough: only a real active membership makes the
+      // dashboard valid. A damaged/missing membership stays in this safe
       // workflow, where finalisation can reconnect an owned workspace.
       if (profile?.onboarding_completed === true) {
         const { data: activeMembership } = await supabase
@@ -213,14 +166,12 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         typeof user.user_metadata?.onboarding_intent === "string"
           ? user.user_metadata.onboarding_intent
           : "";
-      const savedIntent = profile?.onboarding_intent || metadataIntent;
+      const savedGoal = profile?.onboarding_intent || metadataIntent;
       const hasIdentity = Boolean(profile?.display_name?.trim() && profile?.username?.trim());
 
       let furthestSafeStep = hasIdentity ? 2 : 1;
-      if (savedIntent in STEP3_BY_INTENT) {
-        const known = savedIntent as IntentId;
-        setIntent(known);
-        setFirstKind(STEP3_BY_INTENT[known].defaultKind);
+      if (savedGoal in GOAL_OPTIONS_MAP) {
+        setGoal(savedGoal as GoalId);
         if (hasIdentity) furthestSafeStep = 3;
       }
 
@@ -234,22 +185,6 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         // Storage is optional; persisted profile state remains authoritative.
       }
       setStep(resumeStep);
-
-      try {
-        const firstValueDraft = localStorage.getItem(`nexus:onboarding-first:${user.id}`);
-        if (firstValueDraft) {
-          const parsed = JSON.parse(firstValueDraft) as {
-            kind?: FirstKind;
-            title?: string;
-          };
-          if (parsed.kind === "project" || parsed.kind === "task") {
-            setFirstKind(parsed.kind);
-          }
-          if (typeof parsed.title === "string") setFirstTitle(parsed.title);
-        }
-      } catch {
-        // Draft storage is optional and never overrides database truth.
-      }
 
       // A draft identity survives "Back to the landing" from step 1, so
       // nothing typed is lost on the way back in. Prefill only — persisted
@@ -283,16 +218,23 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
       if (!profile?.username) {
         const metadataUsername =
-          typeof user.user_metadata?.username === "string"
-            ? user.user_metadata.username
-            : "";
+          typeof user.user_metadata?.username === "string" ? user.user_metadata.username : "";
         setUsername(
           metadataUsername ||
-            (typeof identityDraft.username === "string"
-              ? identityDraft.username.trim()
-              : "") ||
+            (typeof identityDraft.username === "string" ? identityDraft.username.trim() : "") ||
             fallbackUsername(user.email)
         );
+      }
+
+      // A draft workspace name survives refreshes on step 2.
+      try {
+        const storedWorkspace = localStorage.getItem(`nexus:onboarding-workspace:${user.id}`);
+        if (storedWorkspace) {
+          const parsed = JSON.parse(storedWorkspace) as { name?: unknown };
+          if (typeof parsed.name === "string") setWorkspaceName(parsed.name);
+        }
+      } catch {
+        // Draft storage is optional; the form remains fully usable.
       }
 
       setLoading(false);
@@ -303,13 +245,14 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
   const canContinue = () => {
     if (step === 1) return displayName.trim().length > 0 && username.trim().length > 0;
-    if (step === 2) return intent !== null;
-    return true; // step 3 can always skip
+    if (step === 2) return workspaceName.trim().length > 0;
+    if (step === 3) return goal !== null;
+    return true; // step 4 (Ready) can always proceed
   };
 
   // Continue commits only the answers from the completed step. This makes a
-  // refresh deterministic without creating a workspace, project, or task
-  // before the user explicitly finishes the workflow.
+  // refresh deterministic without creating a workspace before the user
+  // explicitly finishes the workflow.
   const next = async () => {
     setError("");
     if (!canContinue() || step >= TOTAL_STEPS) return;
@@ -326,45 +269,73 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
 
-      const base = {
-        id: user.id,
-        display_name: displayName.trim(),
-        username: username.trim().toLowerCase(),
-        updated_at: new Date().toISOString(),
-      };
-      const payload = step === 2 && intent ? { ...base, onboarding_intent: intent } : base;
-      let saved = await supabase.from("profiles").upsert(payload).select("id").maybeSingle();
-      let intentSavedInProfile = step !== 2;
+      // Step 1 persists identity; step 2 persists the chosen goal (workspace
+      // name is held locally until completion, when the workspace itself is
+      // created idempotently).
+      if (step === 1) {
+        const base = {
+          id: user.id,
+          display_name: displayName.trim(),
+          username: username.trim().toLowerCase(),
+          updated_at: new Date().toISOString(),
+        };
+        const saved = await supabase.from("profiles").upsert(base).select("id").maybeSingle();
 
-      if (saved.error && isMissingColumnError(saved.error.message, "onboarding_intent")) {
-        saved = await supabase.from("profiles").upsert(base).select("id").maybeSingle();
-        intentSavedInProfile = false;
-      } else if (step === 2) {
-        intentSavedInProfile = true;
-      }
-
-      if (saved.error || !saved.data?.id) {
-        setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
-        return;
-      }
-
-      if (step === 2 && intent) {
-        const metadata = await supabase.auth.updateUser({
-          data: { onboarding_intent: intent },
-        });
-        if (metadata.error && !intentSavedInProfile) {
-          setError(`Your choice could not be saved: ${metadata.error.message}`);
+        if (saved.error || !saved.data?.id) {
+          setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
           return;
         }
-      }
 
-      // Step 1 is now persisted in the database — the identity draft has
-      // done its job and must not shadow fresher edits later.
-      if (step === 1) {
+        // Step 1 is now persisted in the database — the identity draft has
+        // done its job and must not shadow fresher edits later.
         try {
           localStorage.removeItem(`nexus:onboarding-identity:${user.id}`);
         } catch {
-          // Storage is optional; the database row is the truth now.
+          // Storage is optional; the database row is the truth.
+        }
+      }
+
+      if (step === 2) {
+        // Workspace name is parked as a draft; the workspace is created at
+        // completion. Persist the draft so a refresh on step 2 keeps it.
+        try {
+          localStorage.setItem(
+            `nexus:onboarding-workspace:${user.id}`,
+            JSON.stringify({ name: workspaceName.trim() })
+          );
+        } catch {
+          // Draft storage is optional; local state still holds the value.
+        }
+      }
+
+      if (step === 3 && goal) {
+        const base = {
+          id: user.id,
+          display_name: displayName.trim(),
+          username: username.trim().toLowerCase(),
+          updated_at: new Date().toISOString(),
+        };
+        let saved = await supabase
+          .from("profiles")
+          .upsert({ ...base, onboarding_intent: goal })
+          .select("id")
+          .maybeSingle();
+
+        if (saved.error && isMissingColumnError(saved.error.message, "onboarding_intent")) {
+          saved = await supabase.from("profiles").upsert(base).select("id").maybeSingle();
+        }
+
+        if (saved.error || !saved.data?.id) {
+          setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
+          return;
+        }
+
+        const metadata = await supabase.auth.updateUser({
+          data: { onboarding_intent: goal },
+        });
+        if (metadata.error) {
+          setError(`Your choice could not be saved: ${metadata.error.message}`);
+          return;
         }
       }
 
@@ -382,8 +353,8 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     }
   };
 
-  // Local state only — no router call, no history entry, no reload.
-  // Every answer already given stays exactly as it was.
+  // Local state only — no router call, no history entry, no reload. Every
+  // answer already given stays exactly as it was.
   const back = () => {
     setError("");
     if (step > 1) {
@@ -402,12 +373,12 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     }
   };
 
-  // Step 1 has no previous *step* — the page before it in the journey is
-  // the public landing. The workflow owns this navigation (never
-  // history.back(), which could land on login, an external page or an
-  // invalid state): we park the typed identity as a draft and go to the
-  // landing with `from=onboarding` so an authenticated session is not
-  // bounced straight back into the dashboard → onboarding loop.
+  // Step 1 has no previous *step* — the page before it in the journey is the
+  // public landing. The workflow owns this navigation (never history.back(),
+  // which could land on login, an external page or an invalid state): we park
+  // the typed identity as a draft and go to the landing with
+  // `from=onboarding` so an authenticated session is not bounced straight back
+  // into the dashboard → onboarding loop.
   const exitToLanding = () => {
     if (onboardingUserId) {
       try {
@@ -420,30 +391,6 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       }
     }
     router.replace("/?from=onboarding");
-  };
-
-  // Choosing an intent re-targets step 3 (default unit of work), but
-  // never destroys a title the user already typed.
-  const rememberFirstValue = (kind: FirstKind, title: string) => {
-    if (!onboardingUserId) return;
-    try {
-      localStorage.setItem(
-        `nexus:onboarding-first:${onboardingUserId}`,
-        JSON.stringify({ kind, title })
-      );
-    } catch {
-      // The form remains fully usable without local draft storage.
-    }
-  };
-
-  const selectIntent = (nextIntent: IntentId) => {
-    setError("");
-    setIntent(nextIntent);
-    // Only the *default* unit of work follows the intent — `firstTitle`
-    // is user-authored content and is never touched.
-    const defaultKind = STEP3_BY_INTENT[nextIntent].defaultKind;
-    setFirstKind(defaultKind);
-    rememberFirstValue(defaultKind, firstTitle);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -469,6 +416,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
       const cleanDisplayName = displayName.trim();
       const cleanUsername = username.trim().toLowerCase();
+      const cleanWorkspaceName = workspaceName.trim();
 
       const persistProfile = async (completed: boolean) => {
         const base = {
@@ -480,21 +428,26 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         };
 
         const attempt = (payload: Record<string, unknown>) =>
-          supabase.from("profiles").upsert(payload).select("onboarding_completed").maybeSingle();
+          supabase
+            .from("profiles")
+            .upsert(payload)
+            .select("onboarding_completed")
+            .maybeSingle();
 
-        let result = await attempt(intent ? { ...base, onboarding_intent: intent } : base);
+        const withIntent = goal ? { ...base, onboarding_intent: goal } : base;
+        let result = await attempt(withIntent);
         if (result.error && isMissingColumnError(result.error.message, "onboarding_intent")) {
           result = await attempt(base);
         }
         return result;
       };
 
-      if (intent) {
-        await supabase.auth.updateUser({ data: { onboarding_intent: intent } }).catch(() => null);
+      if (goal) {
+        await supabase.auth.updateUser({ data: { onboarding_intent: goal } }).catch(() => null);
       }
 
-      // 1. Persist profile WITHOUT onboarding_completed — it is only set
-      //    after the workspace is verified below.
+      // 1. Persist profile WITHOUT onboarding_completed — it is only set after
+      //    the workspace is verified below.
       const { error: profileError } = await persistProfile(false);
 
       if (profileError) {
@@ -502,7 +455,9 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
 
-      // 2. Ensure the user has an active workspace membership.
+      // 2. Ensure the user has an active workspace membership. Signup already
+      //    creates a personal workspace (via DB trigger); reuse it instead of
+      //    inserting a second one (FREE plan limit = 1) and getting stuck.
       const { data: memberships, error: membershipError } = await supabase
         .from("workspace_members")
         .select("workspace_id, role, status")
@@ -528,18 +483,28 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return refreshed?.[0] ?? null;
       };
 
-      // Signup already creates a personal workspace. Reuse it instead of
-      // inserting a second one (FREE plan limit = 1) and getting stuck.
       if (!membership) {
         const { data: owned } = await supabase
           .from("workspaces")
-          .select("id")
+          .select("id, name")
           .eq("owner_id", user.id)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (owned?.id) {
+          // Signup already created a personal workspace (via DB trigger). Link
+          // the membership and rename it to the name the user chose at step 2
+          // — the trigger could only guess (it falls back to the email), so the
+          // user's explicit choice always wins.
+          const chosenName = cleanWorkspaceName || `${cleanDisplayName}'s Workspace`;
+          if (chosenName !== owned.name) {
+            await supabase
+              .from("workspaces")
+              .update({ name: chosenName })
+              .eq("id", owned.id);
+          }
+
           const { error: linkError } = await supabase.from("workspace_members").insert({
             workspace_id: owned.id,
             user_id: user.id,
@@ -549,20 +514,24 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           membership = await rereadMembership();
           if (!membership) {
             setError(
-              `Your existing workspace could not be connected${linkError ? `: ${linkError.message}` : "."}`
+              `Your existing workspace could not be connected${
+                linkError ? `: ${linkError.message}` : "."
+              }`
             );
             return;
           }
         }
       }
 
-      // No membership yet — create a personal workspace and its membership.
+      // No membership yet — create a personal workspace (named by the user in
+      // step 2) and its membership.
       if (!membership) {
+        const finalWorkspaceName = cleanWorkspaceName || `${cleanDisplayName}'s Workspace`;
         const { data: workspace, error: workspaceError } = await supabase
           .from("workspaces")
           .insert({
             owner_id: user.id,
-            name: `${cleanDisplayName}'s Workspace`,
+            name: finalWorkspaceName,
             slug: createSlug(cleanUsername),
           })
           .select("id")
@@ -595,7 +564,9 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         membership = await rereadMembership();
         if (!membership) {
           setError(
-            `Your workspace was created but could not be connected${newMembershipError ? `: ${newMembershipError.message}` : ". Please try again."}`
+            `Your workspace was created but could not be connected${
+              newMembershipError ? `: ${newMembershipError.message}` : ". Please try again."
+            }`
           );
           return;
         }
@@ -604,9 +575,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       // 3. Verify membership is real and usable before declaring success.
       const validRoles = new Set(["owner", "admin", "member"]);
       if (!membership?.workspace_id) {
-        setError(
-          "Your workspace could not be established. Please try again or contact support."
-        );
+        setError("Your workspace could not be established. Please try again or contact support.");
         return;
       }
       if (!validRoles.has(String(membership.role))) {
@@ -614,122 +583,12 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
 
-      const workspaceId = membership.workspace_id as string;
-
-      // 4. Create the first value at most once. A stable client-generated id
-      //    is stored before insertion, then verified on every retry/refresh.
-      //    This closes the duplicate project/task window if profile completion
-      //    fails after the value itself was committed.
-      if (firstTitle.trim()) {
-        const firstValueKey = `nexus:onboarding-first:${user.id}`;
-        type FirstValueDraft = {
-          id?: string;
-          kind: FirstKind;
-          title: string;
-          created?: boolean;
-        };
-
-        let draft: FirstValueDraft = {
-          kind: firstKind,
-          title: firstTitle.trim(),
-        };
-        try {
-          const stored = localStorage.getItem(firstValueKey);
-          if (stored) {
-            const parsed = JSON.parse(stored) as FirstValueDraft;
-            if (
-              (parsed.kind === "project" || parsed.kind === "task") &&
-              typeof parsed.title === "string"
-            ) {
-              draft = parsed;
-            }
-          }
-        } catch {
-          // Continue with the visible, user-authored values.
-        }
-
-        draft.id ||= crypto.randomUUID();
-        draft.title = draft.title.trim() || firstTitle.trim();
-        try {
-          localStorage.setItem(firstValueKey, JSON.stringify(draft));
-        } catch {
-          // Database verification below remains authoritative.
-        }
-
-        const table = draft.kind === "project" ? "projects" : "tasks";
-        const { data: existingValue, error: existingError } = await supabase
-          .from(table)
-          .select("id")
-          .eq("id", draft.id)
-          .eq("workspace_id", workspaceId)
-          .maybeSingle();
-
-        if (existingError) {
-          setError(`We couldn't verify your first ${draft.kind}: ${existingError.message}`);
-          return;
-        }
-
-        if (!existingValue?.id) {
-          if (draft.kind === "project") {
-            const { data: project, error: projectError } = await supabase
-              .from("projects")
-              .insert({
-                id: draft.id,
-                workspace_id: workspaceId,
-                owner_id: user.id,
-                name: draft.title,
-              })
-              .select("id")
-              .single();
-
-            if (projectError || !project?.id) {
-              setError(
-                projectError && isPlanLimitError(projectError.message)
-                  ? "Your plan does not allow another project. Visit /upgrade to unlock more."
-                  : `We couldn't finish setting up your workspace — your project was not created${projectError ? `: ${projectError.message}` : "."}`
-              );
-              return;
-            }
-          } else {
-            const { data: task, error: taskError } = await supabase
-              .from("tasks")
-              .insert({
-                id: draft.id,
-                workspace_id: workspaceId,
-                title: draft.title,
-                assignee_id: user.id,
-                created_by: user.id,
-              })
-              .select("id")
-              .single();
-
-            if (taskError || !task?.id) {
-              setError(
-                taskError && isPlanLimitError(taskError.message)
-                  ? "Your plan does not allow another task. Visit /upgrade to unlock more."
-                  : `We couldn't finish setting up your workspace — your task was not created${taskError ? `: ${taskError.message}` : "."}`
-              );
-              return;
-            }
-          }
-        }
-
-        draft.created = true;
-        try {
-          localStorage.setItem(firstValueKey, JSON.stringify(draft));
-        } catch {
-          // The row has already been read back from the database.
-        }
-      }
-
-      // 5. Only now mark onboarding complete — and read the flag back from
-      //    the database. We redirect on confirmed state, never on hope.
+      // 4. Only now mark onboarding complete — and read the flag back from the
+      //    database. We redirect on confirmed state, never on hope.
       const { data: completedRow, error: completeError } = await persistProfile(true);
 
       if (completeError) {
-        setError(
-          `We couldn't finish setting up your workspace — ${completeError.message}`
-        );
+        setError(`We couldn't finish setting up your workspace — ${completeError.message}`);
         return;
       }
 
@@ -752,7 +611,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
 
       try {
         sessionStorage.removeItem(`nexus:onboarding-step:${user.id}`);
-        localStorage.removeItem(`nexus:onboarding-first:${user.id}`);
+        localStorage.removeItem(`nexus:onboarding-workspace:${user.id}`);
         localStorage.removeItem(`nexus:onboarding-identity:${user.id}`);
       } catch {
         // Completion is database-backed; stale local drafts are non-authoritative.
@@ -796,15 +655,19 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     step === 1
       ? "Welcome to NEXUS"
       : step === 2
-        ? "What are you trying to get under control?"
-        : step3.title;
+        ? "Name your workspace"
+        : step === 3
+          ? "What should NEXUS improve?"
+          : "NEXUS is ready";
 
   const subheading =
     step === 1
       ? "First, how should your workspace recognise you?"
       : step === 2
-        ? "NEXUS adapts the experience to how you work."
-        : step3.description;
+        ? "This is where your team's work lives. You can change it anytime."
+        : step === 3
+          ? "NEXUS adapts the experience to what matters most to you."
+          : "Your workspace is set up. Let's see what NEXUS can surface.";
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center bg-bg-base px-4 py-12">
@@ -816,7 +679,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         <div className="mb-6 flex flex-col items-center text-center">
           <NexusLogo size={34} priority className="mb-6" />
 
-          {/* Progress — 3 segments, filled up to the current step. */}
+          {/* Progress — 4 segments, filled up to the current step. */}
           <div
             className="flex w-full items-center gap-1.5"
             role="progressbar"
@@ -842,21 +705,20 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           <h1 className="mt-2 text-[20px] font-semibold leading-[26px] tracking-[-0.025em] text-text-primary">
             {heading}
           </h1>
-          <p className="mt-1.5 max-w-[38ch] text-small text-text-secondary">
-            {subheading}
-          </p>
+          <p className="mt-1.5 max-w-[38ch] text-small text-text-secondary">{subheading}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {step === 1 ? (
             <>
-              <Field label="Name" htmlFor="onboarding-name">
+              <Field label="Full name" htmlFor="onboarding-name">
                 <Input
                   id="onboarding-name"
                   size="lg"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="Your name"
+                  autoComplete="name"
                   required
                 />
               </Field>
@@ -871,6 +733,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
                   minLength={3}
                   maxLength={30}
                   pattern="[A-Za-z0-9_]+"
+                  autoComplete="username"
                   required
                 />
               </Field>
@@ -878,14 +741,31 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           ) : null}
 
           {step === 2 ? (
+            <Field label="Workspace name" htmlFor="onboarding-workspace">
+              <Input
+                id="onboarding-workspace"
+                size="lg"
+                value={workspaceName}
+                onChange={(event) => setWorkspaceName(event.target.value)}
+                placeholder="e.g. Acme product team"
+                autoComplete="organization"
+                required
+              />
+            </Field>
+          ) : null}
+
+          {step === 3 ? (
             <div className="grid gap-2">
-              {INTENT_OPTIONS.map((option) => {
-                const active = intent === option.id;
+              {GOAL_OPTIONS.map((option) => {
+                const active = goal === option.id;
                 return (
                   <button
                     key={option.id}
                     type="button"
-                    onClick={() => selectIntent(option.id)}
+                    onClick={() => {
+                      setError("");
+                      setGoal(option.id);
+                    }}
                     aria-pressed={active}
                     className={cn(
                       "flex items-center justify-between gap-3 rounded-input border px-3.5 py-3 text-left transition-colors duration-150 ease-nexus",
@@ -915,51 +795,23 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
             </div>
           ) : null}
 
-          {step === 3 ? (
-            <>
-              <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="First value type">
-                {(["project", "task"] as const).map((kind) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    role="tab"
-                    aria-selected={firstKind === kind}
-                    onClick={() => {
-                      setFirstKind(kind);
-                      rememberFirstValue(kind, firstTitle);
-                    }}
-                    className={cn(
-                      "h-9 rounded-input border text-button transition-colors duration-150 ease-nexus",
-                      firstKind === kind
-                        ? "border-transparent bg-accent text-accent-fg"
-                        : "border-border-default text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
-                    )}
-                  >
-                    {kind === "project" ? "First project" : "First task"}
-                  </button>
-                ))}
-              </div>
-
-              <Field
-                label={firstKind === "project" ? "Project name" : "Task title"}
-                htmlFor="onboarding-first"
+          {step === 4 ? (
+            <div className="flex flex-col items-center gap-3 rounded-input border border-border-subtle bg-bg-surface/50 px-4 py-6 text-center">
+              <span
+                aria-hidden="true"
+                className="flex h-10 w-10 items-center justify-center rounded-pill bg-accent text-accent-fg"
               >
-                <Input
-                  id="onboarding-first"
-                  size="lg"
-                  value={firstTitle}
-                  onChange={(event) => {
-                    setFirstTitle(event.target.value);
-                    rememberFirstValue(firstKind, event.target.value);
-                  }}
-                  placeholder={
-                    firstKind === "project"
-                      ? step3.projectPlaceholder
-                      : step3.taskPlaceholder
-                  }
-                />
-              </Field>
-            </>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <p className="text-body-medium text-text-primary">Your workspace is ready.</p>
+              <p className="max-w-[34ch] text-small text-text-tertiary">
+                NEXUS will read the work in {workspaceName.trim() || "your workspace"} and
+                surface what needs attention. You can create your first project as soon as you
+                enter.
+              </p>
+            </div>
           ) : null}
 
           {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -971,7 +823,9 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
               size="lg"
               onClick={() => (step > 1 ? back() : exitToLanding())}
               disabled={saving}
-              aria-label={step > 1 ? "Back to the previous step" : "Back to the NEXUS landing page"}
+              aria-label={
+                step > 1 ? "Back to the previous step" : "Back to the NEXUS landing page"
+              }
             >
               ← Back
             </Button>
@@ -988,7 +842,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
               </Button>
             ) : (
               <Button type="submit" size="lg" className="flex-1" loading={saving}>
-                {firstTitle.trim() ? "Create and enter NEXUS" : "Enter NEXUS"}
+                Enter NEXUS
               </Button>
             )}
           </div>
@@ -997,3 +851,13 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     </main>
   );
 }
+
+// Helper used during load to recognise a persisted goal id regardless of the
+// option list's order.
+const GOAL_OPTIONS_MAP: Record<GoalId, true> = GOAL_OPTIONS.reduce(
+  (acc, option) => {
+    acc[option.id] = true;
+    return acc;
+  },
+  {} as Record<GoalId, true>
+);

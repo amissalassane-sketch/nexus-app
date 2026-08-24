@@ -291,6 +291,14 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
       return json(200, {});
     }
 
+    // Resend confirmation / verification email. Mirrors the real GoTrue
+    // behaviour: always returns 200 with an empty body, revealing nothing
+    // about whether the address is registered.
+    if (url.pathname === "/auth/v1/resend") {
+      await readBody(req);
+      return json(200, {});
+    }
+
     if (url.pathname === "/auth/v1/verify") {
       const body = await readBody(req);
       const user = String(body.type ?? "") === "recovery" ? ONBOARDED_USER : FRESH_USER;
