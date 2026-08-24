@@ -23,6 +23,28 @@ function asOtpType(value: string | null): EmailOtpType | null {
 }
 
 /**
+ * Map a Google OAuth redirect error (`error` + `error_description`, returned on
+ * the callback URL) into a single, actionable NEXUS message — never a raw
+ * provider string. Google reports "the user closed the consent screen / picked
+ * Cancel" as `error=access_denied`; that is a cancellation, not a failure, and
+ * deserves its own message so the login screen shows a clear, correct state.
+ */
+function describeOAuthFailure(code: string | null, description: string | null): string {
+  const key = `${code ?? ""} ${description ?? ""}`.toLowerCase();
+  if (
+    key.includes("access_denied") ||
+    key.includes("user_denied") ||
+    key.includes("user denied") ||
+    key.includes("user_cancel") ||
+    key.includes("cancelled") ||
+    key.includes("canceled")
+  ) {
+    return "Google sign-in was cancelled.";
+  }
+  return "Google sign-in failed. Please try again.";
+}
+
+/**
  * Return from a Supabase email link (signup confirmation or password recovery)
  * OR the return leg of an OAuth sign-in / sign-up (e.g. "Continue with Google").
  *
@@ -53,8 +75,9 @@ export async function GET(request: NextRequest) {
   const next = safeNextPath(url.searchParams.get("next"), "/");
   const recovery = isRecoveryFlow(next, type);
   const isOAuth = url.searchParams.get("source") === "oauth";
-  const authError =
-    url.searchParams.get("error_description") ?? url.searchParams.get("error");
+  const oauthErrorCode = url.searchParams.get("error");
+  const oauthErrorDescription = url.searchParams.get("error_description");
+  const authError = oauthErrorDescription ?? oauthErrorCode;
 
   const landing = `${origin}/?confirmed=1`;
   const recoveryPage = `${origin}/reset-password`;
@@ -62,7 +85,7 @@ export async function GET(request: NextRequest) {
     "This reset link is invalid or has expired. Request a new one."
   )}`;
   const oauthFailed = `${origin}/login?error=${encodeURIComponent(
-    "Google sign-in failed. Please try again."
+    describeOAuthFailure(oauthErrorCode, oauthErrorDescription)
   )}`;
 
   if (authError) {
@@ -139,6 +162,30 @@ export async function GET(request: NextRequest) {
   // --- OAuth: keep the session, route by account state. ---------------------
   if (isOAuth) {
     if (confirmError || !authUserId) {
+      // The PKCE exchange failed — most often a replayed or stale code (a
+      // duplicate callback, a refreshed tab, a back-button re-entry). If the
+      // visitor already holds a live session from a successful sign-in, route
+      // them by their real account state instead of bouncing an authenticated
+      // user to /login. Only genuinely unauthenticated visitors see the error.
+      const {
+        data: { user: existingUser },
+      } = await supabase.auth.getUser();
+
+      if (existingUser) {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", existingUser.id)
+          .maybeSingle();
+
+        const destination =
+          existingProfile?.onboarding_completed === true
+            ? `${origin}/dashboard`
+            : `${origin}/onboarding`;
+
+        return redirectTo(response, destination);
+      }
+
       return NextResponse.redirect(oauthFailed);
     }
 

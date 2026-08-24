@@ -47,6 +47,17 @@ export const FRESH_USER = {
   user_metadata: { full_name: "Fresh User", username: "freshuser" },
 };
 
+/** A returning user who started onboarding but never finished: has a profile
+ *  row with onboarding_completed = false. Used to verify that an OAuth sign-in
+ *  for an "existing but incomplete" account routes to /onboarding, not the
+ *  dashboard and not the login screen. */
+export const INCOMPLETE_USER = {
+  ...ONBOARDED_USER,
+  id: "55555555-5555-5555-5555-555555555555",
+  email: "incomplete@nexus.test",
+  user_metadata: { full_name: "Halfway Hank", username: "halfwayhank" },
+};
+
 export const WORKSPACE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
 function b64url(value) {
@@ -130,6 +141,16 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
           onboarding_completed: true,
         },
       ],
+      [
+        INCOMPLETE_USER.id,
+        {
+          id: INCOMPLETE_USER.id,
+          display_name: "Halfway Hank",
+          username: "halfwayhank",
+          bio: null,
+          onboarding_completed: false,
+        },
+      ],
     ]),
     workspace_members: new Map([
       [
@@ -210,7 +231,14 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
             message: "Invalid PKCE code verifier",
           });
         }
-        const user = authCode.includes("recover") ? ONBOARDED_USER : FRESH_USER;
+        // Deterministic OAuth codes map to the account state they should
+        // authenticate, so the /auth/callback?source=oauth branch can be
+        // exercised for every outcome (new / onboarded / incomplete).
+        const user = authCode.includes("recover") || authCode.includes("oauth-onboarded")
+          ? ONBOARDED_USER
+          : authCode.includes("oauth-incomplete")
+            ? INCOMPLETE_USER
+            : FRESH_USER;
         return json(200, makeSession(user));
       }
 
@@ -278,7 +306,14 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
         return json(401, { code: 401, error_code: "bad_jwt", msg: "token is expired" });
       }
 
-      return json(200, claims.sub === FRESH_USER.id ? FRESH_USER : ONBOARDED_USER);
+      return json(
+        200,
+        claims.sub === FRESH_USER.id
+          ? FRESH_USER
+          : claims.sub === INCOMPLETE_USER.id
+            ? INCOMPLETE_USER
+            : ONBOARDED_USER
+      );
     }
 
     if (url.pathname === "/auth/v1/logout") {

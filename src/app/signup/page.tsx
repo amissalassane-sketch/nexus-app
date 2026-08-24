@@ -34,6 +34,10 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
+  // Guards the OAuth click the same way `submitting` guards the credentials
+  // form: a ref flips synchronously, so two rapid clicks cannot fire two
+  // provider redirects before the button re-renders as disabled.
+  const googleSubmitting = useRef(false);
 
   const handleSignup = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -97,6 +101,8 @@ export default function SignupPage() {
   );
 
   const handleGoogleSignup = useCallback(async () => {
+    if (googleSubmitting.current) return;
+
     if (configError) {
       setError(configError);
       return;
@@ -107,6 +113,7 @@ export default function SignupPage() {
       return;
     }
 
+    googleSubmitting.current = true;
     setGoogleLoading(true);
     setError("");
 
@@ -121,16 +128,18 @@ export default function SignupPage() {
 
       if (oauthError) {
         setError(oauthError.message ?? "Could not start Google sign-up. Please try again.");
+        googleSubmitting.current = false;
         setGoogleLoading(false);
       }
       // On success the browser navigates away to Google, then back to
-      // /auth/callback — nothing else to do here.
+      // /auth/callback — keep the spinner and the guard for the whole trip.
     } catch (cause) {
       setError(
         cause instanceof Error
           ? `Could not reach the server: ${cause.message}`
           : "Could not reach the server."
       );
+      googleSubmitting.current = false;
       setGoogleLoading(false);
     }
   }, [configError, supabase, clientResult.error]);
