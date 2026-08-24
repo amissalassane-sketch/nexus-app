@@ -115,7 +115,7 @@ const landingHtml = await landing.text();
 assert("anonymous / renders the public homepage", landing.status === 200, `status=${landing.status}`);
 assert(
   "public homepage offers sign in and sign up",
-  landingHtml.includes("Everything important, one connected system.") &&
+  landingHtml.includes("It reads the work.") &&
     landingHtml.includes("Get started") &&
     landingHtml.includes("Sign in"),
   "landing copy missing"
@@ -202,8 +202,6 @@ const signup = await visit("/api/auth/signup", {
   jar: signupJar,
   method: "POST",
   body: {
-    fullName: "Fresh User",
-    username: "freshuser",
     email: "fresh@nexus.test",
     password: "supersecret",
   },
@@ -230,8 +228,6 @@ assert(
 const confirmSignup = await visit("/api/auth/signup", {
   method: "POST",
   body: {
-    fullName: "Confirm User",
-    username: "confirmuser",
     email: "confirm-me@nexus.test",
     password: "supersecret",
   },
@@ -249,8 +245,6 @@ assert(
 const existing = await visit("/api/auth/signup", {
   method: "POST",
   body: {
-    fullName: "Existing User",
-    username: "existinguser",
     email: "existing@nexus.test",
     password: "supersecret",
   },
@@ -264,9 +258,22 @@ assert(
 
 const badSignup = await visit("/api/auth/signup", {
   method: "POST",
-  body: { fullName: "X", username: "ab", email: "not-an-email", password: "123" },
+  body: { email: "not-an-email", password: "123" },
 });
 assert("signup validates its input (400)", badSignup.status === 400);
+
+// Signup is intentionally minimal: it must NOT require onboarding fields.
+// Name, username, workspace and goals are collected later in onboarding.
+const minimalSignup = await visit("/api/auth/signup", {
+  method: "POST",
+  body: { email: "minimal@nexus.test", password: "supersecret" },
+});
+const minimalBody = await minimalSignup.json().catch(() => null);
+assert(
+  "signup accepts email + password only (no onboarding fields)",
+  minimalSignup.status === 200 && minimalBody?.ok === true,
+  JSON.stringify(minimalBody)
+);
 
 // ============ 3. ONBOARDING GATE ============
 console.log("\n-- onboarding gate ------------------------------------");
@@ -357,9 +364,9 @@ const dashboardHtml = await dashboard.text();
 assert("/dashboard returns 200", dashboard.status === 200, `status=${dashboard.status}`);
 assert(
   "/dashboard renders the workspace shell",
-  dashboardHtml.includes("Global navigation") &&
-    dashboardHtml.includes("Workspace navigation") &&
-    !dashboardHtml.includes("Sign in to NEXUS"),
+  dashboardHtml.includes("Workspace navigation") &&
+    dashboardHtml.includes("Overview") &&
+    !dashboardHtml.includes("Welcome back"),
   "shell markup missing"
 );
 
@@ -458,6 +465,31 @@ assert(
   "update-password -> 401 without a recovery session",
   updateAnonymous.status === 401,
   `status=${updateAnonymous.status}`
+);
+
+// ============ 7b. RESEND CONFIRMATION ===========
+console.log("-- resend confirmation -------------------------------");
+
+const resendInvalid = await visit("/api/auth/resend-confirmation", {
+  method: "POST",
+  body: { email: "not-an-email" },
+});
+assert("resend-confirmation validates its input (400)", resendInvalid.status === 400);
+
+const resend = await visit("/api/auth/resend-confirmation", {
+  method: "POST",
+  body: { email: "confirm-me@nexus.test" },
+});
+const resendBody = await resend.json().catch(() => null);
+assert(
+  "resend-confirmation accepts a valid email",
+  resend.status === 200 && resendBody?.ok === true,
+  JSON.stringify(resendBody)
+);
+assert(
+  "resend-confirmation never confirms the address exists",
+  typeof resendBody?.message === "string" && !/confirmed/i.test(resendBody.message),
+  JSON.stringify(resendBody)
 );
 
 // ============ 8. LOGOUT ============
