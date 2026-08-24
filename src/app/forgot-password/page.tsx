@@ -96,6 +96,7 @@ export default function ForgotPasswordPage() {
         <Field label="Email address" htmlFor="forgot-email">
           <Input
             id="forgot-email"
+            name="email"
             size="lg"
             type="email"
             value={email}

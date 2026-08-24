@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
@@ -12,6 +12,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/divider";
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
  * Sign in.
@@ -43,12 +45,39 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState(searchParams.get("error") ?? "");
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const submitting = useRef(false);
+  const resendSubmitting = useRef(false);
   // Guards the OAuth click the same way `submitting` guards the credentials
   // form: a ref flips synchronously, so two rapid clicks cannot fire two
   // provider redirects before the button re-renders as disabled.
   const googleSubmitting = useRef(false);
+  const cooldownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownInterval.current) clearInterval(cooldownInterval.current);
+    };
+  }, []);
+
+  const startResendCooldown = useCallback(() => {
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    if (cooldownInterval.current) clearInterval(cooldownInterval.current);
+    cooldownInterval.current = setInterval(() => {
+      setResendCooldown((value) => {
+        if (value <= 1) {
+          if (cooldownInterval.current) clearInterval(cooldownInterval.current);
+          cooldownInterval.current = null;
+          return 0;
+        }
+        return value - 1;
+      });
+    }, 1000);
+  }, []);
 
   const handleLogin = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -80,15 +109,20 @@ function LoginForm() {
         const payload = (await response.json().catch(() => null)) as {
           ok?: boolean;
           error?: string;
+          errorCode?: string;
           redirectTo?: string;
         } | null;
 
         if (!response.ok || !payload?.ok) {
+          const isUnverified = payload?.errorCode === "EMAIL_NOT_CONFIRMED";
           setError(payload?.error ?? "Sign in failed. Please try again.");
+          setNeedsVerification(isUnverified);
+          setVerificationMessage("");
           return;
         }
 
-        router.replace(payload.redirectTo ?? "/dashboard");
+        setNeedsVerification(false);
+        router.replace(payload.redirectTo ?? "/app");
         router.refresh();
       } catch (cause) {
         setError(
@@ -148,6 +182,62 @@ function LoginForm() {
     }
   }, [configError, supabase, clientResult.error]);
 
+  const handleResendVerification = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (resendSubmitting.current || resendCooldown > 0) return;
+
+      if (configError) {
+        setError(configError);
+        return;
+      }
+
+      if (!email.trim()) {
+        setError("Please enter your email address.");
+        return;
+      }
+
+      resendSubmitting.current = true;
+      setResendLoading(true);
+      setError("");
+      setVerificationMessage("");
+
+      try {
+        const response = await fetch("/api/auth/resend-confirmation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as {
+          ok?: boolean;
+          error?: string;
+          message?: string;
+        } | null;
+
+        if (!response.ok || !payload?.ok) {
+          setError(payload?.error ?? "Could not resend the verification email.");
+          return;
+        }
+
+        setVerificationMessage(
+          "Verification email sent. Check your inbox and follow the verification link."
+        );
+        startResendCooldown();
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? `Could not reach the server: ${cause.message}`
+            : "Could not reach the server."
+        );
+      } finally {
+        resendSubmitting.current = false;
+        setResendLoading(false);
+      }
+    },
+    [configError, email, resendCooldown, startResendCooldown]
+  );
+
   const showConfigError = configError ?? clientResult.error;
 
   return (
@@ -191,12 +281,13 @@ function LoginForm() {
         <Field label="Email" htmlFor="login-email">
           <Input
             id="login-email"
+            name="email"
             size="lg"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@company.com"
-            autoComplete="email"
+            autoComplete="username"
             disabled={loading}
             aria-invalid={error ? true : undefined}
             required
@@ -217,6 +308,7 @@ function LoginForm() {
         >
           <PasswordInput
             id="login-password"
+            name="password"
             size="lg"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -240,6 +332,34 @@ function LoginForm() {
           Log in
         </Button>
       </form>
+
+      {needsVerification ? (
+        <div className="mt-6 border-t border-border-subtle pt-6">
+          <p className="mb-3 text-center text-small text-text-secondary">
+            Didn&apos;t receive the verification email?
+          </p>
+          <form onSubmit={handleResendVerification} noValidate className="flex flex-col gap-4">
+            {verificationMessage ? (
+              <Alert tone="success">{verificationMessage}</Alert>
+            ) : null}
+
+            <Button
+              type="submit"
+              size="lg"
+              variant="secondary"
+              loading={resendLoading}
+              disabled={Boolean(showConfigError) || resendCooldown > 0}
+              className="w-full"
+            >
+              {resendCooldown > 0
+                ? `Resend available in ${resendCooldown}s`
+                : resendLoading
+                  ? "Sending verification email…"
+                  : "Resend verification email"}
+            </Button>
+          </form>
+        </div>
+      ) : null}
     </AuthLayout>
   );
 }

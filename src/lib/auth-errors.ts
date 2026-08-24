@@ -16,16 +16,20 @@ export function humanizeAuthError(error: AuthErrorShape): string {
   const key = `${code} ${raw}`.toLowerCase();
 
   if (key.includes("invalid login credentials")) {
-    return "Incorrect email or password.";
+    return "The email or password is incorrect.";
   }
-  if (key.includes("email not confirmed")) {
-    return "This email address is not confirmed yet. Open the link we sent you, then sign in.";
+  if (
+    key.includes("email not confirmed") ||
+    key.includes("email_not_confirmed") ||
+    key.includes("not confirmed")
+  ) {
+    return "Your email address hasn't been verified yet. Verify it before signing in.";
   }
   if (key.includes("user already registered") || key.includes("already been registered")) {
     return "An account already exists with this email address. Sign in instead.";
   }
   if (key.includes("password should be at least")) {
-    return raw;
+    return "Password must be at least 6 characters.";
   }
   if (key.includes("weak password")) {
     return "This password is too weak. Use at least 6 characters.";
@@ -42,11 +46,33 @@ export function humanizeAuthError(error: AuthErrorShape): string {
   if (key.includes("signups not allowed") || key.includes("signup_disabled")) {
     return "Sign-ups are disabled on this Supabase project (Authentication → Sign In / Providers).";
   }
-  if (key.includes("fetch failed") || key.includes("network") || key.includes("enotfound")) {
-    return "Could not reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and your connection.";
+  if (
+    key.includes("token has expired") ||
+    key.includes("otp token has expired") ||
+    key.includes("token expired") ||
+    key.includes("expired token")
+  ) {
+    return "This verification link has expired.";
+  }
+  if (
+    key.includes("token has already been used") ||
+    key.includes("otp token is invalid") ||
+    key.includes("invalid token") ||
+    key.includes("token is invalid")
+  ) {
+    return "This verification link is no longer valid.";
+  }
+  if (
+    key.includes("fetch failed") ||
+    key.includes("network") ||
+    key.includes("enotfound") ||
+    key.includes("failed to fetch")
+  ) {
+    return "We couldn't reach NEXUS. Check your connection and try again.";
   }
 
-  return raw || "Authentication failed. Please try again.";
+  // Never surface a raw GoTrue message to an end user.
+  return "Authentication failed. Please try again.";
 }
 
 /** Validation shared by the client forms and the server routes. */

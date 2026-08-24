@@ -52,11 +52,15 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        // Confirmation must land on /auth/callback with NO next=/onboarding.
-        // The callback verifies the address, drops the session and sends
-        // the visitor to the public landing page — in any browser.
-        emailRedirectTo: `${getRequestOrigin(request)}/auth/callback`,
+        // Confirmation lands on the dedicated NEXUS /auth/confirm endpoint.
+        // The server exchanges the token_hash, establishes the session and
+        // routes by onboarding state (never to a raw page or /onboarding
+        // before the address is verified).
+        emailRedirectTo: `${getRequestOrigin(request)}/auth/confirm`,
       },
+      // ^ The Supabase "Confirm signup" email template should be set to
+      //   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
+      //   (see supabase/email-templates/).
     });
   } catch (cause) {
     return NextResponse.json(
@@ -83,7 +87,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     requiresConfirmation: true,
+    redirectTo: "/check-email",
     message:
-      "Account created. Confirm your email address, then sign in to access your workspace.",
+      "Account created. We sent a verification link to your email. Verify it to continue.",
   });
 }

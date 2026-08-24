@@ -3,9 +3,11 @@
 import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
+import { cn } from "@/lib/cn";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Field, Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -35,6 +37,7 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
+  const passwordMeetsMinimum = password.length >= 6;
   // Guards the OAuth click the same way `submitting` guards the credentials
   // form: a ref flips synchronously, so two rapid clicks cannot fire two
   // provider redirects before the button re-renders as disabled.
@@ -188,6 +191,7 @@ export default function SignupPage() {
         <Field label="Work email" htmlFor="signup-email">
           <Input
             id="signup-email"
+            name="email"
             size="lg"
             type="email"
             value={email}
@@ -200,9 +204,10 @@ export default function SignupPage() {
           />
         </Field>
 
-        <Field label="Password" htmlFor="signup-password" hint="At least 6 characters.">
+        <Field label="Password" htmlFor="signup-password">
           <PasswordInput
             id="signup-password"
+            name="password"
             size="lg"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -212,6 +217,16 @@ export default function SignupPage() {
             aria-invalid={error ? true : undefined}
             required
           />
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-caption text-text-tertiary",
+              passwordMeetsMinimum ? "text-success" : undefined
+            )}
+            aria-live="polite"
+          >
+            <Check size={12} strokeWidth={2.25} aria-hidden="true" />
+            At least 6 characters
+          </p>
         </Field>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}

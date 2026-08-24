@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   let result;
   try {
     result = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getRequestOrigin(request)}/auth/callback?next=/reset-password`,
+      redirectTo: `${getRequestOrigin(request)}/auth/confirm?type=recovery&next=/reset-password`,
     });
   } catch (cause) {
     return NextResponse.json(

@@ -349,7 +349,34 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
 
     if (url.pathname === "/auth/v1/verify") {
       const body = await readBody(req);
-      const user = String(body.type ?? "") === "recovery" ? ONBOARDED_USER : FRESH_USER;
+      const type = String(body.type ?? "");
+      const tokenHash = String(body.token_hash ?? "");
+
+      // Deterministic confirmation-link outcomes so the NEXUS /auth/confirm
+      // route can be exercised end-to-end for every state.
+      if (tokenHash === "expired") {
+        return json(400, {
+          code: 400,
+          error_code: "otp_expired",
+          msg: "OTP has expired",
+          message: "OTP has expired",
+        });
+      }
+      if (tokenHash === "invalid") {
+        return json(400, {
+          code: 400,
+          error_code: "otp_invalid",
+          msg: "OTP token is invalid",
+          message: "OTP token is invalid",
+        });
+      }
+
+      const user =
+        type === "recovery" || tokenHash.includes("onboarded")
+          ? ONBOARDED_USER
+          : tokenHash.includes("incomplete")
+            ? INCOMPLETE_USER
+            : FRESH_USER;
       return json(200, makeSession(user));
     }
 

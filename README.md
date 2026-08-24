@@ -168,7 +168,7 @@ is testable without a GPU (`npm run verify:scene`).
 | Audience | Routes |
 | --- | --- |
 | Public product | `/`, `/intelligence`, `/how-it-works`, `/pricing` |
-| Authentication | `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/check-email`, `/auth/callback` |
+| Authentication | `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/check-email`, `/auth/confirm`, `/auth/confirm-error`, `/auth/callback` |
 | Onboarding | `/onboarding` (authenticated, incomplete accounts only) |
 | Workspace | `/app` → `/dashboard`, `/app/intelligence`, `/projects`, `/tasks`, `/goals`, `/activity`, `/notifications`, `/integrations` |
 | Account | `/settings`, `/settings/billing`, `/upgrade` |
@@ -234,12 +234,20 @@ created by the same client — there is no token relay that can silently fail:
 | Route | Purpose |
 | --- | --- |
 | `POST /api/auth/signin` | email + password, writes the SSR cookies, returns `redirectTo` |
-| `POST /api/auth/signup` | account creation; reports `requiresConfirmation` and emails `/auth/callback` (the callback confirms the address, signs the visitor out and sends them to the public landing page — never `/onboarding`) |
+| `POST /api/auth/signup` | account creation; reports `requiresConfirmation`, emails `/auth/confirm` |
 | `POST /api/auth/signout` | ends the session and clears the cookies |
 | `POST /api/auth/forgot-password` | sends a recovery email (same success copy whether the address exists) |
-| `POST /api/auth/update-password` | completes recovery after `/auth/callback?next=/reset-password` |
-| `GET  /auth/callback` | exchanges the email `code` or the OAuth `code` (`?source=oauth`) for an SSR session; email confirmation signs out and returns to the landing page, OAuth routes by account state (`/onboarding` until complete, then `/dashboard`) |
+| `POST /api/auth/resend-confirmation` | resends the sign-up verification email |
+| `POST /api/auth/update-password` | completes recovery after `/auth/confirm?type=recovery` |
+| `GET  /auth/confirm` | exchanges `token_hash` via `verifyOtp`, writes the SSR session and routes by account state (`/onboarding` until complete, then `/app`) |
+| `GET  /auth/callback` | exchanges an email `code` or the OAuth `code` (`?source=oauth`) for an SSR session; recovery goes to `/reset-password`, everything else routes by account state |
+| `GET  /auth/confirm-error` | branded NEXUS state for expired/invalid/used/missing verification links |
 | `GET  /api/health` | public liveness probe |
+
+The NEXUS-branded email templates live in `supabase/email-templates/` and must be
+pasted into Supabase → Authentication → Email Templates (see the README there).
+They point at `/auth/confirm?token_hash=...&type=email|recovery`, so confirmation
+never depends on a PKCE code or exposes a raw Supabase page.
 
 The cookies are not `HttpOnly` (Supabase default), so the browser client keeps working
 for client-side CRUD under RLS. `src/lib/auth-errors.ts` turns Supabase errors into
@@ -247,10 +255,10 @@ messages a user can act on. The product routes sit behind an onboarding gate: un
 `profiles.onboarding_completed` is true, `(app)` redirects to `/onboarding`.
 
 **Sign-in methods.** Email/password (server-side, above) **and** "Continue with Google"
-on both `/login` and `/signup`. Google uses the **same** Supabase PKCE flow and the
-**same** `/auth/callback` route as email — there is no second auth flow, and the
-existing session handling, onboarding gate and dashboard routing are reused
-unchanged. To enable it, turn on the Google provider under Supabase →
+on both `/login` and `/signup`. Google keeps using the **same** Supabase PKCE flow and
+the **same** `/auth/callback?source=oauth` route — email verification uses its own
+server-side `/auth/confirm` token-hash route, so the two flows stay independent and
+Google OAuth is not modified. To enable it, turn on the Google provider under Supabase →
 Authentication → Providers and add `<site URL>/auth/callback` to the allowed Redirect
 URLs. No client secret is ever shipped to the browser (PKCE); OAuth errors and
 cancellations surface as a clear NEXUS message on `/login`, never a raw server error.

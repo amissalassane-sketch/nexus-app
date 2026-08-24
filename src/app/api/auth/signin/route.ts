@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
+import { resolveUserAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Email + password sign-in, performed ON THE SERVER.
@@ -50,8 +51,14 @@ export async function POST(request: Request) {
   }
 
   if (result.error) {
+    const emailNotConfirmed = /email not confirmed|email_not_confirmed|not confirmed/i.test(
+      `${result.error.code ?? ""} ${result.error.message ?? ""}`
+    );
     return NextResponse.json(
-      { error: humanizeAuthError(result.error) },
+      {
+        error: humanizeAuthError(result.error),
+        ...(emailNotConfirmed ? { errorCode: "EMAIL_NOT_CONFIRMED" } : {}),
+      },
       { status: result.error.status && result.error.status < 500 ? 401 : 502 }
     );
   }
@@ -59,22 +66,18 @@ export async function POST(request: Request) {
   if (!result.data.session) {
     return NextResponse.json(
       {
-        error:
-          "Sign in succeeded but no session was returned. If email confirmation is enabled, confirm your address first.",
+        error: "Sign in succeeded but no session was returned.",
+        errorCode: "NO_SESSION",
       },
       { status: 401 }
     );
   }
 
   // Where to send the user next: onboarding until the profile is completed.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed")
-    .eq("id", result.data.user.id)
-    .maybeSingle();
+  const { destination } = await resolveUserAuthDestination(supabase, result.data.user.id);
 
   return NextResponse.json({
     ok: true,
-    redirectTo: profile?.onboarding_completed === true ? "/dashboard" : "/onboarding",
+    redirectTo: destination,
   });
 }

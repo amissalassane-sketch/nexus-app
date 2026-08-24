@@ -147,10 +147,42 @@ assert(
 assert("anonymous /intelligence renders", (await visit("/intelligence")).status === 200);
 assert("anonymous /how-it-works renders", (await visit("/how-it-works")).status === 200);
 assert("anonymous /pricing renders", (await visit("/pricing")).status === 200);
-assert("anonymous /login renders", (await visit("/login")).status === 200);
-assert("anonymous /signup renders", (await visit("/signup")).status === 200);
+const anonymousLoginHtmlCache = await (await visit("/login")).text();
+const anonymousSignupHtmlCache = await (await visit("/signup")).text();
+assert("anonymous /login renders", anonymousLoginHtmlCache.length > 0);
+assert("anonymous /signup renders", anonymousSignupHtmlCache.length > 0);
 assert("anonymous /forgot-password renders", (await visit("/forgot-password")).status === 200);
 assert("anonymous /check-email renders", (await visit("/check-email")).status === 200);
+
+// Browser-safe autocomplete semantics: signup must be treated as a new
+// password context and login as a current-password context.
+assert(
+  "login uses semantic current-password autocomplete",
+  anonymousLoginHtmlCache.includes('name="email"') &&
+    /autoComplete="username"/i.test(anonymousLoginHtmlCache) &&
+    anonymousLoginHtmlCache.includes('name="password"') &&
+    /autoComplete="current-password"/i.test(anonymousLoginHtmlCache),
+  "login form attributes missing"
+);
+assert(
+  "signup uses semantic new-password autocomplete",
+  anonymousSignupHtmlCache.includes('name="email"') &&
+    /autoComplete="email"/i.test(anonymousSignupHtmlCache) &&
+    anonymousSignupHtmlCache.includes('name="password"') &&
+    /autoComplete="new-password"/i.test(anonymousSignupHtmlCache),
+  "signup form attributes missing"
+);
+
+const confirmErrorPage = await visit("/auth/confirm-error?reason=expired");
+const confirmErrorHtml = await confirmErrorPage.text();
+assert(
+  "confirmation error page renders a branded NEXUS state, not raw JSON",
+  confirmErrorPage.status === 200 &&
+    confirmErrorHtml.includes("Email verification") &&
+    confirmErrorHtml.includes("This verification link has expired") &&
+    confirmErrorHtml.includes("Return to sign in"),
+  `status=${confirmErrorPage.status}`
+);
 
 function redirectTarget(response) {
   return new URL(response.headers.get("location") ?? "", APP_URL);
@@ -158,39 +190,118 @@ function redirectTarget(response) {
 
 const callbackBare = await visit("/auth/callback");
 assert(
-  "confirmation link without a code goes to the landing page, not /onboarding",
+  "confirmation link without a token goes to the NEXUS error page, not the landing page",
   callbackBare.status === 307 &&
-    redirectTarget(callbackBare).pathname === "/" &&
-    !redirectTarget(callbackBare).href.includes("onboarding") &&
-    redirectTarget(callbackBare).pathname !== "/login",
+    redirectTarget(callbackBare).pathname === "/auth/confirm-error" &&
+    redirectTarget(callbackBare).href.includes("reason=missing"),
   `status=${callbackBare.status} location=${callbackBare.headers.get("location")}`
 );
 
-const callbackOnboarding = await visit("/auth/callback?code=ok-code&next=/onboarding");
+const callbackOnboardingJar = oauthCallbackJar();
+const callbackOnboarding = await visit("/auth/callback?code=ok-code&next=/onboarding", {
+  jar: callbackOnboardingJar,
+});
 assert(
-  "legacy next=/onboarding confirmation links still land on the homepage",
+  "a valid email confirmation establishes a session and opens onboarding for a new user",
   callbackOnboarding.status === 307 &&
-    (callbackOnboarding.headers.get("location") ?? "").includes("/?confirmed=1") &&
-    !(callbackOnboarding.headers.get("location") ?? "").includes("onboarding"),
-  `status=${callbackOnboarding.status} location=${callbackOnboarding.headers.get("location")}`
+    redirectTarget(callbackOnboarding).pathname === "/onboarding" &&
+    callbackOnboardingJar.names().some((name) => name.includes("auth-token")),
+  `status=${callbackOnboarding.status} location=${callbackOnboarding.headers.get("location")} cookies=${JSON.stringify(callbackOnboardingJar.names())}`
 );
 
 const callbackInvalid = await visit("/auth/callback?code=invalid");
 assert(
-  "a confirmation click in another browser (failed PKCE) still opens the landing page",
+  "an invalid confirmation token shows the NEXUS error state, never a raw response",
   callbackInvalid.status === 307 &&
-    !(callbackInvalid.headers.get("location") ?? "").includes("onboarding") &&
-    !(callbackInvalid.headers.get("location") ?? "").includes("/login"),
+    redirectTarget(callbackInvalid).pathname === "/auth/confirm-error" &&
+    !redirectTarget(callbackInvalid).href.includes("/login"),
   `status=${callbackInvalid.status} location=${callbackInvalid.headers.get("location")}`
 );
 
-const callbackRecover = await visit("/auth/callback?code=recover-code&next=/reset-password");
+const callbackRecover = await visit("/auth/callback?code=recover-code&next=/reset-password", {
+  jar: oauthCallbackJar(),
+});
 assert(
-  "a recovery link that cannot be exchanged does not open onboarding",
+  "a valid recovery link opens the password reset screen",
   callbackRecover.status === 307 &&
-    !(callbackRecover.headers.get("location") ?? "").includes("onboarding") &&
-    (callbackRecover.headers.get("location") ?? "").includes("/forgot-password"),
+    redirectTarget(callbackRecover).pathname === "/reset-password" &&
+    !redirectTarget(callbackRecover).href.includes("onboarding"),
   `status=${callbackRecover.status} location=${callbackRecover.headers.get("location")}`
+);
+
+const callbackRecoverInvalid = await visit(
+  "/auth/callback?code=invalid&next=/reset-password"
+);
+assert(
+  "an invalid recovery link opens a readable reset error",
+  callbackRecoverInvalid.status === 307 &&
+    redirectTarget(callbackRecoverInvalid).pathname === "/forgot-password" &&
+    (callbackRecoverInvalid.headers.get("location") ?? "").includes("error="),
+  `status=${callbackRecoverInvalid.status} location=${callbackRecoverInvalid.headers.get("location")}`
+);
+
+// ---- /auth/confirm (new NEXUS-branded email template endpoint) ----
+const confirmBare = await visit("/auth/confirm");
+assert(
+  "a confirmation link without a token shows the NEXUS error state",
+  confirmBare.status === 307 &&
+    redirectTarget(confirmBare).pathname === "/auth/confirm-error",
+  `status=${confirmBare.status} location=${confirmBare.headers.get("location")}`
+);
+
+const confirmFreshJar = createJar();
+const confirmFresh = await visit(
+  "/auth/confirm?token_hash=confirm-fresh&type=email",
+  { jar: confirmFreshJar }
+);
+assert(
+  "token_hash confirmation for a new user opens onboarding and writes a session",
+  confirmFresh.status === 307 &&
+    redirectTarget(confirmFresh).pathname === "/onboarding" &&
+    confirmFreshJar.names().some((name) => name.includes("auth-token")),
+  `status=${confirmFresh.status} location=${confirmFresh.headers.get("location")} cookies=${JSON.stringify(confirmFreshJar.names())}`
+);
+
+const confirmOnboardedJar = createJar();
+const confirmOnboarded = await visit(
+  "/auth/confirm?token_hash=confirm-onboarded&type=email",
+  { jar: confirmOnboardedJar }
+);
+assert(
+  "token_hash confirmation for an onboarded user opens /app",
+  confirmOnboarded.status === 307 &&
+    redirectTarget(confirmOnboarded).pathname === "/app" &&
+    confirmOnboardedJar.names().some((name) => name.includes("auth-token")),
+  `status=${confirmOnboarded.status} location=${confirmOnboarded.headers.get("location")} cookies=${JSON.stringify(confirmOnboardedJar.names())}`
+);
+
+const confirmExpired = await visit("/auth/confirm?token_hash=expired&type=email");
+assert(
+  "an expired verification token shows the NEXUS expired state",
+  confirmExpired.status === 307 &&
+    redirectTarget(confirmExpired).pathname === "/auth/confirm-error" &&
+    redirectTarget(confirmExpired).href.includes("reason=expired"),
+  `status=${confirmExpired.status} location=${confirmExpired.headers.get("location")}`
+);
+
+const confirmInvalid = await visit("/auth/confirm?token_hash=invalid&type=email");
+assert(
+  "an invalid verification token shows the NEXUS invalid state",
+  confirmInvalid.status === 307 &&
+    redirectTarget(confirmInvalid).pathname === "/auth/confirm-error" &&
+    redirectTarget(confirmInvalid).href.includes("reason=invalid"),
+  `status=${confirmInvalid.status} location=${confirmInvalid.headers.get("location")}`
+);
+
+const confirmRecovery = await visit(
+  "/auth/confirm?token_hash=confirm-recovery&type=recovery",
+  { jar: createJar() }
+);
+assert(
+  "a recovery token_hash opens the password reset screen",
+  confirmRecovery.status === 307 &&
+    redirectTarget(confirmRecovery).pathname === "/reset-password",
+  `status=${confirmRecovery.status} location=${confirmRecovery.headers.get("location")}`
 );
 
 const emailOnOnboarding = await visit("/onboarding?code=ok-code");
@@ -246,8 +357,10 @@ assert(
   JSON.stringify(signupBody)
 );
 assert(
-  "confirmation email never forces /onboarding",
-  (stub.redirectTos ?? []).every((value) => !String(value).includes("onboarding")),
+  "signup confirmation email points at /auth/confirm, never /onboarding",
+  (stub.redirectTos ?? []).length > 0 &&
+    (stub.redirectTos ?? []).every((value) => String(value).endsWith("/auth/confirm")) &&
+    (stub.redirectTos ?? []).every((value) => !String(value).includes("onboarding")),
   JSON.stringify(stub.redirectTos)
 );
 
@@ -264,6 +377,7 @@ assert(
   confirmSignup.status === 200 &&
     confirmBody?.ok === true &&
     confirmBody?.requiresConfirmation === true &&
+    confirmBody?.redirectTo === "/check-email" &&
     typeof confirmBody?.message === "string",
   JSON.stringify(confirmBody)
 );
@@ -324,7 +438,7 @@ const wrongPassword = await visit("/api/auth/signin", {
 const wrongBody = await wrongPassword.json().catch(() => null);
 assert(
   "wrong password -> 401 with a readable message",
-  wrongPassword.status === 401 && /incorrect email or password/i.test(wrongBody?.error ?? ""),
+  wrongPassword.status === 401 && /email or password is incorrect/i.test(wrongBody?.error ?? ""),
   JSON.stringify(wrongBody)
 );
 assert(
@@ -339,7 +453,8 @@ const unknownEmail = await visit("/api/auth/signin", {
 const unknownBody = await unknownEmail.json().catch(() => null);
 assert(
   "unknown email -> 401 with a readable message",
-  unknownEmail.status === 401 && /incorrect email or password/i.test(unknownBody?.error ?? ""),
+  unknownEmail.status === 401 &&
+    /email or password is incorrect/i.test(unknownBody?.error ?? ""),
   JSON.stringify(unknownBody)
 );
 
@@ -349,8 +464,10 @@ const unconfirmed = await visit("/api/auth/signin", {
 });
 const unconfirmedBody = await unconfirmed.json().catch(() => null);
 assert(
-  "unconfirmed email -> actionable message",
-  unconfirmed.status === 401 && /not confirmed/i.test(unconfirmedBody?.error ?? ""),
+  "unconfirmed email -> actionable verification message",
+  unconfirmed.status === 401 &&
+    /verified/i.test(unconfirmedBody?.error ?? "") &&
+    unconfirmedBody?.errorCode === "EMAIL_NOT_CONFIRMED",
   JSON.stringify(unconfirmedBody)
 );
 
@@ -370,8 +487,8 @@ const loginBody = await login.json().catch(() => null);
 assert("login succeeds", login.status === 200 && loginBody?.ok === true, JSON.stringify(loginBody));
 assert("login writes auth cookies", jar.size() > 0, JSON.stringify(jar.names()));
 assert(
-  "an onboarded user lands on /dashboard",
-  loginBody?.redirectTo === "/dashboard",
+  "an onboarded user lands on /app",
+  loginBody?.redirectTo === "/app",
   JSON.stringify(loginBody)
 );
 
@@ -462,14 +579,14 @@ assert(
   `status=${oauthIncomplete.status} location=${oauthIncomplete.headers.get("location")}`
 );
 
-// Google sign-in for a fully onboarded user -> /dashboard (never /login, /signup).
+// Google sign-in for a fully onboarded user -> /app (never /login, /signup).
 const oauthOnboarded = await visit("/auth/callback?source=oauth&code=oauth-onboarded", {
   jar: oauthCallbackJar(),
 });
 assert(
-  "google sign-in for an onboarded user opens the dashboard",
+  "google sign-in for an onboarded user opens the app",
   oauthOnboarded.status === 307 &&
-    redirectTarget(oauthOnboarded).pathname === "/dashboard",
+    redirectTarget(oauthOnboarded).pathname === "/app",
   `status=${oauthOnboarded.status} location=${oauthOnboarded.headers.get("location")}`
 );
 
@@ -505,7 +622,7 @@ const oauthReplay = await visit("/auth/callback?source=oauth&code=invalid", { ja
 assert(
   "a duplicate oauth callback with a live session routes by account state",
   oauthReplay.status === 307 &&
-    redirectTarget(oauthReplay).pathname === "/dashboard" &&
+    redirectTarget(oauthReplay).pathname === "/app" &&
     !redirectTarget(oauthReplay).href.includes("/login"),
   `status=${oauthReplay.status} location=${oauthReplay.headers.get("location")}`
 );
@@ -625,6 +742,33 @@ assert(
   `status=${updateAnonymous.status}`
 );
 
+const recoveryJar = createJar();
+const recoveryConfirm = await visit(
+  "/auth/confirm?token_hash=confirm-recovery&type=recovery",
+  { jar: recoveryJar }
+);
+assert(
+  "a recovery link opens /reset-password and writes a session",
+  recoveryConfirm.status === 307 &&
+    redirectTarget(recoveryConfirm).pathname === "/reset-password" &&
+    recoveryJar.names().some((name) => name.includes("auth-token")),
+  `status=${recoveryConfirm.status} cookies=${JSON.stringify(recoveryJar.names())}`
+);
+
+const updateWithSession = await visit("/api/auth/update-password", {
+  jar: recoveryJar,
+  method: "POST",
+  body: { password: "newsecret" },
+});
+const updateSessionBody = await updateWithSession.json().catch(() => null);
+assert(
+  "password reset with a live recovery session succeeds and opens /app",
+  updateWithSession.status === 200 &&
+    updateSessionBody?.ok === true &&
+    updateSessionBody?.redirectTo === "/app",
+  JSON.stringify(updateSessionBody)
+);
+
 // ============ 7b. RESEND CONFIRMATION ===========
 console.log("-- resend confirmation -------------------------------");
 
@@ -679,9 +823,9 @@ const googleAgain = await visit(
   { jar: googleAgainJar }
 );
 assert(
-  "google sign-in after logout starts a fresh session and opens the dashboard",
+  "google sign-in after logout starts a fresh session and opens the app",
   googleAgain.status === 307 &&
-    redirectTarget(googleAgain).pathname === "/dashboard" &&
+    redirectTarget(googleAgain).pathname === "/app" &&
     googleAgainJar.names().some((name) => name.includes("auth-token")),
   `status=${googleAgain.status} location=${googleAgain.headers.get("location")} cookies=${JSON.stringify(googleAgainJar.names())}`
 );
