@@ -183,8 +183,13 @@ them directly into `/app`.
 Every tenant-owned table uses RLS based on active workspace membership; IDs supplied in
 a URL or PostgREST request do not bypass workspace isolation. Post-base migrations add
 atomic plan enforcement, write-time membership checks, task dependencies and a
-trigger-owned activity audit stream. Public clients use only Supabase publishable/anon
-keys—no service-role secret is read by the application.
+trigger-owned activity audit stream. Migrations 016–018 make personal-workspace
+bootstrap atomic and idempotent for onboarding, including historical owner and
+subscription repair; they do not make tenant tables public. Public clients use only
+Supabase publishable/anon keys—no service-role secret is read by the application.
+See `PRODUCTION_ONBOARDING_RUNBOOK.md` and
+`supabase/diagnostics/onboarding-production.sql` before declaring a deployment
+production-ready; migration files in Git are not proof of application to the live DB.
 
 ## Application shell
 

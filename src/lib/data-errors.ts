@@ -11,7 +11,13 @@ export function humanizeDataError(
   if (isPlanLimitError(error?.message)) {
     return "This workspace has reached its current plan limit. Review your plan to add more.";
   }
-  if (code === "42501" || message.includes("row-level security") || message.includes("access denied")) {
+  if (
+    code === "42501" ||
+    message.includes("row-level security") ||
+    message.includes("access denied") ||
+    message.includes("permission denied") ||
+    message.includes("workspace_access_denied")
+  ) {
     return "You do not have permission to make this change in the current workspace.";
   }
   if (code === "23505" || message.includes("duplicate key") || message.includes("already exists")) {

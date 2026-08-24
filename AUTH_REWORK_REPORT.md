@@ -115,7 +115,9 @@ production confirmation link may still be rejected by Supabase's allowlist.
 - Supabase error messages are never surfaced raw to the UI.
 - Email responses are deliberately generic (no account-existence disclosure).
 - Onboarding/workspace bootstrap remains idempotent (no duplicate workspaces or
-  memberships); no changes were made to those migrations.
+  memberships); migration 018 now prefers the caller's owned workspace,
+  repairs subscriptions and serializes concurrent retries. It does not widen
+  normal table RLS.
 - OAuth error/cancel handling is unchanged.
 
 ## 8. Tests executed
@@ -135,9 +137,9 @@ production confirmation link may still be rejected by Supabase's allowlist.
 | `tsc --noEmit` | Pass |
 | `eslint` | Pass |
 | `next build` | Pass |
-| Auth flow end-to-end | **94 passed / 0 failed** (signup, confirmation, invalid/expired, resend, login/unverified, recovery, OAuth, session refresh, logout, redirects, autocomplete semantics, no raw errors) |
-| Migration logic | **54 passed / 0 failed** |
-| Onboarding / workspace RLS | **21 passed / 0 failed** |
+| Auth flow end-to-end | **97 passed / 0 failed** (signup, confirmation, invalid/expired, resend, login/unverified, recovery, OAuth, session refresh, logout, redirects, autocomplete semantics, no raw errors, ordered Step 1 route) |
+| Migration logic | **55 passed / 0 failed** |
+| Onboarding / workspace RLS | **33 passed / 0 failed** |
 | Schema errors | Pass |
 
 ## 10. Production deployment considerations
@@ -148,5 +150,6 @@ production confirmation link may still be rejected by Supabase's allowlist.
 3. Keep email confirmation enabled; do not disable it to "fix" this.
 4. The production built app (`next build && next start`) is the same flow the
    tests cover; the dev-server run is only used for the local stub harness.
-5. No database migrations were added or changed — RLS, plans, workspace
-   bootstrap, and membership triggers are untouched.
+5. The onboarding hardening is in additive migration 018; it preserves the
+   existing RLS model while repairing the owner/subscription bootstrap. Apply
+   016, 017 and 018 to the production Supabase project in order.
