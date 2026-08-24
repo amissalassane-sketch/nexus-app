@@ -20,13 +20,13 @@ import { cn } from "@/lib/cn";
 //                            Intelligence item is marked as current.
 // ============================================================
 
-type LandingNavContext = "landing" | "intelligence";
+type LandingNavContext = "landing" | "intelligence" | "how-it-works" | "pricing";
 
 const NAV_LINKS = [
-  { id: "product", hash: "product", label: "Product" },
-  { id: "how-it-works", hash: "how-it-works", label: "How it works" },
+  { id: "product", route: "/#product", label: "Product" },
+  { id: "how-it-works", route: "/how-it-works", label: "How it works" },
   { id: "intelligence", route: "/intelligence", label: "Intelligence" },
-  { id: "pricing", hash: "pricing", label: "Pricing" },
+  { id: "pricing", route: "/pricing", label: "Pricing" },
 ] as const;
 
 export function LandingNav({
@@ -52,17 +52,8 @@ export function LandingNav({
     };
   }, [open]);
 
-  // Anchors stay anchors on the landing page; from /intelligence the same
-  // items navigate back to the corresponding section of the landing page.
-  const linkHref = (link: (typeof NAV_LINKS)[number]) =>
-    "route" in link
-      ? link.route
-      : context === "intelligence"
-        ? `/#${link.hash}`
-        : `#${link.hash}`;
-
   const isCurrent = (link: (typeof NAV_LINKS)[number]) =>
-    context === "intelligence" && link.id === "intelligence";
+    context !== "landing" && link.id === context;
 
   return (
     <header
@@ -92,23 +83,15 @@ export function LandingNav({
                 : "text-text-secondary"
             );
 
-            if ("route" in link) {
-              return (
-                <Link
-                  key={link.id}
-                  href={link.route}
-                  aria-current={current ? "page" : undefined}
-                  className={className}
-                >
-                  {link.label}
-                </Link>
-              );
-            }
-
             return (
-              <a key={link.id} href={linkHref(link)} className={className}>
+              <Link
+                key={link.id}
+                href={link.route}
+                aria-current={current ? "page" : undefined}
+                className={className}
+              >
                 {link.label}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -156,29 +139,16 @@ export function LandingNav({
                 current ? "bg-accent-ghost text-text-primary" : "text-text-primary"
               );
 
-              if ("route" in link) {
-                return (
-                  <Link
-                    key={link.id}
-                    href={link.route}
-                    onClick={() => setOpen(false)}
-                    aria-current={current ? "page" : undefined}
-                    className={className}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              }
-
               return (
-                <a
+                <Link
                   key={link.id}
-                  href={linkHref(link)}
+                  href={link.route}
                   onClick={() => setOpen(false)}
+                  aria-current={current ? "page" : undefined}
                   className={className}
                 >
                   {link.label}
-                </a>
+                </Link>
               );
             })}
             <div className="mt-2 flex items-center gap-2 border-t border-border-subtle pt-4">

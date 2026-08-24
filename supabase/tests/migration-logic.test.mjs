@@ -2,7 +2,7 @@
  * ============================================================
  * NEXUS — MIGRATION LOGIC TEST HARNESS
  * ============================================================
- * Executes the versioned migrations (006 -> 011) against a real
+ * Executes the post-base migrations (006 onward) against a real
  * PostgreSQL engine (PGlite / WASM) on top of a minimal schema fixture,
  * and asserts the freemium enforcement behaviour.
  *
@@ -69,7 +69,11 @@ const db = await PGlite.create();
 // ---- schema fixture + versioned migrations ------------------------
 await db.exec(readFileSync(join(here, "00_base_schema_fixture.sql"), "utf8"));
 
-const migrations = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort();
+// 001 is the production base schema. This harness has already installed its
+// deliberately minimal fixture above, so only apply post-base migrations.
+const migrations = readdirSync(migrationsDir)
+  .filter((file) => file.endsWith(".sql") && !file.startsWith("001_"))
+  .sort();
 for (const file of migrations) {
   try {
     await db.exec(readFileSync(join(migrationsDir, file), "utf8"));

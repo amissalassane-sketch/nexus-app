@@ -144,6 +144,9 @@ assert(
   "landing copy missing"
 );
 
+assert("anonymous /intelligence renders", (await visit("/intelligence")).status === 200);
+assert("anonymous /how-it-works renders", (await visit("/how-it-works")).status === 200);
+assert("anonymous /pricing renders", (await visit("/pricing")).status === 200);
 assert("anonymous /login renders", (await visit("/login")).status === 200);
 assert("anonymous /signup renders", (await visit("/signup")).status === 200);
 assert("anonymous /forgot-password renders", (await visit("/forgot-password")).status === 200);
@@ -377,9 +380,16 @@ console.log("\n-- authenticated navigation ---------------------------");
 
 const root = await visit("/", { jar });
 assert(
-  "/ redirects to /dashboard once signed in",
-  root.status === 307 && (root.headers.get("location") ?? "").endsWith("/dashboard"),
+  "the public homepage remains available once signed in",
+  root.status === 200,
   `status=${root.status} location=${root.headers.get("location")}`
+);
+const authenticatedLogin = await visit("/login", { jar });
+assert(
+  "an authenticated Sign in route enters /app",
+  authenticatedLogin.status === 307 &&
+    (authenticatedLogin.headers.get("location") ?? "").endsWith("/app"),
+  `status=${authenticatedLogin.status} location=${authenticatedLogin.headers.get("location")}`
 );
 
 const dashboard = await visit("/dashboard", { jar });

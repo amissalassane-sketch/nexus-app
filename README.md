@@ -85,13 +85,12 @@ Empty states always answer three questions: what is missing, why it matters, wha
 A dedicated public product page for the intelligence layer — not a section of the
 main landing, and not a replacement for it. `/` is untouched.
 
-- **Page**: `src/app/intelligence-landing/page.tsx`, sections in
-  `src/components/intelligence/` (hero field, what it sees, the six signals,
-  next best action, explainable, workspace → action, closing CTA).
-- **One URL, two audiences**: `src/lib/supabase/middleware.ts` rewrites
-  `/intelligence` to the public page for visitors, while signed-in users keep the
-  workspace Intelligence page (`src/app/(app)/intelligence/page.tsx`) at the same
-  URL. Nothing in the app rail, sidebar or command menu had to move.
+- **Page**: `src/app/intelligence/page.tsx`, with sections in
+  `src/components/intelligence/` (context, signals, next best action,
+  explainability, workspace → action, closing CTA).
+- **Clear public/product separation**: `/intelligence` is public for everyone.
+  Authenticated workspace Intelligence lives at `/app/intelligence`; no marketing
+  navigation can accidentally enter onboarding.
 - **Navbar / footer**: the existing `LandingNav` and `LandingFooter` take a
   `context` prop (`"landing" | "intelligence"`); section anchors resolve back to
   `/#…` and the Intelligence item is marked `aria-current="page"`.
@@ -163,6 +162,29 @@ is testable without a GPU (`npm run verify:scene`).
   the preference is watched live.
 - No WebGL → the static SVG core, which is also what renders if context creation
   fails at runtime.
+
+## Route map
+
+| Audience | Routes |
+| --- | --- |
+| Public product | `/`, `/intelligence`, `/how-it-works`, `/pricing` |
+| Authentication | `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/check-email`, `/auth/callback` |
+| Onboarding | `/onboarding` (authenticated, incomplete accounts only) |
+| Workspace | `/app` → `/dashboard`, `/app/intelligence`, `/projects`, `/tasks`, `/goals`, `/activity`, `/notifications`, `/integrations` |
+| Account | `/settings`, `/settings/billing`, `/upgrade` |
+
+The Next.js 16 proxy refreshes Supabase cookies and protects every non-public route.
+Authenticated visitors may still read public product pages; opening an auth form takes
+them directly into `/app`.
+
+## Database and tenant isolation
+
+`supabase/migrations/001_nexus_base_schema.sql` is the reproducible base schema.
+Every tenant-owned table uses RLS based on active workspace membership; IDs supplied in
+a URL or PostgREST request do not bypass workspace isolation. Post-base migrations add
+atomic plan enforcement, write-time membership checks, task dependencies and a
+trigger-owned activity audit stream. Public clients use only Supabase publishable/anon
+keys—no service-role secret is read by the application.
 
 ## Application shell
 

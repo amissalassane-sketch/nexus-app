@@ -14,6 +14,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
+import { humanizeDataError } from "@/lib/data-errors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
@@ -113,7 +114,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
       .order("created_at", { ascending: false });
 
     if (loadError) {
-      setError(loadError.message);
+      setError(humanizeDataError(loadError));
       setNotifications([]);
       setLoading(false);
       return;
@@ -173,7 +174,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
       .eq("user_id", userId);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(humanizeDataError(updateError));
       return;
     }
 
@@ -195,7 +196,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
     setMarkingAll(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(humanizeDataError(updateError));
       return;
     }
 

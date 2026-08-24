@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Field, Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 
@@ -102,10 +103,9 @@ export default function ResetPasswordPage() {
           htmlFor="reset-password"
           hint="At least 6 characters."
         >
-          <Input
+          <PasswordInput
             id="reset-password"
             size="lg"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="New password"
@@ -116,10 +116,9 @@ export default function ResetPasswordPage() {
         </Field>
 
         <Field label="Confirm password" htmlFor="reset-confirm">
-          <Input
+          <PasswordInput
             id="reset-confirm"
             size="lg"
-            type="password"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
             placeholder="Repeat the password"

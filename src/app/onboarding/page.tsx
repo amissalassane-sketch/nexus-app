@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClientSafe } from "@/lib/supabase/client";
 import { isPlanLimitError } from "@/lib/plan-errors";
 import { isMissingColumnError } from "@/lib/schema-errors";
+import { humanizeDataError } from "@/lib/data-errors";
 import { NexusLogo } from "@/components/nexus-logo";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/feedback";
@@ -136,7 +137,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         | null;
 
       if (profileResult.error) {
-        setError(profileResult.error.message);
+        setError(humanizeDataError(profileResult.error, "Your profile could not be loaded. Please try again."));
         setLoading(false);
         return;
       }
@@ -282,7 +283,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         const saved = await supabase.from("profiles").upsert(base).select("id").maybeSingle();
 
         if (saved.error || !saved.data?.id) {
-          setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
+          setError(humanizeDataError(saved.error, "Your progress could not be saved. Please try again."));
           return;
         }
 
@@ -326,7 +327,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         }
 
         if (saved.error || !saved.data?.id) {
-          setError(saved.error?.message ?? "Your progress could not be saved. Please try again.");
+          setError(humanizeDataError(saved.error, "Your progress could not be saved. Please try again."));
           return;
         }
 
@@ -334,7 +335,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
           data: { onboarding_intent: goal },
         });
         if (metadata.error) {
-          setError(`Your choice could not be saved: ${metadata.error.message}`);
+          setError(humanizeDataError(metadata.error, "Your choice could not be saved. Please try again."));
           return;
         }
       }
@@ -347,7 +348,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         // Persisted profile fields still determine a safe refresh route.
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Your progress could not be saved.");
+      setError(humanizeDataError(cause instanceof Error ? cause : null, "Your progress could not be saved. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -451,7 +452,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       const { error: profileError } = await persistProfile(false);
 
       if (profileError) {
-        setError(profileError.message);
+        setError(humanizeDataError(profileError, "Your profile could not be prepared. Please try again."));
         return;
       }
 
@@ -466,7 +467,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         .order("created_at", { ascending: false });
 
       if (membershipError) {
-        setError(`Could not verify your workspace: ${membershipError.message}`);
+        setError(humanizeDataError(membershipError, "Your workspace could not be verified. Please try again."));
         return;
       }
 
@@ -588,7 +589,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       const { data: completedRow, error: completeError } = await persistProfile(true);
 
       if (completeError) {
-        setError(`We couldn't finish setting up your workspace — ${completeError.message}`);
+        setError(humanizeDataError(completeError, "We couldn't finish setting up your workspace. Please try again."));
         return;
       }
 

@@ -8,14 +8,14 @@ import { NexusWordmark } from "@/components/nexus-logo";
 // back to the landing page instead of resolving to nothing.
 // ============================================================
 
-type LandingFooterContext = "landing" | "intelligence";
+type LandingFooterContext = "landing" | "intelligence" | "how-it-works" | "pricing";
 
 const PRODUCT_LINKS = [
-  { href: "#product", label: "Product" },
-  { href: "#model", label: "The model" },
-  { href: "#how-it-works", label: "How it works" },
+  { href: "/#product", label: "Product" },
+  { href: "/#model", label: "The model" },
+  { href: "/how-it-works", label: "How it works" },
   { href: "/intelligence", label: "Intelligence" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "/pricing", label: "Pricing" },
 ] as const;
 
 const ACCOUNT_LINKS = [
@@ -24,9 +24,9 @@ const ACCOUNT_LINKS = [
 ] as const;
 
 const SYSTEM_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#faq", label: "FAQ" },
-  { href: "#pricing", label: "Free plan" },
+  { href: "/#features", label: "Features" },
+  { href: "/#faq", label: "FAQ" },
+  { href: "/pricing", label: "Free plan" },
 ] as const;
 
 const COLUMNS = [

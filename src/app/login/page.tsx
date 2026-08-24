@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
-import { validateCredentials } from "@/lib/auth-errors";
+import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Field, Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Alert } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/divider";
@@ -130,7 +131,7 @@ function LoginForm() {
       });
 
       if (oauthError) {
-        setError(oauthError.message ?? "Could not start Google sign-in. Please try again.");
+        setError(humanizeAuthError(oauthError));
         googleSubmitting.current = false;
         setGoogleLoading(false);
       }
@@ -214,10 +215,9 @@ function LoginForm() {
             </Link>
           }
         >
-          <Input
+          <PasswordInput
             id="login-password"
             size="lg"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Your password"
