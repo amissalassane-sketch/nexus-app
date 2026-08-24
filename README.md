@@ -95,14 +95,74 @@ main landing, and not a replacement for it. `/` is untouched.
 - **Navbar / footer**: the existing `LandingNav` and `LandingFooter` take a
   `context` prop (`"landing" | "intelligence"`); section anchors resolve back to
   `/#…` and the Intelligence item is marked `aria-current="page"`.
-- **Hero visual**: the locked N is used as a CSS `mask-image`, never redrawn — the
-  light, the texture and the sweep travel through the real geometry, and the mark
-  forms out of signal points and connected lines like the launch signature.
-  All motion is CSS/SVG (no WebGL, no canvas, no animation library); pointer depth
-  runs through a single `pointermove` listener and one rAF loop
-  (`src/components/intelligence/intelligence-field.tsx`).
+- **Hero visual**: a real-time 3D intelligence core rendered with Three.js —
+  see *NEXUS Intelligence 3D hero* below. Everything above the canvas is still
+  HTML: the lockup, the copy and both CTAs are server-rendered and readable
+  before a single WebGL frame exists.
 - **Copy discipline**: every claim maps to `src/lib/intelligence/engine.ts`, and
   every example signal is labelled as a product visualisation.
+
+## NEXUS Intelligence 3D hero
+
+`src/components/nexus-intelligence/` — the visual identity of the intelligence
+layer. A monochrome, near-static computational structure: a faceted core, a shell
+of bound nodes, three orbital pathways and a sparse network around it.
+
+**Composition.** The world is centred on the core at the origin and the *camera*
+is offset, which is what puts the core centre-right on desktop, slightly off
+centre on tablet and below the copy on mobile. No important geometry ever lands
+behind the headline.
+
+**Architecture.**
+
+| Module | Role |
+| --- | --- |
+| `nexus-intelligence-hero.tsx` | Server component: lockup, copy, CTAs, scrim |
+| `nexus-intelligence-stage.tsx` | Chooses scene or static fallback |
+| `nexus-intelligence-scene.tsx` | Mounts the engine, loads Three.js on idle |
+| `nexus-intelligence-fallback.tsx` | SVG core for browsers with no WebGL |
+| `scene/intelligence-engine.ts` | WebGL context, rAF loop, DOM observers |
+| `scene/intelligence-world.ts` | Everything that simulates — DOM-free, GPU-free |
+| `scene/intelligence-core.ts` | Inner mass, cages, struts, mid nodes, pathways |
+| `scene/intelligence-network.ts` | k-NN node graph, instanced, 3 draw calls |
+| `scene/data-signal.ts` | Fixed pool of travelling information particles |
+| `scene/reasoning-cycle.ts` | The autonomous 8-step cycle plus ambient activity |
+| `scene/intelligence-camera.ts` · `intelligence-lighting.ts` | Composition, depth |
+| `scene/state.ts` | INTRO / IDLE / CURSOR_NEAR / CURSOR_OVER_CORE / REASONING |
+
+The engine/world split is deliberate: the world takes a delta time and normalised
+pointer coordinates and returns a scene graph, so the whole behaviour of the hero
+is testable without a GPU (`npm run verify:scene`).
+
+**Behaviour.**
+
+- *Entrance* — 2.5s, from a single point of light to a settled system. Line
+  formation uses `drawRange`, node appearance uses instance scale.
+- *Idle* — slow rotation, a 0.8% breath, drifting internals, occasional ambient
+  link activation.
+- *Reasoning* — every 5–9s (period measured between cycle *starts*): a distant
+  node wakes, a signal hops to a neighbour, that neighbour wakes, a second signal
+  carries the result to the core, the core pulses, a neighbourhood lights, and the
+  system fades back to idle. Phase-driven, so the rhythm follows the geometry.
+- *Cursor* — proximity and hover are computed by projecting the core to screen
+  space. Movement is capped at 0.11 world units of camera parallax; channels ease
+  toward their targets, so nothing ever snaps.
+- *Palette* — strictly the NEXUS greyscale ramp. One 4-unit-cool key light is the
+  only non-neutral value in the scene.
+
+**Performance and access.**
+
+- Three.js is fetched by a real `import()` inside an effect, so it is a chunk the
+  bundler cannot merge into the eager graph — the hero copy paints first.
+- ~18 draw calls total; every node, strut and particle is instanced or merged.
+  No post-processing, no shadows, no physics.
+- The loop is *parked*, not throttled, when the hero scrolls out of view or the
+  tab is hidden.
+- The canvas and every wrapper are `pointer-events: none`.
+- `prefers-reduced-motion` renders one settled frame and never starts the loop;
+  the preference is watched live.
+- No WebGL → the static SVG core, which is also what renders if context creation
+  fails at runtime.
 
 ## Application shell
 
@@ -213,6 +273,11 @@ node supabase/tests/migration-logic.test.mjs
 
 # Onboarding must tolerate a missing profiles.onboarding_intent column:
 node supabase/tests/schema-errors.test.mjs
+
+# 3D hero: builds the real IntelligenceWorld and steps it headlessly —
+# entrance timing, idle convergence, reasoning cycles, cursor states,
+# camera composition, numerical stability and resource disposal.
+npm run verify:scene
 ```
 
 `supabase/tests/rls_audit.sql` is a read-only script to run in the Supabase SQL editor:
@@ -226,4 +291,5 @@ versioned in this repository, so the live policies can only be audited that way.
 npm run dev     # development server
 npm run build   # production build (type-checked)
 npm run lint    # eslint
+npm run verify:scene   # headless simulation of the 3D hero (no GPU needed)
 ```
