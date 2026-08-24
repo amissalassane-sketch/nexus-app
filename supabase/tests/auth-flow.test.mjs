@@ -8,7 +8,8 @@
  * Covers the scenarios that must never regress:
  *   signup (session / confirmation / already registered)
  *   login  (success / wrong password / unknown email / invalid input)
- *   oauth  (new / incomplete / onboarded / error / cancellation / replay)
+ *   oauth  (new / incomplete / onboarded / error / cancellation / replay /
+ *          refresh after callback / re-login after logout)
  *   session persistence + expired-token refresh
  *   route protection
  *   onboarding gate
@@ -499,6 +500,36 @@ assert(
   `status=${oauthReplay.status} location=${oauthReplay.headers.get("location")}`
 );
 
+// Refresh after OAuth: the callback's 307 carries the new session cookies.
+// A browser refresh (the next page load) must keep the user signed in, and
+// an authenticated user must never be left on the login form.
+const oauthSessionJar = oauthCallbackJar();
+const oauthSession = await visit(
+  "/auth/callback?source=oauth&code=oauth-onboarded",
+  { jar: oauthSessionJar }
+);
+assert(
+  "the successful google callback writes a session cookie",
+  oauthSession.status === 307 &&
+    oauthSessionJar.names().some((name) => name.includes("auth-token")),
+  `status=${oauthSession.status} cookies=${JSON.stringify(oauthSessionJar.names())}`
+);
+
+const oauthRefresh = await visit("/dashboard", { jar: oauthSessionJar });
+assert(
+  "a refresh after google sign-in keeps the user signed in",
+  oauthRefresh.status === 200,
+  `status=${oauthRefresh.status}`
+);
+
+const oauthThenLogin = await visit("/login", { jar: oauthSessionJar });
+assert(
+  "an authenticated user is never left on /login after google sign-in",
+  oauthThenLogin.status === 307 &&
+    !redirectTarget(oauthThenLogin).pathname.endsWith("/login"),
+  `status=${oauthThenLogin.status} location=${oauthThenLogin.headers.get("location")}`
+);
+
 // ============ 6. SESSION PERSISTENCE + REFRESH ============
 console.log("\n-- session persistence --------------------------------");
 
@@ -628,6 +659,28 @@ assert(
   "after logout /tasks redirects to /login",
   tasksAfterSignOut.status === 307,
   `status=${tasksAfterSignOut.status}`
+);
+
+// Logout then Google sign-in again: the SAME single flow must work a second
+// time — a fresh PKCE exchange, a fresh session, routing by account state.
+const googleAgainJar = oauthCallbackJar();
+const googleAgain = await visit(
+  "/auth/callback?source=oauth&code=oauth-onboarded",
+  { jar: googleAgainJar }
+);
+assert(
+  "google sign-in after logout starts a fresh session and opens the dashboard",
+  googleAgain.status === 307 &&
+    redirectTarget(googleAgain).pathname === "/dashboard" &&
+    googleAgainJar.names().some((name) => name.includes("auth-token")),
+  `status=${googleAgain.status} location=${googleAgain.headers.get("location")} cookies=${JSON.stringify(googleAgainJar.names())}`
+);
+
+const googleAgainDashboard = await visit("/dashboard", { jar: googleAgainJar });
+assert(
+  "the dashboard is reachable after the second google sign-in",
+  googleAgainDashboard.status === 200,
+  `status=${googleAgainDashboard.status}`
 );
 
 await stub.close();
