@@ -9,6 +9,7 @@ import { canCreateTask } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
 import { cn } from "@/lib/cn";
+import { humanizeDataError } from "@/lib/data-errors";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
@@ -149,7 +150,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .order("due_at", { ascending: true });
 
     if (loadError) {
-      setError(loadError.message);
+      setError(humanizeDataError(loadError));
       setTasks([]);
       setLoading(false);
       return;
@@ -300,7 +301,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
         setFormOpen(false);
         return;
       }
-      setError(createError.message);
+      setError(humanizeDataError(createError));
       return;
     }
 
@@ -337,7 +338,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
     if (updateError) {
       if (await handleMutationError(updateError.message)) return;
-      setError(updateError.message);
+      setError(humanizeDataError(updateError));
       return;
     }
 
@@ -436,7 +437,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
-      setError(deleteError.message);
+      setError(humanizeDataError(deleteError));
       return;
     }
 

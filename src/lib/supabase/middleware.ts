@@ -13,15 +13,31 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { config } = readSupabaseConfig();
-
-  // Without configuration there is no session to read: let the request
-  // through so the pages can display an explicit configuration error
-  // instead of an infinite redirect loop towards /login.
-  if (!config) {
-    return response;
-  }
-
   const pathname = request.nextUrl.pathname;
+
+  // A deployment without Supabase cannot have an authenticated session.
+  // Keep marketing/auth surfaces reachable (the forms explain the missing
+  // configuration), but preserve the protected-route contract instead of
+  // allowing product server components to throw a configuration error.
+  if (!config) {
+    const publicWithoutAuth =
+      pathname === "/" ||
+      pathname === "/intelligence" ||
+      pathname === "/pricing" ||
+      pathname === "/how-it-works" ||
+      pathname.startsWith("/login") ||
+      pathname.startsWith("/signup") ||
+      pathname.startsWith("/forgot-password") ||
+      pathname.startsWith("/reset-password") ||
+      pathname.startsWith("/check-email") ||
+      pathname.startsWith("/auth/") ||
+      pathname.startsWith("/api/") ||
+      pathname === "/robots.txt" ||
+      pathname === "/sitemap.xml";
+    return publicWithoutAuth
+      ? response
+      : NextResponse.redirect(new URL("/login", request.url));
+  }
 
   // Email links sometimes land on Site URL (/), /onboarding or /login with
   // `?code=` / `?token_hash=` instead of /auth/callback. Catch them here so
@@ -86,6 +102,10 @@ export async function updateSession(request: NextRequest) {
     pathname === "/" ||
     pathname === "/intelligence" ||
     pathname === "/intelligence/" ||
+    pathname === "/pricing" ||
+    pathname === "/pricing/" ||
+    pathname === "/how-it-works" ||
+    pathname === "/how-it-works/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||
@@ -104,7 +124,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthForm) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/app", request.url));
   }
 
   return response;

@@ -31,6 +31,7 @@ as $$
   select nullif(current_setting('test.current_user_id', true), '')::uuid;
 $$;
 
+
 create table if not exists public.profiles (
   id                   uuid primary key references auth.users(id) on delete cascade,
   display_name         text,
@@ -62,6 +63,20 @@ create table if not exists public.workspace_members (
   created_at   timestamptz not null default now(),
   unique (workspace_id, user_id)
 );
+
+-- Membership policy helper from the production base migration. The fixture
+-- keeps policies out, but post-base tables may reference this function.
+create or replace function public.is_active_workspace_member(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.workspace_members
+    where workspace_id = p_workspace_id and user_id = p_user_id and status = 'active'
+  );
+$$;
 
 create table if not exists public.projects (
   id           uuid primary key default gen_random_uuid(),

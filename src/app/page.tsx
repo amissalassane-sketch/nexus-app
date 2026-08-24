@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getAuthenticatedUser } from "@/lib/auth";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { Alert } from "@/components/ui/feedback";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingReveal } from "@/components/landing/landing-reveal";
@@ -60,18 +57,8 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const justConfirmed = params.confirmed === "1";
-  const fromOnboarding = params.from === "onboarding";
-
-  // After an email confirmation link — or when a user was just bounced here
-  // from /onboarding after a page refresh — we always show this page so the
-  // visitor can choose Sign in or Create account, instead of an authenticated
-  // session bouncing them straight back into /dashboard -> /onboarding.
-  if (isSupabaseConfigured() && !justConfirmed && !fromOnboarding) {
-    const user = await getAuthenticatedUser();
-    if (user) {
-      redirect("/dashboard");
-    }
-  }
+  // Public marketing stays public even when a session exists. Authenticated
+  // visitors who choose Sign in or Get started are routed to /app by proxy.
 
   return (
     <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
