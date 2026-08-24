@@ -156,13 +156,22 @@ created by the same client — there is no token relay that can silently fail:
 | `POST /api/auth/signout` | ends the session and clears the cookies |
 | `POST /api/auth/forgot-password` | sends a recovery email (same success copy whether the address exists) |
 | `POST /api/auth/update-password` | completes recovery after `/auth/callback?next=/reset-password` |
-| `GET  /auth/callback` | exchanges the email `code` for an SSR session |
+| `GET  /auth/callback` | exchanges the email `code` or the OAuth `code` (`?source=oauth`) for an SSR session; email confirmation signs out and returns to the landing page, OAuth routes by account state (`/onboarding` until complete, then `/dashboard`) |
 | `GET  /api/health` | public liveness probe |
 
 The cookies are not `HttpOnly` (Supabase default), so the browser client keeps working
 for client-side CRUD under RLS. `src/lib/auth-errors.ts` turns Supabase errors into
 messages a user can act on. The product routes sit behind an onboarding gate: until
 `profiles.onboarding_completed` is true, `(app)` redirects to `/onboarding`.
+
+**Sign-in methods.** Email/password (server-side, above) **and** "Continue with Google"
+on both `/login` and `/signup`. Google uses the **same** Supabase PKCE flow and the
+**same** `/auth/callback` route as email — there is no second auth flow, and the
+existing session handling, onboarding gate and dashboard routing are reused
+unchanged. To enable it, turn on the Google provider under Supabase →
+Authentication → Providers and add `<site URL>/auth/callback` to the allowed Redirect
+URLs. No client secret is ever shipped to the browser (PKCE); OAuth errors and
+cancellations surface as a clear NEXUS message on `/login`, never a raw server error.
 
 ## Routing & session
 

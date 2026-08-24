@@ -44,6 +44,10 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState(searchParams.get("error") ?? "");
   const submitting = useRef(false);
+  // Guards the OAuth click the same way `submitting` guards the credentials
+  // form: a ref flips synchronously, so two rapid clicks cannot fire two
+  // provider redirects before the button re-renders as disabled.
+  const googleSubmitting = useRef(false);
 
   const handleLogin = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -100,6 +104,8 @@ function LoginForm() {
   );
 
   const handleGoogleLogin = useCallback(async () => {
+    if (googleSubmitting.current) return;
+
     if (configError) {
       setError(configError);
       return;
@@ -110,6 +116,7 @@ function LoginForm() {
       return;
     }
 
+    googleSubmitting.current = true;
     setGoogleLoading(true);
     setError("");
 
@@ -124,14 +131,18 @@ function LoginForm() {
 
       if (oauthError) {
         setError(oauthError.message ?? "Could not start Google sign-in. Please try again.");
+        googleSubmitting.current = false;
         setGoogleLoading(false);
       }
+      // On success the browser navigates away to Google, then back to
+      // /auth/callback — keep the spinner and the guard for the whole trip.
     } catch (cause) {
       setError(
         cause instanceof Error
           ? `Could not reach the server: ${cause.message}`
           : "Could not reach the server."
       );
+      googleSubmitting.current = false;
       setGoogleLoading(false);
     }
   }, [configError, supabase, clientResult.error]);

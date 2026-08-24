@@ -8,6 +8,7 @@
  * Covers the scenarios that must never regress:
  *   signup (session / confirmation / already registered)
  *   login  (success / wrong password / unknown email / invalid input)
+ *   oauth  (new / incomplete / onboarded / error / cancellation / replay)
  *   session persistence + expired-token refresh
  *   route protection
  *   onboarding gate
@@ -21,6 +22,7 @@
  */
 
 import { makeAccessToken, startSupabaseStub } from "./supabase-stub.mjs";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 const APP_URL = process.env.APP_URL ?? "http://127.0.0.1:3000";
 
@@ -97,6 +99,26 @@ const stub = await startSupabaseStub(54321).catch((cause) => {
   return { url: "http://127.0.0.1:54321", calls: [], close: async () => {} };
 });
 console.log(`Supabase stub: ${stub.url}\nApplication:   ${APP_URL}\n`);
+
+// The OAuth return leg calls supabase.auth.exchangeCodeForSession, which in a
+// real browser reads the PKCE `code_verifier` that `signInWithOAuth` stored in
+// a cookie before redirecting to Google. This harness has no browser, so the
+// OAuth success cases plant that cookie themselves. The name is derived from
+// the project storage key (the same derivation the app uses), and the value
+// must be a JSON-encoded string — auth-js JSON.parses storage on every read,
+// so a bare string would be treated as absent.
+const pkceVerifierCookie = `${createSupabaseClient(stub.url, "stub-key", {
+  auth: { flowType: "pkce" },
+}).auth.storageKey}-code-verifier`;
+const pkceVerifierValue = JSON.stringify("nexus-test-verifier");
+
+/** A cookie jar that carries only the PKCE verifier, so an OAuth callback can
+ *  exchange its code the way a browser would after `signInWithOAuth`. */
+function oauthCallbackJar() {
+  const jar = createJar();
+  jar.set(pkceVerifierCookie, pkceVerifierValue);
+  return jar;
+}
 
 // ============ 1. ROUTE PROTECTION (no session) ============
 console.log("-- protection (anonymous) -----------------------------");
@@ -380,6 +402,101 @@ assert(
   "/login redirects away when already signed in",
   loginWhileAuthenticated.status === 307,
   `status=${loginWhileAuthenticated.status}`
+);
+
+// ============ 5b. OAUTH (CONTINUE WITH GOOGLE) ============
+console.log("\n-- oauth (continue with google) -----------------------");
+// The "Continue with Google" button reuses the same Supabase PKCE OAuth flow
+// and the SAME /auth/callback route as email confirmation — it is not a second
+// auth flow. These cases drive the callback's `source=oauth` branch for every
+// account state, mirroring the scenarios that must never regress.
+
+const loginPage = await visit("/login");
+const loginPageHtml = await loginPage.text();
+assert(
+  "/login offers Continue with Google",
+  loginPage.status === 200 && loginPageHtml.includes("Continue with Google"),
+  "google button missing on /login"
+);
+
+const signupPage = await visit("/signup");
+const signupPageHtml = await signupPage.text();
+assert(
+  "/signup offers Continue with Google",
+  signupPage.status === 200 && signupPageHtml.includes("Continue with Google"),
+  "google button missing on /signup"
+);
+
+// Google sign-up for a brand-new user (no profile yet) -> /onboarding.
+const oauthNew = await visit("/auth/callback?source=oauth&code=oauth-new", {
+  jar: oauthCallbackJar(),
+});
+assert(
+  "google sign-up for a new user opens onboarding",
+  oauthNew.status === 307 &&
+    redirectTarget(oauthNew).pathname === "/onboarding" &&
+    !redirectTarget(oauthNew).pathname.includes("login"),
+  `status=${oauthNew.status} location=${oauthNew.headers.get("location")}`
+);
+
+// Google sign-in for a returning user who never finished onboarding -> /onboarding.
+const oauthIncomplete = await visit("/auth/callback?source=oauth&code=oauth-incomplete", {
+  jar: oauthCallbackJar(),
+});
+assert(
+  "google sign-in for an incomplete-onboarding user opens onboarding",
+  oauthIncomplete.status === 307 &&
+    redirectTarget(oauthIncomplete).pathname === "/onboarding" &&
+    !redirectTarget(oauthIncomplete).pathname.includes("login"),
+  `status=${oauthIncomplete.status} location=${oauthIncomplete.headers.get("location")}`
+);
+
+// Google sign-in for a fully onboarded user -> /dashboard (never /login, /signup).
+const oauthOnboarded = await visit("/auth/callback?source=oauth&code=oauth-onboarded", {
+  jar: oauthCallbackJar(),
+});
+assert(
+  "google sign-in for an onboarded user opens the dashboard",
+  oauthOnboarded.status === 307 &&
+    redirectTarget(oauthOnboarded).pathname === "/dashboard",
+  `status=${oauthOnboarded.status} location=${oauthOnboarded.headers.get("location")}`
+);
+
+// A failed exchange (provider rejected it) -> /login?error, as a clear NEXUS
+// error state — never a raw server error.
+const oauthError = await visit("/auth/callback?source=oauth&code=invalid");
+assert(
+  "a failed google exchange sends the visitor to /login with an error",
+  oauthError.status === 307 &&
+    redirectTarget(oauthError).pathname === "/login" &&
+    (oauthError.headers.get("location") ?? "").includes("error=") &&
+    (oauthError.headers.get("location") ?? "").includes("failed"),
+  `status=${oauthError.status} location=${oauthError.headers.get("location")}`
+);
+
+// OAuth cancellation (user closed the Google consent screen; the provider
+// reports it as error=access_denied) -> a DISTINCT "cancelled" message.
+const oauthCancel = await visit(
+  "/auth/callback?source=oauth&error=access_denied&error_description=Access%20denied"
+);
+assert(
+  "a cancelled google sign-in shows a distinct cancelled error",
+  oauthCancel.status === 307 &&
+    redirectTarget(oauthCancel).pathname === "/login" &&
+    (oauthCancel.headers.get("location") ?? "").toLowerCase().includes("cancelled"),
+  `status=${oauthCancel.status} location=${oauthCancel.headers.get("location")}`
+);
+
+// Duplicate / replayed callback while ALREADY signed in: the single-use PKCE
+// code can no longer be exchanged, but the visitor keeps their live session and
+// is routed by their account state — an authenticated user never lands on /login.
+const oauthReplay = await visit("/auth/callback?source=oauth&code=invalid", { jar });
+assert(
+  "a duplicate oauth callback with a live session routes by account state",
+  oauthReplay.status === 307 &&
+    redirectTarget(oauthReplay).pathname === "/dashboard" &&
+    !redirectTarget(oauthReplay).href.includes("/login"),
+  `status=${oauthReplay.status} location=${oauthReplay.headers.get("location")}`
 );
 
 // ============ 6. SESSION PERSISTENCE + REFRESH ============
