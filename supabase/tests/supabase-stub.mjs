@@ -151,6 +151,19 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
           onboarding_completed: false,
         },
       ],
+      // FRESH_USER: just signed up — the DB trigger created a profile row
+      // with onboarding_completed = false and a default display name pulled
+      // from user_metadata. No workspace yet (the RPC will bootstrap it).
+      [
+        FRESH_USER.id,
+        {
+          id: FRESH_USER.id,
+          display_name: FRESH_USER.user_metadata.full_name,
+          username: null,
+          bio: null,
+          onboarding_completed: false,
+        },
+      ],
     ]),
     workspace_members: new Map([
       [
@@ -346,6 +359,70 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
 
     // ---------- PostgREST ----------
     if (url.pathname.startsWith("/rest/v1/rpc/")) {
+      const rpcName = url.pathname.replace("/rest/v1/rpc/", "");
+      const auth = req.headers.authorization ?? "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+      const claims = decodeJwt(token);
+      const userId = claims?.sub ?? null;
+
+      // get_or_create_personal_workspace: idempotent bootstrap RPC
+      // added in migration 016. Mimics the security-definer DB function:
+      // returns the user's workspace_id, role, status — creating the
+      // workspace + owner membership if they don't already exist.
+      if (rpcName === "get_or_create_personal_workspace") {
+        await readBody(req);
+        if (!userId) {
+          return json(401, { message: "AUTH_REQUIRED" });
+        }
+        // Find an existing active membership for this user.
+        let membership = [...tables.workspace_members.values()].find(
+          (m) => m.user_id === userId && m.status === "active"
+        );
+        // Orphan-repair: if the user owns a workspace with no membership,
+        // claim it as owner.
+        if (!membership) {
+          const owned = [...tables.workspaces.values()].find(
+            (w) => w.owner_id === userId
+          );
+          if (owned) {
+            membership = {
+              workspace_id: owned.id,
+              user_id: userId,
+              role: "owner",
+              status: "active",
+            };
+            tables.workspace_members.set(`${owned.id}:${userId}`, membership);
+          }
+        }
+        // Nothing yet: create the personal workspace.
+        if (!membership) {
+          const newId = crypto.randomUUID();
+          tables.workspaces.set(newId, {
+            id: newId,
+            owner_id: userId,
+            name: "My Workspace",
+            slug: `workspace-${newId.slice(0, 8)}`,
+          });
+          membership = {
+            workspace_id: newId,
+            user_id: userId,
+            role: "owner",
+            status: "active",
+          };
+          tables.workspace_members.set(`${newId}:${userId}`, membership);
+          tables.workspace_subscriptions.set(`sub-${newId}`, {
+            workspace_id: newId,
+            plan: "FREE",
+            status: "active",
+          });
+        }
+        return json(200, {
+          workspace_id: membership.workspace_id,
+          role: membership.role,
+          status: membership.status,
+        });
+      }
+
       return json(200, null);
     }
 

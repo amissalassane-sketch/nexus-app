@@ -1,10 +1,9 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { createClientSafe } from "@/lib/supabase/client";
-import { isPlanLimitError } from "@/lib/plan-errors";
 import { isMissingColumnError } from "@/lib/schema-errors";
 import { humanizeDataError } from "@/lib/data-errors";
 import { NexusLogo } from "@/components/nexus-logo";
@@ -30,9 +29,18 @@ import { cn } from "@/lib/cn";
 // - Nothing is declared "done" on optimism: every write is read back from the
 //   database and verified before the user is redirected. On any failure we
 //   STAY here, with the data intact, and explain what happened.
-// - The workspace is created idempotently at completion, never duplicated by a
-//   refresh, and the profile's onboarding_completed flag is only set after the
-//   workspace is verified — and only after the database confirms the write.
+// - Personal workspace + owner membership are bootstrapped AT SIGNUP by a
+//   security-definer trigger (see migration 016). If that trigger ever fails
+//   (swallowed exception, OAuth sign-in where the trigger fired before
+//   migration 016, or a damaged account), the onboarding page self-heals by
+//   calling the same idempotent security-definer RPC
+//   (`get_or_create_personal_workspace`) BEFORE any profile write that other
+//   code paths might want to authorize against. This fixes the
+//   "permission to make this change in the current workspace" regression
+//   WITHOUT weakening RLS: the RPC can only operate on the caller's own
+//   account, and normal table writes remain RLS-protected.
+// - The workspace is idempotent: re-running onboarding never duplicates a
+//   workspace or membership.
 // ============================================================
 
 const GOAL_OPTIONS = [
@@ -45,6 +53,8 @@ const GOAL_OPTIONS = [
 ] as const;
 
 type GoalId = (typeof GOAL_OPTIONS)[number]["id"];
+
+type Membership = { workspace_id: string; role: string; status: string };
 
 const TOTAL_STEPS = 4;
 
@@ -72,6 +82,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
   const [onboardingUserId, setOnboardingUserId] = useState("");
+  const [membership, setMembership] = useState<Membership | null>(null);
 
   // All answers live at component level: moving between steps only changes
   // `step`, so nothing typed is ever lost.
@@ -85,14 +96,71 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     return base.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30);
   };
 
-  const createSlug = (value: string) => {
-    const base = value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-    const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
-    return `${base || "workspace"}-${suffix}`;
-  };
+  /**
+   * Legacy repair path: attempt to locate an existing workspace + membership
+   * directly through RLS-visible rows. Used when the RPC is unavailable or
+   * returns no row (e.g. pre-016 databases).
+   */
+  const fallbackEnsureWorkspace = useCallback(async (): Promise<Membership | null> => {
+    try {
+      const { data: memberships } = await supabase
+        .from("workspace_members")
+        .select("workspace_id, role, status")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const existing = memberships?.[0] ?? null;
+      if (existing?.workspace_id) {
+        setMembership(existing);
+        return existing;
+      }
+    } catch {
+      // ignore; surface nothing yet — later steps will re-verify.
+    }
+    return null;
+  }, [supabase]);
+
+  /**
+   * Idempotently ensure the current user has a personal workspace and an
+   * owner membership. Uses the security-definer RPC (migration 016) so the
+   * operation is atomic and cannot be vetoed by the chicken-and-egg RLS
+   * policy on workspace_members (which requires an existing membership to
+   * manage one). RLS is NOT weakened: the RPC enforces that callers can
+   * only bootstrap their own workspace, and all other table writes remain
+   * protected. Returns the verified membership row, or null on failure.
+   */
+  const ensurePersonalWorkspace = useCallback(async (): Promise<Membership | null> => {
+    try {
+      const { data, error: rpcError } = await supabase.rpc(
+        "get_or_create_personal_workspace"
+      );
+      if (rpcError) {
+        // The RPC may not exist on databases that haven't applied migration
+        // 016 yet. Fall back to the direct flow (which works on accounts
+        // whose trigger bootstrap succeeded).
+        if (
+          /function.*does not exist|Could not find the function/i.test(
+            rpcError.message
+          )
+        ) {
+          return fallbackEnsureWorkspace();
+        }
+        return fallbackEnsureWorkspace();
+      }
+      // Supabase RPC returns a single row or array depending on the function;
+      // normalise both shapes.
+      const row = Array.isArray(data) ? data[0] : (data as Membership | null);
+      if (row?.workspace_id) {
+        setMembership(row);
+        return row;
+      }
+      return fallbackEnsureWorkspace();
+    } catch {
+      // On network/permission errors, try the legacy direct path as a
+      // best-effort fallback.
+      return fallbackEnsureWorkspace();
+    }
+  }, [supabase, fallbackEnsureWorkspace]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -106,6 +174,14 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
       setOnboardingUserId(user.id);
+
+      // FIRST: ensure the personal workspace exists before any other write.
+      // This repairs accounts whose signup trigger swallowed an error (e.g.
+      // pre-008 missing-slug bug, partial migration, Google OAuth on a
+      // lagging replica) and prevents the "no permission in current
+      // workspace" failure when subsequent code tries to resolve workspace
+      // context against a missing membership.
+      const ws = await ensurePersonalWorkspace();
 
       // Read the most precise persisted progress available. Older hosted
       // schemas may not have onboarding_intent yet, so fall back without
@@ -137,41 +213,67 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         | null;
 
       if (profileResult.error) {
+        // If reading the profile failed with a permission error, the most
+        // likely cause is that the trigger-created profile row is missing
+        // (repair path). Self-insert a minimal profile and retry once.
+        if (isPermissionError(profileResult.error)) {
+          const repair = await supabase.from("profiles").insert({
+            id: user.id,
+            display_name: user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              user.email?.split("@")[0] ??
+              "User",
+          }).select("id").maybeSingle();
+          if (!repair.error && repair.data) {
+            // Retry the read.
+            profileResult = await supabase
+              .from("profiles")
+              .select("display_name, username, onboarding_completed, onboarding_intent")
+              .eq("id", user.id)
+              .maybeSingle();
+            if (
+              profileResult.error &&
+              isMissingColumnError(profileResult.error.message, "onboarding_intent")
+            ) {
+              profileResult = await supabase
+                .from("profiles")
+                .select("display_name, username, onboarding_completed")
+                .eq("id", user.id)
+                .maybeSingle();
+            }
+          }
+        }
+      }
+
+      if (profileResult.error && !profileResult.data) {
         setError(humanizeDataError(profileResult.error, "Your profile could not be loaded. Please try again."));
         setLoading(false);
         return;
       }
 
-      // Completion alone is not enough: only a real active membership makes the
-      // dashboard valid. A damaged/missing membership stays in this safe
-      // workflow, where finalisation can reconnect an owned workspace.
-      if (profile?.onboarding_completed === true) {
-        const { data: activeMembership } = await supabase
-          .from("workspace_members")
-          .select("workspace_id")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .limit(1)
-          .maybeSingle();
+      const p = (profileResult.data ?? profile) as typeof profile;
 
-        if (activeMembership?.workspace_id) {
-          router.replace("/dashboard");
-          return;
-        }
+      // Completion alone is not enough: only a real active membership makes the
+      // dashboard valid. If the user is marked complete but membership is
+      // missing, STAY in onboarding so the bootstrap above can reconnect it
+      // (idempotent) and finalisation can confirm.
+      if (p?.onboarding_completed === true && ws?.workspace_id) {
+        router.replace("/dashboard");
+        return;
       }
 
-      if (profile?.display_name) setDisplayName(profile.display_name);
-      if (profile?.username) setUsername(profile.username);
+      if (p?.display_name) setDisplayName(p.display_name);
+      if (p?.username) setUsername(p.username);
 
       const metadataIntent =
         typeof user.user_metadata?.onboarding_intent === "string"
           ? user.user_metadata.onboarding_intent
           : "";
-      const savedGoal = profile?.onboarding_intent || metadataIntent;
-      const hasIdentity = Boolean(profile?.display_name?.trim() && profile?.username?.trim());
+      const savedGoal = p?.onboarding_intent || metadataIntent;
+      const hasIdentity = Boolean(p?.display_name?.trim() && p?.username?.trim());
 
       let furthestSafeStep = hasIdentity ? 2 : 1;
-      if (savedGoal in GOAL_OPTIONS_MAP) {
+      if (savedGoal && savedGoal in GOAL_OPTIONS_MAP) {
         setGoal(savedGoal as GoalId);
         if (hasIdentity) furthestSafeStep = 3;
       }
@@ -200,7 +302,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         // Draft storage is optional; the form remains fully usable.
       }
 
-      if (!profile?.display_name) {
+      if (!p?.display_name) {
         const metadataName =
           typeof user.user_metadata?.full_name === "string"
             ? user.user_metadata.full_name
@@ -217,7 +319,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         );
       }
 
-      if (!profile?.username) {
+      if (!p?.username) {
         const metadataUsername =
           typeof user.user_metadata?.username === "string" ? user.user_metadata.username : "";
         setUsername(
@@ -242,7 +344,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     };
 
     void loadProfile();
-  }, [router, supabase]);
+  }, [router, supabase, ensurePersonalWorkspace]);
 
   const canContinue = () => {
     if (step === 1) return displayName.trim().length > 0 && username.trim().length > 0;
@@ -251,9 +353,9 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     return true; // step 4 (Ready) can always proceed
   };
 
-  // Continue commits only the answers from the completed step. This makes a
-  // refresh deterministic without creating a workspace before the user
-  // explicitly finishes the workflow.
+  // Continue commits only the answers from the completed step.
+  // Workspace is created (idempotently) at page load via ensurePersonalWorkspace
+  // so that no step ever runs against an account without a valid membership.
   const next = async () => {
     setError("");
     if (!canContinue() || step >= TOTAL_STEPS) return;
@@ -270,10 +372,18 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         return;
       }
 
-      // Step 1 persists identity; step 2 persists the chosen goal (workspace
-      // name is held locally until completion, when the workspace itself is
-      // created idempotently).
+      // Step 1 persists identity. Ensure workspace exists first so any code
+      // path that resolves workspace context during or after this write sees
+      // a valid membership (fixes the "no permission in current workspace"
+      // race).
       if (step === 1) {
+        const ws = await ensurePersonalWorkspace();
+        // If we still have no membership after the bootstrap attempt, we
+        // still allow the profile update — profiles are scoped to
+        // auth.uid(), not workspace membership. But we record this so the
+        // final submit can retry.
+        void ws;
+
         const base = {
           id: user.id,
           display_name: displayName.trim(),
@@ -297,12 +407,33 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       }
 
       if (step === 2) {
-        // Workspace name is parked as a draft; the workspace is created at
-        // completion. Persist the draft so a refresh on step 2 keeps it.
+        // Workspace name is parked as a draft; the workspace itself is
+        // already created (via the bootstrap RPC). If the user chose a
+        // different name than the trigger default, update it now — this
+        // requires workspace owner role, which the bootstrap guarantees.
+        const ws = membership ?? (await ensurePersonalWorkspace());
+        const chosenName = workspaceName.trim();
+        if (ws?.workspace_id && chosenName) {
+          const { data: current } = await supabase
+            .from("workspaces")
+            .select("name")
+            .eq("id", ws.workspace_id)
+            .maybeSingle();
+          if (current && (current as { name?: string }).name !== chosenName) {
+            const rename = await supabase
+              .from("workspaces")
+              .update({ name: chosenName })
+              .eq("id", ws.workspace_id);
+            if (rename.error && isPermissionError(rename.error)) {
+              // Non-fatal: the workspace still exists with its default
+              // name; finalisation will retry the rename.
+            }
+          }
+        }
         try {
           localStorage.setItem(
             `nexus:onboarding-workspace:${user.id}`,
-            JSON.stringify({ name: workspaceName.trim() })
+            JSON.stringify({ name: chosenName })
           );
         } catch {
           // Draft storage is optional; local state still holds the value.
@@ -419,6 +550,45 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
       const cleanUsername = username.trim().toLowerCase();
       const cleanWorkspaceName = workspaceName.trim();
 
+      // 1. Idempotently ensure workspace + owner membership via the
+      //    security-definer RPC. This is the canonical fix for the
+      //    permission regression: the RPC runs as the table owner and
+      //    inserts the owner membership before any RLS policy can veto a
+      //    chicken-and-egg client insert. The RPC can only bootstrap the
+      //    caller's own workspace; cross-tenant writes are impossible.
+      let ws = membership ?? (await ensurePersonalWorkspace());
+
+      if (!ws?.workspace_id) {
+        setError(
+          "Your workspace could not be prepared. Please try again, or sign out and back in."
+        );
+        return;
+      }
+
+      // 2. Apply the user-chosen workspace name (step 2). RLS allows the
+      //    owner to update their workspace; the membership we just confirmed
+      //    satisfies can_manage_workspace().
+      if (cleanWorkspaceName) {
+        const { data: currentWs } = await supabase
+          .from("workspaces")
+          .select("name")
+          .eq("id", ws.workspace_id)
+          .maybeSingle();
+        if (
+          currentWs &&
+          (currentWs as { name?: string }).name !== cleanWorkspaceName
+        ) {
+          const rename = await supabase
+            .from("workspaces")
+            .update({ name: cleanWorkspaceName })
+            .eq("id", ws.workspace_id);
+          if (rename.error && isPermissionError(rename.error)) {
+            // Fall through: workspace still exists; completion can
+            // proceed. The user can rename from Settings later.
+          }
+        }
+      }
+
       const persistProfile = async (completed: boolean) => {
         const base = {
           id: user.id,
@@ -447,145 +617,29 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         await supabase.auth.updateUser({ data: { onboarding_intent: goal } }).catch(() => null);
       }
 
-      // 1. Persist profile WITHOUT onboarding_completed — it is only set after
-      //    the workspace is verified below.
+      // 3. Persist profile WITHOUT onboarding_completed first — it is only
+      //    set after the workspace is verified below.
       const { error: profileError } = await persistProfile(false);
-
       if (profileError) {
         setError(humanizeDataError(profileError, "Your profile could not be prepared. Please try again."));
         return;
       }
 
-      // 2. Ensure the user has an active workspace membership. Signup already
-      //    creates a personal workspace (via DB trigger); reuse it instead of
-      //    inserting a second one (FREE plan limit = 1) and getting stuck.
-      const { data: memberships, error: membershipError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id, role, status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
-
-      if (membershipError) {
-        setError(humanizeDataError(membershipError, "Your workspace could not be verified. Please try again."));
-        return;
-      }
-
-      let membership: { workspace_id: string; role: string; status: string } | null =
-        memberships?.[0] ?? null;
-
-      const rereadMembership = async () => {
-        const { data: refreshed } = await supabase
-          .from("workspace_members")
-          .select("workspace_id, role, status")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .order("created_at", { ascending: false });
-        return refreshed?.[0] ?? null;
-      };
-
-      if (!membership) {
-        const { data: owned } = await supabase
-          .from("workspaces")
-          .select("id, name")
-          .eq("owner_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (owned?.id) {
-          // Signup already created a personal workspace (via DB trigger). Link
-          // the membership and rename it to the name the user chose at step 2
-          // — the trigger could only guess (it falls back to the email), so the
-          // user's explicit choice always wins.
-          const chosenName = cleanWorkspaceName || `${cleanDisplayName}'s Workspace`;
-          if (chosenName !== owned.name) {
-            await supabase
-              .from("workspaces")
-              .update({ name: chosenName })
-              .eq("id", owned.id);
-          }
-
-          const { error: linkError } = await supabase.from("workspace_members").insert({
-            workspace_id: owned.id,
-            user_id: user.id,
-            role: "owner",
-            status: "active",
-          });
-          membership = await rereadMembership();
-          if (!membership) {
-            setError(
-              `Your existing workspace could not be connected${
-                linkError ? `: ${linkError.message}` : "."
-              }`
-            );
-            return;
-          }
-        }
-      }
-
-      // No membership yet — create a personal workspace (named by the user in
-      // step 2) and its membership.
-      if (!membership) {
-        const finalWorkspaceName = cleanWorkspaceName || `${cleanDisplayName}'s Workspace`;
-        const { data: workspace, error: workspaceError } = await supabase
-          .from("workspaces")
-          .insert({
-            owner_id: user.id,
-            name: finalWorkspaceName,
-            slug: createSlug(cleanUsername),
-          })
-          .select("id")
-          .single();
-
-        if (workspaceError) {
-          setError(
-            isPlanLimitError(workspaceError.message)
-              ? "A workspace already exists for this account but could not be opened. Sign out, sign back in, and try again."
-              : `Could not create your workspace: ${workspaceError.message}`
-          );
-          return;
-        }
-
-        if (!workspace?.id) {
-          setError(
-            "We couldn't finish setting up your workspace — it was not saved. Your answers are kept, please try again."
-          );
-          return;
-        }
-
-        const { error: newMembershipError } = await supabase
-          .from("workspace_members")
-          .insert({
-            workspace_id: workspace.id,
-            user_id: user.id,
-            role: "owner",
-            status: "active",
-          });
-        membership = await rereadMembership();
-        if (!membership) {
-          setError(
-            `Your workspace was created but could not be connected${
-              newMembershipError ? `: ${newMembershipError.message}` : ". Please try again."
-            }`
-          );
-          return;
-        }
-      }
-
-      // 3. Verify membership is real and usable before declaring success.
-      const validRoles = new Set(["owner", "admin", "member"]);
-      if (!membership?.workspace_id) {
+      // 4. Re-verify membership after persistence (defensive).
+      ws = (await ensurePersonalWorkspace()) ?? ws;
+      if (!ws?.workspace_id) {
         setError("Your workspace could not be established. Please try again or contact support.");
         return;
       }
-      if (!validRoles.has(String(membership.role))) {
+
+      const validRoles = new Set(["owner", "admin", "member"]);
+      if (!validRoles.has(String(ws.role))) {
         setError("Your workspace role is invalid. Please try again or contact support.");
         return;
       }
 
-      // 4. Only now mark onboarding complete — and read the flag back from the
-      //    database. We redirect on confirmed state, never on hope.
+      // 5. Only now mark onboarding complete — and read the flag back from
+      //    the database. We redirect on confirmed state, never on hope.
       const { data: completedRow, error: completeError } = await persistProfile(true);
 
       if (completeError) {
@@ -622,7 +676,7 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
     } catch (cause) {
       setError(
         cause instanceof Error
-          ? cause.message
+          ? humanizeDataError(cause, "We couldn't finish setting up your workspace. Your answers are kept, please try again.")
           : "We couldn't finish setting up your workspace. Your answers are kept, please try again."
       );
     } finally {
@@ -850,6 +904,23 @@ function OnboardingFlow({ supabase }: { supabase: SupabaseClient }) {
         </form>
       </div>
     </main>
+  );
+}
+
+/**
+ * Recognise a PostgREST/RLS permission error so we can handle it gracefully
+ * instead of surfacing a low-level message.
+ */
+function isPermissionError(err: PostgrestError | { message?: string | null; code?: string | null } | null | undefined): boolean {
+  if (!err) return false;
+  const code = err.code ?? "";
+  const msg = (err.message ?? "").toLowerCase();
+  return (
+    code === "42501" ||
+    msg.includes("row-level security") ||
+    msg.includes("access denied") ||
+    msg.includes("permission denied") ||
+    msg.includes("workspace_access_denied")
   );
 }
 

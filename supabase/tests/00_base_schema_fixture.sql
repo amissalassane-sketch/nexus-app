@@ -3,7 +3,7 @@
 -- ============================================================
 -- Migrations 001-005 (base schema + RLS policies) are NOT versioned in
 -- this repository. To be able to execute and verify the logic of the
--- migrations that ARE versioned (006 -> 011), this fixture recreates a
+-- migrations that ARE versioned (006 -> 016), this fixture recreates a
 -- minimal approximation of the base schema, limited to the columns the
 -- application actually reads/writes.
 --
@@ -37,7 +37,9 @@ create table if not exists public.profiles (
   display_name         text,
   username             text unique,
   bio                  text,
+  avatar_url           text,
   onboarding_completed boolean not null default false,
+  onboarding_intent    text,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
@@ -64,24 +66,39 @@ create table if not exists public.workspace_members (
   unique (workspace_id, user_id)
 );
 
--- Membership policy helper from the production base migration. The fixture
--- keeps policies out, but post-base tables may reference this function.
-create or replace function public.is_active_workspace_member(
-  p_workspace_id uuid,
-  p_user_id uuid default auth.uid()
-)
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select exists (
-    select 1 from public.workspace_members
-    where workspace_id = p_workspace_id and user_id = p_user_id and status = 'active'
-  );
-$$;
+create table if not exists public.workspace_subscriptions (
+  id                     uuid primary key default gen_random_uuid(),
+  workspace_id           uuid not null references public.workspaces(id) on delete cascade,
+  plan                   text not null default 'FREE',
+  status                 text not null default 'active',
+  billing_customer_id    text,
+  billing_subscription_id text,
+  trial_ends_at          timestamptz,
+  current_period_end     timestamptz,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+create unique index if not exists workspace_subscriptions_active_workspace_idx
+  on public.workspace_subscriptions (workspace_id) where status = 'active';
+
+create table if not exists public.goals (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  created_by   uuid references auth.users(id) on delete set null,
+  title        text not null,
+  description  text,
+  status       text not null default 'active',
+  progress     numeric not null default 0,
+  target_date  date,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
 
 create table if not exists public.projects (
   id           uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   owner_id     uuid references auth.users(id) on delete set null,
+  goal_id      uuid references public.goals(id) on delete set null,
   name         text not null,
   slug         text,
   description  text,
@@ -108,19 +125,6 @@ create table if not exists public.tasks (
   updated_at   timestamptz not null default now()
 );
 
-create table if not exists public.goals (
-  id           uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  created_by   uuid references auth.users(id) on delete set null,
-  title        text not null,
-  description  text,
-  status       text not null default 'active',
-  progress     numeric not null default 0,
-  target_date  date,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
-);
-
 create table if not exists public.notifications (
   id           uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
@@ -130,6 +134,8 @@ create table if not exists public.notifications (
   message      text,
   entity_type  text,
   entity_id    uuid,
+  severity     text not null default 'info',
+  action       text,
   read_at      timestamptz,
   created_at   timestamptz not null default now()
 );
@@ -145,10 +151,55 @@ create table if not exists public.activities (
   created_at   timestamptz not null default now()
 );
 
--- The real project also owns a membership bootstrap (owner becomes an
--- active member of the workspace they create). It lives in the
--- unversioned migrations; recreated here so member-limit behaviour can
--- be exercised the way the application experiences it.
+create table if not exists public.task_dependencies (
+  id                uuid primary key default gen_random_uuid(),
+  workspace_id      uuid not null references public.workspaces(id) on delete cascade,
+  task_id           uuid not null references public.tasks(id) on delete cascade,
+  depends_on_task_id uuid not null references public.tasks(id) on delete cascade,
+  created_by        uuid references auth.users(id) on delete set null,
+  created_at        timestamptz not null default now(),
+  check (task_id <> depends_on_task_id),
+  unique (task_id, depends_on_task_id)
+);
+create index if not exists task_dependencies_workspace_idx on public.task_dependencies(workspace_id);
+create index if not exists task_dependencies_parent_idx on public.task_dependencies(depends_on_task_id);
+
+create index if not exists workspace_members_user_idx on public.workspace_members(user_id, status);
+create index if not exists projects_workspace_idx on public.projects(workspace_id);
+create index if not exists tasks_workspace_status_idx on public.tasks(workspace_id, status);
+create index if not exists tasks_project_idx on public.tasks(project_id);
+create index if not exists goals_workspace_idx on public.goals(workspace_id);
+create index if not exists activities_workspace_created_idx on public.activities(workspace_id, created_at desc);
+create index if not exists notifications_user_unread_idx on public.notifications(user_id, workspace_id) where read_at is null;
+
+-- Membership policy helper from the production base migration. The fixture
+-- keeps policies out, but post-base tables may reference this function.
+create or replace function public.is_active_workspace_member(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.workspace_members
+    where workspace_id = p_workspace_id and user_id = p_user_id and status = 'active'
+  );
+$$;
+
+create or replace function public.can_manage_workspace(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.workspace_members
+    where workspace_id = p_workspace_id and user_id = p_user_id
+      and status = 'active' and role in ('owner','admin')
+  );
+$$;
+
+-- Owner-membership bootstrap used by test harness for workspace inserts.
 create or replace function public.test_bootstrap_owner_membership()
 returns trigger
 language plpgsql
@@ -168,3 +219,8 @@ create trigger trg_test_bootstrap_owner_membership
   after insert on public.workspaces
   for each row
   execute function public.test_bootstrap_owner_membership();
+
+-- updated_at helper
+create or replace function public.set_updated_at()
+returns trigger language plpgsql set search_path = public
+as $$ begin new.updated_at = now(); return new; end $$;
