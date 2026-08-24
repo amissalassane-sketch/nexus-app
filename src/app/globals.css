@@ -962,34 +962,6 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
    SECTION SURFACES
    ============================================================ */
 
-/* Context wires — a single dash travelling from a workspace surface
-   into the intelligence node. Pure CSS, one dash per line. */
-.nexus-intel-wire {
-  stroke-dasharray: 0.06 0.94;
-  stroke-dashoffset: 1;
-  opacity: 0.85;
-  animation: nexus-intel-wire-run 7200ms linear infinite;
-  animation-delay: var(--wire-delay, 0ms);
-}
-
-@keyframes nexus-intel-wire-run {
-  0% {
-    stroke-dashoffset: 1;
-    opacity: 0;
-  }
-  6% {
-    opacity: 0.85;
-  }
-  40% {
-    opacity: 0.85;
-  }
-  46%,
-  100% {
-    stroke-dashoffset: 0.06;
-    opacity: 0;
-  }
-}
-
 /* Closing watermark — the mark at rest, no motion at all. */
 .nexus-intel-closing-mark {
   background: radial-gradient(
@@ -1174,13 +1146,11 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   .nexus-intel-speck,
   .nexus-intel-scan::after,
   .nexus-intel-cycle,
-  .nexus-intel-wire,
   .nexus-intel-step-dot,
   .nexus-intel-step-line::after {
     animation: none;
   }
 
-  .nexus-intel-wire,
   .nexus-intel-scan::after,
   .nexus-intel-step-line::after {
     opacity: 0;
@@ -1192,6 +1162,383 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 
   .nexus-intel-sweep::after {
     display: none;
+  }
+}
+
+/* ============================================================
+   NEXUS INTELLIGENCE — CONTEXT NETWORK ("WHAT IT SEES")
+   The spatial version of the context diagram: eight workspace
+   objects floating at different depths around the intelligence
+   core, connections travelling between them.
+
+   Every element has a complete static state (positions from CSS
+   variables, resting opacities, no motion), so the scene is whole
+   with no JavaScript and under prefers-reduced-motion. Once the
+   engine mounts it adds `.nx-live` and takes ownership of
+   transform/opacity per frame — the two states never disagree.
+   ============================================================ */
+
+.nexus-context-scene {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 4%,
+    black 93%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 4%,
+    black 93%,
+    transparent 100%
+  );
+}
+
+@media (max-width: 767.98px) {
+  .nexus-context-scene {
+    aspect-ratio: 3 / 4;
+    max-width: 430px;
+  }
+}
+
+/* ---------- Atmosphere ----------------------------------------- */
+
+/* Center light — the middle of the field is slightly brighter than
+   anything around it; the edges fall away. */
+.nexus-context-light {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 115%;
+  aspect-ratio: 1.7;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 255, 255, 0.05),
+    rgba(233, 228, 255, 0.02) 42%,
+    transparent 70%
+  );
+  transform: translate3d(-50%, -50%, 0);
+  pointer-events: none;
+}
+
+/* Computational grid — an almost invisible floor the network sits
+   above. Only visible when looking for it. */
+.nexus-context-grid {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  bottom: -30%;
+  height: 64%;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 72px 72px;
+  transform: perspective(620px) rotateX(64deg);
+  transform-origin: center 100%;
+  pointer-events: none;
+  mask-image: radial-gradient(
+    ellipse 82% 96% at 50% 98%,
+    black 32%,
+    transparent 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 82% 96% at 50% 98%,
+    black 32%,
+    transparent 80%
+  );
+}
+
+@media (max-width: 767.98px) {
+  .nexus-context-grid {
+    display: none;
+  }
+}
+
+.nexus-context-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.nexus-context-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: #ffffff;
+  will-change: transform;
+}
+
+/* ---------- Connections ----------------------------------------
+   Thin spatial cables with a soft halo reserved for activity. A
+   radial mask keeps them brightest near the core and lets them
+   dissolve toward the dark edges. */
+.nexus-context-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mask-image: radial-gradient(
+    ellipse 88% 86% at 50% 46%,
+    black 36%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 88% 86% at 50% 46%,
+    black 36%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+}
+
+.nexus-context-line {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1;
+  stroke-opacity: 0.1;
+  vector-effect: non-scaling-stroke;
+}
+
+.nexus-context-halo {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-opacity: 0;
+  vector-effect: non-scaling-stroke;
+}
+
+.nexus-context-signal {
+  fill: #ffffff;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
+}
+
+/* Static mobile fallback: connection geometry is desktop-shaped, so
+   the simplified mobile scene shows no wires until the engine draws
+   the correct (reduced) set. */
+@media (max-width: 767.98px) {
+  .nexus-context-scene:not(.nx-live) .nexus-context-lines {
+    display: none;
+  }
+  .nexus-context-scene:not(.nx-live) .nexus-context-particle:nth-child(n + 9) {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099.98px) {
+  .nexus-context-scene:not(.nx-live) .nexus-context-particle:nth-child(n + 13) {
+    display: none;
+  }
+}
+
+/* ---------- Workspace objects ----------------------------------- */
+
+.nexus-context-node {
+  position: absolute;
+  left: var(--nx-x);
+  top: var(--nx-y);
+  transform: translate(-50%, -50%) scale(var(--nx-scale, 1));
+  filter: blur(var(--nx-blur, 0px));
+  opacity: var(--nx-dim, 1);
+  will-change: transform, opacity;
+}
+
+@media (max-width: 767.98px) {
+  .nexus-context-node {
+    left: var(--nx-mx, var(--nx-x));
+    top: var(--nx-my, var(--nx-y));
+    transform: translate(-50%, -50%)
+      scale(var(--nx-mscale, var(--nx-scale, 1)));
+  }
+}
+
+/* Glass panel — dark translucent surface, rim light, soft shadow,
+   remains an elegant UI card rather than a 3D cube. */
+.nexus-context-node-card {
+  position: relative;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.014)
+    ),
+    rgba(9, 9, 9, 0.74);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 20px 42px -20px rgba(0, 0, 0, 0.86);
+  padding: 9px 14px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Rim light. */
+.nexus-context-node-card::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Proximity / relationship ring — driven by --near / --lit. */
+.nexus-context-node-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.07);
+  opacity: calc(var(--near, 0) * 0.85 + var(--lit, 0) * 0.95);
+  pointer-events: none;
+}
+
+/* ---------- Intelligence core ----------------------------------- */
+
+.nexus-context-core {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  will-change: transform, opacity;
+  z-index: 2;
+}
+
+.nexus-context-core-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 340px;
+  height: 190px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 255, 255, 0.055),
+    rgba(233, 228, 255, 0.02) 46%,
+    transparent 72%
+  );
+  pointer-events: none;
+}
+
+/* Breathing — 1.00 → 1.015 → 1.00 over ~5s, brightness in sync. */
+.nexus-context-core-breath {
+  position: relative;
+  animation: nexus-context-core-breathe 5.2s cubic-bezier(0.45, 0, 0.55, 1)
+    infinite;
+  will-change: transform;
+}
+
+@keyframes nexus-context-core-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.015);
+    filter: brightness(1.05);
+  }
+}
+
+/* The floating glass core — the intelligence layer itself. */
+.nexus-context-core-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  border-radius: 9999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    ),
+    rgba(11, 11, 11, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 24px 50px -18px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(10px);
+}
+
+/* Answer flare when a signal arrives — driven by --core-heat. */
+.nexus-context-core-heat {
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0 26px rgba(255, 255, 255, 0.11),
+    inset 0 0 14px rgba(233, 228, 255, 0.09);
+  opacity: var(--core-heat, 0);
+  transition: opacity 380ms ease;
+  pointer-events: none;
+}
+
+/* ---------- Vignette ---------------------------------------------
+   Outer nodes gradually disappear into darkness. */
+.nexus-context-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 76% 66% at 50% 46%,
+      transparent 52%,
+      rgba(0, 0, 0, 0.42) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.3),
+      transparent 16%,
+      transparent 84%,
+      rgba(0, 0, 0, 0.32)
+    );
+}
+
+/* ---------- Assembly gating --------------------------------------
+   With JS and full motion, the network starts almost invisible and
+   the engine assembles it on scroll. Without scripting, or under
+   reduced motion, the complete static scene is the final state. */
+@media (prefers-reduced-motion: no-preference) {
+  .nexus-context-scene:not(.nx-live) [data-nx-fade] {
+    opacity: 0;
+  }
+}
+
+@media (scripting: none) {
+  .nexus-context-scene [data-nx-fade] {
+    opacity: 1 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-context-core-breath {
+    animation: none;
+  }
+
+  .nexus-context-core-heat {
+    transition: none;
   }
 }
 
