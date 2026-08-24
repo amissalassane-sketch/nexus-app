@@ -942,209 +942,6 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   letter-spacing: -0.015em;
 }
 
-/* ---------- Progressive entrance ------------------------------
-   Pure CSS (no launch gate, no hydration dependency): the page
-   is readable the instant the HTML lands. */
-.nexus-intel-item {
-  opacity: 0;
-  animation: nexus-intel-in 620ms var(--ease-out-expo) both;
-  animation-delay: var(--intel-delay, 0ms);
-}
-
-@keyframes nexus-intel-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ============================================================
-   HERO — THE INTELLIGENCE NETWORK
-   The field itself is drawn on a single <canvas> (see
-   components/intelligence/intelligence-network.tsx). Everything
-   here is the surrounding atmosphere and the scrim that keeps the
-   typography readable, in the layer order of the spec:
-
-     network canvas → atmospheric glow → scrim → content → nav
-
-   No layer here ever captures a pointer event.
-   ============================================================ */
-
-.nexus-intel-network {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  /* The field fades out before the section ends so it never collides
-     with the footnote rule or the section below. */
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 7%,
-    black 82%,
-    transparent 99%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 7%,
-    black 82%,
-    transparent 99%
-  );
-  /* The network materialises rather than switching on. */
-  opacity: 0;
-  animation: nexus-intel-network-in 1200ms var(--ease-out-expo) 80ms both;
-}
-
-.nexus-intel-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  /* Non-negotiable: the field must never intercept a click, a text
-     selection or a scroll gesture. */
-  pointer-events: none;
-}
-
-@keyframes nexus-intel-network-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ---------- Atmospheric glow ---------------------------------
-   One very faint light behind the copy. This is the only gradient
-   in the hero, and it exists to give the black some depth — not to
-   decorate. */
-.nexus-intel-atmosphere {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  z-index: 1;
-  width: min(1280px, 128vw);
-  aspect-ratio: 1.7;
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate3d(-50%, -50%, 0);
-  background: radial-gradient(
-    ellipse,
-    rgba(255, 255, 255, 0.038),
-    rgba(199, 201, 255, 0.022) 38%,
-    transparent 70%
-  );
-  opacity: 0;
-  animation:
-    nexus-intel-atmosphere-in 1600ms var(--ease-out-expo) 200ms both,
-    nexus-intel-breathe 14s ease-in-out 2400ms infinite;
-}
-
-@keyframes nexus-intel-atmosphere-in {
-  from {
-    opacity: 0;
-    transform: translate3d(-50%, -50%, 0) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(-50%, -50%, 0) scale(1);
-  }
-}
-
-@keyframes nexus-intel-breathe {
-  0%,
-  100% {
-    opacity: 0.82;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ---------- Scrim --------------------------------------------
-   The contract with the reader: whatever the network is doing, the
-   headline sits on near-black. Elliptical so the field stays fully
-   visible at the edges of the viewport. */
-.nexus-intel-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 46% 40% at 50% 54%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.62) 42%,
-    rgba(0, 0, 0, 0.24) 70%,
-    transparent 100%
-  );
-}
-
-/* The eyebrow marker — the one lavender pixel in the hero. */
-.nexus-intel-eyebrow-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background-color: #c7c9ff;
-  box-shadow: 0 0 8px rgba(199, 201, 255, 0.5);
-  animation: nexus-intel-eyebrow-dot 5.5s ease-in-out 1800ms infinite;
-}
-
-@keyframes nexus-intel-eyebrow-dot {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ---------- Hero actions -------------------------------------
-   The NEXUS pill, unchanged in shape and colour. Only the hover
-   response is tuned for this page: a slight lift and a soft white
-   bloom, no aggressive motion. */
-.nexus-intel-cta {
-  height: 46px;
-  padding-inline: 20px;
-  transition:
-    transform 320ms var(--ease-out-expo),
-    box-shadow 320ms var(--ease-out-expo),
-    filter 320ms var(--ease-out-expo),
-    background-color 200ms var(--ease-nexus),
-    border-color 200ms var(--ease-nexus),
-    color 200ms var(--ease-nexus);
-}
-
-.nexus-intel-cta-primary:hover {
-  transform: scale(1.02);
-  filter: brightness(1.04);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 6px 28px rgba(255, 255, 255, 0.16);
-}
-
-.nexus-intel-cta-primary:active {
-  transform: scale(0.99);
-}
-
-.nexus-intel-cta-secondary {
-  border-color: rgba(255, 255, 255, 0.14);
-  background-color: rgba(255, 255, 255, 0.02);
-  color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(6px);
-}
-
-.nexus-intel-cta-secondary:hover {
-  border-color: rgba(255, 255, 255, 0.26);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-}
-
 /* The closing section reuses the locked mark as a static watermark;
    the mask geometry stays defined here for it. */
 .nexus-intel-mark-layer {
@@ -1373,24 +1170,7 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  /* Every entrance resolves instantly to its final state. The network
-     canvas draws exactly one static frame (the engine never starts its
-     loop under reduced motion), so the field stays present and legible
-     without a single moving pixel. */
-  .nexus-intel-item,
-  .nexus-intel-network,
-  .nexus-intel-atmosphere {
-    opacity: 1;
-    transform: none;
-    filter: none;
-    animation: none;
-  }
-
-  .nexus-intel-atmosphere {
-    transform: translate3d(-50%, -50%, 0);
-  }
-
-  .nexus-intel-eyebrow-dot,
+  /* Every entrance resolves instantly to its final state. */
   .nexus-intel-speck,
   .nexus-intel-scan::after,
   .nexus-intel-cycle,
@@ -1410,15 +1190,268 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
     background-color: var(--color-bg-surface-3);
   }
 
-  .nexus-intel-cta,
-  .nexus-intel-cta-primary:hover {
-    transform: none;
-    transition: none;
-    box-shadow: none;
-    filter: none;
-  }
-
   .nexus-intel-sweep::after {
     display: none;
+  }
+}
+
+/* ============================================================
+   NEXUS INTELLIGENCE — 3D HERO
+   Scoped under `.nexus-intelligence-hero` so none of it can leak
+   into the main landing page, the product shell or the auth
+   screens. Motion is opacity / transform only, always with a
+   visible fallback when JavaScript or animation never runs.
+
+   Layer order:
+     WebGL scene (or static fallback) → scrim → copy → nav
+   No layer below the copy ever captures a pointer event.
+   ============================================================ */
+
+.nexus-intelligence-hero {
+  background-color: var(--color-bg-base);
+}
+
+/* ---------- Layer 0: the scene -------------------------------- */
+
+.nexus-intelligence-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* The system fades out before the section ends so it never collides
+     with the footnote rule or the section below. */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 6%,
+    black 80%,
+    transparent 98%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 6%,
+    black 80%,
+    transparent 98%
+  );
+}
+
+.nexus-intelligence-stage canvas {
+  display: block;
+  pointer-events: none;
+}
+
+/* ---------- Layer 1: the scrim --------------------------------
+   Protects the type. On desktop the copy sits left and the core sits
+   centre-right, so the scrim is a horizontal wash. Below `lg` the copy
+   is centred and the core sits low, so it becomes a vertical one. */
+
+.nexus-intelligence-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.72) 0%,
+      rgba(0, 0, 0, 0.1) 34%,
+      rgba(0, 0, 0, 0.1) 62%,
+      rgba(0, 0, 0, 0.86) 100%
+    );
+}
+
+@media (min-width: 1024px) {
+  .nexus-intelligence-scrim {
+    background:
+      linear-gradient(
+        to right,
+        rgba(0, 0, 0, 0.88) 0%,
+        rgba(0, 0, 0, 0.72) 30%,
+        rgba(0, 0, 0, 0.12) 56%,
+        rgba(0, 0, 0, 0) 74%
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.6) 0%,
+        rgba(0, 0, 0, 0) 26%,
+        rgba(0, 0, 0, 0) 68%,
+        rgba(0, 0, 0, 0.9) 100%
+      );
+  }
+}
+
+/* ---------- Layer 2: the copy --------------------------------- */
+
+.nexus-intelligence-item {
+  opacity: 0;
+  animation: nexus-intelligence-in 640ms var(--ease-out-expo) both;
+  animation-delay: var(--nxi-delay, 0ms);
+}
+
+@keyframes nexus-intelligence-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* The lockup. Two lines, deliberately unequal: the wordmark carries
+   the weight, the descriptor is quiet and tracked out to roughly
+   match its width. Fluid so `INTELLIGENCE` never overflows the
+   left-hand column on desktop. */
+
+.nexus-intelligence-lockup {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.nexus-intelligence-lockup-primary {
+  font-size: clamp(40px, 5.4vw, 66px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  color: var(--color-text-primary);
+}
+
+.nexus-intelligence-lockup-secondary {
+  margin-top: 0.12em;
+  font-size: clamp(13px, 1.5vw, 19px);
+  font-weight: 400;
+  letter-spacing: 0.44em;
+  /* Optical correction: trailing letter-spacing would otherwise push
+     the word off-centre relative to the line above it. */
+  margin-right: -0.44em;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+}
+
+.nexus-intelligence-dot {
+  height: 5px;
+  width: 5px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-text-primary);
+  animation: nexus-intelligence-dot 5.5s ease-in-out 1.6s infinite;
+}
+
+@keyframes nexus-intelligence-dot {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- Static fallback (no WebGL) -------------------------
+   The same composition as the scene, drawn once. Positioned to match
+   where the core sits at each breakpoint. */
+
+.nexus-intelligence-fallback {
+  pointer-events: none;
+}
+
+.nexus-intelligence-fallback-glow {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: min(760px, 120vw);
+  aspect-ratio: 1.4;
+  border-radius: 50%;
+  transform: translate3d(-50%, -50%, 0);
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.016) 42%,
+    transparent 70%
+  );
+}
+
+.nexus-intelligence-fallback-svg {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: min(560px, 96vw);
+  height: auto;
+  transform: translate3d(-50%, -50%, 0);
+  opacity: 0;
+  animation: nexus-intelligence-fallback-in 1400ms var(--ease-out-expo) 120ms
+    both;
+}
+
+@keyframes nexus-intelligence-fallback-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.nexus-intelligence-fallback-fade {
+  opacity: 0;
+  animation: nexus-intelligence-fallback-in 1800ms var(--ease-out-expo) 420ms
+    both;
+}
+
+.nexus-intelligence-fallback-breathe {
+  animation: nexus-intelligence-fallback-breathe 12s ease-in-out infinite;
+  transform-origin: 250px 250px;
+}
+
+@keyframes nexus-intelligence-fallback-breathe {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.014);
+  }
+}
+
+@media (min-width: 1024px) {
+  .nexus-intelligence-fallback-glow,
+  .nexus-intelligence-fallback-svg {
+    left: 66%;
+    top: 48%;
+  }
+}
+
+/* ---------- Accessibility ------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-intelligence-item {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .nexus-intelligence-dot,
+  .nexus-intelligence-fallback-breathe,
+  .nexus-intelligence-fallback-fade,
+  .nexus-intelligence-fallback-svg {
+    animation: none;
+  }
+
+  .nexus-intelligence-fallback-svg,
+  .nexus-intelligence-fallback-fade {
+    opacity: 1;
+  }
+}
+
+/* Without JavaScript the entrance would never fire — show everything. */
+@media (scripting: none) {
+  .nexus-intelligence-item {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
   }
 }

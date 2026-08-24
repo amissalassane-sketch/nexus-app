@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
-import { IntelligenceHero } from "@/components/intelligence/intelligence-hero";
+import { NexusIntelligenceHero } from "@/components/nexus-intelligence";
 import { WhatIntelligenceSees } from "@/components/intelligence/what-intelligence-sees";
 import { IntelligenceSignals } from "@/components/intelligence/intelligence-signals";
 import { NextBestAction } from "@/components/intelligence/next-best-action";
@@ -16,8 +16,9 @@ import { IntelligenceClosing } from "@/components/intelligence/intelligence-clos
 // A plain public marketing route: it never depends on auth or onboarding
 // state. The authenticated Intelligence workspace lives at /app/intelligence.
 // Composition:
-//   NAV → HERO (the mark forms) → WHAT IT SEES → WHAT IT SURFACES →
-//   NEXT BEST ACTION → EXPLAINABLE → WORKSPACE TO ACTION → CTA → FOOTER
+//   NAV → HERO (the intelligence core comes online) → WHAT IT SEES →
+//   WHAT IT SURFACES → NEXT BEST ACTION → EXPLAINABLE →
+//   WORKSPACE TO ACTION → CTA → FOOTER
 //
 // Every claim on this page maps to src/lib/intelligence/engine.ts.
 // Every example signal is labelled as a product visualisation.
@@ -46,7 +47,10 @@ export default function IntelligenceLandingPage() {
       <LandingNav context="intelligence" />
 
       <main id="main">
-        <IntelligenceHero />
+        <NexusIntelligenceHero
+          primaryCta={{ label: "Get started", href: "/signup" }}
+          secondaryCta={{ label: "See how it works", href: "#in-action" }}
+        />
         <WhatIntelligenceSees />
         <IntelligenceSignals />
         <NextBestAction />
