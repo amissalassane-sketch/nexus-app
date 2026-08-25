@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
-import { getPostAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Refreshes the Supabase session cookies on every request and enforces
@@ -11,11 +10,12 @@ import { getPostAuthDestination } from "@/lib/auth-flow";
  * Responsibilities:
  *  1. Refresh session cookies (Supabase SSR)
  *  2. Redirect unauthenticated users from private routes → /login
- *  3. Redirect authenticated users from auth forms → correct destination
+ *  3. Redirect authenticated users from auth forms → /app
  *  4. Intercept stray token_hash/code params → canonical auth routes
  *
- * Does NOT check onboarding state (too expensive for middleware).
- * The app layout handles onboarding gating.
+ * No database work happens here: the canonical post-auth destination is
+ * always /app, and the (app) layout is the single place that verifies the
+ * workspace bootstrap before rendering the product.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -123,20 +123,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Authenticated users on auth forms → redirect to correct destination
-  // We check onboarding state so users go to /onboarding or /app correctly.
+  // Authenticated users on auth forms → straight into the product.
+  // /app is the canonical destination for every account; the (app) layout
+  // ensures the workspace exists before rendering (idempotent bootstrap).
   if (user && isAuthForm) {
-    try {
-      const { destination } = await getPostAuthDestination(
-        supabase,
-        user.id,
-        user.email
-      );
-      return NextResponse.redirect(new URL(destination, request.url));
-    } catch {
-      // If bootstrap fails, send to /app (the layout will handle it)
-      return NextResponse.redirect(new URL("/app", request.url));
-    }
+    return NextResponse.redirect(new URL("/app", request.url));
   }
 
   return response;

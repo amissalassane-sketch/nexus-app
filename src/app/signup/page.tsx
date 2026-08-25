@@ -19,8 +19,9 @@ import { Divider } from "@/components/ui/divider";
  * Create an account.
  *
  * This page collects ONLY the information required to create the account:
- * a work email and a password. Everything else — name, workspace, goals —
- * belongs to the onboarding workflow that follows, never to signup.
+ * a work email and a password. Nothing else. The purpose of signup is to
+ * create the account — name, username and everything else are completed
+ * later, from inside the product, and are never required to enter it.
  *
  * Posts to /api/auth/signup, which handles both Supabase outcomes:
  * a session (email confirmation disabled) or a pending confirmation.
@@ -88,7 +89,7 @@ export default function SignupPage() {
           return;
         }
 
-        router.replace(payload.redirectTo ?? "/onboarding");
+        router.replace(payload.redirectTo ?? "/app");
         router.refresh();
       } catch (cause) {
         setError(

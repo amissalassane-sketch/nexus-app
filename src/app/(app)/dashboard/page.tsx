@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileSummary, requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Metric, Panel } from "@/components/ui/card";
 import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
 import { FocusPanel, InsightRow } from "@/components/intelligence-panel";
@@ -63,7 +64,9 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const supabase = await createClient();
   const profile = await getProfileSummary();
-  const firstName = profile.displayName.split(" ")[0] ?? profile.displayName;
+  // `displayName` is null until the user (or their OAuth provider) actually
+  // provides a name — the greeting then simply omits it. No invented names.
+  const firstName = profile.displayName?.split(" ")[0] ?? null;
 
   const { membership, error: membershipError } = await getActiveMembership(
     supabase,
@@ -185,6 +188,13 @@ export default async function DashboardPage() {
     membershipError || workspaceError || !workspaceId || !workspace
   );
 
+  // FIRST-VISIT STATE — a brand-new workspace (no projects, tasks or goals)
+  // gets a focused welcome instead of a wall of empty panels. The moment the
+  // user creates the first thing NEXUS can understand, the full dashboard
+  // appears.
+  const isNewWorkspace =
+    context.projects === 0 && context.tasks === 0 && context.goals === 0;
+
   const attentionLine =
     needsAttention.length > 0
       ? `${needsAttention.length} ${
@@ -207,7 +217,8 @@ export default async function DashboardPage() {
             }).format(new Date())}
           </p>
           <h1 className="mt-2.5 text-[26px] font-semibold leading-[32px] tracking-[-0.03em] text-text-primary">
-            {greeting(new Date())}, {firstName}.
+            {greeting(new Date())}
+            {firstName ? `, ${firstName}` : ""}.
           </h1>
           <p className="mt-1.5 text-small text-text-secondary">
             {attentionLine}{" "}
@@ -233,15 +244,58 @@ export default async function DashboardPage() {
         </Link>
       </header>
 
-      {showWorkspaceWarning ? (
-        <Alert tone="warning">
-          No active workspace is linked to this account, so NEXUS has nothing to
-          analyse yet.
-        </Alert>
-      ) : null}
+      {isNewWorkspace ? (
+        <section className="overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70">
+          <div className="px-6 py-10 sm:px-10 sm:py-14">
+            <div className="max-w-[620px]">
+              <p className="eyebrow text-lavender">Your workspace is ready</p>
+              <h2 className="mt-3 text-[22px] font-semibold leading-[28px] tracking-[-0.025em] text-text-primary">
+                Welcome to NEXUS.
+              </h2>
+              <p className="mt-2.5 max-w-[52ch] text-body text-text-secondary">
+                NEXUS helps you understand what needs attention, what is moving
+                forward, and what requires action. Start by giving it the first
+                thing to understand — it begins working the moment you create
+                it.
+              </p>
 
-      {/* NEXT ACTION */}
-      <FocusPanel insight={focus} />
+              <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                <ButtonLink href="/projects?create=1" size="lg">
+                  <FolderKanban size={16} strokeWidth={1.75} />
+                  Create your first project
+                </ButtonLink>
+                <ButtonLink href="/tasks?create=1" size="lg" variant="secondary">
+                  <CheckSquare size={16} strokeWidth={1.75} />
+                  Create a task
+                </ButtonLink>
+              </div>
+
+              <Link
+                href="/app/intelligence"
+                className="group mt-5 inline-flex items-center gap-1.5 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
+              >
+                Explore NEXUS Intelligence
+                <ArrowRight
+                  size={13}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
+                />
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <>
+          {showWorkspaceWarning ? (
+            <Alert tone="warning">
+              No active workspace is linked to this account, so NEXUS has nothing
+              to analyse yet.
+            </Alert>
+          ) : null}
+
+          {/* NEXT ACTION */}
+          <FocusPanel insight={focus} />
 
       {/* NEEDS ATTENTION — the operational signals, highest value first */}
       <Panel
@@ -541,6 +595,8 @@ export default async function DashboardPage() {
           </Panel>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

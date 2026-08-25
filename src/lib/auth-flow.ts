@@ -2,19 +2,25 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ============================================================
-// NEXUS — SHARED AUTH FLOW HELPERS
+// NEXUS — SHARED AUTH FLOW HELPERS (ACCESS FIRST)
 // Single source of truth for the decisions every authentication
 // entry point must agree on:
 //
-//   * where a verified/signed-in user lands (onboarding vs /app)
+//   * where a verified/signed-in user lands: ALWAYS /app
+//     (recovery flows are the single exception -> /reset-password)
 //   * how to carry freshly-issued Supabase session cookies onto a
 //     redirect without dropping them
 //   * which email OTP flows are "recovery" flows
 //   * how to classify a broken verification link
 //   * workspace bootstrap (ensure workspace + membership exist)
 //
-// Keeping this in one module prevents signup, confirmation,
-// login, OAuth and password recovery from drifting apart.
+// THE JOURNEY
+//   SIGNUP/LOGIN -> EMAIL CONFIRMATION (if enabled) -> SESSION
+//   -> ensurePersonalWorkspace() -> /app (DASHBOARD)
+//   -> profile completion, OPTIONAL, from inside the product.
+//
+// There is no /onboarding destination anymore. Profile completeness
+// never changes where a user is sent.
 // ============================================================
 
 /**
@@ -22,7 +28,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * No other values should appear in redirect logic.
  */
 export type PostAuthDestination =
-  | "/onboarding"
   | "/app"
   | "/reset-password"
   | "/auth/confirm-error";
@@ -128,45 +133,29 @@ export async function ensurePersonalWorkspaceServer(
 /**
  * Ensures a profile row exists for the given user. Used for orphan repair
  * when the auth trigger didn't create the profile.
+ *
+ * Inserts the MINIMUM record (just the id). No display name or username is
+ * invented: when the trigger had no provider metadata to pre-fill, the
+ * profile stays incomplete and the UI shows a fallback instead of storing
+ * fake identity data.
  */
 export async function ensureProfileServer(
   supabase: SupabaseClient,
-  userId: string,
-  email?: string
-): Promise<void> {
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (existing?.id) return;
-
-  // Generate a default display name from email
-  const defaultName = email
-    ? email.split("@")[0].replace(/[._-]/g, " ")
-    : "User";
-
-  await supabase.from("profiles").insert({
-    id: userId,
-    display_name: defaultName,
-  });
-}
-
-/**
- * Generate a deterministic default username from the user's email.
- * Used when username is not collected during onboarding.
- */
-export function generateDefaultUsername(
-  email: string,
   userId: string
-): string {
-  const local = email.split("@")[0] || "user";
-  // Strip non-alphanumeric, lowercase, truncate
-  const clean = local.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
-  const suffix = userId.replace(/-/g, "").slice(0, 6);
-  const base = clean.length >= 3 ? clean : "user";
-  return `${base}_${suffix}`.slice(0, 30);
+): Promise<void> {
+  try {
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (existing?.id) return;
+
+    await supabase.from("profiles").insert({ id: userId });
+  } catch {
+    // Orphan repair must never break an otherwise valid session.
+  }
 }
 
 // ============================================================
@@ -175,94 +164,41 @@ export function generateDefaultUsername(
 
 export type PostAuthResult = {
   destination: PostAuthDestination;
-  onboardingCompleted: boolean;
   workspaceReady: boolean;
 };
 
 /**
  * THE canonical post-authentication destination resolver.
  *
- * Every entry point (email confirmation, OAuth callback, login, password
- * recovery) MUST call this function to determine where to send the user.
+ * Every entry point (email confirmation, OAuth callback, login) MUST call
+ * this function to determine where to send the user.
  *
- * It guarantees:
- *  1. Profile exists (orphan repair)
- *  2. Personal workspace exists (bootstrap)
- *  3. Owner membership exists (bootstrap)
- *  4. Onboarding state is checked
- *  5. Returns ONLY one of: /onboarding, /app
+ * It guarantees, in order:
+ *   1. Profile exists (orphan repair, minimal record)
+ *   2. Personal workspace exists (idempotent bootstrap)
+ *   3. Owner membership exists (idempotent bootstrap)
  *
- * For recovery flows, callers should check isRecoveryType() first and
- * redirect to /reset-password directly (recovery users never go through
- * onboarding).
+ * It then returns the single normal destination: /app.
+ * Profile completeness does NOT influence the destination — the dashboard
+ * is the first-value experience for everyone, complete or not.
+ *
+ * For recovery flows, callers check isRecoveryType() first and redirect to
+ * /reset-password directly (recovery users never pass through here).
  */
 export async function getPostAuthDestination(
   supabase: SupabaseClient,
-  userId: string,
-  userEmail?: string
+  userId: string
 ): Promise<PostAuthResult> {
-  // Step 1: Ensure profile exists (orphan repair)
-  await ensureProfileServer(supabase, userId, userEmail);
+  // Step 1: ensure profile exists (orphan repair, minimal record)
+  await ensureProfileServer(supabase, userId);
 
-  // Step 2: Ensure workspace + membership exist (idempotent bootstrap)
+  // Step 2: ensure workspace + membership exist (idempotent bootstrap)
   const membership = await ensurePersonalWorkspaceServer(supabase);
   const workspaceReady = membership !== null;
 
-  // Step 3: If the user has a default username from email, set it
-  // (only if username is null — never overwrite an existing one)
-  if (workspaceReady && userEmail) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, onboarding_completed")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (profile && !profile.username) {
-      const defaultUsername = generateDefaultUsername(userEmail, userId);
-      await supabase
-        .from("profiles")
-        .update({ username: defaultUsername })
-        .eq("id", userId);
-    }
-  }
-
-  // Step 4: Check onboarding state
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed")
-    .eq("id", userId)
-    .maybeSingle();
-
-  const onboardingCompleted = profile?.onboarding_completed === true;
-
-  // Step 5: Determine destination
-  const destination: PostAuthDestination = onboardingCompleted
-    ? "/app"
-    : "/onboarding";
-
-  return { destination, onboardingCompleted, workspaceReady };
-}
-
-/**
- * Legacy-compatible wrapper. Prefer getPostAuthDestination() in new code.
- */
-export async function resolveUserAuthDestination(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<{ destination: string; onboardingCompleted: boolean }> {
-  const result = await getPostAuthDestination(supabase, userId);
-  return {
-    destination: result.destination,
-    onboardingCompleted: result.onboardingCompleted,
-  };
-}
-
-/**
- * Simple destination resolver that only checks onboarding state.
- * Used when workspace bootstrap is not appropriate (e.g. recovery flows).
- */
-export function resolveAuthDestination(
-  onboardingCompleted: boolean
-): string {
-  return onboardingCompleted ? "/app" : "/onboarding";
+  // Step 3: the dashboard is the first destination for every account.
+  // If the bootstrap could not be verified (transient failure), the
+  // (app) layout renders its "Preparing your workspace" state and
+  // retries on the next load — it never bounces the user to a form.
+  return { destination: "/app", workspaceReady };
 }

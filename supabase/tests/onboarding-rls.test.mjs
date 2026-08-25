@@ -122,7 +122,30 @@ const aliceMem = await db.query(
 );
 ok("signup creates owner membership", aliceMem.rows[0]?.role === "owner" && aliceMem.rows[0]?.status === "active");
 
-console.log("\n-- 2. Step 1 profile upsert succeeds for owner --");
+// Access-first profile model: provider metadata pre-fills the name, but the
+// username from metadata is NOT auto-applied — it stays a user choice.
+const aliceProfile = await db.query(
+  `select display_name, username from public.profiles where id = $1`, [ALICE]
+);
+ok("metadata name pre-fills the display name", aliceProfile.rows[0]?.display_name === "Alice");
+ok("metadata username is not auto-applied (stays a user choice)", aliceProfile.rows[0]?.username === null);
+
+// A signup with NO identity metadata must produce a minimal profile: the row
+// exists (authentication identity is guaranteed) but nothing is invented.
+const NO_META = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+await signup(NO_META, "nometadata@nexus.test", {});
+const noMetaProfile = await db.query(
+  `select display_name, username from public.profiles where id = $1`, [NO_META]
+);
+ok("signup without metadata creates a minimal profile row", noMetaProfile.rows.length === 1);
+ok("minimal profile stores no invented name or username",
+  noMetaProfile.rows[0]?.display_name === null && noMetaProfile.rows[0]?.username === null);
+const noMetaWs = await db.query(
+  `select count(*)::int as c from workspaces where owner_id = $1`, [NO_META]
+);
+ok("signup without metadata still bootstraps a workspace", noMetaWs.rows[0]?.c === 1);
+
+console.log("\n-- 2. Profile upsert succeeds for owner --");
 await asUser(ALICE, async () => {
   const r = await db.query(
     `insert into public.profiles (id, display_name, username, updated_at)
@@ -156,8 +179,15 @@ if (bobInitial.rows[0]) {
   await db.query(`delete from workspace_members where user_id = $1`, [BOB]);
   await db.query(`delete from workspaces where id = $1`, [bobInitial.rows[0].id]);
 }
+// Google-style metadata: the `name` claim pre-fills the display name only.
+const bobProfile = await db.query(
+  `select display_name, username from public.profiles where id = $1`, [BOB]
+);
+ok("google signup pre-fills the name from metadata", bobProfile.rows[0]?.display_name === "Bob");
+ok("google signup does not invent a username", bobProfile.rows[0]?.username === null);
+
 await asUser(BOB, async () => {
-  // Step 1: profile upsert must work without a workspace.
+  // Profile upsert must work without a workspace.
   const r = await db.query(
     `insert into public.profiles (id, display_name, username, updated_at)
      values ($1, 'Bob Google', 'bobgoogle', now())
@@ -165,7 +195,7 @@ await asUser(BOB, async () => {
      returning display_name`,
     [BOB]
   );
-  ok("step 1 profile upsert works for orphan", r.rows[0]?.display_name === "Bob Google");
+  ok("profile upsert works for orphan", r.rows[0]?.display_name === "Bob Google");
 
   // RPC bootstraps workspace.
   const rpc = await db.query(`select workspace_id, role from public.get_or_create_personal_workspace()`);
@@ -254,7 +284,7 @@ ok("reload does not duplicate workspace", finalCount.rows[0].c === 1);
 const memCount = await db.query(`select count(*)::int as c from workspace_members where user_id = $1`, [ALICE]);
 ok("reload does not duplicate membership", memCount.rows[0].c === 1);
 
-console.log("\n-- 11. Exact historical Step 1 sequence -----------------");
+console.log("\n-- 11. Exact historical bootstrap sequence -----------------");
 // This is the incident state: auth user + profile exist, but the signup
 // bootstrap left no workspace/membership. The order below is deliberately
 // the order the production API route uses: bootstrap first, profile update
@@ -293,7 +323,7 @@ await asUser(HISTORICAL, async () => {
   );
   const row = bootstrapped.rows[0];
   ok(
-    "historical Step 1 bootstrap returns an active owner",
+    "historical bootstrap returns an active owner",
     Boolean(row?.workspace_id) && row.role === "owner" && row.status === "active"
   );
 
@@ -305,7 +335,7 @@ await asUser(HISTORICAL, async () => {
     [HISTORICAL]
   );
   ok(
-    "historical Step 1 profile update follows bootstrap without RLS denial",
+    "historical profile update follows bootstrap without RLS denial",
     profileUpdate.rows[0]?.id === HISTORICAL &&
       profileUpdate.rows[0]?.display_name === "Historical Repaired"
   );
@@ -319,7 +349,7 @@ await asUser(HISTORICAL, async () => {
     [HISTORICAL]
   );
   ok(
-    "historical Step 1 read-back has coherent workspace context",
+    "historical read-back has coherent workspace context",
     readBack.rows[0]?.owner_id === HISTORICAL &&
       readBack.rows[0]?.role === "owner" &&
       readBack.rows[0]?.status === "active" &&
@@ -410,6 +440,32 @@ await asUser(NO_PROFILE, async () => {
     "new account can insert its own profile after bootstrap",
     profileInsert.rows[0]?.id === NO_PROFILE
   );
+});
+
+// The orphan-repair path inserts a MINIMAL profile (id only) when the auth
+// trigger never ran. That insert must succeed under RLS, and the resulting
+// incomplete profile must not affect any workspace access.
+const NO_PROFILE2 = "99999999-9999-9999-9999-999999999999";
+await signup(NO_PROFILE2, "minimal@nexus.test", {});
+await db.query(`delete from public.profiles where id = $1`, [NO_PROFILE2]);
+await asUser(NO_PROFILE2, async () => {
+  const minimalInsert = await db.query(
+    `insert into public.profiles (id) values ($1) returning id`,
+    [NO_PROFILE2]
+  );
+  ok("orphan repair can insert a minimal profile (id only)", minimalInsert.rows[0]?.id === NO_PROFILE2);
+
+  const readBack = await db.query(
+    `select display_name, username from public.profiles where id = $1`, [NO_PROFILE2]
+  );
+  ok("minimal profile reads back with NULL identity fields",
+    readBack.rows[0]?.display_name === null && readBack.rows[0]?.username === null);
+
+  const ws = await db.query(
+    `select workspace_id from public.get_or_create_personal_workspace()`
+  );
+  ok("an incomplete profile still resolves a workspace (profile never gates access)",
+    Boolean(ws.rows[0]?.workspace_id));
 });
 
 await db.close();

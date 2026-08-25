@@ -7,11 +7,15 @@ import { getPostAuthDestination } from "@/lib/auth-flow";
 /**
  * Email + password sign-in, performed ON THE SERVER.
  *
+ * Email is the canonical authentication credential — the username is a
+ * NEXUS profile identity and is never accepted here.
+ *
  * After successful authentication:
  *   1. Session cookies are written server-side
- *   2. Workspace + membership are ensured (idempotent bootstrap)
- *   3. Onboarding state is checked
- *   4. User is routed to /onboarding or /app
+ *   2. Profile row is ensured (orphan repair, minimal record)
+ *   3. Workspace + membership are ensured (idempotent bootstrap)
+ *   4. User is routed to /app — the dashboard is the first destination
+ *      for every account, complete profile or not.
  */
 export async function POST(request: Request) {
   const { error: configError } = readSupabaseConfig();
@@ -73,22 +77,23 @@ export async function POST(request: Request) {
     );
   }
 
-  // Ensure workspace + membership, then determine destination
+  // Ensure profile + workspace + membership, then determine destination.
+  // The destination is always /app: the (app) layout retries the idempotent
+  // bootstrap on its "Preparing your workspace" state if it could not be
+  // verified here, so nothing is lost.
   try {
     const { destination } = await getPostAuthDestination(
       supabase,
-      result.data.user.id,
-      result.data.user.email
+      result.data.user.id
     );
     return NextResponse.json({
       ok: true,
       redirectTo: destination,
     });
   } catch {
-    // If bootstrap fails, send to onboarding which will retry
     return NextResponse.json({
       ok: true,
-      redirectTo: "/onboarding",
+      redirectTo: "/app",
     });
   }
 }

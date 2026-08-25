@@ -1,18 +1,25 @@
 /**
  * ============================================================
- * NEXUS — AUTH END-TO-END TEST
+ * NEXUS — AUTH END-TO-END TEST (ACCESS FIRST)
  * ============================================================
  * Exercises the real application (server auth routes, proxy, server
  * components, cookie plumbing) against a stubbed Supabase service.
  *
+ * The canonical journey under test:
+ *   signup/login/verify -> session -> workspace bootstrap -> /app
+ *
  * Covers the scenarios that must never regress:
- *   signup (session / confirmation / already registered)
- *   login  (success / wrong password / unknown email / invalid input)
- *   oauth  (new / incomplete / onboarded / error / cancellation / replay /
- *          refresh after callback / re-login after logout)
+ *   signup   (session / confirmation / already registered / minimal)
+ *   confirm  (new -> /app, complete -> /app, expired/invalid, recovery)
+ *   login    (success -> /app, wrong password, unknown email, invalid)
+ *   oauth    (new -> /app, incomplete profile -> /app, complete -> /app,
+ *            error, cancellation, replay, refresh after callback,
+ *            re-login after logout)
+ *   first-value experience (brand-new workspace welcome state, optional
+ *            profile prompt, profile skip keeps the dashboard open)
+ *   profile completion (optional save via /api/profile, dashboard updates)
  *   session persistence + expired-token refresh
- *   route protection
- *   onboarding gate
+ *   route protection (no /onboarding gate: /app is canonical)
  *   logout
  *
  * Usage:
@@ -38,6 +45,18 @@ function assert(name, condition, detail = "") {
     failed += 1;
     console.log(`  FAIL  ${name}\n        ${detail}`);
   }
+}
+
+/** Raw HTML is not user-visible text: React inserts `<!-- -->` comment
+ *  placeholders between adjacent text/expression nodes (invisible in the
+ *  browser), and inline markup splits strings across tags. Copy assertions
+ *  match against the visible text instead, which is what the browser
+ *  actually renders to the user. */
+function visibleText(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function createJar() {
@@ -197,16 +216,16 @@ assert(
   `status=${callbackBare.status} location=${callbackBare.headers.get("location")}`
 );
 
-const callbackOnboardingJar = oauthCallbackJar();
-const callbackOnboarding = await visit("/auth/callback?code=ok-code&next=/onboarding", {
-  jar: callbackOnboardingJar,
+const callbackNewUserJar = oauthCallbackJar();
+const callbackNewUser = await visit("/auth/callback?code=ok-code", {
+  jar: callbackNewUserJar,
 });
 assert(
-  "a valid email confirmation establishes a session and opens onboarding for a new user",
-  callbackOnboarding.status === 307 &&
-    redirectTarget(callbackOnboarding).pathname === "/onboarding" &&
-    callbackOnboardingJar.names().some((name) => name.includes("auth-token")),
-  `status=${callbackOnboarding.status} location=${callbackOnboarding.headers.get("location")} cookies=${JSON.stringify(callbackOnboardingJar.names())}`
+  "a valid email confirmation establishes a session and enters /app for a new user",
+  callbackNewUser.status === 307 &&
+    redirectTarget(callbackNewUser).pathname === "/app" &&
+    callbackNewUserJar.names().some((name) => name.includes("auth-token")),
+  `status=${callbackNewUser.status} location=${callbackNewUser.headers.get("location")} cookies=${JSON.stringify(callbackNewUserJar.names())}`
 );
 
 const callbackInvalid = await visit("/auth/callback?code=invalid");
@@ -255,24 +274,24 @@ const confirmFresh = await visit(
   { jar: confirmFreshJar }
 );
 assert(
-  "token_hash confirmation for a new user opens onboarding and writes a session",
+  "token_hash confirmation for a new user enters /app and writes a session",
   confirmFresh.status === 307 &&
-    redirectTarget(confirmFresh).pathname === "/onboarding" &&
+    redirectTarget(confirmFresh).pathname === "/app" &&
     confirmFreshJar.names().some((name) => name.includes("auth-token")),
   `status=${confirmFresh.status} location=${confirmFresh.headers.get("location")} cookies=${JSON.stringify(confirmFreshJar.names())}`
 );
 
-const confirmOnboardedJar = createJar();
-const confirmOnboarded = await visit(
+const confirmCompleteJar = createJar();
+const confirmComplete = await visit(
   "/auth/confirm?token_hash=confirm-onboarded&type=email",
-  { jar: confirmOnboardedJar }
+  { jar: confirmCompleteJar }
 );
 assert(
-  "token_hash confirmation for an onboarded user opens /app",
-  confirmOnboarded.status === 307 &&
-    redirectTarget(confirmOnboarded).pathname === "/app" &&
-    confirmOnboardedJar.names().some((name) => name.includes("auth-token")),
-  `status=${confirmOnboarded.status} location=${confirmOnboarded.headers.get("location")} cookies=${JSON.stringify(confirmOnboardedJar.names())}`
+  "token_hash confirmation for a complete-profile user enters /app",
+  confirmComplete.status === 307 &&
+    redirectTarget(confirmComplete).pathname === "/app" &&
+    confirmCompleteJar.names().some((name) => name.includes("auth-token")),
+  `status=${confirmComplete.status} location=${confirmComplete.headers.get("location")} cookies=${JSON.stringify(confirmCompleteJar.names())}`
 );
 
 const confirmExpired = await visit("/auth/confirm?token_hash=expired&type=email");
@@ -357,8 +376,8 @@ assert(
   `cookies=${JSON.stringify(signupJar.names())}`
 );
 assert(
-  "signup sends the new user to /onboarding",
-  signupBody?.redirectTo === "/onboarding",
+  "signup with an immediate session enters /app (no onboarding step)",
+  signupBody?.redirectTo === "/app",
   JSON.stringify(signupBody)
 );
 assert(
@@ -420,57 +439,152 @@ assert(
   JSON.stringify(minimalBody)
 );
 
-// ============ 3. ONBOARDING GATE ============
-console.log("\n-- onboarding gate ------------------------------------");
+// ============ 3. FIRST-VALUE JOURNEY (NO ONBOARDING GATE) ============
+console.log("\n-- first-value journey (access first) -----------------");
 
-const gate = await visit("/dashboard", { jar: signupJar });
+// The brand-new signed-up user has NO completed profile (no name, no
+// username). The dashboard must still open: profile completeness is UI
+// guidance, never a gate.
+const freshDashboard = await visit("/dashboard", { jar: signupJar });
+const freshDashboardHtml = await freshDashboard.text();
 assert(
-  "a user without a completed profile is sent to /onboarding",
-  gate.status === 307 && (gate.headers.get("location") ?? "").endsWith("/onboarding"),
-  `status=${gate.status} location=${gate.headers.get("location")}`
+  "a brand-new user with an incomplete profile enters /dashboard (no gate)",
+  freshDashboard.status === 200,
+  `status=${freshDashboard.status} location=${freshDashboard.headers.get("location")}`
+);
+assert(
+  "the first dashboard visit shows the NEXUS welcome state",
+  freshDashboardHtml.includes("Welcome to NEXUS.") &&
+    freshDashboardHtml.includes("Your workspace is ready"),
+  "welcome state copy missing"
+);
+assert(
+  "the welcome state offers the first meaningful actions",
+  freshDashboardHtml.includes("Create your first project") &&
+    freshDashboardHtml.includes("Explore NEXUS Intelligence"),
+  "welcome actions missing"
+);
+// Copy is asserted against the VISIBLE text: React inserts `<!-- -->`
+// comment nodes between the greeting's text/expression boundaries and the
+// prompt's summary, which raw-HTML matching would (incorrectly) treat as
+// text. The browser renders none of that.
+const freshDashboardText = visibleText(freshDashboardHtml);
+assert(
+  "the optional profile completion prompt is shown (non-blocking)",
+  freshDashboardText.includes("Complete your profile") &&
+    freshDashboardText.includes("Add your name and username"),
+  "profile prompt copy missing"
+);
+assert(
+  "a missing full name never renders an invented display name",
+  /Good (morning|afternoon|evening|night)\./.test(freshDashboardText) &&
+    !/Good (morning|afternoon|evening|night),\s*\S/.test(freshDashboardText),
+  "unexpected name rendering"
 );
 
-const onboarding = await visit("/onboarding", { jar: signupJar });
-assert("authenticated /onboarding renders", onboarding.status === 200, `status=${onboarding.status}`);
+// The legacy onboarding URL must no longer gate the product: authenticated
+// visitors are simply sent into NEXUS.
+const onboardingRedirect = await visit("/onboarding", { jar: signupJar });
+assert(
+  "authenticated /onboarding redirects into /app (wizard removed)",
+  onboardingRedirect.status === 307 &&
+    (onboardingRedirect.headers.get("location") ?? "").endsWith("/app"),
+  `status=${onboardingRedirect.status} location=${onboardingRedirect.headers.get("location")}`
+);
 
-// Reproduce the production incident through the real server route: a signed-in
-// account reaches onboarding, Step 1 bootstraps the workspace, then persists
-// its identity. The stub only replaces Supabase; the route, cookies and RLS
-// request shape are the application code under test.
-const stepOneCallStart = stub.calls.length;
-const stepOne = await visit("/api/onboarding/step-1", {
+// The wizard's API route is gone: no 200, no raw error — a clean 404.
+const stepOneGone = await visit("/api/onboarding/step-1", {
   jar: signupJar,
   method: "POST",
   body: { displayName: "Fresh Repaired", username: "fresh_repaired" },
 });
-const stepOneBody = await stepOne.json().catch(() => null);
-const stepOneCalls = stub.calls.slice(stepOneCallStart);
-const bootstrapCallIndex = stepOneCalls.findIndex((call) =>
-  call.includes("/rest/v1/rpc/get_or_create_personal_workspace")
-);
-const profileCallIndex = stepOneCalls.findIndex((call) =>
-  call.includes("/rest/v1/profiles")
-);
 assert(
-  "real Step 1 route succeeds for the incomplete account",
-  stepOne.status === 200 && stepOneBody?.ok === true,
-  JSON.stringify(stepOneBody)
-);
-assert(
-  "Step 1 calls the bootstrap RPC before any profile operation",
-  bootstrapCallIndex >= 0 && profileCallIndex > bootstrapCallIndex,
-  JSON.stringify(stepOneCalls)
+  "the old /api/onboarding/step-1 route no longer exists",
+  stepOneGone.status === 404,
+  `status=${stepOneGone.status}`
 );
 
-const stepOneRetry = await visit("/api/onboarding/step-1", {
-  jar: signupJar,
+// ============ 3b. PROFILE COMPLETION (OPTIONAL) ============
+console.log("\n-- profile completion (optional) ----------------------");
+
+const profileAnonymous = await visit("/api/profile", {
   method: "POST",
-  body: { displayName: "Fresh Repaired Again", username: "fresh_repaired_again" },
+  body: { displayName: "Nobody", username: "nobody" },
 });
 assert(
-  "repeating Step 1 remains idempotent and updates the same profile",
-  stepOneRetry.status === 200,
-  `status=${stepOneRetry.status}`
+  "profile save requires authentication (401)",
+  profileAnonymous.status === 401,
+  `status=${profileAnonymous.status}`
+);
+
+const profileInvalid = await visit("/api/profile", {
+  jar: signupJar,
+  method: "POST",
+  body: { displayName: "Fresh Newcomer", username: "x" },
+});
+assert(
+  "profile save rejects a malformed username (400, readable message)",
+  profileInvalid.status === 400 && /3–32 characters/i.test(
+    (await profileInvalid.json().catch(() => null))?.error ?? ""
+  ),
+  `status=${profileInvalid.status}`
+);
+
+// Profile save through the real server route: bootstrap RPC runs before any
+// profile write (the production incident ordering), then the write lands.
+const profileCallStart = stub.calls.length;
+const profileSave = await visit("/api/profile", {
+  jar: signupJar,
+  method: "POST",
+  body: { displayName: "Fresh Newcomer", username: "freshnewcomer" },
+});
+const profileSaveBody = await profileSave.json().catch(() => null);
+const profileCalls = stub.calls.slice(profileCallStart);
+const profileRpcIndex = profileCalls.findIndex((call) =>
+  call.includes("/rest/v1/rpc/get_or_create_personal_workspace")
+);
+const profileFirstWriteIndex = profileCalls.findIndex((call) => {
+  const method = call.split(" ")[0];
+  return (method === "POST" || method === "PATCH" || method === "PUT") &&
+    call.includes("/rest/v1/profiles");
+});
+assert(
+  "profile save succeeds for the incomplete account",
+  profileSave.status === 200 && profileSaveBody?.ok === true,
+  JSON.stringify(profileSaveBody)
+);
+assert(
+  "profile save ensures the workspace before persisting profile state",
+  profileRpcIndex >= 0 && profileFirstWriteIndex > profileRpcIndex,
+  JSON.stringify(profileCalls)
+);
+
+// The dashboard reflects the completed profile: the greeting now carries the
+// real name and the completion prompt is gone.
+const freshDashboardAfter = await visit("/dashboard", { jar: signupJar });
+const freshDashboardAfterHtml = await freshDashboardAfter.text();
+assert(
+  "after profile save the dashboard greets the user by name",
+  freshDashboardAfter.status === 200 && freshDashboardAfterHtml.includes("Fresh"),
+  `status=${freshDashboardAfter.status}`
+);
+assert(
+  "after profile save the completion prompt disappears",
+  !freshDashboardAfterHtml.includes("Complete your profile"),
+  "prompt still present after completion"
+);
+
+// Saving again remains idempotent (same row, no duplicate profile).
+const profileRetry = await visit("/api/profile", {
+  jar: signupJar,
+  method: "POST",
+  body: { displayName: "Fresh Newcomer", username: "freshnewcomer", bio: "New to NEXUS" },
+});
+assert(
+  "repeating a profile save remains idempotent",
+  profileRetry.status === 200 &&
+    (await profileRetry.json().catch(() => null))?.ok === true,
+  `status=${profileRetry.status}`
 );
 
 // ============ 4. LOGIN ============
@@ -514,6 +628,37 @@ assert(
     /verified/i.test(unconfirmedBody?.error ?? "") &&
     unconfirmedBody?.errorCode === "EMAIL_NOT_CONFIRMED",
   JSON.stringify(unconfirmedBody)
+);
+
+// Existing user with an INCOMPLETE profile (name present, username missing):
+// login still lands on /app — the profile is completed from inside, later.
+const incompleteLoginJar = createJar();
+const incompleteLogin = await visit("/api/auth/signin", {
+  jar: incompleteLoginJar,
+  method: "POST",
+  body: { email: "incomplete@nexus.test", password: "supersecret" },
+});
+const incompleteLoginBody = await incompleteLogin.json().catch(() => null);
+assert(
+  "existing user with an incomplete profile logs in and lands on /app",
+  incompleteLogin.status === 200 &&
+    incompleteLoginBody?.ok === true &&
+    incompleteLoginBody?.redirectTo === "/app",
+  JSON.stringify(incompleteLoginBody)
+);
+const incompleteDashboard = await visit("/dashboard", { jar: incompleteLoginJar });
+const incompleteDashboardHtml = await incompleteDashboard.text();
+assert(
+  "the incomplete-profile user's dashboard stays fully accessible",
+  incompleteDashboard.status === 200 &&
+    incompleteDashboardHtml.includes("Halfway Hank"),
+  `status=${incompleteDashboard.status}`
+);
+assert(
+  "the incomplete-profile user still sees the profile prompt (missing username)",
+  visibleText(incompleteDashboardHtml).includes("Complete your profile") &&
+    visibleText(incompleteDashboardHtml).includes("Add your username"),
+  "profile prompt missing for partial profile"
 );
 
 const invalidInput = await visit("/api/auth/signin", {
@@ -600,26 +745,27 @@ assert(
   "google button missing on /signup"
 );
 
-// Google sign-up for a brand-new user (no profile yet) -> /onboarding.
+// Google sign-up for a brand-new user -> /app. Google's identity metadata
+// pre-fills the name via the signup trigger; the user is never asked again.
 const oauthNew = await visit("/auth/callback?source=oauth&code=oauth-new", {
   jar: oauthCallbackJar(),
 });
 assert(
-  "google sign-up for a new user opens onboarding",
+  "google sign-up for a new user enters /app",
   oauthNew.status === 307 &&
-    redirectTarget(oauthNew).pathname === "/onboarding" &&
+    redirectTarget(oauthNew).pathname === "/app" &&
     !redirectTarget(oauthNew).pathname.includes("login"),
   `status=${oauthNew.status} location=${oauthNew.headers.get("location")}`
 );
 
-// Google sign-in for a returning user who never finished onboarding -> /onboarding.
+// Google sign-in for a returning user with an incomplete profile -> /app.
 const oauthIncomplete = await visit("/auth/callback?source=oauth&code=oauth-incomplete", {
   jar: oauthCallbackJar(),
 });
 assert(
-  "google sign-in for an incomplete-onboarding user opens onboarding",
+  "google sign-in for an incomplete-profile user enters /app",
   oauthIncomplete.status === 307 &&
-    redirectTarget(oauthIncomplete).pathname === "/onboarding" &&
+    redirectTarget(oauthIncomplete).pathname === "/app" &&
     !redirectTarget(oauthIncomplete).pathname.includes("login"),
   `status=${oauthIncomplete.status} location=${oauthIncomplete.headers.get("location")}`
 );

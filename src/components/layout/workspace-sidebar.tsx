@@ -50,9 +50,13 @@ export type ShellPlan = {
 };
 
 export type ShellUser = {
-  name: string;
+  /** The name the user (or their OAuth provider) provided — `null` until
+   *  they complete their profile. UI renders a fallback, never a guess. */
+  name: string | null;
   username?: string;
   email?: string;
+  /** UI guidance only: name AND username both exist. Never an access gate. */
+  profileComplete: boolean;
 };
 
 export type ShellWorkspace = {

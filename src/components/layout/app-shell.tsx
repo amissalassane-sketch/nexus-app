@@ -11,6 +11,8 @@ import { MobileNavItem } from "@/components/ui/navigation";
 import { MOBILE_NAV, isNavActive } from "@/components/layout/nav-config";
 import { ToastProvider } from "@/components/ui/toast";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { ProfileCompletionPrompt } from "@/components/profile/profile-completion-prompt";
+import { ProfileCompletionModal } from "@/components/profile/profile-completion-modal";
 import {
   WorkspaceSidebar,
   type ShellCounts,
@@ -40,7 +42,22 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const pathname = usePathname();
+
+  // Optional profile completion — UI guidance only, never an access gate.
+  // The product renders first; the prompt appears as a subtle card and the
+  // modal can be opened from the card or the account menu.
+  const openProfileModal = useCallback(() => setProfileModalOpen(true), []);
+  const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
+
+  const profileMissingSummary =
+    [
+      user.name?.trim() ? null : "name",
+      user.username ? null : "username",
+    ]
+      .filter((entry): entry is string => entry !== null)
+      .join(" and ");
 
   // The drawer is closed by the thing that navigates (`onNavigate` on every
   // sidebar item), not by an effect watching the pathname — no cascading
@@ -125,11 +142,18 @@ export function AppShell({
               user={user}
               workspace={workspace}
               unreadCount={counts.unreadNotifications}
+              onOpenProfileModal={openProfileModal}
             />
           </div>
 
           <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
+              {!user.profileComplete ? (
+                <ProfileCompletionPrompt
+                  missingSummary={profileMissingSummary || "your identity"}
+                  onOpen={openProfileModal}
+                />
+              ) : null}
               {children}
             </div>
           </main>
@@ -164,6 +188,15 @@ export function AppShell({
             </button>
           </nav>
         </div>
+
+        {/* Optional profile completion — reachable from the prompt card
+            and the account menu. Never auto-opens. */}
+        <ProfileCompletionModal
+          open={profileModalOpen}
+          onClose={closeProfileModal}
+          initialName={user.name}
+          initialUsername={user.username}
+        />
 
         {/* Drawer — the full sidebar below lg */}
         {navOpen ? (

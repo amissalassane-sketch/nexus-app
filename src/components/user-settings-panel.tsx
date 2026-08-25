@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CreditCard,
   KeyRound,
@@ -18,16 +19,41 @@ import { getActiveMembership, canManageBilling } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import { Alert, Skeleton } from "@/components/ui/feedback";
+import { Alert, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
+import {
+  computeProfileCompleteness,
+  isValidUsername,
+  missingLabel,
+} from "@/lib/profile-state";
+import { isMissingColumnError } from "@/lib/schema-errors";
 
 type ProfileState = {
   display_name: string;
   username: string;
   bio: string;
+  job_title: string;
+  avatar_url: string;
 };
+
+/**
+ * Client wrapper used by the settings page: reads the `?tab=` param so the
+ * account menu can deep-link to the exact section it named (Profile,
+ * Security, Workspace, Intelligence).
+ */
+export function SettingsTabLoader({ userId }: { userId: string }) {
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab");
+  const initialTab: TabId = (
+    ["profile", "account", "workspace", "intelligence"] as const
+  ).includes(requested as TabId)
+    ? (requested as TabId)
+    : "profile";
+
+  return <UserSettingsPanel userId={userId} initialTab={initialTab} />;
+}
 
 type StatusState = {
   type: "idle" | "success" | "error";
@@ -47,13 +73,22 @@ const SECTIONS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export function UserSettingsPanel({ userId }: { userId: string }) {
+export function UserSettingsPanel({
+  userId,
+  initialTab = "profile",
+}: {
+  userId: string;
+  /** Section to open first — deep-linked from the account menu. */
+  initialTab?: TabId;
+}) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [form, setForm] = useState<ProfileState>({
     display_name: "",
     username: "",
     bio: "",
+    job_title: "",
+    avatar_url: "",
   });
   const [workspaceName, setWorkspaceName] = useState<string>("Not linked");
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -64,18 +99,39 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [status, setStatus] = useState<StatusState>({ type: "idle", message: "" });
   const [workspaceStatus, setWorkspaceStatus] = useState<StatusState>({ type: "idle", message: "" });
-  const [tab, setTab] = useState<TabId>("profile");
+  const [tab, setTab] = useState<TabId>(initialTab);
+
+  // Account-menu deep links change ?tab= while the page stays mounted.
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     const loadProfile = async () => {
-      const { data: profileData, error: profileError } = await supabase
+      // Hosted projects that have not applied migration 020 yet lack the
+      // `job_title` column — retry on the base columns instead of bricking
+      // the page with a raw Postgres error.
+      let { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("display_name, username, bio")
+        .select("display_name, username, bio, job_title, avatar_url")
         .eq("id", userId)
         .maybeSingle();
 
+      if (profileError && isMissingColumnError(profileError.message, "job_title")) {
+        ({ data: profileData } = await supabase
+          .from("profiles")
+          .select("display_name, username, bio, avatar_url")
+          .eq("id", userId)
+          .maybeSingle());
+        profileError = null;
+      }
+
       if (profileError) {
-        setStatus({ type: "error", message: profileError.message });
+        setStatus({
+          type: "error",
+          message:
+            "Your profile could not be loaded. Please try again shortly.",
+        });
         setLoading(false);
         return;
       }
@@ -85,6 +141,8 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
           display_name: profileData.display_name ?? "",
           username: profileData.username ?? "",
           bio: profileData.bio ?? "",
+          job_title: (profileData as { job_title?: string | null }).job_title ?? "",
+          avatar_url: profileData.avatar_url ?? "",
         });
       }
 
@@ -129,13 +187,25 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     const displayName = form.display_name.trim();
     const username = form.username.trim();
     const bio = form.bio.trim();
+    const jobTitle = form.job_title.trim();
+    const avatarUrl = form.avatar_url.trim();
 
-    if (!displayName) {
-      return "Display name is required.";
+    // Profile fields are OPTIONAL (access-first): no field is required to
+    // save. We only reject values that are present but malformed.
+    if (displayName.length > 120) {
+      return "Your name must be 120 characters or fewer.";
     }
 
-    if (username && !/^[a-zA-Z0-9._-]{3,32}$/.test(username)) {
+    if (username && !isValidUsername(username)) {
       return "Username must be 3-32 characters and may only contain letters, numbers, dots, underscores, and dashes.";
+    }
+
+    if (jobTitle.length > 120) {
+      return "Job title must be 120 characters or fewer.";
+    }
+
+    if (avatarUrl && !/^(https?:\/\/[^\s]+\.[^\s]+|data:image\/[a-z+]+;base64,[^\s]+)$/i.test(avatarUrl)) {
+      return "Profile photo must be a valid image link.";
     }
 
     if (bio.length > 500) {
@@ -155,29 +225,46 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
     setSaving(true);
     setStatus({ type: "idle", message: "" });
 
+    const basePayload = {
+      id: userId,
+      display_name: form.display_name.trim() || null,
+      username: form.username.trim() || null,
+      bio: form.bio.trim() || null,
+      avatar_url: form.avatar_url.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    const payload = {
+      ...basePayload,
+      job_title: form.job_title.trim() || null,
+    };
+
     // `update()` alone reports success even when it matched 0 rows (missing
     // profile row, or a row hidden by RLS), so the UI claimed "saved" while
     // nothing was persisted. `upsert(...).select()` writes the row and returns
     // it, which lets us verify the write actually happened.
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("profiles")
-      .upsert(
-        {
-          id: userId,
-          display_name: form.display_name.trim(),
-          username: form.username.trim() || null,
-          bio: form.bio.trim() || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      )
+      .upsert(payload, { onConflict: "id" })
       .select("id, display_name, username, bio")
       .maybeSingle();
+
+    // Hosted project without migration 020: retry without job_title.
+    if (error && isMissingColumnError(error.message, "job_title")) {
+      ({ data, error } = await supabase
+        .from("profiles")
+        .upsert(basePayload, { onConflict: "id" })
+        .select("id, display_name, username, bio")
+        .maybeSingle());
+    }
 
     setSaving(false);
 
     if (error) {
-      setStatus({ type: "error", message: error.message });
+      setStatus({
+        type: "error",
+        message:
+          "Your profile could not be saved. Please try again shortly.",
+      });
       return;
     }
 
@@ -190,11 +277,13 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
       return;
     }
 
-    setForm({
+    setForm((current) => ({
       display_name: data.display_name ?? "",
       username: data.username ?? "",
       bio: data.bio ?? "",
-    });
+      job_title: current.job_title,
+      avatar_url: current.avatar_url,
+    }));
 
     setStatus({ type: "success", message: "Profile updated successfully." });
     router.refresh();
@@ -288,7 +377,8 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
         <Card className="p-6">
           <h2 className="text-h2 text-text-primary">Profile</h2>
           <p className="mt-1 text-small text-text-secondary">
-            Update the public profile associated with your account.
+            Your NEXUS identity. Everything here is optional — your email is
+            your login, and none of these fields ever gate access to NEXUS.
           </p>
 
           {loading ? (
@@ -299,7 +389,41 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
             </div>
           ) : (
             <div className="mt-6 space-y-4">
-              <Field label="Display name" htmlFor="settings-display-name">
+              {/* Completeness indicator — helpful only, never a gate. */}
+              {(() => {
+                const completeness = computeProfileCompleteness(
+                  form.display_name,
+                  form.username,
+                  form.avatar_url
+                );
+                return (
+                  <div className="rounded-input border border-border-subtle bg-bg-surface/60 px-3.5 py-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-caption font-medium text-text-secondary">
+                        Profile
+                      </span>
+                      <span className="text-caption text-text-tertiary">
+                        {completeness.complete
+                          ? "Complete"
+                          : `${completeness.filled} of ${completeness.total} completed`}
+                      </span>
+                    </div>
+                    <Progress
+                      value={completeness.percent}
+                      label="Profile completeness"
+                      tone={completeness.complete ? "success" : "lavender"}
+                      className="mt-2"
+                    />
+                    {!completeness.complete ? (
+                      <p className="mt-1.5 text-caption text-text-quaternary">
+                        Missing: {missingLabel(completeness.missing)}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
+
+              <Field label="Full name" htmlFor="settings-display-name">
                 <Input
                   id="settings-display-name"
                   value={form.display_name}
@@ -310,10 +434,15 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
                     }))
                   }
                   placeholder="Jane Doe"
+                  autoComplete="name"
                 />
               </Field>
 
-              <Field label="Username" htmlFor="settings-username">
+              <Field
+                label="Username"
+                htmlFor="settings-username"
+                hint="Your NEXUS identity — not your login. 3-32 characters."
+              >
                 <Input
                   id="settings-username"
                   value={form.username}
@@ -321,13 +450,48 @@ export function UserSettingsPanel({ userId }: { userId: string }) {
                     setForm((current) => ({ ...current, username: event.target.value }))
                   }
                   placeholder="janedoe"
+                  autoComplete="off"
+                />
+              </Field>
+
+              <Field
+                label="Profile photo"
+                htmlFor="settings-avatar"
+                hint="Optional — a link to an image you host."
+              >
+                <Input
+                  id="settings-avatar"
+                  value={form.avatar_url}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      avatar_url: event.target.value,
+                    }))
+                  }
+                  placeholder="https://…"
+                  autoComplete="off"
+                />
+              </Field>
+
+              <Field label="Job title" htmlFor="settings-job-title" hint="Optional">
+                <Input
+                  id="settings-job-title"
+                  value={form.job_title}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      job_title: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Product lead"
+                  autoComplete="off"
                 />
               </Field>
 
               <Field
                 label="Bio"
                 htmlFor="settings-bio"
-                hint={`${form.bio.length}/500`}
+                hint={`Optional · ${form.bio.length}/500`}
               >
                 <Textarea
                   id="settings-bio"

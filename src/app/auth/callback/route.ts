@@ -60,9 +60,14 @@ function confirmErrorUrl(origin: string, reason: string): string {
  *   1. Password recovery — keep the fresh session, continue to /reset-password
  *
  *   2. Email confirmation — exchange the token, write session cookies,
- *      bootstrap workspace, route by account state
+ *      bootstrap workspace, enter /app
  *
- *   3. OAuth — exchange the PKCE code, bootstrap workspace, route by state
+ *   3. OAuth — exchange the PKCE code, bootstrap workspace, enter /app.
+ *      When Google already provided identity metadata, the signup trigger
+ *      pre-filled the profile name; the user is never asked for it again.
+ *
+ * Every successful outcome lands on /app. Profile completeness is never a
+ * routing input; the dashboard is the first-value experience.
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -127,7 +132,6 @@ export async function GET(request: NextRequest) {
 
   let confirmError: string | null = null;
   let authUserId: string | null = null;
-  let authUserEmail: string | null = null;
   const otpType = asOtpType(type);
 
   try {
@@ -139,19 +143,11 @@ export async function GET(request: NextRequest) {
       confirmError = result.error?.message ?? null;
       authUserId =
         result.data.user?.id ?? result.data.session?.user?.id ?? null;
-      authUserEmail =
-        result.data.user?.email ??
-        result.data.session?.user?.email ??
-        null;
     } else if (code) {
       const result = await supabase.auth.exchangeCodeForSession(code);
       confirmError = result.error?.message ?? null;
       authUserId =
         result.data.user?.id ?? result.data.session?.user?.id ?? null;
-      authUserEmail =
-        result.data.user?.email ??
-        result.data.session?.user?.email ??
-        null;
     } else {
       confirmError = "Malformed confirmation link.";
     }
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest) {
     return redirectWithCookies(response, `${origin}/reset-password`);
   }
 
-  // --- OAuth: keep the session, bootstrap workspace, route by state. -------
+  // --- OAuth: keep the session, bootstrap workspace, enter NEXUS. ----------
   if (isOAuth) {
     if (confirmError || !authUserId) {
       // PKCE exchange failed — check if user already has a live session
@@ -182,32 +178,30 @@ export async function GET(request: NextRequest) {
         try {
           const { destination } = await getPostAuthDestination(
             supabase,
-            existingUser.id,
-            existingUser.email
+            existingUser.id
           );
           return redirectWithCookies(response, `${origin}${destination}`);
         } catch {
-          return redirectWithCookies(response, `${origin}/onboarding`);
+          return redirectWithCookies(response, `${origin}/app`);
         }
       }
 
       return NextResponse.redirect(oauthFailed);
     }
 
-    // Bootstrap workspace + membership, then route
+    // Bootstrap workspace + membership, then enter NEXUS
     try {
       const { destination } = await getPostAuthDestination(
         supabase,
-        authUserId,
-        authUserEmail ?? undefined
+        authUserId
       );
       return redirectWithCookies(response, `${origin}${destination}`);
     } catch {
-      return redirectWithCookies(response, `${origin}/onboarding`);
+      return redirectWithCookies(response, `${origin}/app`);
     }
   }
 
-  // --- Email confirmation: verify, bootstrap, route by account state. ------
+  // --- Email confirmation: verify, bootstrap, enter the product. -----------
   if (confirmError || !authUserId) {
     const reason = classifyConfirmationError(confirmError);
     return NextResponse.redirect(confirmErrorUrl(origin, reason));
@@ -216,11 +210,10 @@ export async function GET(request: NextRequest) {
   try {
     const { destination } = await getPostAuthDestination(
       supabase,
-      authUserId,
-      authUserEmail ?? undefined
+      authUserId
     );
     return redirectWithCookies(response, `${origin}${destination}`);
   } catch {
-    return redirectWithCookies(response, `${origin}/onboarding`);
+    return redirectWithCookies(response, `${origin}/app`);
   }
 }
