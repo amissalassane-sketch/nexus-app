@@ -29,6 +29,7 @@ export function NavItem({
   count,
   countTone = "muted",
   onNavigate,
+  ...rest
 }: {
   href: string;
   label: string;
@@ -37,12 +38,13 @@ export function NavItem({
   count?: number;
   countTone?: "muted" | "accent";
   onNavigate?: () => void;
-}) {
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
     <Link
       href={href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
+      {...rest}
       className={cn(
         "group relative flex h-[34px] items-center gap-2.5 rounded-nav border px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
         active

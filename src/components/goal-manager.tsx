@@ -215,6 +215,9 @@ function GoalManagerInner({ userId }: { userId: string }) {
     }
 
     setSuccess("Goal created.");
+    window.dispatchEvent(
+      new CustomEvent("nexus:activation", { detail: { type: "goal_created" } })
+    );
     closeForm();
     await fetchGoals(workspaceId);
     syncServerViews();

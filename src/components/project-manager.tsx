@@ -382,7 +382,13 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         title="Projects"
         count={projects.length}
         description="The initiatives NEXUS tracks for risk, momentum and deadlines."
-        actions={<CreateButton label="New Project" onClick={openCreateForm} />}
+        actions={
+          <CreateButton
+            label="New Project"
+            onClick={openCreateForm}
+            data-tour="create-project"
+          />
+        }
       />
 
       <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">

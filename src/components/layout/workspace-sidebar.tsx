@@ -206,6 +206,7 @@ export function WorkspaceSidebar({
               type="button"
               ref={ref}
               onClick={toggle}
+              data-tour="create-project"
               className="flex h-9 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99]"
               {...ariaProps}
             >
@@ -224,6 +225,7 @@ export function WorkspaceSidebar({
           <DropdownLink
             href="/projects?create=1"
             icon={<FolderKanban size={15} strokeWidth={1.75} />}
+            data-tour="create-project"
           >
             Project
           </DropdownLink>
@@ -246,16 +248,25 @@ export function WorkspaceSidebar({
             {group.label ? <SectionLabel>{group.label}</SectionLabel> : null}
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <NavItem
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  active={isNavActive(pathname, item.href)}
-                  count={item.count ? counts[item.count] : undefined}
-                  countTone={item.accentCount ? "accent" : "muted"}
-                  onNavigate={onNavigate}
-                  icon={<item.icon size={15} strokeWidth={1.75} />}
-                />
+              <NavItem
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                active={isNavActive(pathname, item.href)}
+                count={item.count ? counts[item.count] : undefined}
+                countTone={item.accentCount ? "accent" : "muted"}
+                onNavigate={onNavigate}
+                icon={<item.icon size={15} strokeWidth={1.75} />}
+                data-tour={
+                  item.href === "/app/intelligence"
+                    ? "nav-intelligence"
+                    : item.href === "/projects"
+                      ? "nav-projects"
+                      : item.href === "/tasks"
+                        ? "nav-tasks"
+                        : undefined
+                }
+              />
               ))}
             </div>
           </div>

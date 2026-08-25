@@ -13,6 +13,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { ProfileCompletionPrompt } from "@/components/profile/profile-completion-prompt";
 import { ProfileCompletionModal } from "@/components/profile/profile-completion-modal";
+import { OnboardingProvider, useOnboarding } from "@/components/onboarding/onboarding-provider";
 import {
   WorkspaceSidebar,
   type ShellCounts,
@@ -28,7 +29,7 @@ import {
 // compact bottom navigation carries the primary destinations.
 // ============================================================
 
-export function AppShell({
+function AppShellInner({
   user,
   workspace,
   counts,
@@ -50,6 +51,8 @@ export function AppShell({
   // modal can be opened from the card or the account menu.
   const openProfileModal = useCallback(() => setProfileModalOpen(true), []);
   const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
+
+  const { tourActive, openHelp } = useOnboarding();
 
   const profileMissingSummary =
     [
@@ -143,12 +146,13 @@ export function AppShell({
               workspace={workspace}
               unreadCount={counts.unreadNotifications}
               onOpenProfileModal={openProfileModal}
+              onOpenHelp={openHelp}
             />
           </div>
 
           <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
-              {!user.profileComplete ? (
+              {!user.profileComplete && !tourActive ? (
                 <ProfileCompletionPrompt
                   missingSummary={profileMissingSummary || "your identity"}
                   onOpen={openProfileModal}
@@ -238,5 +242,35 @@ export function AppShell({
         ) : null}
       </div>
     </ToastProvider>
+  );
+}
+
+export function AppShell({
+  user,
+  workspace,
+  counts,
+  plan,
+  userId,
+  children,
+}: {
+  user: ShellUser;
+  workspace: ShellWorkspace;
+  counts: ShellCounts;
+  plan: ShellPlan;
+  userId: string;
+  children: ReactNode;
+}) {
+  return (
+    <OnboardingProvider
+      userId={userId}
+      projectCount={counts.projects}
+      taskCount={counts.tasks}
+      goalCount={counts.goals}
+      profileComplete={user.profileComplete}
+    >
+      <AppShellInner user={user} workspace={workspace} counts={counts} plan={plan}>
+        {children}
+      </AppShellInner>
+    </OnboardingProvider>
   );
 }
