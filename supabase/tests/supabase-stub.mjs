@@ -39,23 +39,28 @@ export const ONBOARDED_USER = {
   identities: [],
 };
 
-/** A brand new account: no profile row yet, so onboarding must kick in. */
+/**
+ * A brand new email/password account. Under the access-first model the
+ * signup trigger created a MINIMAL profile: no display name and no
+ * username (nothing was provided at signup). The user still reaches the
+ * dashboard — profile completeness is UI guidance, never a gate.
+ */
 export const FRESH_USER = {
   ...ONBOARDED_USER,
   id: "99999999-9999-9999-9999-999999999999",
   email: "fresh@nexus.test",
-  user_metadata: { full_name: "Fresh User", username: "freshuser" },
+  user_metadata: {},
 };
 
-/** A returning user who started onboarding but never finished: has a profile
- *  row with onboarding_completed = false. Used to verify that an OAuth sign-in
- *  for an "existing but incomplete" account routes to /onboarding, not the
- *  dashboard and not the login screen. */
+/** A returning user with a PARTIAL profile: a name was provided but the
+ *  username is missing. Used to verify that an OAuth sign-in for an
+ *  "existing but incomplete" account routes to /app (the dashboard),
+ *  not to a form and not to the login screen. */
 export const INCOMPLETE_USER = {
   ...ONBOARDED_USER,
   id: "55555555-5555-5555-5555-555555555555",
   email: "incomplete@nexus.test",
-  user_metadata: { full_name: "Halfway Hank", username: "halfwayhank" },
+  user_metadata: { name: "Halfway Hank" },
 };
 
 export const WORKSPACE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -138,29 +143,37 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
           display_name: "Owner One",
           username: "ownerone",
           bio: null,
+          job_title: null,
+          avatar_url: null,
           onboarding_completed: true,
         },
       ],
       [
+        // INCOMPLETE_USER: name present, username missing — a partial
+        // profile under the access-first model.
         INCOMPLETE_USER.id,
         {
           id: INCOMPLETE_USER.id,
           display_name: "Halfway Hank",
-          username: "halfwayhank",
+          username: null,
           bio: null,
+          job_title: null,
+          avatar_url: null,
           onboarding_completed: false,
         },
       ],
-      // FRESH_USER: just signed up — the DB trigger created a profile row
-      // with onboarding_completed = false and a default display name pulled
-      // from user_metadata. No workspace yet (the RPC will bootstrap it).
+      // FRESH_USER: just signed up — the DB trigger (migration 020) created
+      // a MINIMAL profile row: no identity was provided, so nothing is
+      // invented. No workspace yet (the RPC will bootstrap it).
       [
         FRESH_USER.id,
         {
           id: FRESH_USER.id,
-          display_name: FRESH_USER.user_metadata.full_name,
+          display_name: null,
           username: null,
           bio: null,
+          job_title: null,
+          avatar_url: null,
           onboarding_completed: false,
         },
       ],
@@ -179,11 +192,106 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
     workspaces: new Map([
       [WORKSPACE_ID, { id: WORKSPACE_ID, name: "Test Workspace", slug: "test-workspace" }],
     ]),
-    projects: new Map(),
-    tasks: new Map(),
-    goals: new Map(),
+    // The ONBOARDED user's workspace has real content, so the e2e suite can
+    // verify BOTH dashboard states: the full dashboard (data present) and
+    // the first-visit welcome state (brand-new empty workspace).
+    projects: new Map([
+      [
+        "proj-1",
+        {
+          id: "proj-1",
+          workspace_id: WORKSPACE_ID,
+          name: "Launch site",
+          status: "active",
+          due_date: null,
+          progress: 40,
+          updated_at: "2026-08-20T10:00:00.000Z",
+          created_at: "2026-08-01T10:00:00.000Z",
+        },
+      ],
+      [
+        "proj-2",
+        {
+          id: "proj-2",
+          workspace_id: WORKSPACE_ID,
+          name: "Mobile app",
+          status: "active",
+          due_date: null,
+          progress: 10,
+          updated_at: "2026-08-21T10:00:00.000Z",
+          created_at: "2026-08-05T10:00:00.000Z",
+        },
+      ],
+    ]),
+    tasks: new Map([
+      [
+        "task-1",
+        {
+          id: "task-1",
+          workspace_id: WORKSPACE_ID,
+          title: "Fix checkout bug",
+          status: "in_progress",
+          priority: "high",
+          due_at: null,
+          completed_at: null,
+          project_id: "proj-1",
+          updated_at: "2026-08-22T10:00:00.000Z",
+          created_at: "2026-08-10T10:00:00.000Z",
+        },
+      ],
+      [
+        "task-2",
+        {
+          id: "task-2",
+          workspace_id: WORKSPACE_ID,
+          title: "Write release notes",
+          status: "todo",
+          priority: "medium",
+          due_at: null,
+          completed_at: null,
+          project_id: "proj-1",
+          updated_at: "2026-08-21T10:00:00.000Z",
+          created_at: "2026-08-12T10:00:00.000Z",
+        },
+      ],
+      [
+        "task-3",
+        {
+          id: "task-3",
+          workspace_id: WORKSPACE_ID,
+          title: "Ship v1",
+          status: "done",
+          priority: "low",
+          due_at: null,
+          completed_at: "2026-08-18T10:00:00.000Z",
+          project_id: "proj-2",
+          updated_at: "2026-08-18T10:00:00.000Z",
+          created_at: "2026-08-02T10:00:00.000Z",
+        },
+      ],
+    ]),
+    goals: new Map([
+      [
+        "goal-1",
+        {
+          id: "goal-1",
+          workspace_id: WORKSPACE_ID,
+          title: "Reach 100 customers",
+          status: "active",
+          progress: 25,
+          target_date: null,
+          updated_at: "2026-08-19T10:00:00.000Z",
+          created_at: "2026-08-03T10:00:00.000Z",
+        },
+      ],
+    ]),
     notifications: new Map(),
-    workspace_subscriptions: new Map(),
+    workspace_subscriptions: new Map([
+      [
+        `sub-${WORKSPACE_ID}`,
+        { workspace_id: WORKSPACE_ID, plan: "FREE", status: "active" },
+      ],
+    ]),
   };
 
   if (shared) shared.tables = tables;
@@ -276,7 +384,11 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
         });
       }
 
-      const user = email.startsWith("fresh") ? FRESH_USER : ONBOARDED_USER;
+      const user = email.startsWith("fresh")
+        ? FRESH_USER
+        : email.startsWith("incomplete")
+          ? INCOMPLETE_USER
+          : ONBOARDED_USER;
       return json(200, makeSession(user));
     }
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { WorkspacePreparing } from "@/components/workspace-preparing";
 import { getProfileSummary, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/workspace";
@@ -11,16 +11,22 @@ import {
 } from "@/lib/auth-flow";
 
 // ============================================================
-// AUTHENTICATED SHELL LAYOUT
+// AUTHENTICATED SHELL LAYOUT (ACCESS FIRST)
 // Resolves the signed-in user, their workspace, the live navigation
 // counters and the plan usage ONCE for every product route.
 //
 // Before rendering:
 //  1. Require authenticated user
-//  2. Ensure profile exists (orphan repair)
+//  2. Ensure profile exists (orphan repair — minimal record, no
+//     invented identity)
 //  3. Ensure workspace + membership exist (idempotent bootstrap)
-//  4. Check onboarding state — redirect to /onboarding if incomplete
+//  4. If the bootstrap could not be verified this request, show the
+//     "Preparing your workspace…" retry state — never a form, never a
+//     redirect to an onboarding wizard
 //  5. Render the app shell with live workspace data
+//
+// Profile completeness is read and passed to the shell purely as UI
+// guidance (the optional completion prompt). It never blocks rendering.
 // ============================================================
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -28,29 +34,29 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const supabase = await createClient();
 
-  // Step 1: Ensure profile exists (orphan repair)
-  await ensureProfileServer(supabase, user.id, user.email);
+  // Step 1: ensure profile exists (orphan repair, minimal record)
+  await ensureProfileServer(supabase, user.id);
 
-  // Step 2: Ensure workspace + membership exist (idempotent bootstrap)
-  await ensurePersonalWorkspaceServer(supabase);
+  // Step 2: ensure workspace + membership exist (idempotent bootstrap)
+  const membership = await ensurePersonalWorkspaceServer(supabase);
 
-  // Step 3: Get profile summary (onboarding state)
+  // Step 3: profile summary — drives the shell UI, never access
   const profile = await getProfileSummary();
 
-  // Step 4: If onboarding incomplete, redirect to /onboarding
-  if (!profile.onboardingCompleted) {
-    redirect("/onboarding");
+  // Step 4: resolve active workspace for the shell
+  const { membership: activeMembership } = await getActiveMembership(
+    supabase,
+    user.id
+  );
+
+  // The bootstrap ran above; if we still cannot see an active membership
+  // (transient failure, or a state the RPC could not repair this request),
+  // show the retry state instead of an empty or broken shell.
+  if (!membership || !activeMembership?.workspaceId) {
+    return <WorkspacePreparing />;
   }
 
-  // Step 5: Resolve active workspace for the shell
-  const { membership } = await getActiveMembership(supabase, user.id);
-
-  // Double-check: if no active workspace despite bootstrap, redirect to onboarding
-  if (!membership?.workspaceId) {
-    redirect("/onboarding");
-  }
-
-  const workspaceId = membership.workspaceId;
+  const workspaceId = activeMembership.workspaceId;
 
   const emptyCounts = {
     tasks: 0,
@@ -116,12 +122,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <AppShell
       user={{
         name: profile.displayName,
-        username: profile.username,
+        username: profile.username ?? undefined,
         email: profile.email,
+        profileComplete: profile.profileComplete,
       }}
       workspace={{
         name: (workspace?.data?.name as string | undefined) ?? null,
-        role: membership?.role ?? null,
+        role: activeMembership.role ?? null,
       }}
       counts={counts}
       plan={{

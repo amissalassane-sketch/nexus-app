@@ -25,8 +25,13 @@ import { safeNextPath } from "@/lib/request-origin";
 //   2. Validate the token server-side through Supabase
 //   3. Establish the authenticated session (set cookies)
 //   4. For recovery: redirect to /reset-password
-//   5. For signup: ensure workspace, ensure membership, check onboarding
-//   6. Redirect deterministically to /onboarding or /app
+//   5. For signup: ensure profile (orphan repair), ensure workspace,
+//      ensure membership — the confirmation process ends at the product
+//   6. Redirect deterministically to /app
+//
+// The user lands in NEXUS after verification. There is no onboarding step
+// in between: the dashboard is the first-value experience and profile
+// completion is offered from inside it, optionally.
 //
 // Never exposes raw Supabase errors or JSON to the browser.
 // ============================================================
@@ -113,7 +118,6 @@ export async function GET(request: NextRequest) {
 
   let confirmError: string | null = null;
   let authUserId: string | null = null;
-  let authUserEmail: string | null = null;
   const otpType = asOtpType(type);
 
   try {
@@ -125,19 +129,11 @@ export async function GET(request: NextRequest) {
       confirmError = result.error?.message ?? null;
       authUserId =
         result.data.user?.id ?? result.data.session?.user?.id ?? null;
-      authUserEmail =
-        result.data.user?.email ??
-        result.data.session?.user?.email ??
-        null;
     } else if (code) {
       const result = await supabase.auth.exchangeCodeForSession(code);
       confirmError = result.error?.message ?? null;
       authUserId =
         result.data.user?.id ?? result.data.session?.user?.id ?? null;
-      authUserEmail =
-        result.data.user?.email ??
-        result.data.session?.user?.email ??
-        null;
     } else {
       confirmError = "Malformed confirmation link.";
     }
@@ -156,22 +152,19 @@ export async function GET(request: NextRequest) {
     return redirectWithCookies(response, `${origin}/reset-password`);
   }
 
-  // --- Email confirmation: verify, bootstrap, then route by account state. -
+  // --- Email confirmation: verify, bootstrap, then enter the product. ------
   if (confirmError || !authUserId) {
     const reason = classifyConfirmationError(confirmError);
     return NextResponse.redirect(confirmErrorUrl(origin, reason));
   }
 
-  // Bootstrap workspace + membership, then determine destination
+  // Bootstrap workspace + membership, then enter NEXUS. The destination is
+  // always /app for every account; if the bootstrap could not be verified,
+  // the (app) layout shows its "Preparing your workspace" retry state.
   try {
-    const { destination } = await getPostAuthDestination(
-      supabase,
-      authUserId,
-      authUserEmail ?? undefined
-    );
+    const { destination } = await getPostAuthDestination(supabase, authUserId);
     return redirectWithCookies(response, `${origin}${destination}`);
   } catch {
-    // If bootstrap fails, send to onboarding which will retry
-    return redirectWithCookies(response, `${origin}/onboarding`);
+    return redirectWithCookies(response, `${origin}/app`);
   }
 }

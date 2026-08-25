@@ -8,14 +8,13 @@ import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
  * Account creation, performed ON THE SERVER.
  *
  * Signup collects ONLY what is required to create the account: the email
- * and password. Everything else — display name, workspace name, goals — is
- * collected later, in the onboarding workflow. Mixing the two would couple
- * account creation to product configuration and make both harder to reason
- * about.
+ * and password. Nothing else — no name, username, workspace, goals.
+ * Profile identity is completed later, from inside the product, and is
+ * never a gate to it.
  *
  * Two legitimate outcomes are handled explicitly:
  *   1. email confirmation disabled -> Supabase returns a session, the SSR
- *      cookies are written here and the user goes straight to /onboarding;
+ *      cookies are written here and the user goes straight to /app;
  *   2. email confirmation enabled  -> a user is returned WITHOUT a session,
  *      and the UI must say so instead of pretending nothing happened.
  */
@@ -53,9 +52,9 @@ export async function POST(request: Request) {
       password,
       options: {
         // Confirmation lands on the dedicated NEXUS /auth/confirm endpoint.
-        // The server exchanges the token_hash, establishes the session and
-        // routes by onboarding state (never to a raw page or /onboarding
-        // before the address is verified).
+        // The server exchanges the token_hash, establishes the session,
+        // ensures the personal workspace and routes to /app — the
+        // confirmation process ends at the product, never at a form.
         emailRedirectTo: `${getRequestOrigin(request)}/auth/confirm`,
       },
       // ^ The Supabase "Confirm signup" email template should be set to
@@ -81,7 +80,7 @@ export async function POST(request: Request) {
   }
 
   if (result.data.session) {
-    return NextResponse.json({ ok: true, requiresConfirmation: false, redirectTo: "/onboarding" });
+    return NextResponse.json({ ok: true, requiresConfirmation: false, redirectTo: "/app" });
   }
 
   return NextResponse.json({

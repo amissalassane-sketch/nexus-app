@@ -2,7 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronRight, LifeBuoy, LogOut, Search, Settings2, User } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  CreditCard,
+  KeyRound,
+  LifeBuoy,
+  LogOut,
+  Search,
+  Settings2,
+  User,
+  UserRound,
+  UserRoundCheck,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -24,15 +36,19 @@ export function Topbar({
   user,
   workspace,
   unreadCount,
+  onOpenProfileModal,
 }: {
   user: ShellUser;
   workspace: ShellWorkspace;
   unreadCount: number;
+  /** Opens the optional profile completion modal (account menu entry). */
+  onOpenProfileModal?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const crumbs = breadcrumbFor(pathname);
-  const initial = (user.name || "U").trim().slice(0, 1).toUpperCase();
+  const hasName = Boolean(user.name?.trim());
+  const initial = (user.name ?? "").trim().slice(0, 1).toUpperCase();
 
   const handleLogout = async () => {
     try {
@@ -133,35 +149,66 @@ export function Topbar({
         <Dropdown
           label="Account"
           align="end"
-          width={232}
+          width={248}
           trigger={({ toggle, ref, ariaProps }) => (
             <button
               type="button"
               ref={ref}
               onClick={toggle}
-              aria-label={`Account — ${user.name}`}
+              aria-label={
+                hasName ? `Account — ${user.name}` : "Account — complete profile"
+              }
               className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong"
               {...ariaProps}
             >
-              {initial}
+              {hasName ? (
+                initial
+              ) : (
+                <UserRound size={13} strokeWidth={1.75} aria-hidden="true" />
+              )}
             </button>
           )}
         >
           <div className="px-2.5 py-2">
-            <p className="truncate text-body-medium text-text-primary">{user.name}</p>
+            <p className="truncate text-body-medium text-text-primary">
+              {hasName ? user.name : "Complete profile"}
+            </p>
             <p className="truncate font-mono text-mono text-text-tertiary">
               {user.email ?? (user.username ? `@${user.username}` : "")}
             </p>
           </div>
           <DropdownSeparator />
-          <DropdownLink href="/settings" icon={<User size={15} strokeWidth={1.75} />}>
+          {!user.profileComplete && onOpenProfileModal ? (
+            <DropdownItem
+              icon={<UserRoundCheck size={15} strokeWidth={1.75} />}
+              onSelect={() => onOpenProfileModal()}
+            >
+              Complete profile
+            </DropdownItem>
+          ) : null}
+          <DropdownLink
+            href="/settings?tab=profile"
+            icon={<User size={15} strokeWidth={1.75} />}
+          >
             Profile
           </DropdownLink>
           <DropdownLink
-            href="/settings"
+            href="/settings?tab=account"
+            icon={<KeyRound size={15} strokeWidth={1.75} />}
+          >
+            Security
+          </DropdownLink>
+          <DropdownLink
+            href="/settings?tab=workspace"
             icon={<Settings2 size={15} strokeWidth={1.75} />}
           >
             {workspace.name ? `${workspace.name} settings` : "Workspace settings"}
+          </DropdownLink>
+          <DropdownLink
+            href="/settings/billing"
+            icon={<CreditCard size={15} strokeWidth={1.75} />}
+          >
+            Billing
           </DropdownLink>
           <DropdownSeparator />
           <DropdownItem

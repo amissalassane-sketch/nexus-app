@@ -89,8 +89,8 @@ main landing, and not a replacement for it. `/` is untouched.
   `src/components/intelligence/` (context, signals, next best action,
   explainability, workspace → action, closing CTA).
 - **Clear public/product separation**: `/intelligence` is public for everyone.
-  Authenticated workspace Intelligence lives at `/app/intelligence`; no marketing
-  navigation can accidentally enter onboarding.
+  Authenticated workspace Intelligence lives at `/app/intelligence`; marketing
+  navigation never enters the product area.
 - **Navbar / footer**: the existing `LandingNav` and `LandingFooter` take a
   `context` prop (`"landing" | "intelligence"`); section anchors resolve back to
   `/#…` and the Intelligence item is marked `aria-current="page"`.
@@ -169,13 +169,19 @@ is testable without a GPU (`npm run verify:scene`).
 | --- | --- |
 | Public product | `/`, `/intelligence`, `/how-it-works`, `/pricing` |
 | Authentication | `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/check-email`, `/auth/confirm`, `/auth/confirm-error`, `/auth/callback` |
-| Onboarding | `/onboarding` (authenticated, incomplete accounts only) |
 | Workspace | `/app` → `/dashboard`, `/app/intelligence`, `/projects`, `/tasks`, `/goals`, `/activity`, `/notifications`, `/integrations` |
 | Account | `/settings`, `/settings/billing`, `/upgrade` |
 
 The Next.js 16 proxy refreshes Supabase cookies and protects every non-public route.
 Authenticated visitors may still read public product pages; opening an auth form takes
 them directly into `/app`.
+
+The legacy `/onboarding` URL is a redirect into `/app`: the mandatory multi-step
+onboarding wizard was removed. NEXUS is **access first, value second, profile
+later** — every authenticated account (email/password, email-verified, or Google)
+lands on the dashboard, and profile completion is an optional, non-blocking
+experience inside the product (`/settings` profile tab or the in-dashboard
+completion prompt).
 
 ## Database and tenant isolation
 
@@ -184,8 +190,11 @@ Every tenant-owned table uses RLS based on active workspace membership; IDs supp
 a URL or PostgREST request do not bypass workspace isolation. Post-base migrations add
 atomic plan enforcement, write-time membership checks, task dependencies and a
 trigger-owned activity audit stream. Migrations 016–018 make personal-workspace
-bootstrap atomic and idempotent for onboarding, including historical owner and
-subscription repair; they do not make tenant tables public. Public clients use only
+bootstrap atomic and idempotent, including historical owner and subscription
+repair; migrations 019–020 make profile bootstrap access-first — a minimal row
+with nothing invented (no auto-generated username, no name derived from the
+email), the provider's display name only, plus `profiles.job_title`. Neither
+changes RLS. Public clients use only
 Supabase publishable/anon keys—no service-role secret is read by the application.
 See `PRODUCTION_ONBOARDING_RUNBOOK.md` and
 `supabase/diagnostics/onboarding-production.sql` before declaring a deployment
@@ -244,8 +253,9 @@ created by the same client — there is no token relay that can silently fail:
 | `POST /api/auth/forgot-password` | sends a recovery email (same success copy whether the address exists) |
 | `POST /api/auth/resend-confirmation` | resends the sign-up verification email |
 | `POST /api/auth/update-password` | completes recovery after `/auth/confirm?type=recovery` |
-| `GET  /auth/confirm` | exchanges `token_hash` via `verifyOtp`, writes the SSR session and routes by account state (`/onboarding` until complete, then `/app`) |
-| `GET  /auth/callback` | exchanges an email `code` or the OAuth `code` (`?source=oauth`) for an SSR session; recovery goes to `/reset-password`, everything else routes by account state |
+| `POST /api/profile` | optional profile completion (full name, username, photo, job title, bio); validated server-side, never gates access |
+| `GET  /auth/confirm` | exchanges `token_hash` via `verifyOtp`, writes the SSR session; recovery goes to `/reset-password`, everything else to `/app` |
+| `GET  /auth/callback` | exchanges an email `code` or the OAuth `code` (`?source=oauth`) for an SSR session; recovery goes to `/reset-password`, everything else to `/app` |
 | `GET  /auth/confirm-error` | branded NEXUS state for expired/invalid/used/missing verification links |
 | `GET  /api/health` | public liveness probe |
 
@@ -256,8 +266,19 @@ never depends on a PKCE code or exposes a raw Supabase page.
 
 The cookies are not `HttpOnly` (Supabase default), so the browser client keeps working
 for client-side CRUD under RLS. `src/lib/auth-errors.ts` turns Supabase errors into
-messages a user can act on. The product routes sit behind an onboarding gate: until
-`profiles.onboarding_completed` is true, `(app)` redirects to `/onboarding`.
+messages a user can act on.
+
+**Access first, value second, profile later.** The product routes are never gated on
+profile state. `(app)` idempotently bootstraps the minimal profile row and the
+personal workspace (the user only ever sees a brief "Preparing your workspace…" state
+when bootstrap has not finished yet), then opens the dashboard for every
+authenticated account. Profile completeness (`profile_complete` = full name **and**
+username present) drives UI guidance only — the subtle in-dashboard completion
+prompt, the "Complete profile" account-menu item, and the profile tab in
+`/settings` — and is never used for authorization. New accounts bootstrap with
+nothing invented: no auto-generated username, no name derived from the email
+(migration 020). A Google sign-up pre-fills the full name from the provider's
+metadata exactly once, and the user is never asked for it again.
 
 **Sign-in methods.** Email/password (server-side, above) **and** "Continue with Google"
 on both `/login` and `/signup`. Google keeps using the **same** Supabase PKCE flow and
@@ -295,8 +316,11 @@ Plans are `FREE`, `PRO`, `TEAM`.
 ## Database verification
 
 ```bash
-# End-to-end auth pipeline (sign-in -> SSR cookies -> proxy -> pages -> sign-out)
-# against a stubbed Supabase service (test double, never used at runtime):
+# End-to-end auth pipeline (sign-up / verify / OAuth -> SSR cookies -> proxy ->
+# pages -> sign-out) against a stubbed Supabase service (test double, never used
+# at runtime). Covers the access-first journey: every authenticated state
+# lands on /app, the legacy /onboarding gate is gone, the optional profile
+# prompt never blocks, and profile save is idempotent.
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=stub-key npm run dev -- --port 3000 &
 node supabase/tests/auth-flow.test.mjs
@@ -306,7 +330,8 @@ node supabase/tests/auth-flow.test.mjs
 npm install --no-save @electric-sql/pglite
 node supabase/tests/migration-logic.test.mjs
 
-# Onboarding must tolerate a missing profiles.onboarding_intent column:
+# The missing-column classifier (used to tolerate hosts that have not applied
+# the latest migration yet, e.g. profiles.job_title) keeps its behaviour:
 node supabase/tests/schema-errors.test.mjs
 
 # 3D hero: builds the real IntelligenceWorld and steps it headlessly —
