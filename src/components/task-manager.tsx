@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { CheckSquare, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateTask } from "@/lib/access";
@@ -433,6 +433,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
     const confirmed = window.confirm("Delete this task?");
     if (!confirmed) return;
 
+    // Instant optimistic update
+    const previous = tasks;
+    setTasks((current) => current.filter((item) => item.id !== taskId));
+    if (editingTaskId === taskId) closeForm();
+
     const { error: deleteError } = await supabase
       .from("tasks")
       .delete()
@@ -440,12 +445,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
+      setTasks(previous);
       setError(humanizeDataError(deleteError));
       return;
     }
 
     setSuccess("Task deleted.");
-    if (editingTaskId === taskId) closeForm();
     await fetchTasks(workspaceId);
     syncServerViews();
   };
@@ -606,6 +611,10 @@ function TaskManagerInner({ userId }: { userId: string }) {
           </button>
         )}
 
+        <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+          <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority.slice(0, 3)}</Badge>
+        </div>
+
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
           <Badge tone={done ? "success" : "neutral"}>{STATUS_LABELS[task.status]}</Badge>
@@ -620,7 +629,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
           {formatDate(task.due_at) ?? "—"}
         </span>
 
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 ease-nexus focus-within:opacity-100 group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-150 sm:ease-nexus sm:focus-within:opacity-100 sm:group-hover:opacity-100">
           <Button
             variant="icon"
             aria-label={`Edit ${task.title}`}
@@ -788,21 +797,22 @@ function TaskManagerInner({ userId }: { userId: string }) {
             <EmptyState
               title={
                 tasks.length === 0
-                  ? "No tasks yet"
+                  ? "Create your first task"
                   : view !== "all"
                     ? `Nothing in ${VIEWS.find((entry) => entry.id === view)?.label.toLowerCase()}`
                     : "Nothing matches these filters"
               }
               description={
                 tasks.length === 0
-                  ? "Create your first task so NEXUS can start tracking dates, priority and what is blocking progress."
+                  ? "Turn your projects into actionable steps NEXUS can track, prioritize and monitor."
                   : view !== "all"
                     ? "This view is clear. Switch back to All to see the rest of the workspace."
                     : "Adjust the search or reset the filters to see the rest of the workspace."
               }
+              icon={<CheckSquare size={17} strokeWidth={1.75} />}
               action={
                 tasks.length === 0 ? (
-                  <CreateButton label="New Task" onClick={openCreateForm} />
+                  <CreateButton label="New Task" onClick={openCreateForm} data-guide="new-task" />
                 ) : null
               }
             />

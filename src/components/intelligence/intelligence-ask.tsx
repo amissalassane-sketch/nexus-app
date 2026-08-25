@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CornerDownLeft, Sparkles } from "lucide-react";
+import { ArrowRight, CornerDownLeft, Plus, Sparkles } from "lucide-react";
 import {
   askWorkspace,
   type AskAnswer,
@@ -13,35 +13,61 @@ import { emitActivation, trackEvent } from "@/lib/onboarding/analytics";
 // ============================================================
 // NEXUS INTELLIGENCE — ASK THE WORKSPACE
 //
-// A question console over the deterministic engine. Answers are
-// computed from the snapshot — never invented, never a chat
-// completion. Every answer carries its fact rows, deep links into
-// the exact view that proves it, and follow-up questions.
+// Structured query console connected to the NEXUS AI API and the
+// deterministic context engine. Answers are computed from live
+// workspace entities — never hallucinated, never a generic chat.
 // ============================================================
 
 const STARTERS = [
+  "Quels projets nécessitent mon attention ?",
+  "Quelles sont mes 3 prochaines tâches prioritaires ?",
+  "Quels projets semblent bloqués ?",
+  "Résume l'activité de cette semaine.",
+  "Aide-moi à organiser cette semaine.",
   "What is blocked?",
-  "What is overdue?",
   "What should I do next?",
-  "How is the workspace?",
-  "What moved this week?",
 ];
 
 export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState<AskAnswer | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const suggestions = useMemo(
     () => (answer ? answer.suggestions : STARTERS).slice(0, 4),
     [answer]
   );
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const value = (text ?? query).trim();
-    if (!value) return;
+    if (!value || loading) return;
+
     setQuery(value);
+    setLoading(true);
     emitActivation("intelligence");
     trackEvent("intelligence_interaction");
+
+    try {
+      const response = await fetch("/api/intelligence/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: value }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.answer) {
+          setAnswer(data.answer);
+          return;
+        }
+      }
+    } catch {
+      // Offline or network error: fallback to client-side deterministic reasoning
+    } finally {
+      setLoading(false);
+    }
+
+    // Deterministic fallback
     setAnswer(askWorkspace(snapshot, value));
   };
 
@@ -66,20 +92,22 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           />
           <input
             data-guide="intelligence-input"
+            disabled={loading}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") send();
+              if (event.key === "Enter") void send();
             }}
-            placeholder="Ask the workspace — “what is blocked?”, “what should I do next?”…"
+            placeholder="Ask NEXUS — “Quels projets nécessitent mon attention ?”, “What should I do next?”…"
             aria-label="Ask a question about this workspace"
-            className="h-10 w-full rounded-input border border-border-default bg-bg-surface pl-9 pr-9 text-body text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)]"
+            className="h-10 w-full rounded-input border border-border-default bg-bg-surface pl-9 pr-9 text-body text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)] disabled:opacity-60"
           />
           <button
             type="button"
-            onClick={() => send()}
+            disabled={loading}
+            onClick={() => void send()}
             aria-label="Ask"
-            className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-[6px] text-text-quaternary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+            className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-[6px] text-text-quaternary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40"
           >
             <CornerDownLeft size={13} strokeWidth={1.75} aria-hidden="true" />
           </button>
@@ -87,19 +115,50 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         <button
           type="button"
           data-guide="intelligence-send"
-          onClick={() => send()}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
+          disabled={loading}
+          onClick={() => void send()}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-input bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-50"
         >
-          Ask NEXUS
+          {loading ? (
+            <svg
+              className="h-3.5 w-3.5 animate-spin"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="8"
+                cy="8"
+                r="6.5"
+                stroke="currentColor"
+                strokeOpacity="0.25"
+                strokeWidth="1.6"
+              />
+              <path
+                d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : null}
+          <span>{loading ? "Analyzing…" : "Ask NEXUS"}</span>
         </button>
       </div>
 
-      {answer ? (
+      {loading ? (
+        <div className="mx-3 mb-3 animate-fade-in rounded-input border border-border-subtle bg-bg-surface/50 p-4">
+          <div className="flex items-center gap-2 text-small text-text-secondary">
+            <span className="h-2 w-2 rounded-pill bg-lavender animate-ping" />
+            <span>Analyzing workspace context & computing real signals…</span>
+          </div>
+        </div>
+      ) : answer ? (
         <div className="mx-3 mb-3 animate-fade-in rounded-input border border-border-subtle bg-bg-surface p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-body-medium text-text-primary">{answer.title}</p>
-            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">
-              computed from this workspace
+            <p className="text-body-medium font-medium text-text-primary">{answer.title}</p>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-lavender/90">
+              {answer.evidenceNote ?? "computed from this workspace"}
             </span>
           </div>
 
@@ -113,12 +172,35 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                   <dt className="shrink-0 text-caption text-text-tertiary">
                     {line.label}
                   </dt>
-                  <dd className="min-w-0 truncate text-right text-small text-text-primary">
+                  <dd className="min-w-0 text-right text-small text-text-primary">
                     {line.value}
                   </dd>
                 </div>
               ))}
             </dl>
+          ) : null}
+
+          {/* Action Proposal Card */}
+          {answer.actionProposal ? (
+            <div className="mt-3.5 flex flex-col gap-3 rounded-card border border-lavender-border/50 bg-lavender/5 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <span className="eyebrow text-lavender">Recommended Action</span>
+                <p className="mt-0.5 text-body-medium font-medium text-text-primary truncate">
+                  {answer.actionProposal.title}
+                </p>
+                <p className="text-caption text-text-tertiary">
+                  Priority: {answer.actionProposal.priority ?? "High"}
+                  {answer.actionProposal.dueDate ? ` · Due: ${answer.actionProposal.dueDate}` : ""}
+                </p>
+              </div>
+              <Link
+                href={`/tasks?create=1&title=${encodeURIComponent(answer.actionProposal.title)}${answer.actionProposal.dueDate ? `&due_at=${answer.actionProposal.dueDate}` : ""}`}
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-input bg-accent px-3 text-caption font-medium text-accent-fg hover:bg-accent-hover transition-colors"
+              >
+                <Plus size={13} strokeWidth={2} />
+                <span>{answer.actionProposal.actionLabel}</span>
+              </Link>
+            </div>
           ) : null}
 
           {answer.links.length > 0 ? (
@@ -146,8 +228,9 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           <button
             key={suggestion}
             type="button"
-            onClick={() => send(suggestion)}
-            className="inline-flex h-7 items-center rounded-pill border border-border-subtle bg-bg-surface px-2.5 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary"
+            disabled={loading}
+            onClick={() => void send(suggestion)}
+            className="inline-flex h-7 items-center rounded-pill border border-border-subtle bg-bg-surface px-2.5 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary disabled:opacity-50"
           >
             {suggestion}
           </button>

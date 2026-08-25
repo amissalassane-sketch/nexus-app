@@ -127,8 +127,8 @@ export function ActivityList({
     return (
       <div className={cn(compact ? "p-4" : "p-0", className)}>
         <EmptyState
-          title="No activity yet"
-          description="Every change to a project, task or goal is recorded here, so you can see what moved without asking anyone."
+          title="No activity recorded yet"
+          description="Every action on projects, tasks and goals creates an automatic audit trail here so you can see what moved without asking anyone."
           icon={<CircleDot size={17} strokeWidth={1.75} />}
         />
       </div>

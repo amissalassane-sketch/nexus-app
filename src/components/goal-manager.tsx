@@ -309,6 +309,11 @@ function GoalManagerInner({ userId }: { userId: string }) {
     const confirmed = window.confirm("Delete this goal?");
     if (!confirmed) return;
 
+    // Instant optimistic update
+    const previous = goals;
+    setGoals((current) => current.filter((item) => item.id !== goalId));
+    if (editingGoalId === goalId) closeForm();
+
     const { error: deleteError } = await supabase
       .from("goals")
       .delete()
@@ -316,12 +321,12 @@ function GoalManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
+      setGoals(previous);
       setError(humanizeDataError(deleteError));
       return;
     }
 
     setSuccess("Goal deleted.");
-    if (editingGoalId === goalId) closeForm();
     await fetchGoals(workspaceId);
     syncServerViews();
   };
@@ -370,8 +375,8 @@ function GoalManagerInner({ userId }: { userId: string }) {
         />
       ) : goals.length === 0 ? (
         <EmptyState
-          title="No goals yet"
-          description="Define what this workspace is working towards. NEXUS measures progress against goals and flags the ones falling behind their target date."
+          title="Set your first goal"
+          description="Define the key outcomes your projects and tasks are driving toward. NEXUS measures progress and flags goals falling behind."
           icon={<Target size={17} strokeWidth={1.75} />}
           action={<CreateButton label="New Goal" onClick={openCreateForm} />}
         />
@@ -411,7 +416,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-150 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
                     <Button
                       variant="icon"
                       aria-label={`Edit ${goal.title}`}

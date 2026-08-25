@@ -375,13 +375,13 @@ export default async function DashboardPage() {
             {priorityTasks.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  title="Nothing open"
-                  description="Your queue is clear. New tasks appear here ranked by priority and date."
+                  title="Create your first task"
+                  description="Your queue is clear. Create tasks with priorities and deadlines so NEXUS can help you focus on what matters next."
                   icon={<CheckSquare size={17} strokeWidth={1.75} />}
                   action={
                     <Link
                       href="/tasks?create=1"
-                      className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                      className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
                     >
                       Create a task
                     </Link>
@@ -445,8 +445,8 @@ export default async function DashboardPage() {
             {recentProjects.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  title="No projects yet"
-                  description="Create your first project to give NEXUS the context it needs to detect risk and momentum."
+                  title="Create your first project"
+                  description="Give NEXUS something real to organize. Create your first project to give NEXUS the context it needs to detect risk and momentum."
                   icon={<FolderKanban size={17} strokeWidth={1.75} />}
                   action={
                     <Link
@@ -530,9 +530,17 @@ export default async function DashboardPage() {
             {recentGoals.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  title="No goals yet"
+                  title="Set your first goal"
                   description="Define what this workspace is working towards so NEXUS can measure progress against it."
                   icon={<Target size={17} strokeWidth={1.75} />}
+                  action={
+                    <Link
+                      href="/goals?create=1"
+                      className="inline-flex h-8 items-center rounded-input border border-border-default px-3 text-caption text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                    >
+                      Set a goal
+                    </Link>
+                  }
                 />
               </div>
             ) : (

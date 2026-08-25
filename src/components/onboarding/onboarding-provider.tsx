@@ -344,6 +344,7 @@ export function OnboardingProvider({
       ) : null}
       {guidanceMode === "tour" && currentStep && !showWelcome ? (
         <GuidedTour
+          key={currentStep.id}
           step={currentStep}
           onSkip={skipGuide}
           onWelcome={completeWelcome}

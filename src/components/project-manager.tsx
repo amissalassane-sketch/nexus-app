@@ -318,28 +318,46 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     });
   };
 
-  const handleProgress = async (projectId: string, progress: number) => {
-    const { error: updateError } = await supabase
-      .from("projects")
-      .update({
-        progress: Math.min(100, Math.max(0, progress)),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", projectId)
-      .eq("workspace_id", workspaceId ?? "");
+  const progressDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
-    if (updateError) {
-      setError(humanizeDataError(updateError));
-      return;
+  const handleProgress = (projectId: string, rawProgress: number) => {
+    const progress = Math.min(100, Math.max(0, rawProgress));
+    // Instant optimistic update for 60fps responsive UI
+    setProjects((current) =>
+      current.map((p) => (p.id === projectId ? { ...p, progress } : p))
+    );
+
+    if (progressDebounceTimers.current[projectId]) {
+      clearTimeout(progressDebounceTimers.current[projectId]);
     }
 
-    await fetchProjects(workspaceId);
-    syncServerViews();
+    progressDebounceTimers.current[projectId] = setTimeout(async () => {
+      const { error: updateError } = await supabase
+        .from("projects")
+        .update({
+          progress,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", projectId)
+        .eq("workspace_id", workspaceId ?? "");
+
+      if (updateError) {
+        setError(humanizeDataError(updateError));
+        await fetchProjects(workspaceId);
+        return;
+      }
+      syncServerViews();
+    }, 280);
   };
 
   const deleteProject = async (projectId: string) => {
     const confirmed = window.confirm("Delete this project?");
     if (!confirmed) return;
+
+    // Instant optimistic update
+    const previous = projects;
+    setProjects((current) => current.filter((p) => p.id !== projectId));
+    if (editingProjectId === projectId) closeForm();
 
     const { error: deleteError } = await supabase
       .from("projects")
@@ -348,12 +366,12 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (deleteError) {
+      setProjects(previous);
       setError(humanizeDataError(deleteError));
       return;
     }
 
     setSuccess("Project deleted.");
-    if (editingProjectId === projectId) closeForm();
     await fetchProjects(workspaceId);
     syncServerViews();
   };
@@ -476,17 +494,17 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           <div className="p-4">
             <EmptyState
               title={
-                projects.length === 0 ? "No projects yet" : "Nothing matches those filters"
+                projects.length === 0 ? "Create your first project" : "Nothing matches those filters"
               }
               description={
                 projects.length === 0
-                  ? "Create your first project to give NEXUS the context it needs to detect drift, deadline pressure and stalled work."
+                  ? "Give NEXUS something real to organize. Projects group your work, track momentum and let NEXUS detect risks and deadlines."
                   : "Adjust the search or the status filter to see the rest of the workspace."
               }
               icon={<FolderKanban size={17} strokeWidth={1.75} />}
               action={
                 projects.length === 0 ? (
-                  <CreateButton label="New Project" onClick={openCreateForm} />
+                  <CreateButton label="New Project" onClick={openCreateForm} data-guide="new-project" />
                 ) : null
               }
             />
@@ -555,7 +573,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1 sm:gap-0.5">
                       <span
                         className={cn(
                           "hidden w-14 text-right font-mono text-mono tabular-nums text-text-tertiary sm:block"
@@ -563,7 +581,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                       >
                         {formatDate(project.due_date) ?? "—"}
                       </span>
-                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+                      <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-150 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
                         <Button
                           variant="icon"
                           aria-label={`Edit ${project.name}`}

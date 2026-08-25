@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 import { useReducedMotion } from "@/components/onboarding/spotlight";
 import { cn } from "@/lib/cn";
@@ -13,6 +14,19 @@ export function WelcomeScreen({
 }) {
   const locale = browserLocale();
   const reduced = useReducedMotion();
+  const [pending, setPending] = useState<"start" | "explore" | null>(null);
+
+  const handleStart = () => {
+    if (pending) return;
+    setPending("start");
+    onStart();
+  };
+
+  const handleExplore = () => {
+    if (pending) return;
+    setPending("explore");
+    onExplore();
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center">
@@ -41,15 +55,40 @@ export function WelcomeScreen({
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
-            onClick={onStart}
-            className="inline-flex h-10 flex-1 items-center justify-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg hover:bg-accent-hover"
+            disabled={pending !== null}
+            onClick={handleStart}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-140 hover:bg-accent-hover disabled:opacity-60"
           >
-            {t("welcome.start", locale)}
+            {pending === "start" ? (
+              <svg
+                className="h-3.5 w-3.5 animate-spin"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="6.5"
+                  stroke="currentColor"
+                  strokeOpacity="0.25"
+                  strokeWidth="1.6"
+                />
+                <path
+                  d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : null}
+            <span>{t("welcome.start", locale)}</span>
           </button>
           <button
             type="button"
-            onClick={onExplore}
-            className="inline-flex h-10 flex-1 items-center justify-center rounded-input border border-border-default px-3.5 text-button text-text-secondary hover:text-text-primary"
+            disabled={pending !== null}
+            onClick={handleExplore}
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-140 hover:text-text-primary disabled:opacity-50"
           >
             {t("welcome.explore", locale)}
           </button>

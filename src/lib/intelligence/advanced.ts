@@ -541,9 +541,24 @@ export type AskKind =
   | "momentum"
   | "next"
   | "project"
+  | "projects_attention"
+  | "priorities"
+  | "projects_blocked"
+  | "synthesis"
+  | "planning"
+  | "action_proposal"
   | "health"
   | "help"
   | "empty";
+
+export interface ActionProposal {
+  type: "create_task";
+  title: string;
+  priority?: "low" | "medium" | "high" | "urgent";
+  dueDate?: string | null;
+  projectId?: string | null;
+  actionLabel: string;
+}
 
 export interface AskAnswer {
   kind: AskKind;
@@ -554,6 +569,8 @@ export interface AskAnswer {
   links: { href: string; label: string }[];
   /** Follow-up questions that map to other intents. */
   suggestions: string[];
+  actionProposal?: ActionProposal;
+  evidenceNote?: string;
 }
 
 const SUGGESTIONS: Record<AskKind, string[]> = {
@@ -564,6 +581,12 @@ const SUGGESTIONS: Record<AskKind, string[]> = {
   momentum: ["What is due this week?", "How is the workspace?", "What should I do next?"],
   next: ["What is blocked?", "What is overdue?", "How is the workspace?"],
   project: ["What is blocked?", "What should I do next?", "How is the workspace?"],
+  projects_attention: ["Quelles sont mes 3 prochaines tâches prioritaires ?", "Quels projets semblent bloqués ?", "Aide-moi à organiser cette semaine."],
+  priorities: ["Quels projets nécessitent mon attention ?", "Aide-moi à organiser cette semaine.", "Résume l'activité de cette semaine."],
+  projects_blocked: ["Quelles sont mes 3 prochaines tâches prioritaires ?", "Quels projets nécessitent mon attention ?"],
+  synthesis: ["Quels projets nécessitent mon attention ?", "Aide-moi à organiser cette semaine."],
+  planning: ["Quelles sont mes 3 prochaines tâches prioritaires ?", "Quels projets nécessitent mon attention ?"],
+  action_proposal: ["What should I do next?", "Quelles sont mes 3 prochaines tâches prioritaires ?"],
   health: ["What should I do next?", "What is blocked?", "What is due this week?"],
   help: ["What is blocked?", "What is overdue?", "What should I do next?"],
   empty: ["What should I do next?", "What is blocked?", "How is the workspace?"],
@@ -598,6 +621,284 @@ export function askWorkspace(
       lines: [],
       links: [],
       suggestions: SUGGESTIONS.empty,
+    };
+  }
+
+  // ---- action proposal (task creation) -----------------------
+  if (
+    lowerQuery.startsWith("crée une tâche") ||
+    lowerQuery.startsWith("créer une tâche") ||
+    lowerQuery.startsWith("ajoute une tâche") ||
+    lowerQuery.startsWith("ajouter une tâche") ||
+    lowerQuery.startsWith("create a task") ||
+    lowerQuery.startsWith("add a task") ||
+    lowerQuery.startsWith("new task")
+  ) {
+    const rawTitle = lowerQuery
+      .replace(/^(crée|créer|ajoute|ajouter)\s+une\s+tâche\s*(pour|de|:)?\s*/i, "")
+      .replace(/^(create|add)\s+(a\s+)?task\s*(to|for|:)?\s*/i, "")
+      .replace(/^new\s+task\s*(:)?\s*/i, "")
+      .trim();
+
+    const title = rawTitle ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) : "New Task";
+    let suggestedDueDate: string | null = null;
+    let dueLabel: string | null = null;
+
+    if (lowerQuery.includes("vendredi") || lowerQuery.includes("friday")) {
+      const d = new Date(now);
+      const day = d.getDay();
+      const diff = (5 - day + 7) % 7 || 7;
+      d.setDate(d.getDate() + diff);
+      suggestedDueDate = d.toISOString().slice(0, 10);
+      dueLabel = "This Friday";
+    } else if (lowerQuery.includes("demain") || lowerQuery.includes("tomorrow")) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      suggestedDueDate = d.toISOString().slice(0, 10);
+      dueLabel = "Tomorrow";
+    }
+
+    return {
+      kind: "action_proposal",
+      title: `Task proposal: “${title}”`,
+      lines: [
+        { label: "Action", value: "Ready to create in this workspace" },
+        { label: "Title", value: title },
+        { label: "Priority", value: "High (suggested)" },
+        ...(dueLabel ? [{ label: "Due date", value: dueLabel }] : []),
+      ],
+      links: [
+        {
+          href: `/tasks?create=1&title=${encodeURIComponent(title)}`,
+          label: "Open task form",
+        },
+      ],
+      actionProposal: {
+        type: "create_task",
+        title,
+        priority: "high",
+        dueDate: suggestedDueDate,
+        actionLabel: "Create this task now",
+      },
+      evidenceNote: "Parsed from your request · Click below to execute",
+      suggestions: SUGGESTIONS.action_proposal,
+    };
+  }
+
+  // ---- analysis: projects needing attention ---------------------
+  if (
+    lowerQuery.includes("attention") ||
+    lowerQuery.includes("nécessitent") ||
+    lowerQuery.includes("need attention") ||
+    lowerQuery.includes("require attention") ||
+    (has(tokens, "attention") && has(tokens, "projet", "projets", "project", "projects"))
+  ) {
+    const projectsNeedingAttention = snapshot.projects
+      .map((project) => {
+        const projectTasks = open.filter((t) => t.project_id === project.id);
+        const overdueTasks = projectTasks.filter((t) => {
+          const due = asDate(t.due_at);
+          return due !== null && due.getTime() < now.getTime();
+        });
+        const blockedTasks = projectTasks.filter((t) => t.status === "blocked");
+        const projectDue = asDate(project.due_date);
+        const reasons: string[] = [];
+
+        if (projectDue && projectDue.getTime() < now.getTime()) {
+          reasons.push("Deadline passed");
+        } else if (projectDue && daysUntil(projectDue, now) <= 7) {
+          reasons.push("Deadline in final week");
+        }
+        if (blockedTasks.length > 0) {
+          reasons.push(`${plural(blockedTasks.length, "task")} blocked`);
+        }
+        if (overdueTasks.length > 0) {
+          reasons.push(`${plural(overdueTasks.length, "task")} overdue`);
+        }
+        if (project.status === "paused") {
+          reasons.push("Project paused");
+        }
+
+        return { project, reasons };
+      })
+      .filter((entry) => entry.reasons.length > 0);
+
+    return {
+      kind: "projects_attention",
+      title:
+        projectsNeedingAttention.length === 0
+          ? "No projects currently need urgent attention"
+          : `${plural(projectsNeedingAttention.length, "project")} require attention`,
+      lines:
+        projectsNeedingAttention.length === 0
+          ? [
+              { label: "Active projects", value: String(snapshot.projects.length) },
+              { label: "Status", value: "All active initiatives are moving on schedule" },
+            ]
+          : projectsNeedingAttention.slice(0, 4).map((entry) => ({
+              label: entry.project.name,
+              value: entry.reasons.join(" · "),
+            })),
+      links: [{ href: "/projects", label: "Inspect all projects" }],
+      suggestions: SUGGESTIONS.projects_attention,
+    };
+  }
+
+  // ---- prioritization: top priority tasks ------------------------
+  if (
+    (has(tokens, "priorit", "priority") &&
+      (has(tokens, "tâche", "tâches", "task", "tasks", "3", "trois", "prochain", "next", "mes", "my") ||
+        lowerQuery.includes("3") ||
+        lowerQuery.includes("top"))) ||
+    lowerQuery.includes("tâches prioritaires") ||
+    lowerQuery.includes("priority tasks") ||
+    lowerQuery.includes("prochaines tâches")
+  ) {
+    const topPriorities = rankPriorities(snapshot, 3);
+    return {
+      kind: "priorities",
+      title:
+        topPriorities.length === 0
+          ? "No priority tasks open right now"
+          : `Top ${topPriorities.length} priority ${plural(topPriorities.length, "task")}`,
+      lines:
+        topPriorities.length === 0
+          ? [{ label: "Open tasks", value: "Queue is clear" }]
+          : topPriorities.map((item, index) => ({
+              label: `#${index + 1} (${item.task.priority ?? "medium"})`,
+              value: `${item.task.title} — ${item.reasons.join(", ")}`,
+            })),
+      links: [{ href: "/tasks", label: "Open task board" }],
+      suggestions: SUGGESTIONS.priorities,
+    };
+  }
+
+  // ---- detection: projects blocked or stalled -------------------
+  if (
+    lowerQuery.includes("projets bloqu") ||
+    lowerQuery.includes("projet bloqu") ||
+    lowerQuery.includes("projets semblent bloqu") ||
+    lowerQuery.includes("blocked project") ||
+    lowerQuery.includes("projects blocked") ||
+    lowerQuery.includes("stalled project")
+  ) {
+    const blockedProjects = snapshot.projects
+      .map((project) => {
+        const projectTasks = open.filter((t) => t.project_id === project.id);
+        const blocked = projectTasks.filter((t) => t.status === "blocked");
+        return { project, blocked };
+      })
+      .filter((entry) => entry.blocked.length > 0);
+
+    return {
+      kind: "projects_blocked",
+      title:
+        blockedProjects.length === 0
+          ? "No projects are currently blocked"
+          : `${plural(blockedProjects.length, "project")} have blocked work`,
+      lines:
+        blockedProjects.length === 0
+          ? [{ label: "Blockers", value: "No active task is marked blocked in any project" }]
+          : blockedProjects.slice(0, 3).map((entry) => ({
+              label: entry.project.name,
+              value: `${plural(entry.blocked.length, "task")} blocked: “${entry.blocked[0].title}”`,
+            })),
+      links: [
+        { href: "/tasks?filter=blocked", label: "Review blocked tasks" },
+        { href: "/projects", label: "Inspect projects" },
+      ],
+      suggestions: SUGGESTIONS.projects_blocked,
+    };
+  }
+
+  // ---- synthesis: weekly activity summary -----------------------
+  if (
+    (has(tokens, "résume", "resume", "synthèse", "synthese", "summar", "digest", "bilan") &&
+      (has(tokens, "semaine", "week", "activit", "activity") ||
+        lowerQuery.includes("cette semaine") ||
+        lowerQuery.includes("this week"))) ||
+    lowerQuery.includes("résume l'activité") ||
+    lowerQuery.includes("résume l activité") ||
+    lowerQuery.includes("summarize activity")
+  ) {
+    const briefing = weeklyBriefing(snapshot);
+    return {
+      kind: "synthesis",
+      title: `Weekly summary: ${briefing.headline}`,
+      lines: [
+        { label: "Completed (7d)", value: `${briefing.completedThisWeek} tasks done` },
+        { label: "Opened (7d)", value: `${briefing.openedThisWeek} new tasks tracked` },
+        {
+          label: "Momentum",
+          value:
+            briefing.momentumDelta > 0
+              ? `+${briefing.momentumDelta} tasks vs previous week`
+              : briefing.momentumDelta === 0
+                ? "Pacing equal to previous week"
+                : `${briefing.momentumDelta} tasks vs previous week`,
+        },
+        { label: "Outlook", value: briefing.outlook },
+      ],
+      links: [
+        { href: "/activity", label: "View activity feed" },
+        { href: "/dashboard", label: "Open dashboard" },
+      ],
+      suggestions: SUGGESTIONS.synthesis,
+    };
+  }
+
+  // ---- planning: organize this week -----------------------------
+  if (
+    lowerQuery.includes("organis") ||
+    lowerQuery.includes("planning") ||
+    lowerQuery.includes("plan my week") ||
+    lowerQuery.includes("plan this week") ||
+    lowerQuery.includes("schedule") ||
+    lowerQuery.includes("aide-moi à organiser") ||
+    lowerQuery.includes("aide moi à organiser")
+  ) {
+    const weekAhead = now.getTime() + 7 * 86_400_000;
+    const dueThisWeek = open.filter((t) => {
+      const due = asDate(t.due_at);
+      return due !== null && due.getTime() >= now.getTime() && due.getTime() <= weekAhead;
+    });
+    const overdue = open.filter((t) => {
+      const due = asDate(t.due_at);
+      return due !== null && due.getTime() < now.getTime();
+    });
+    const blocked = open.filter((t) => t.status === "blocked");
+
+    return {
+      kind: "planning",
+      title: "Recommended operating plan for this week",
+      lines: [
+        {
+          label: "1. Urgent today",
+          value:
+            overdue.length > 0
+              ? `Resolve ${plural(overdue.length, "overdue task")} first`
+              : "No overdue work — queue is clean",
+        },
+        {
+          label: "2. Blockers",
+          value:
+            blocked.length > 0
+              ? `Unblock ${blocked[0].title}${blocked.length > 1 ? ` (+${blocked.length - 1} more)` : ""}`
+              : "No active blockers",
+        },
+        {
+          label: "3. Due this week",
+          value:
+            dueThisWeek.length > 0
+              ? `${plural(dueThisWeek.length, "task")} scheduled for the next 7 days`
+              : "Clear window for deep work on long-term goals",
+        },
+      ],
+      links: [
+        { href: "/tasks", label: "Open task board" },
+        { href: "/app/intelligence", label: "See operating index" },
+      ],
+      suggestions: SUGGESTIONS.planning,
     };
   }
 
@@ -873,7 +1174,9 @@ function anyIntentToken(tokens: string[]): boolean {
     "week", "semaine", "upcoming", "coming",
     "momentum", "shipped", "completed", "velocity", "throughput", "productiv",
     "health", "score", "shape",
-    "next", "focus", "priority", "should", "first",
+    "next", "focus", "priority", "priorit", "should", "first",
+    "attention", "nécessitent", "tâche", "tâches", "task", "tasks",
+    "organis", "synthèse", "résume", "resume", "crée", "créer",
     "help"
   );
 }

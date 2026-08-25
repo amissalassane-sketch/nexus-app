@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, LifeBuoy, LogOut, Menu, UserRound, X } from "lucide-react";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { CommandMenu } from "@/components/command-menu";
 import { Topbar } from "@/components/layout/topbar";
@@ -14,6 +14,7 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { ProfileCompletionPrompt } from "@/components/profile/profile-completion-prompt";
 import { ProfileCompletionModal } from "@/components/profile/profile-completion-modal";
 import { OnboardingProvider, useOnboarding } from "@/components/onboarding/onboarding-provider";
+import { createClient } from "@/lib/supabase/client";
 import {
   WorkspaceSidebar,
   type ShellCounts,
@@ -45,6 +46,7 @@ function AppShellInner({
   const [navOpen, setNavOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   // Optional profile completion — UI guidance only, never an access gate.
   // The product renders first; the prompt appears as a subtle card and the
@@ -53,6 +55,17 @@ function AppShellInner({
   const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
 
   const { tourActive, openHelp } = useOnboarding();
+
+  const handleLogout = async () => {
+    try {
+      await createClient().auth.signOut();
+    } catch (cause) {
+      console.error("Logout error:", cause);
+    }
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => null);
+    router.replace("/login");
+    router.refresh();
+  };
 
   const profileMissingSummary =
     [
@@ -102,21 +115,21 @@ function AppShellInner({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Compact header below lg — carries brand + drawer trigger */}
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border-subtle px-4 lg:hidden">
+          {/* Compact header below lg — carries brand + drawer trigger + quick search, help & account */}
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle px-3 sm:px-4 lg:hidden">
             <button
               type="button"
               onClick={() => setNavOpen(true)}
               aria-label="Open navigation"
               aria-expanded={navOpen}
-              className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+              className="flex h-9 w-9 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
             >
-              <Menu size={18} strokeWidth={1.75} aria-hidden="true" />
+              <Menu size={19} strokeWidth={1.75} aria-hidden="true" />
             </button>
-            <Link href="/dashboard" aria-label="NEXUS — Overview">
-              <NexusWordmark size={20} priority />
+            <Link href="/dashboard" aria-label="NEXUS — Overview" className="outline-none focus-visible:ring-1 focus-visible:ring-lavender-border rounded-nav">
+              <NexusWordmark size={19} priority />
             </Link>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
@@ -124,8 +137,8 @@ function AppShellInner({
                 className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
               >
                 <svg
-                  width="16"
-                  height="16"
+                  width="15"
+                  height="15"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -136,6 +149,40 @@ function AppShellInner({
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" />
                 </svg>
+              </button>
+              <Link
+                href="/notifications"
+                aria-label={counts.unreadNotifications > 0 ? `Notifications — ${counts.unreadNotifications} unread` : "Notifications"}
+                className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+              >
+                <Bell size={15} strokeWidth={1.75} aria-hidden="true" />
+                {counts.unreadNotifications > 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-lavender"
+                  />
+                ) : null}
+              </Link>
+              <button
+                type="button"
+                onClick={openHelp}
+                aria-label="Help & Guide"
+                data-guide="help-button"
+                className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+              >
+                <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={openProfileModal}
+                aria-label="Account profile"
+                className="flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong"
+              >
+                {user.name?.trim() ? (
+                  user.name.trim().slice(0, 1).toUpperCase()
+                ) : (
+                  <UserRound size={13} strokeWidth={1.75} aria-hidden="true" />
+                )}
               </button>
             </div>
           </header>
@@ -164,7 +211,7 @@ function AppShellInner({
 
           {/* Compact bottom navigation — below lg only */}
           <nav
-            aria-label="Primary"
+            aria-label="Primary navigation"
             className="flex shrink-0 items-stretch gap-1 border-t border-border-subtle bg-bg-subtle/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden"
           >
             {MOBILE_NAV.map((item) => (
@@ -179,13 +226,24 @@ function AppShellInner({
                     : undefined
                 }
                 icon={<item.icon size={17} strokeWidth={1.75} />}
+                data-guide={
+                  item.href === "/app/intelligence"
+                    ? "intelligence-nav"
+                    : item.href === "/projects"
+                      ? "projects-nav"
+                      : item.href === "/tasks"
+                        ? "tasks-nav"
+                        : item.href === "/dashboard"
+                          ? "dashboard"
+                          : undefined
+                }
               />
             ))}
             <button
               type="button"
               onClick={() => setNavOpen(true)}
               aria-label="More destinations"
-              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary transition-colors duration-150 hover:text-text-primary"
+              className="flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-colors duration-150 hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
             >
               <Menu size={17} strokeWidth={1.75} aria-hidden="true" />
               <span className="text-[10.5px] leading-none">More</span>
@@ -215,7 +273,7 @@ function AppShellInner({
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
-              className="absolute inset-y-0 left-0 flex w-[272px] max-w-[86vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle animate-panel-in"
+              className="absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle animate-panel-in"
             >
               <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-4">
                 <NexusWordmark size={20} />
@@ -236,6 +294,29 @@ function AppShellInner({
                   plan={plan}
                   onNavigate={closeNav}
                 />
+              </div>
+              <div className="shrink-0 border-t border-border-subtle p-3 bg-bg-surface/30">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeNav();
+                      openHelp();
+                    }}
+                    className="inline-flex h-8 items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+                  >
+                    <LifeBuoy size={14} strokeWidth={1.75} />
+                    <span>Help & Guide</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleLogout()}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary hover:bg-danger-bg hover:text-danger"
+                  >
+                    <LogOut size={13} strokeWidth={1.75} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

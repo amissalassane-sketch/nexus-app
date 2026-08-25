@@ -166,15 +166,23 @@ export function IntelligenceView({
               />
             ) : insights.length === 0 ? (
               <EmptyState
-                title="No signals detected"
-                description="NEXUS watches deadlines, blocked work, drifting projects and goal progress. Nothing in this workspace currently meets a signal threshold — add dated work and it will start tracking risk."
+                title="Intelligence is ready for your workspace"
+                description="NEXUS watches deadlines, blocked work, drifting projects and goal progress. Create projects and tasks so NEXUS can analyze risks, spot bottlenecks and recommend priorities."
                 action={
-                  <Link
-                    href="/tasks?create=1"
-                    className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
-                  >
-                    Create a task
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/projects?create=1"
+                      className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
+                    >
+                      Create a project
+                    </Link>
+                    <Link
+                      href="/tasks?create=1"
+                      className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                    >
+                      Create a task
+                    </Link>
+                  </div>
                 }
               />
             ) : (

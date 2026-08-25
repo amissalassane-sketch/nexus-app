@@ -129,7 +129,7 @@ export function Topbar({
               ? `Notifications — ${unreadCount} unread`
               : "Notifications"
           }
-          className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+          className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
         >
           <Bell size={15} strokeWidth={1.75} aria-hidden="true" />
           {unreadCount > 0 ? (
@@ -145,7 +145,7 @@ export function Topbar({
           onClick={onOpenHelp}
           aria-label="NEXUS Guide and help"
           data-guide="help-button"
-          className="hidden h-8 w-8 items-center justify-center rounded-nav text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:flex"
+          className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
         >
           <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />
         </button>
@@ -162,7 +162,7 @@ export function Topbar({
               aria-label={
                 hasName ? `Account — ${user.name}` : "Account — complete profile"
               }
-              className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong"
+              className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary outline-none transition-colors duration-150 ease-nexus hover:border-border-strong focus-visible:ring-1 focus-visible:ring-lavender-border"
               {...ariaProps}
             >
               {hasName ? (

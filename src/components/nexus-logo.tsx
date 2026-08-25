@@ -35,7 +35,7 @@ export function NexusLogo({
   );
 }
 
-/** Symbol + wordmark lockup (Inter 600, tracking -0.03em, uppercase). */
+/** Symbol + wordmark lockup (Inter 600, tracking 0.08em, uppercase). */
 export function NexusWordmark({
   size = 28,
   className,
@@ -48,11 +48,11 @@ export function NexusWordmark({
   priority?: boolean;
 }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-center gap-2.5 select-none", className)}>
       <NexusLogo size={size} priority={priority} />
       {showText ? (
-        <span className="text-[13px] font-semibold uppercase tracking-[-0.03em] text-text-primary">
-          Nexus
+        <span className="text-[13px] font-bold uppercase tracking-[0.08em] text-text-primary">
+          NEXUS
         </span>
       ) : null}
     </span>
