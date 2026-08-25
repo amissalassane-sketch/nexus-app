@@ -102,7 +102,7 @@ export default async function IntelligencePage() {
           action={<ButtonLink href="/app/intelligence">Retry</ButtonLink>}
         />
       ) : (
-        <IntelligenceView insights={insights} context={context} />
+        <IntelligenceView insights={insights} context={context} snapshot={snapshot} />
       )}
     </div>
   );
