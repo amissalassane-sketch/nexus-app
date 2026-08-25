@@ -331,8 +331,6 @@ export function CommandMenu() {
         .filter((command): command is Command => Boolean(command))
     );
     void loadEntities();
-    // allCommandsById is a module-level constant — safe to read here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadEntities]);
 
   useEffect(() => {
@@ -457,16 +455,10 @@ export function CommandMenu() {
       setActiveIndex(Math.max(flat.length - 1, 0));
     } else if (event.key === "Enter") {
       event.preventDefault();
-      const command = flat[activeIndex];
+      const command = flat[currentIndex];
       if (command) runCommand(command);
     }
   };
-
-  useEffect(() => {
-    setActiveIndex((index) =>
-      index >= flat.length ? Math.max(flat.length - 1, 0) : index
-    );
-  }, [flat.length]);
 
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(
@@ -474,6 +466,10 @@ export function CommandMenu() {
     );
     el?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
+
+  // Results shrink as the query narrows; clamp at render so the active
+  // row can never point past the end of the list.
+  const currentIndex = Math.min(activeIndex, Math.max(flat.length - 1, 0));
 
   if (!open) return null;
 
@@ -520,7 +516,7 @@ export function CommandMenu() {
             aria-expanded="true"
             aria-controls={listboxId}
             aria-activedescendant={
-              flat[activeIndex] ? `${listboxId}-opt-${activeIndex}` : undefined
+              flat[currentIndex] ? `${listboxId}-opt-${currentIndex}` : undefined
             }
             className="h-full w-full bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-quaternary"
           />
@@ -583,7 +579,7 @@ export function CommandMenu() {
                 {group.items.map((command) => {
                   cursor += 1;
                   const index = cursor;
-                  const active = index === activeIndex;
+                  const active = index === currentIndex;
                   return (
                     <button
                       key={command.id}

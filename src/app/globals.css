@@ -1361,24 +1361,74 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   }
 }
 
-/* Glass panel — dark translucent surface, rim light, soft shadow,
-   remains an elegant UI card rather than a 3D cube. */
+/* Glass card — icon tile + name + mono caption, laid out like a real
+   product row rather than a floating tag. */
 .nexus-context-node-card {
   position: relative;
-  border-radius: var(--radius-card);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background:
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.045),
-      rgba(255, 255, 255, 0.014)
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.016)
     ),
-    rgba(9, 9, 9, 0.74);
-  backdrop-filter: blur(4px);
+    rgba(9, 9, 9, 0.78);
+  backdrop-filter: blur(5px);
   box-shadow: 0 20px 42px -20px rgba(0, 0, 0, 0.86);
-  padding: 9px 14px 10px;
-  text-align: center;
+  padding: 8px 14px 8px 8px;
+  text-align: left;
   white-space: nowrap;
+}
+
+/* Icon tile — the object's vocabulary, one glance. */
+.nexus-context-node-tile {
+  display: flex;
+  height: 28px;
+  width: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.015)
+  );
+  color: #cfcfcf;
+  transition: color 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* When the relationship is active (--lit) the tile warms up — see the
+   @supports block at the end of this section. */
+
+.nexus-context-node-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.nexus-context-node-label {
+  font-size: 12.5px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #f2f2f2;
+}
+
+.nexus-context-node-detail {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
 }
 
 /* Rim light. */
@@ -1392,22 +1442,40 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   background: linear-gradient(
     to right,
     transparent,
-    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.24),
     transparent
   );
   pointer-events: none;
 }
 
-/* Proximity / relationship ring — driven by --near / --lit. */
+/* Proximity / relationship ring — driven by --near / --lit. The tile
+   icon brightens with it, so activity reads on the card itself. */
 .nexus-context-node-card::after {
   content: "";
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  box-shadow: 0 0 22px rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.08);
   opacity: calc(var(--near, 0) * 0.85 + var(--lit, 0) * 0.95);
   pointer-events: none;
+}
+
+.nexus-context-node .nexus-context-node-tile {
+  transition: color 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --lit arrives as a custom property on the node root; brighten the
+   tile and give it a faint halo when a relationship is active. */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .nexus-context-node .nexus-context-node-tile {
+    color: rgba(255, 255, 255, calc(0.72 + var(--lit, 0) * 0.28));
+    border-color: rgba(255, 255, 255, calc(0.1 + var(--lit, 0) * 0.14));
+    box-shadow: 0 0 calc(var(--lit, 0) * 16px)
+      rgba(233, 228, 255, calc(var(--lit, 0) * 0.18));
+  }
 }
 
 /* ---------- Intelligence core ----------------------------------- */
@@ -1425,17 +1493,61 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 340px;
-  height: 190px;
+  width: 460px;
+  height: 260px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
     ellipse,
-    rgba(255, 255, 255, 0.055),
-    rgba(233, 228, 255, 0.02) 46%,
+    rgba(255, 255, 255, 0.06),
+    rgba(233, 228, 255, 0.022) 46%,
     transparent 72%
   );
   pointer-events: none;
+}
+
+/* Orbital rings — two dashed ellipses counter-rotating around the
+   pill. They read as "the system the reader sits inside", and give
+   the core real presence without a single extra draw call. */
+.nexus-context-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.nexus-context-ring-outer {
+  width: 340px;
+  height: 190px;
+  border: 1px dashed rgba(255, 255, 255, 0.13);
+  animation: nexus-context-ring-spin 64s linear infinite;
+}
+
+.nexus-context-ring-inner {
+  width: 250px;
+  height: 138px;
+  border: 1px dashed rgba(233, 228, 255, 0.16);
+  animation: nexus-context-ring-spin-reverse 46s linear infinite;
+}
+
+@keyframes nexus-context-ring-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes nexus-context-ring-spin-reverse {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
 }
 
 /* Breathing — 1.00 → 1.015 → 1.00 over ~5s, brightness in sync. */
@@ -1534,6 +1646,11 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 
 @media (prefers-reduced-motion: reduce) {
   .nexus-context-core-breath {
+    animation: none;
+  }
+
+  .nexus-context-ring-outer,
+  .nexus-context-ring-inner {
     animation: none;
   }
 

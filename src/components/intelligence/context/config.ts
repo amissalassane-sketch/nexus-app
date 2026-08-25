@@ -49,6 +49,16 @@ export interface ContextNodeConfig {
   id: ContextNodeId;
   label: string;
   detail: string;
+  /** Lucide icon rendered in the node's tile. */
+  icon:
+    | "check-square"
+    | "folder-kanban"
+    | "target"
+    | "calendar-clock"
+    | "trending-up"
+    | "git-branch"
+    | "activity"
+    | "layers";
   desktop: NodePlacement;
   mobile: NodePlacement;
 }
@@ -66,6 +76,7 @@ export const CONTEXT_NODES: ContextNodeConfig[] = [
     id: "tasks",
     label: "Tasks",
     detail: "status, priority, due date",
+    icon: "check-square",
     desktop: { x: 19.5, y: 17, z: 70, dim: 1, blur: 0, bend: -18, line: "front", introAt: 0.42 },
     mobile: { x: 25, y: 7, z: 30, dim: 1, blur: 0, bend: -6, line: "front", introAt: 0.42 },
   },
@@ -73,6 +84,7 @@ export const CONTEXT_NODES: ContextNodeConfig[] = [
     id: "projects",
     label: "Projects",
     detail: "scope and state",
+    icon: "folder-kanban",
     desktop: { x: 49, y: 8.5, z: -5, dim: 0.94, blur: 0.15, bend: -14, line: "front", introAt: 0.5 },
     mobile: { x: 75, y: 7, z: 0, dim: 0.96, blur: 0, bend: -6, line: "front", introAt: 0.5 },
   },
@@ -80,6 +92,7 @@ export const CONTEXT_NODES: ContextNodeConfig[] = [
     id: "goals",
     label: "Goals",
     detail: "progress vs. target",
+    icon: "target",
     desktop: { x: 79.5, y: 17.5, z: 60, dim: 1, blur: 0, bend: -18, line: "front", introAt: 0.56 },
     mobile: { x: 25, y: 26, z: 30, dim: 1, blur: 0, bend: -5, line: "none", introAt: 0.56 },
   },
@@ -87,27 +100,31 @@ export const CONTEXT_NODES: ContextNodeConfig[] = [
     id: "deadlines",
     label: "Deadlines",
     detail: "what is already past",
-    desktop: { x: 10.8, y: 46.5, z: -15, dim: 0.9, blur: 0.25, bend: -10, line: "front", introAt: 0.62 },
+    icon: "calendar-clock",
+    desktop: { x: 10.8, y: 46.5, z: -15, dim: 0.95, blur: 0.15, bend: -10, line: "front", introAt: 0.62 },
     mobile: { x: 75, y: 26, z: -10, dim: 0.94, blur: 0, bend: -5, line: "none", introAt: 0.62 },
   },
   {
     id: "progress",
     label: "Progress",
     detail: "what actually moved",
-    desktop: { x: 89.2, y: 46.5, z: -15, dim: 0.9, blur: 0.25, bend: -10, line: "front", introAt: 0.68 },
+    icon: "trending-up",
+    desktop: { x: 89.2, y: 46.5, z: -15, dim: 0.95, blur: 0.15, bend: -10, line: "front", introAt: 0.68 },
     mobile: { x: 25, y: 66.5, z: -10, dim: 0.94, blur: 0, bend: 5, line: "none", introAt: 0.68 },
   },
   {
     id: "dependencies",
     label: "Dependencies",
     detail: "what blocks what",
-    desktop: { x: 21.5, y: 79, z: -70, dim: 0.62, blur: 0.7, bend: 20, line: "behind", introAt: 0.74 },
+    icon: "git-branch",
+    desktop: { x: 21.5, y: 79, z: -70, dim: 0.8, blur: 0.45, bend: 20, line: "behind", introAt: 0.74 },
     mobile: { x: 75, y: 66.5, z: -40, dim: 0.8, blur: 0, bend: 5, line: "none", introAt: 0.74 },
   },
   {
     id: "activity",
     label: "Activity",
     detail: "the last real change",
+    icon: "activity",
     desktop: { x: 50, y: 83.5, z: 55, dim: 1, blur: 0, bend: 16, line: "front", introAt: 0.8 },
     mobile: { x: 25, y: 87, z: 25, dim: 1, blur: 0, bend: 6, line: "front", introAt: 0.8 },
   },
@@ -115,7 +132,8 @@ export const CONTEXT_NODES: ContextNodeConfig[] = [
     id: "workload",
     label: "Workload",
     detail: "what is open right now",
-    desktop: { x: 78.5, y: 77.5, z: -75, dim: 0.6, blur: 0.7, bend: 20, line: "behind", introAt: 0.86 },
+    icon: "layers",
+    desktop: { x: 78.5, y: 77.5, z: -75, dim: 0.78, blur: 0.45, bend: 20, line: "behind", introAt: 0.86 },
     mobile: { x: 75, y: 87, z: -45, dim: 0.76, blur: 0, bend: 6, line: "front", introAt: 0.86 },
   },
 ];

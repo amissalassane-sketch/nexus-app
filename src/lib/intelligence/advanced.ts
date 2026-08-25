@@ -92,7 +92,6 @@ const BAND_COPY: Record<HealthBand, string> = {
 export function workspaceHealth(snapshot: WorkspaceSnapshot): WorkspaceHealth {
   const now = snapshot.now ?? new Date();
   const open = snapshot.tasks.filter(isActiveTask);
-  const projectsById = new Map(snapshot.projects.map((p) => [p.id, p]));
 
   const overdue = open.filter((task) => {
     const due = asDate(task.due_at);
