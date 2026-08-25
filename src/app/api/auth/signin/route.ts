@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
-import { resolveUserAuthDestination } from "@/lib/auth-flow";
+import { getPostAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Email + password sign-in, performed ON THE SERVER.
  *
- * Doing it here (instead of in the browser then relaying tokens) means the
- * SSR cookies are written by the same client that creates the session:
- * one source of truth, no handshake that can silently fail or be redirected.
- * The cookies remain readable by the browser Supabase client, so client-side
- * CRUD keeps working under RLS.
+ * After successful authentication:
+ *   1. Session cookies are written server-side
+ *   2. Workspace + membership are ensured (idempotent bootstrap)
+ *   3. Onboarding state is checked
+ *   4. User is routed to /onboarding or /app
  */
 export async function POST(request: Request) {
   const { error: configError } = readSupabaseConfig();
@@ -73,11 +73,22 @@ export async function POST(request: Request) {
     );
   }
 
-  // Where to send the user next: onboarding until the profile is completed.
-  const { destination } = await resolveUserAuthDestination(supabase, result.data.user.id);
-
-  return NextResponse.json({
-    ok: true,
-    redirectTo: destination,
-  });
+  // Ensure workspace + membership, then determine destination
+  try {
+    const { destination } = await getPostAuthDestination(
+      supabase,
+      result.data.user.id,
+      result.data.user.email
+    );
+    return NextResponse.json({
+      ok: true,
+      redirectTo: destination,
+    });
+  } catch {
+    // If bootstrap fails, send to onboarding which will retry
+    return NextResponse.json({
+      ok: true,
+      redirectTo: "/onboarding",
+    });
+  }
 }

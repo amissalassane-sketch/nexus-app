@@ -127,7 +127,7 @@ function CheckEmailInner() {
   return (
     <AuthLayout
       title="Check your inbox"
-      description="We sent a NEXUS verification link to your email. Open it to activate your account, then continue to your workspace."
+      description="Verify your email address to finish creating your NEXUS account."
       footer={
         <>
           Wrong address?{" "}

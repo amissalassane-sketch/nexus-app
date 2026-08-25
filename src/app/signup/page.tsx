@@ -152,8 +152,8 @@ export default function SignupPage() {
 
   return (
     <AuthLayout
-      title="Create your workspace"
-      description="Start building a clearer way to work."
+      title="Create your account"
+      description="Start building your workspace with NEXUS."
       footer={
         <>
           Already have an account?{" "}
@@ -240,6 +240,28 @@ export default function SignupPage() {
         >
           Create account
         </Button>
+
+        <p className="mt-4 text-center text-caption text-text-quaternary">
+          By creating an account, you agree to our{" "}
+          <a
+            href="/terms"
+            className="underline decoration-border-subtle underline-offset-4 transition-colors hover:text-text-secondary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href="/privacy"
+            className="underline decoration-border-subtle underline-offset-4 transition-colors hover:text-text-secondary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
       </form>
     </AuthLayout>
   );

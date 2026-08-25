@@ -1,13 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import type { EmailOtpType, SupabaseClient } from "@supabase/supabase-js";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { getRequestOrigin, safeNextPath } from "@/lib/request-origin";
 import {
   classifyConfirmationError,
   isRecoveryType,
   redirectWithCookies,
-  resolveUserAuthDestination,
+  getPostAuthDestination,
 } from "@/lib/auth-flow";
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
@@ -21,17 +21,18 @@ const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
 
 function asOtpType(value: string | null): EmailOtpType | null {
   if (!value) return null;
-  return EMAIL_OTP_TYPES.has(value as EmailOtpType) ? (value as EmailOtpType) : null;
+  return EMAIL_OTP_TYPES.has(value as EmailOtpType)
+    ? (value as EmailOtpType)
+    : null;
 }
 
 /**
- * Map a Google OAuth redirect error (`error` + `error_description`, returned on
- * the callback URL) into a single, actionable NEXUS message — never a raw
- * provider string. Google reports "the user closed the consent screen / picked
- * Cancel" as `error=access_denied`; that is a cancellation, not a failure, and
- * deserves its own message so the login screen shows a clear, correct state.
+ * Map a Google OAuth redirect error into a single, actionable NEXUS message.
  */
-function describeOAuthFailure(code: string | null, description: string | null): string {
+function describeOAuthFailure(
+  code: string | null,
+  description: string | null
+): string {
   const key = `${code ?? ""} ${description ?? ""}`.toLowerCase();
   if (
     key.includes("access_denied") ||
@@ -50,35 +51,18 @@ function confirmErrorUrl(origin: string, reason: string): string {
   return `${origin}/auth/confirm-error?reason=${encodeURIComponent(reason)}`;
 }
 
-function routeByAccountState(
-  supabase: SupabaseClient,
-  userId: string,
-  origin: string,
-  response: NextResponse
-): Promise<NextResponse> {
-  return resolveUserAuthDestination(supabase, userId).then(({ destination }) =>
-    redirectWithCookies(response, `${origin}${destination}`)
-  );
-}
-
 /**
  * Return from a Supabase email link (signup confirmation or password recovery)
- * OR the return leg of an OAuth sign-in / sign-up (e.g. "Continue with Google").
+ * OR the return leg of an OAuth sign-in / sign-up.
  *
  * Three distinct outcomes:
  *
  *   1. Password recovery — keep the fresh session, continue to /reset-password
- *      so the visitor can set a new password.
  *
- *   2. Email confirmation (signup / email change / magic link) — exchange the
- *      token, write the session cookies and route by account state:
- *      /onboarding until onboarding is complete, then /app.
+ *   2. Email confirmation — exchange the token, write session cookies,
+ *      bootstrap workspace, route by account state
  *
- *   3. OAuth — the visitor just proved their identity with a provider. Keep the
- *      session and route them to the same destination by account state.
- *      We tell this case apart from (2) with `source=oauth`, set when the
- *      OAuth flow was started; a bare PKCE `code` is not enough, because email
- *      confirmation uses the same PKCE flow.
+ *   3. OAuth — exchange the PKCE code, bootstrap workspace, route by state
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -113,8 +97,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Nothing to exchange: expired link, email-client preview, or a click in a
-  // browser that never started PKCE. Never expose a raw error.
+  // Nothing to exchange
   if (!code && !tokenHash) {
     if (recovery) return NextResponse.redirect(recoveryFailed);
     if (isOAuth) return NextResponse.redirect(oauthFailed);
@@ -144,6 +127,7 @@ export async function GET(request: NextRequest) {
 
   let confirmError: string | null = null;
   let authUserId: string | null = null;
+  let authUserEmail: string | null = null;
   const otpType = asOtpType(type);
 
   try {
@@ -153,20 +137,32 @@ export async function GET(request: NextRequest) {
         token_hash: tokenHash,
       });
       confirmError = result.error?.message ?? null;
-      authUserId = result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserId =
+        result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserEmail =
+        result.data.user?.email ??
+        result.data.session?.user?.email ??
+        null;
     } else if (code) {
       const result = await supabase.auth.exchangeCodeForSession(code);
       confirmError = result.error?.message ?? null;
-      authUserId = result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserId =
+        result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserEmail =
+        result.data.user?.email ??
+        result.data.session?.user?.email ??
+        null;
     } else {
       confirmError = "Malformed confirmation link.";
     }
   } catch (cause) {
     confirmError =
-      cause instanceof Error ? cause.message : "Authentication failed. Please try again.";
+      cause instanceof Error
+        ? cause.message
+        : "Authentication failed. Please try again.";
   }
 
-  // --- Recovery: keep the session, continue to the password reset form. -----
+  // --- Recovery: keep the session, continue to the password reset form. ----
   if (recovery) {
     if (confirmError || !authUserId) {
       return NextResponse.redirect(recoveryFailed);
@@ -174,33 +170,57 @@ export async function GET(request: NextRequest) {
     return redirectWithCookies(response, `${origin}/reset-password`);
   }
 
-  // --- OAuth: keep the session, route by account state. ---------------------
+  // --- OAuth: keep the session, bootstrap workspace, route by state. -------
   if (isOAuth) {
     if (confirmError || !authUserId) {
-      // The PKCE exchange failed — most often a replayed or stale code (a
-      // duplicate callback, a refreshed tab, a back-button re-entry). If the
-      // visitor already holds a live session from a successful sign-in, route
-      // them by their real account state instead of bouncing an authenticated
-      // user to /login. Only genuinely unauthenticated visitors see the error.
+      // PKCE exchange failed — check if user already has a live session
       const {
         data: { user: existingUser },
       } = await supabase.auth.getUser();
 
       if (existingUser) {
-        return routeByAccountState(supabase, existingUser.id, origin, response);
+        try {
+          const { destination } = await getPostAuthDestination(
+            supabase,
+            existingUser.id,
+            existingUser.email
+          );
+          return redirectWithCookies(response, `${origin}${destination}`);
+        } catch {
+          return redirectWithCookies(response, `${origin}/onboarding`);
+        }
       }
 
       return NextResponse.redirect(oauthFailed);
     }
 
-    return routeByAccountState(supabase, authUserId, origin, response);
+    // Bootstrap workspace + membership, then route
+    try {
+      const { destination } = await getPostAuthDestination(
+        supabase,
+        authUserId,
+        authUserEmail ?? undefined
+      );
+      return redirectWithCookies(response, `${origin}${destination}`);
+    } catch {
+      return redirectWithCookies(response, `${origin}/onboarding`);
+    }
   }
 
-  // --- Email confirmation: verify, keep the session, route by account state.
+  // --- Email confirmation: verify, bootstrap, route by account state. ------
   if (confirmError || !authUserId) {
     const reason = classifyConfirmationError(confirmError);
     return NextResponse.redirect(confirmErrorUrl(origin, reason));
   }
 
-  return routeByAccountState(supabase, authUserId, origin, response);
+  try {
+    const { destination } = await getPostAuthDestination(
+      supabase,
+      authUserId,
+      authUserEmail ?? undefined
+    );
+    return redirectWithCookies(response, `${origin}${destination}`);
+  } catch {
+    return redirectWithCookies(response, `${origin}/onboarding`);
+  }
 }
