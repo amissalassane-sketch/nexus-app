@@ -332,6 +332,45 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
     };
 
     // ---------- GoTrue ----------
+    // Provider simulator for sandbox previews: a real deployment would send
+    // the browser to the provider (Google) here. The stub instead serves a
+    // tiny "account picker" that completes the PKCE round trip against the
+    // app's own /auth/callback using the deterministic test codes.
+    if (url.pathname === "/auth/v1/oauth" || url.pathname === "/auth/v1/authorize") {
+      const provider = url.searchParams.get("provider") ?? "google";
+      const html = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Stub ${provider} account picker</title>
+<style>body{background:#000;color:#fff;font:15px/1.5 system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.box{width:340px;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:22px}
+h1{font-size:16px;margin:0 0 4px}p{color:#9a9a9a;font-size:13px;margin:0 0 16px}
+a{display:block;padding:11px 14px;margin-top:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#fff;text-decoration:none;font-size:14px}
+a:hover{background:rgba(255,255,255,.06)}</style></head>
+<body><div class="box"><h1>Stub ${provider} — choose an account</h1>
+<p>Test double for the preview. The production app would be talking to the real ${provider} provider here.</p>
+<a data-code="oauth-new">fresh@nexus.test (brand-new account)</a>
+<a data-code="oauth-incomplete">incomplete@nexus.test (name only)</a>
+<a data-code="oauth-onboarded">owner@nexus.test (complete account)</a>
+<script>
+const base = new URLSearchParams(location.search).get("redirect_to");
+document.querySelectorAll("a[data-code]").forEach((el) => {
+  el.addEventListener("click", (event) => {
+    event.preventDefault();
+    location.href =
+      (base ?? new URL("/auth/callback", location.origin).href) +
+      (String(base ?? "").includes("?") ? "&" : "?") +
+      "source=oauth&code=" + el.dataset.code;
+  });
+});
+</script></div></body></html>`;
+      res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "content-length": Buffer.byteLength(html),
+        ...corsHeaders,
+      });
+      res.end(html);
+      return;
+    }
+
     if (url.pathname === "/auth/v1/token") {
       const grant = url.searchParams.get("grant_type");
       const body = await readBody(req);
