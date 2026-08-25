@@ -37,12 +37,14 @@ export function Topbar({
   workspace,
   unreadCount,
   onOpenProfileModal,
+  onOpenHelp,
 }: {
   user: ShellUser;
   workspace: ShellWorkspace;
   unreadCount: number;
   /** Opens the optional profile completion modal (account menu entry). */
   onOpenProfileModal?: () => void;
+  onOpenHelp?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -138,13 +140,15 @@ export function Topbar({
           ) : null}
         </Link>
 
-        <Link
-          href="/settings"
-          aria-label="Help and settings"
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          aria-label="NEXUS Guide and help"
+          data-guide="help-button"
           className="hidden h-8 w-8 items-center justify-center rounded-nav text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:flex"
         >
           <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />
-        </Link>
+        </button>
 
         <Dropdown
           label="Account"

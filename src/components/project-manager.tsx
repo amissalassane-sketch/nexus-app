@@ -382,7 +382,13 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         title="Projects"
         count={projects.length}
         description="The initiatives NEXUS tracks for risk, momentum and deadlines."
-        actions={<CreateButton label="New Project" onClick={openCreateForm} />}
+        actions={
+          <CreateButton
+            label="New Project"
+            onClick={openCreateForm}
+            data-guide="new-project"
+          />
+        }
       />
 
       <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
@@ -591,7 +597,11 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         }
         footer={
           <>
-            <Button onClick={submitProject} disabled={saving || !workspaceId}>
+            <Button
+              onClick={submitProject}
+              disabled={saving || !workspaceId}
+              data-guide="create-project"
+            >
               {saving
                 ? editingProjectId
                   ? "Saving..."
@@ -610,6 +620,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           <Field label="Name" htmlFor="project-name">
             <Input
               id="project-name"
+              data-guide="project-name"
               value={form.name}
               onChange={(event) =>
                 setForm((current) => ({ ...current, name: event.target.value }))

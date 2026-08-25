@@ -135,6 +135,11 @@ function ProfileCompletionForm({
       toast("success", "Profile updated", {
         description: "NEXUS now knows who you are.",
       });
+      window.dispatchEvent(
+        new CustomEvent("nexus:activation", {
+          detail: { type: "profile_completed" },
+        })
+      );
       onClose();
       router.refresh();
     } catch {

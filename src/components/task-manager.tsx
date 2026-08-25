@@ -306,6 +306,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
     }
 
     setSuccess("Task created.");
+    window.dispatchEvent(
+      new CustomEvent("nexus:activation", { detail: { type: "task_created" } })
+    );
     closeForm();
     await fetchTasks(workspaceId);
     syncServerViews();
@@ -481,6 +484,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
     }
 
     showToast("success", "Task added.");
+    window.dispatchEvent(
+      new CustomEvent("nexus:activation", { detail: { type: "task_created" } })
+    );
     setQuickTitle("");
     setQuickOpen(false);
     await fetchTasks(workspaceId);
@@ -641,7 +647,13 @@ function TaskManagerInner({ userId }: { userId: string }) {
         title="Tasks"
         count={tasks.length}
         description="Everything you are executing in this workspace."
-        actions={<CreateButton label="New Task" onClick={openCreateForm} />}
+        actions={
+          <CreateButton
+            label="New Task"
+            onClick={openCreateForm}
+            data-guide="new-task"
+          />
+        }
       />
 
       {/* Workspace state — real counts, not decoration */}
@@ -862,7 +874,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
         }
         footer={
           <>
-            <Button onClick={submitTask} disabled={saving || !workspaceId}>
+            <Button
+              onClick={submitTask}
+              disabled={saving || !workspaceId}
+              data-guide="create-task"
+            >
               {saving
                 ? editingTaskId
                   ? "Saving..."

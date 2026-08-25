@@ -205,7 +205,7 @@ export default async function DashboardPage() {
         : "Your workspace is clear.";
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="page-enter space-y-6" data-guide="dashboard">
       {/* HEADER */}
       <header className="flex flex-col gap-3 border-b border-border-subtle pb-6 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
@@ -253,14 +253,16 @@ export default async function DashboardPage() {
                 Welcome to NEXUS.
               </h2>
               <p className="mt-2.5 max-w-[52ch] text-body text-text-secondary">
-                NEXUS helps you understand what needs attention, what is moving
-                forward, and what requires action. Start by giving it the first
-                thing to understand — it begins working the moment you create
-                it.
+                Your workspace starts here. Create your first project and NEXUS
+                will help you turn it into actionable work.
               </p>
 
               <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                <ButtonLink href="/projects?create=1" size="lg">
+                <ButtonLink
+                  href="/projects?create=1"
+                  size="lg"
+                  data-guide="new-project"
+                >
                   <FolderKanban size={16} strokeWidth={1.75} />
                   Create your first project
                 </ButtonLink>

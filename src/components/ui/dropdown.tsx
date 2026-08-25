@@ -209,13 +209,14 @@ export function DropdownLink({
   icon,
   active,
   trailing,
+  ...rest
 }: {
   href: string;
   children: ReactNode;
   icon?: ReactNode;
   active?: boolean;
   trailing?: ReactNode;
-}) {
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   const { close } = useContext(DropdownContext);
 
   return (
@@ -225,6 +226,7 @@ export function DropdownLink({
       data-dropdown-item
       onClick={close}
       className={cn(itemClasses, active && activeClasses)}
+      {...rest}
     >
       {icon ? <span className="shrink-0 text-current">{icon}</span> : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
