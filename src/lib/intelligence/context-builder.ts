@@ -13,6 +13,7 @@
 import type { ProjectLike, WorkspaceSnapshot } from "./engine";
 import { isActiveTask } from "./engine";
 import { workspaceHealth, rankPriorities } from "./advanced";
+import type { ActivityContextItem, TaskDependencyContextItem } from "./types";
 
 export interface WorkspaceContextSummary {
   workspaceId: string;
@@ -48,6 +49,13 @@ export interface WorkspaceContextSummary {
     score: number;
     reasons: string[];
   }[];
+  blockedTasksDetail: {
+    id: string;
+    title: string;
+    projectName?: string;
+    priority: string;
+    blockedBy?: string[];
+  }[];
   recentCompletionsCount7d: number;
   newTasksCount7d: number;
   tasksDueNext7dCount: number;
@@ -57,11 +65,17 @@ export interface WorkspaceContextSummary {
     progress: number;
     targetDate: string | null;
   }[];
+  recentActivities: ActivityContextItem[];
+  compactPrompt: string;
 }
 
 export function buildWorkspaceContext(
   workspaceId: string,
-  snapshot: WorkspaceSnapshot
+  snapshot: WorkspaceSnapshot,
+  options?: {
+    activities?: ActivityContextItem[];
+    dependencies?: TaskDependencyContextItem[];
+  }
 ): WorkspaceContextSummary {
   const now = snapshot.now ?? new Date();
   const openTasks = snapshot.tasks.filter(isActiveTask);
@@ -149,7 +163,78 @@ export function buildWorkspaceContext(
     reasons: entry.reasons,
   }));
 
+  // Blocked tasks detail with dependencies if available
+  const dependenciesMap = new Map<string, string[]>();
+  if (options?.dependencies) {
+    for (const dep of options.dependencies) {
+      const list = dependenciesMap.get(dep.taskId) ?? [];
+      list.push(dep.dependsOnTitle);
+      dependenciesMap.set(dep.taskId, list);
+    }
+  }
+
+  const blockedTasksDetail = blockedTasks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    projectName: t.project_id ? projectMap.get(t.project_id)?.name : undefined,
+    priority: t.priority ?? "medium",
+    blockedBy: dependenciesMap.get(t.id),
+  }));
+
   const health = workspaceHealth(snapshot);
+  const recentActivities = (options?.activities ?? []).slice(0, 10);
+
+  // Generate compact string representation for LLM prompt injection
+  const compactLines: string[] = [
+    `WORKSPACE ID: ${workspaceId}`,
+    `OPERATING HEALTH INDEX: ${health.score}/100 (${health.band})`,
+    `TOTALS: ${snapshot.projects.length} projects, ${openTasks.length} open tasks (${overdueTasks.length} overdue, ${blockedTasks.length} blocked), ${snapshot.goals.length} goals`,
+    `7-DAY ACTIVITY: ${completedLast7d} tasks completed, ${createdLast7d} tasks opened, ${dueNext7d} tasks due next 7 days`,
+  ];
+
+  if (projectsNeedingAttention.length > 0) {
+    compactLines.push("PROJECTS AT RISK:");
+    for (const p of projectsNeedingAttention) {
+      compactLines.push(`- "${p.name}" (Status: ${p.status}, Progress: ${p.progress}%, Due: ${p.dueDate ?? "none"}): ${p.reasons.join(", ")}`);
+    }
+  }
+
+  if (ranked.length > 0) {
+    compactLines.push("TOP PRIORITIES:");
+    for (const t of ranked) {
+      compactLines.push(`- "${t.title}" (Priority: ${t.priority}, Due: ${t.dueDate ?? "none"}, Project: ${t.projectName ?? "none"}): ${t.reasons.join(", ")}`);
+    }
+  }
+
+  if (blockedTasksDetail.length > 0) {
+    compactLines.push("BLOCKED WORK:");
+    for (const b of blockedTasksDetail) {
+      compactLines.push(`- "${b.title}" in project "${b.projectName ?? "General"}": Status blocked`);
+    }
+  }
+
+  if (recentActivities.length > 0) {
+    compactLines.push("RECENT AUDIT ACTIVITY:");
+    for (const a of recentActivities) {
+      compactLines.push(`- [${a.createdAt.slice(0, 10)}] ${a.actorName ?? "User"} ${a.action} ${a.entityType} "${a.title}"`);
+    }
+  }
+
+  const activeGoals = snapshot.goals
+    .filter((g) => g.status !== "completed" && g.status !== "cancelled")
+    .map((g) => ({
+      id: g.id,
+      title: g.title,
+      progress: Math.round(g.progress ?? 0),
+      targetDate: g.target_date ?? null,
+    }));
+
+  if (activeGoals.length > 0) {
+    compactLines.push("ACTIVE GOALS:");
+    for (const g of activeGoals) {
+      compactLines.push(`- "${g.title}" (Progress: ${g.progress}%, Target Date: ${g.targetDate ?? "none"})`);
+    }
+  }
 
   return {
     workspaceId,
@@ -166,16 +251,12 @@ export function buildWorkspaceContext(
     healthBand: health.band,
     projectsNeedingAttention,
     topPriorityTasks: ranked,
+    blockedTasksDetail,
     recentCompletionsCount7d: completedLast7d,
     newTasksCount7d: createdLast7d,
     tasksDueNext7dCount: dueNext7d,
-    activeGoals: snapshot.goals
-      .filter((g) => g.status !== "completed" && g.status !== "cancelled")
-      .map((g) => ({
-        id: g.id,
-        title: g.title,
-        progress: Math.round(g.progress ?? 0),
-        targetDate: g.target_date ?? null,
-      })),
+    activeGoals,
+    recentActivities,
+    compactPrompt: compactLines.join("\n"),
   };
 }

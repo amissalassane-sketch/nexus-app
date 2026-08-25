@@ -22,6 +22,11 @@ import {
   type TaskLike,
   type WorkspaceSnapshot,
 } from "./engine";
+import type {
+  StructuredIntelligenceResponse,
+  IntelligenceItem,
+} from "./types";
+import type { WorkspaceContextSummary } from "./context-builder";
 
 function asDate(value: string | null | undefined): Date | null {
   if (!value) return null;
@@ -605,26 +610,22 @@ const has = (tokens: string[], ...needles: string[]) =>
  * overdue → today → week → momentum → health → next), then an honest
  * steering answer. A bare name match never hijacks an intent.
  */
-export function askWorkspace(
+/**
+ * Core reasoning engine for NEXUS Intelligence.
+ * Pure, deterministic, evidence-grounded. Maps the user's intent to one of the
+ * 6 core capabilities (Analysis, Prioritization, Planning, Synthesis, Detection, Action).
+ */
+export function reasonWorkspace(
   snapshot: WorkspaceSnapshot,
-  query: string
-): AskAnswer {
+  query: string,
+  context?: WorkspaceContextSummary
+): StructuredIntelligenceResponse {
   const now = snapshot.now ?? new Date();
   const open = snapshot.tasks.filter(isActiveTask);
   const lowerQuery = query.toLowerCase().trim();
   const tokens = lowerQuery.split(/\s+/).filter(Boolean);
 
-  if (tokens.length === 0) {
-    return {
-      kind: "empty",
-      title: "Ask about this workspace",
-      lines: [],
-      links: [],
-      suggestions: SUGGESTIONS.empty,
-    };
-  }
-
-  // ---- action proposal (task creation) -----------------------
+  // 1. ACTION (Task or Project creation intent)
   if (
     lowerQuery.startsWith("crée une tâche") ||
     lowerQuery.startsWith("créer une tâche") ||
@@ -632,9 +633,13 @@ export function askWorkspace(
     lowerQuery.startsWith("ajouter une tâche") ||
     lowerQuery.startsWith("create a task") ||
     lowerQuery.startsWith("add a task") ||
-    lowerQuery.startsWith("new task")
+    lowerQuery.startsWith("new task") ||
+    lowerQuery.includes("dois préparer") ||
+    lowerQuery.includes("faut préparer") ||
+    lowerQuery.includes("besoin de préparer")
   ) {
     const rawTitle = lowerQuery
+      .replace(/^(je\s+dois|il\s+faut|j'ai\s+besoin\s+de)\s+/i, "")
       .replace(/^(crée|créer|ajoute|ajouter)\s+une\s+tâche\s*(pour|de|:)?\s*/i, "")
       .replace(/^(create|add)\s+(a\s+)?task\s*(to|for|:)?\s*/i, "")
       .replace(/^new\s+task\s*(:)?\s*/i, "")
@@ -659,38 +664,51 @@ export function askWorkspace(
     }
 
     return {
-      kind: "action_proposal",
-      title: `Task proposal: “${title}”`,
-      lines: [
-        { label: "Action", value: "Ready to create in this workspace" },
-        { label: "Title", value: title },
-        { label: "Priority", value: "High (suggested)" },
-        ...(dueLabel ? [{ label: "Due date", value: dueLabel }] : []),
-      ],
-      links: [
-        {
-          href: `/tasks?create=1&title=${encodeURIComponent(title)}`,
-          label: "Open task form",
-        },
-      ],
-      actionProposal: {
-        type: "create_task",
-        title,
-        priority: "high",
-        dueDate: suggestedDueDate,
-        actionLabel: "Create this task now",
+      query,
+      intent: "action",
+      headline: `Recommended action: Create task “${title}”`,
+      narrative: `It would be useful to create a dedicated task for “${title}”${dueLabel ? ` due ${dueLabel}` : ""} in your workspace so NEXUS can track its momentum and protect that time.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Suggested title", value: title },
+          { label: "Suggested priority", value: "High" },
+          ...(dueLabel ? [{ label: "Target deadline", value: dueLabel }] : []),
+        ],
+        traceCount: "Parsed from intent · Verified workspace action",
+        sources: ["User Prompt", "Workspace Context"],
       },
-      evidenceNote: "Parsed from your request · Click below to execute",
-      suggestions: SUGGESTIONS.action_proposal,
+      action: {
+        id: `act-task-${Date.now()}`,
+        type: "create_task",
+        label: "Create this task",
+        description: `Create "${title}" in current workspace`,
+        confirmationRequired: true,
+        payload: {
+          title,
+          priority: "high",
+          dueDate: suggestedDueDate,
+          status: "todo",
+        },
+      },
+      suggestions: [
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Quels projets nécessitent mon attention ?",
+        "Aide-moi à organiser cette semaine.",
+      ],
     };
   }
 
-  // ---- analysis: projects needing attention ---------------------
+  // 2. ANALYSE (Projects needing attention, risk of delays, key issues)
   if (
     lowerQuery.includes("attention") ||
     lowerQuery.includes("nécessitent") ||
     lowerQuery.includes("need attention") ||
     lowerQuery.includes("require attention") ||
+    lowerQuery.includes("retard") ||
+    lowerQuery.includes("slipping") ||
+    lowerQuery.includes("problème") ||
+    lowerQuery.includes("issues") ||
     (has(tokens, "attention") && has(tokens, "projet", "projets", "project", "projects"))
   ) {
     const projectsNeedingAttention = snapshot.projects
@@ -707,7 +725,7 @@ export function askWorkspace(
         if (projectDue && projectDue.getTime() < now.getTime()) {
           reasons.push("Deadline passed");
         } else if (projectDue && daysUntil(projectDue, now) <= 7) {
-          reasons.push("Deadline in final week");
+          reasons.push("Deadline inside 7 days");
         }
         if (blockedTasks.length > 0) {
           reasons.push(`${plural(blockedTasks.length, "task")} blocked`);
@@ -719,61 +737,312 @@ export function askWorkspace(
           reasons.push("Project paused");
         }
 
-        return { project, reasons };
+        return { project, reasons, overdueTasks, blockedTasks };
       })
       .filter((entry) => entry.reasons.length > 0);
 
+    const items: IntelligenceItem[] = projectsNeedingAttention.map((p) => ({
+      id: p.project.id,
+      title: p.project.name,
+      subtitle: `Status: ${p.project.status ?? "planning"} · Progress: ${Math.round(p.project.progress ?? 0)}%`,
+      badge: {
+        label: p.reasons[0].includes("passed") ? "OVERDUE" : "AT RISK",
+        tone: "danger",
+      },
+      href: "/projects",
+      reasons: p.reasons,
+    }));
+
+    const overdueTotal = open.filter((t) => {
+      const d = asDate(t.due_at);
+      return d !== null && d.getTime() < now.getTime();
+    }).length;
+
+    const blockedTotal = open.filter((t) => t.status === "blocked").length;
+
     return {
-      kind: "projects_attention",
-      title:
-        projectsNeedingAttention.length === 0
+      query,
+      intent: "analysis",
+      headline:
+        items.length === 0
           ? "No projects currently need urgent attention"
-          : `${plural(projectsNeedingAttention.length, "project")} require attention`,
-      lines:
-        projectsNeedingAttention.length === 0
-          ? [
-              { label: "Active projects", value: String(snapshot.projects.length) },
-              { label: "Status", value: "All active initiatives are moving on schedule" },
-            ]
-          : projectsNeedingAttention.slice(0, 4).map((entry) => ({
-              label: entry.project.name,
-              value: entry.reasons.join(" · "),
-            })),
-      links: [{ href: "/projects", label: "Inspect all projects" }],
-      suggestions: SUGGESTIONS.projects_attention,
+          : `${plural(items.length, "project")} require attention`,
+      narrative:
+        items.length === 0
+          ? "No projects currently have overdue deadlines, blocked work or stalled momentum. All initiatives are progressing within safe parameters."
+          : `Analysis of ${snapshot.projects.length} workspace projects identified ${items.length} initiatives with critical risks: ${items.map((i) => `“${i.title}” (${i.reasons?.[0]})`).join(", ")}.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Projects at risk", value: String(items.length) },
+          { label: "Overdue tasks", value: String(overdueTotal) },
+          { label: "Blocked tasks", value: String(blockedTotal) },
+          { label: "Total open tasks", value: String(open.length) },
+        ],
+        traceCount: `Derived from ${snapshot.projects.length} projects and ${open.length} open tasks`,
+        sources: ["Projects Registry", "Task Deadlines"],
+      },
+      items: items.length > 0 ? items : undefined,
+      action: items.length > 0 ? {
+        id: "act-view-projects",
+        type: "view_risky_projects",
+        label: "Inspect projects",
+        confirmationRequired: false,
+        payload: { url: "/projects" },
+      } : undefined,
+      suggestions: [
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Quels projets semblent bloqués ?",
+        "Aide-moi à organiser cette semaine.",
+      ],
     };
   }
 
-  // ---- prioritization: top priority tasks ------------------------
+  // 3. PRIORISATION (Top priority tasks, what to do first, today's focus)
   if (
     (has(tokens, "priorit", "priority") &&
-      (has(tokens, "tâche", "tâches", "task", "tasks", "3", "trois", "prochain", "next", "mes", "my") ||
+      (has(tokens, "tâche", "tâches", "task", "tasks", "3", "trois", "prochain", "next", "mes", "my", "premier", "first") ||
         lowerQuery.includes("3") ||
         lowerQuery.includes("top"))) ||
     lowerQuery.includes("tâches prioritaires") ||
     lowerQuery.includes("priority tasks") ||
-    lowerQuery.includes("prochaines tâches")
+    lowerQuery.includes("prochaines tâches") ||
+    lowerQuery.includes("faire en premier") ||
+    lowerQuery.includes("faire aujourd'hui") ||
+    lowerQuery.includes("what should i do first") ||
+    lowerQuery.includes("what to do today")
   ) {
-    const topPriorities = rankPriorities(snapshot, 3);
+    const ranked = rankPriorities(snapshot, 3);
+    const items: IntelligenceItem[] = ranked.map((r, idx) => ({
+      id: r.task.id,
+      title: r.task.title,
+      subtitle: `Rank #${idx + 1} · Priority: ${r.task.priority ?? "medium"}`,
+      badge: {
+        label: r.reasons[0].toUpperCase(),
+        tone: r.task.status === "blocked" ? "danger" : r.task.due_at && asDate(r.task.due_at)!.getTime() < now.getTime() ? "danger" : "warning",
+      },
+      href: r.href,
+      reasons: r.reasons,
+    }));
+
     return {
-      kind: "priorities",
-      title:
-        topPriorities.length === 0
+      query,
+      intent: "prioritization",
+      headline:
+        items.length === 0
           ? "No priority tasks open right now"
-          : `Top ${topPriorities.length} priority ${plural(topPriorities.length, "task")}`,
-      lines:
-        topPriorities.length === 0
-          ? [{ label: "Open tasks", value: "Queue is clear" }]
-          : topPriorities.map((item, index) => ({
-              label: `#${index + 1} (${item.task.priority ?? "medium"})`,
-              value: `${item.task.title} — ${item.reasons.join(", ")}`,
-            })),
-      links: [{ href: "/tasks", label: "Open task board" }],
-      suggestions: SUGGESTIONS.priorities,
+          : `Top ${items.length} priority ${plural(items.length, "task")}`,
+      narrative:
+        items.length === 0
+          ? "All tasks are completed or there are no active tasks recorded. Your queue is clean."
+          : `NEXUS triaged open work against real deadlines, overdue status, blocking dependencies and priority weights. Starting with “${items[0]?.title}” eliminates the largest friction point.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Top task", value: items[0]?.title ?? "None" },
+          { label: "Top task criteria", value: items[0]?.reasons?.[0] ?? "—" },
+          { label: "Total open tasks", value: String(open.length) },
+        ],
+        traceCount: `Triaged ${open.length} active tasks across ${snapshot.projects.length} projects`,
+        sources: ["Task Queue", "Priority Index"],
+      },
+      items,
+      action: items.length > 0 ? {
+        id: "act-open-task",
+        type: "open_task",
+        label: `Open #${items[0].title}`,
+        confirmationRequired: false,
+        payload: { url: items[0].href },
+      } : undefined,
+      suggestions: [
+        "Quels projets nécessitent mon attention ?",
+        "Aide-moi à organiser cette semaine.",
+        "Résume l'activité de cette semaine.",
+      ],
     };
   }
 
-  // ---- detection: projects blocked or stalled -------------------
+  // 4. PLANIFICATION (Organize day, week, sequenced execution)
+  if (
+    lowerQuery.includes("organis") ||
+    lowerQuery.includes("planning") ||
+    lowerQuery.includes("plan my week") ||
+    lowerQuery.includes("plan this week") ||
+    lowerQuery.includes("plan my day") ||
+    lowerQuery.includes("organise ma journée") ||
+    lowerQuery.includes("schedule") ||
+    lowerQuery.includes("comment avancer") ||
+    lowerQuery.includes("aide-moi à organiser") ||
+    lowerQuery.includes("aide moi à organiser")
+  ) {
+    const weekAhead = now.getTime() + 7 * 86_400_000;
+    const overdue = open.filter((t) => {
+      const due = asDate(t.due_at);
+      return due !== null && due.getTime() < now.getTime();
+    });
+    const dueToday = open.filter((t) => {
+      const due = asDate(t.due_at);
+      return due !== null && daysUntil(due, now) === 0;
+    });
+    const dueThisWeek = open.filter((t) => {
+      const due = asDate(t.due_at);
+      return due !== null && due.getTime() >= now.getTime() && due.getTime() <= weekAhead;
+    });
+    const blocked = open.filter((t) => t.status === "blocked");
+
+    const steps: IntelligenceItem[] = [];
+    if (overdue.length > 0) {
+      steps.push({
+        id: "plan-step-1",
+        title: `1. Clear deadline debt (${plural(overdue.length, "task")})`,
+        subtitle: `Start immediately with “${overdue[0].title}” to stop project slip`,
+        badge: { label: "IMMEDIATE", tone: "danger" },
+        href: "/tasks?filter=overdue",
+        reasons: [`${overdue.length} tasks are past their due date`],
+      });
+    }
+    if (dueToday.length > 0) {
+      steps.push({
+        id: "plan-step-2",
+        title: `2. Protect today's commitments (${plural(dueToday.length, "task")})`,
+        subtitle: dueToday.map((t) => t.title).slice(0, 2).join(", "),
+        badge: { label: "TODAY", tone: "warning" },
+        href: "/tasks?filter=today",
+        reasons: ["Due before the end of the day"],
+      });
+    }
+    if (blocked.length > 0) {
+      steps.push({
+        id: "plan-step-3",
+        title: `3. Resolve blockers (${plural(blocked.length, "task")})`,
+        subtitle: `Unblock “${blocked[0].title}” to free downstream work`,
+        badge: { label: "UNBLOCK", tone: "lavender" },
+        href: "/tasks?filter=blocked",
+        reasons: ["Blocked work prevents dependent tasks from starting"],
+      });
+    }
+    if (dueThisWeek.length > 0) {
+      steps.push({
+        id: "plan-step-4",
+        title: `4. Execute scheduled milestones (${plural(dueThisWeek.length, "task")})`,
+        subtitle: "Work allocated across the remaining days of the week",
+        badge: { label: "THIS WEEK", tone: "neutral" },
+        href: "/tasks",
+        reasons: ["Scheduled within the next 7 days"],
+      });
+    }
+
+    if (steps.length === 0) {
+      steps.push({
+        id: "plan-step-clear",
+        title: "No scheduled deadline pressure",
+        subtitle: "A clear cadence to focus on strategic long-term goals or start a new project",
+        badge: { label: "CLEAR", tone: "success" },
+        href: "/projects?create=1",
+        reasons: ["No overdue tasks, blockers or tight deadlines"],
+      });
+    }
+
+    return {
+      query,
+      intent: "planning",
+      headline: "Recommended operating plan for this week",
+      narrative: `NEXUS organized your workflow into a prioritized cadence: eliminate overdue debt first, secure today's commitments, remove blockers, then advance weekly milestones.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "1. Urgent today", value: overdue.length > 0 ? `Resolve ${plural(overdue.length, "overdue task")} first` : "No overdue work — queue is clean" },
+          { label: "2. Blockers", value: blocked.length > 0 ? `Unblock ${blocked[0].title}` : "No active blockers" },
+          { label: "3. Due this week", value: `${plural(dueThisWeek.length, "task")} scheduled` },
+        ],
+        traceCount: `Sequenced from ${open.length} active tasks`,
+        sources: ["Work Cadence", "Deadlines"],
+      },
+      items: steps,
+      action: {
+        id: "act-open-tasks",
+        type: "navigate",
+        label: "Open task board",
+        confirmationRequired: false,
+        payload: { url: "/tasks" },
+      },
+      suggestions: [
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Quels projets nécessitent mon attention ?",
+        "Résume l'activité de cette semaine.",
+      ],
+    };
+  }
+
+  // 5. SYNTHÈSE (Summary of week, activity, changes, progress)
+  if (
+    (has(tokens, "résume", "resume", "synthèse", "synthese", "summar", "digest", "bilan") &&
+      (has(tokens, "semaine", "week", "activit", "activity") ||
+        lowerQuery.includes("cette semaine") ||
+        lowerQuery.includes("this week"))) ||
+    lowerQuery.includes("résume l'activité") ||
+    lowerQuery.includes("résume l activité") ||
+    lowerQuery.includes("summarize activity") ||
+    lowerQuery.includes("qu'est-ce qui a changé") ||
+    lowerQuery.includes("où en suis-je") ||
+    lowerQuery.includes("what changed recently")
+  ) {
+    const briefing = weeklyBriefing(snapshot);
+    const recentActs = (context?.recentActivities ?? []).slice(0, 4);
+
+    const items: IntelligenceItem[] = recentActs.map((act) => ({
+      id: act.id,
+      title: `${act.action.toUpperCase()}: ${act.title}`,
+      subtitle: `By ${act.actorName ?? "User"} · ${act.createdAt.slice(0, 10)}`,
+      badge: {
+        label: act.entityType.toUpperCase(),
+        tone: act.action === "created" ? "success" : "neutral",
+      },
+      href: "/activity",
+      reasons: [`Logged in audit feed`],
+    }));
+
+    return {
+      query,
+      intent: "synthesis",
+      headline: `Weekly summary: ${briefing.headline}`,
+      narrative: `${briefing.summary} ${briefing.outlook}`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Completed (7d)", value: `${briefing.completedThisWeek} tasks done` },
+          { label: "Opened (7d)", value: `${briefing.openedThisWeek} new tasks tracked` },
+          {
+            label: "Momentum",
+            value:
+              briefing.momentumDelta > 0
+                ? `+${briefing.momentumDelta} tasks vs previous week`
+                : briefing.momentumDelta === 0
+                  ? "Pacing equal to previous week"
+                  : `${briefing.momentumDelta} tasks vs previous week`,
+          },
+          { label: "Outlook", value: briefing.outlook },
+        ],
+        traceCount: `Derived from verified activity log and task timestamps`,
+        sources: ["Audit Log", "Throughput Engine"],
+      },
+      items: items.length > 0 ? items : undefined,
+      action: {
+        id: "act-view-activity",
+        type: "navigate",
+        label: "View activity feed",
+        confirmationRequired: false,
+        payload: { url: "/activity" },
+      },
+      suggestions: [
+        "Quels projets nécessitent mon attention ?",
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Aide-moi à organiser cette semaine.",
+      ],
+    };
+  }
+
+  // 6. DÉTECTION (Blocked projects, overdue work, approaching risks)
   if (
     lowerQuery.includes("projets bloqu") ||
     lowerQuery.includes("projet bloqu") ||
@@ -790,125 +1059,134 @@ export function askWorkspace(
       })
       .filter((entry) => entry.blocked.length > 0);
 
+    const blockedItems: IntelligenceItem[] = blockedProjects.map((bp) => ({
+      id: bp.project.id,
+      title: bp.project.name,
+      subtitle: `${plural(bp.blocked.length, "task")} blocked: “${bp.blocked[0].title}”`,
+      badge: { label: "BLOCKED", tone: "danger" as const },
+      href: "/tasks?filter=blocked",
+      reasons: bp.blocked.map((b) => `Task “${b.title}” is marked blocked`),
+    }));
+
+    const overdueTasks = open.filter((t) => {
+      const d = asDate(t.due_at);
+      return d !== null && d.getTime() < now.getTime();
+    });
+
+    const overdueItems: IntelligenceItem[] = overdueTasks.slice(0, 2).map((t) => ({
+      id: t.id,
+      title: `Overdue: ${t.title}`,
+      subtitle: `Was due ${formatShortRelative(t.due_at!, now)}`,
+      badge: { label: "OVERDUE", tone: "danger" as const },
+      href: "/tasks?filter=overdue",
+      reasons: [`Overdue by ${plural(Math.abs(daysUntil(asDate(t.due_at!)!, now)), "day")}`],
+    }));
+
+    const items: IntelligenceItem[] = [...blockedItems, ...overdueItems];
+
     return {
-      kind: "projects_blocked",
-      title:
+      query,
+      intent: "detection",
+      headline:
         blockedProjects.length === 0
           ? "No projects are currently blocked"
           : `${plural(blockedProjects.length, "project")} have blocked work`,
-      lines:
+      narrative:
         blockedProjects.length === 0
-          ? [{ label: "Blockers", value: "No active task is marked blocked in any project" }]
-          : blockedProjects.slice(0, 3).map((entry) => ({
-              label: entry.project.name,
-              value: `${plural(entry.blocked.length, "task")} blocked: “${entry.blocked[0].title}”`,
-            })),
-      links: [
-        { href: "/tasks?filter=blocked", label: "Review blocked tasks" },
-        { href: "/projects", label: "Inspect projects" },
+          ? "No active task is marked blocked in any project. Work is flowing smoothly."
+          : `Blockers detected in ${blockedProjects.length} projects: ${blockedProjects.map((bp) => `“${bp.project.name}” (${bp.blocked.length} blocked)`).join(", ")}.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Blocked projects", value: String(blockedProjects.length) },
+          { label: "Blocked tasks", value: String(blockedProjects.reduce((acc, p) => acc + p.blocked.length, 0)) },
+          { label: "Total open tasks", value: String(open.length) },
+        ],
+        traceCount: `Scanned ${snapshot.projects.length} projects for blocker states`,
+        sources: ["Project Task Graphs", "Task Attributes"],
+      },
+      items: items.length > 0 ? items : undefined,
+      action: blockedProjects.length > 0 ? {
+        id: "act-filter-blocked",
+        type: "view_blocked_tasks",
+        label: "Review blocked tasks",
+        confirmationRequired: false,
+        payload: { url: "/tasks?filter=blocked" },
+      } : undefined,
+      suggestions: [
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Quels projets nécessitent mon attention ?",
       ],
-      suggestions: SUGGESTIONS.projects_blocked,
     };
   }
 
-  // ---- synthesis: weekly activity summary -----------------------
-  if (
-    (has(tokens, "résume", "resume", "synthèse", "synthese", "summar", "digest", "bilan") &&
-      (has(tokens, "semaine", "week", "activit", "activity") ||
-        lowerQuery.includes("cette semaine") ||
-        lowerQuery.includes("this week"))) ||
-    lowerQuery.includes("résume l'activité") ||
-    lowerQuery.includes("résume l activité") ||
-    lowerQuery.includes("summarize activity")
-  ) {
-    const briefing = weeklyBriefing(snapshot);
+  // Fallback: General workspace query / health overview
+  const health = workspaceHealth(snapshot);
+  return {
+    query,
+    intent: "general",
+    headline: `Workspace Health: ${health.score}/100 (${health.band})`,
+    narrative: `NEXUS reads this workspace directly. Ask specific questions about projects, priorities, blockers, planning, or request task creation.`,
+    provider: "nexus-engine",
+    evidence: {
+      metrics: [
+        { label: "Operating Index", value: `${health.score}/100` },
+        { label: "Projects", value: String(snapshot.projects.length) },
+        { label: "Open tasks", value: String(open.length) },
+      ],
+      traceCount: `${snapshot.projects.length} projects · ${open.length} open tasks · index ${health.score}/100`,
+      sources: ["Workspace Health Engine"],
+    },
+    items: [
+      {
+        id: "health-1",
+        title: health.headline,
+        subtitle: `Band: ${health.band.toUpperCase()}`,
+        badge: { label: health.band.toUpperCase(), tone: health.band === "steady" ? "success" : health.band === "watch" ? "warning" : "danger" },
+        href: "/app/intelligence",
+        reasons: health.factors.filter((f) => f.penalty > 0).map((f) => `${f.label}: ${f.evidence}`),
+      },
+    ],
+    action: {
+      id: "act-intelligence-view",
+      type: "navigate",
+      label: "Open Intelligence",
+      confirmationRequired: false,
+      payload: { url: "/app/intelligence" },
+    },
+    suggestions: [
+      "Quels projets nécessitent mon attention ?",
+      "Quelles sont mes 3 prochaines tâches prioritaires ?",
+      "Quels projets semblent bloqués ?",
+      "Aide-moi à organiser cette semaine.",
+    ],
+  };
+}
+
+export function askWorkspace(
+  snapshot: WorkspaceSnapshot,
+  query: string
+): AskAnswer {
+  const lowerQuery = query.toLowerCase().trim();
+  const tokens = lowerQuery.split(/\s+/).filter(Boolean);
+
+  if (tokens.length === 0) {
     return {
-      kind: "synthesis",
-      title: `Weekly summary: ${briefing.headline}`,
-      lines: [
-        { label: "Completed (7d)", value: `${briefing.completedThisWeek} tasks done` },
-        { label: "Opened (7d)", value: `${briefing.openedThisWeek} new tasks tracked` },
-        {
-          label: "Momentum",
-          value:
-            briefing.momentumDelta > 0
-              ? `+${briefing.momentumDelta} tasks vs previous week`
-              : briefing.momentumDelta === 0
-                ? "Pacing equal to previous week"
-                : `${briefing.momentumDelta} tasks vs previous week`,
-        },
-        { label: "Outlook", value: briefing.outlook },
-      ],
-      links: [
-        { href: "/activity", label: "View activity feed" },
-        { href: "/dashboard", label: "Open dashboard" },
-      ],
-      suggestions: SUGGESTIONS.synthesis,
+      kind: "empty",
+      title: "Ask about this workspace",
+      lines: [],
+      links: [],
+      suggestions: SUGGESTIONS.empty,
     };
   }
 
-  // ---- planning: organize this week -----------------------------
-  if (
-    lowerQuery.includes("organis") ||
-    lowerQuery.includes("planning") ||
-    lowerQuery.includes("plan my week") ||
-    lowerQuery.includes("plan this week") ||
-    lowerQuery.includes("schedule") ||
-    lowerQuery.includes("aide-moi à organiser") ||
-    lowerQuery.includes("aide moi à organiser")
-  ) {
-    const weekAhead = now.getTime() + 7 * 86_400_000;
-    const dueThisWeek = open.filter((t) => {
-      const due = asDate(t.due_at);
-      return due !== null && due.getTime() >= now.getTime() && due.getTime() <= weekAhead;
-    });
-    const overdue = open.filter((t) => {
-      const due = asDate(t.due_at);
-      return due !== null && due.getTime() < now.getTime();
-    });
-    const blocked = open.filter((t) => t.status === "blocked");
-
-    return {
-      kind: "planning",
-      title: "Recommended operating plan for this week",
-      lines: [
-        {
-          label: "1. Urgent today",
-          value:
-            overdue.length > 0
-              ? `Resolve ${plural(overdue.length, "overdue task")} first`
-              : "No overdue work — queue is clean",
-        },
-        {
-          label: "2. Blockers",
-          value:
-            blocked.length > 0
-              ? `Unblock ${blocked[0].title}${blocked.length > 1 ? ` (+${blocked.length - 1} more)` : ""}`
-              : "No active blockers",
-        },
-        {
-          label: "3. Due this week",
-          value:
-            dueThisWeek.length > 0
-              ? `${plural(dueThisWeek.length, "task")} scheduled for the next 7 days`
-              : "Clear window for deep work on long-term goals",
-        },
-      ],
-      links: [
-        { href: "/tasks", label: "Open task board" },
-        { href: "/app/intelligence", label: "See operating index" },
-      ],
-      suggestions: SUGGESTIONS.planning,
-    };
-  }
-
-  // ---- a specifically named project -----------------------------
+  // Check specific project name first if asked specifically about a single project
   const STOPWORDS = new Set([
     "project", "projets", "the", "how", "is", "what", "whats", "status",
     "about", "doing", "going", "with", "tell", "me", "show", "and", "for", "workspace",
     "a", "an", "of", "on", "in", "to", "it", "its", "that", "this",
     "block", "blocked", "overdue", "late", "today", "week", "next",
-    "momentum", "health", "should", "work",
+    "momentum", "health", "should", "work", "attention", "priorit",
   ]);
 
   const askedAboutProjects = tokens.some((token) =>
@@ -916,240 +1194,50 @@ export function askWorkspace(
   );
   const nameMatch = findNamedProject(snapshot, lowerQuery, tokens, STOPWORDS);
 
-  if (askedAboutProjects && nameMatch) {
-    return projectAnswer(nameMatch, snapshot, now);
-  }
-  if (nameMatch && !anyIntentToken(tokens)) {
-    return projectAnswer(nameMatch, snapshot, now);
+  if (askedAboutProjects && nameMatch && !anyIntentToken(tokens)) {
+    return projectAnswer(nameMatch, snapshot, snapshot.now ?? new Date());
   }
 
-  // ---- blocked --------------------------------------------------
-  if (has(tokens, "block", "stuck", "stall", "bloqu")) {
-    const blocked = open.filter((task) => task.status === "blocked");
-    return {
-      kind: "blocked",
-      title:
-        blocked.length === 0
-          ? "Nothing is blocked right now"
-          : `${plural(blocked.length, "task")} blocked`,
-      lines:
-        blocked.length === 0
-          ? [{ label: "Open tasks", value: String(open.length) }]
-          : [
-              {
-                label: "First blocked",
-                value: blocked[0].title,
-              },
-              ...(blocked.length > 1
-                ? [{ label: "Also blocked", value: `${blocked.length - 1} more` }]
-                : []),
-            ],
-      links:
-        blocked.length > 0
-          ? [{ href: "/tasks?filter=blocked", label: "Review blocked work" }]
-          : [],
-      suggestions: SUGGESTIONS.blocked,
-    };
+  const reasoned = reasonWorkspace(snapshot, query);
+  const lines: { label: string; value: string }[] = [];
+
+  for (const m of reasoned.evidence.metrics) {
+    lines.push({ label: m.label, value: m.value });
   }
 
-  // ---- overdue --------------------------------------------------
-  if (has(tokens, "overdue", "late", "delayed", "past", "en retard")) {
-    const overdue = open.filter((task) => {
-      const due = asDate(task.due_at);
-      return due !== null && due.getTime() < now.getTime();
-    });
-    return {
-      kind: "overdue",
-      title:
-        overdue.length === 0
-          ? "Nothing is overdue"
-          : `${plural(overdue.length, "task")} past their date`,
-      lines:
-        overdue.length === 0
-          ? [{ label: "On time", value: "Every dated task is within its window" }]
-          : [
-              {
-                label: "Oldest",
-                value: `${overdue[0].title} (${formatShortRelative(overdue[0].due_at!, now)})`,
-              },
-              ...(overdue.length > 1
-                ? [{ label: "Also late", value: `${overdue.length - 1} more` }]
-                : []),
-            ],
-      links:
-        overdue.length > 0
-          ? [{ href: "/tasks?filter=overdue", label: "Review overdue work" }]
-          : [],
-      suggestions: SUGGESTIONS.overdue,
-    };
+  if (reasoned.items && reasoned.items.length > 0) {
+    for (const item of reasoned.items.slice(0, 3)) {
+      lines.push({ label: item.title, value: item.reasons?.[0] ?? item.subtitle ?? "active" });
+    }
   }
 
-  // ---- today ----------------------------------------------------
-  if (has(tokens, "today", "now", "aujourd")) {
-    const dueToday = open.filter((task) => {
-      const due = asDate(task.due_at);
-      return due !== null && daysUntil(due, now) === 0;
-    });
-    return {
-      kind: "today",
-      title:
-        dueToday.length === 0
-          ? "Nothing is due today"
-          : `${plural(dueToday.length, "task")} due today`,
-      lines:
-        dueToday.length === 0
-          ? [{ label: "Open tasks", value: String(open.length) }]
-          : dueToday.slice(0, 3).map((task) => ({
-              label: task.priority ?? "medium",
-              value: task.title,
-            })),
-      links:
-        dueToday.length > 0
-          ? [{ href: "/tasks?filter=today", label: "Plan the day" }]
-          : [],
-      suggestions: SUGGESTIONS.today,
-    };
+  let kind: AskKind = "help";
+  if (reasoned.intent === "action") kind = "action_proposal";
+  else if (reasoned.intent === "analysis") kind = "projects_attention";
+  else if (reasoned.intent === "prioritization") kind = "priorities";
+  else if (reasoned.intent === "detection") kind = "projects_blocked";
+  else if (reasoned.intent === "synthesis") kind = "synthesis";
+  else if (reasoned.intent === "planning") kind = "planning";
+
+  const links: { href: string; label: string }[] = [];
+  if (reasoned.action?.payload?.url) {
+    links.push({ href: reasoned.action.payload.url, label: reasoned.action.label });
   }
 
-  // ---- momentum / what moved --------------------------------------
-  if (
-    has(
-      tokens,
-      "momentum",
-      "shipped",
-      "completed",
-      "done",
-      "moved",
-      "progress",
-      "velocity",
-      "throughput",
-      "productiv"
-    )
-  ) {
-    const weekAgo = now.getTime() - 7 * 86_400_000;
-    const completed = snapshot.tasks.filter((task) => {
-      const at = asDate(task.completed_at);
-      return at !== null && at.getTime() >= weekAgo;
-    });
-    return {
-      kind: "momentum",
-      title:
-        completed.length === 0
-          ? "No completions in the last seven days"
-          : `${plural(completed.length, "task")} completed this week`,
-      lines:
-        completed.length === 0
-          ? [{ label: "Open tasks", value: String(open.length) }]
-          : [
-              { label: "Completed (7d)", value: String(completed.length) },
-              { label: "Still open", value: String(open.length) },
-              ...(completed[0]?.completed_at
-                ? [
-                    {
-                      label: "Latest",
-                      value: completed[0].title,
-                    },
-                  ]
-                : []),
-            ],
-      links: [{ href: "/activity", label: "See the activity log" }],
-      suggestions: SUGGESTIONS.momentum,
-    };
-  }
-
-  // ---- this week --------------------------------------------------
-  if (has(tokens, "week", "semaine", "upcoming", "coming")) {
-    const weekAhead = now.getTime() + 7 * 86_400_000;
-    const dueThisWeek = open.filter((task) => {
-      const due = asDate(task.due_at);
-      return (
-        due !== null &&
-        due.getTime() >= now.getTime() &&
-        due.getTime() <= weekAhead
-      );
-    });
-    return {
-      kind: "week",
-      title:
-        dueThisWeek.length === 0
-          ? "Nothing lands in the next seven days"
-          : `${plural(dueThisWeek.length, "task")} due in the next seven days`,
-      lines:
-        dueThisWeek.length === 0
-          ? [
-              {
-                label: "Window",
-                value: "Clear week — good time for drifting work",
-              },
-            ]
-          : dueThisWeek.slice(0, 3).map((task) => ({
-              label: formatShortRelative(task.due_at!, now),
-              value: task.title,
-            })),
-      links:
-        dueThisWeek.length > 0
-          ? [{ href: "/tasks", label: "Open the task board" }]
-          : [],
-      suggestions: SUGGESTIONS.week,
-    };
-  }
-
-  // ---- health ------------------------------------------------------
-  if (
-    has(tokens, "health", "status", "score", "shape", "going", "overall") ||
-    lowerQuery.includes("how are we") ||
-    lowerQuery.includes("workspace")
-  ) {
-    const health = workspaceHealth(snapshot);
-    return {
-      kind: "health",
-      title: `Operating index: ${health.score}/100 — ${health.band}`,
-      lines: health.factors
-        .filter((factor) => factor.penalty > 0)
-        .slice(0, 3)
-        .map((factor) => ({
-          label: factor.label,
-          value: factor.evidence,
-        })),
-      links: [{ href: "/app/intelligence", label: "Open Intelligence" }],
-      suggestions: SUGGESTIONS.health,
-    };
-  }
-
-  // ---- next / priority ---------------------------------------------
-  if (has(tokens, "next", "focus", "priority", "should", "first", "work on", "do")) {
-    const action = nextBestAction(snapshot);
-    const ranked = rankPriorities(snapshot, 3);
-    return {
-      kind: "next",
-      title: action ? action.title : "Nothing needs a decision right now",
-      lines: [
-        ...(action ? [{ label: "Why", value: action.reason }] : []),
-        ...ranked
-          .filter((entry) => entry.task.id !== action?.entity.id)
-          .slice(0, 2)
-          .map((entry) => ({
-            label: `#${ranked.indexOf(entry) + 2}`,
-            value: `${entry.task.title} — ${entry.reasons[0]}`,
-          })),
-      ],
-      links: action ? [{ href: action.href, label: action.cta }] : [],
-      suggestions: SUGGESTIONS.next,
-    };
-  }
-
-  // ---- fallback: honest steering, not a guess -----------------------
-  const health = workspaceHealth(snapshot);
   return {
-    kind: "help",
-    title: "I read this workspace, not a chat script",
-    lines: [
-      { label: "Try", value: "“What is blocked?” or “What is overdue?”" },
-      { label: "Or", value: "“What should I do next?”" },
-      { label: "Workspace", value: `${snapshot.projects.length} projects · ${open.length} open tasks · index ${health.score}/100` },
-    ],
-    links: [{ href: "/app/intelligence", label: "Open Intelligence" }],
-    suggestions: SUGGESTIONS.help,
+    kind,
+    title: reasoned.headline,
+    lines: lines.slice(0, 6),
+    links,
+    suggestions: reasoned.suggestions,
+    actionProposal: reasoned.action?.type === "create_task" ? {
+      type: "create_task",
+      title: reasoned.action.payload?.title ?? "New Task",
+      priority: reasoned.action.payload?.priority,
+      dueDate: reasoned.action.payload?.dueDate,
+      actionLabel: reasoned.action.label,
+    } : undefined,
+    evidenceNote: reasoned.evidence.traceCount,
   };
 }
 

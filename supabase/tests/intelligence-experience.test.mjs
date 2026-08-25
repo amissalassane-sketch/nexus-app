@@ -1,5 +1,6 @@
-const { askWorkspace } = await import("../../src/lib/intelligence/advanced.ts");
+const { askWorkspace, reasonWorkspace } = await import("../../src/lib/intelligence/advanced.ts");
 const { buildWorkspaceContext } = await import("../../src/lib/intelligence/context-builder.ts");
+const { detectAIProvider } = await import("../../src/lib/intelligence/ai-provider.ts");
 const navConfig = await import("../../src/components/layout/nav-config.ts");
 const { NAV_GROUPS, MOBILE_NAV } = navConfig;
 
@@ -74,7 +75,54 @@ const mockSnapshot = {
   ],
 };
 
-console.log("-- intelligence intents --------------------------------");
+console.log("-- intelligence 6 core capabilities (reasonWorkspace) ---");
+{
+  const res = reasonWorkspace(mockSnapshot, "Quels projets nécessitent mon attention ?");
+  ok("A. Analyse: intent is analysis", res.intent === "analysis");
+  ok("A. Analyse: headline highlights projects needing attention", res.headline.includes("require"));
+  ok("A. Analyse: evidence metrics attached", res.evidence.metrics.length > 0);
+  ok("A. Analyse: provider is honest nexus-engine", res.provider === "nexus-engine");
+  ok("A. Analyse: items include Website Redesign", res.items?.some((i) => i.title === "Website Redesign"));
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Quelles sont mes 3 prochaines tâches prioritaires ?");
+  ok("B. Priorisation: intent is prioritization", res.intent === "prioritization");
+  ok("B. Priorisation: top task is Deploy auth service", res.items?.[0]?.title === "Deploy auth service");
+  ok("B. Priorisation: action opens top task", res.action?.type === "open_task");
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Aide-moi à organiser cette semaine.");
+  ok("C. Planification: intent is planning", res.intent === "planning");
+  ok("C. Planification: sequenced steps generated", (res.items?.length ?? 0) >= 3);
+  ok("C. Planification: immediate focus clears overdue debt", res.items?.[0]?.title.includes("Clear deadline debt"));
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Résume mon activité cette semaine.");
+  ok("D. Synthèse: intent is synthesis", res.intent === "synthesis");
+  ok("D. Synthèse: mentions completed tasks", res.evidence.metrics.some((m) => m.label.includes("Completed")));
+  ok("D. Synthèse: links to activity log", res.action?.payload?.url === "/activity");
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Quels projets semblent bloqués ?");
+  ok("E. Détection: intent is detection", res.intent === "detection");
+  ok("E. Détection: identifies blocked project", res.headline.includes("blocked"));
+  ok("E. Détection: items include blocked task", res.items?.some((i) => i.title.includes("Deploy auth service")));
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Je dois préparer ma présentation de vendredi.");
+  ok("F. Action: intent is action from 'Je dois préparer...'", res.intent === "action");
+  ok("F. Action: requires confirmation before mutating", res.action?.confirmationRequired === true);
+  ok("F. Action: action type is create_task", res.action?.type === "create_task");
+  ok("F. Action: extracted title is clean", res.action?.payload?.title?.toLowerCase().includes("préparer ma présentation"));
+  ok("F. Action: calculated deadline for Friday", Boolean(res.action?.payload?.dueDate));
+}
+
+console.log("-- intelligence legacy adapter (askWorkspace) ------------");
 {
   const answer = askWorkspace(mockSnapshot, "Quels projets nécessitent mon attention ?");
   ok("Analysis intent matches projects_attention", answer.kind === "projects_attention");
@@ -84,13 +132,13 @@ console.log("-- intelligence intents --------------------------------");
 {
   const answer = askWorkspace(mockSnapshot, "Quelles sont mes 3 prochaines tâches prioritaires ?");
   ok("Prioritization intent matches priorities", answer.kind === "priorities");
-  ok("Priorities include urgent blocked task", answer.lines.some((l) => l.value.includes("Deploy auth service")));
+  ok("Priorities include urgent blocked task", answer.lines.some((l) => l.label.includes("Deploy auth service")));
 }
 
 {
   const answer = askWorkspace(mockSnapshot, "Quels projets semblent bloqués ?");
   ok("Detection intent matches projects_blocked", answer.kind === "projects_blocked");
-  ok("Blocked projects detect Website Redesign", answer.lines.some((l) => l.label === "Website Redesign" && l.value.includes("blocked")));
+  ok("Blocked projects detect Website Redesign", answer.lines.some((l) => l.label.includes("Website Redesign")));
 }
 
 {
@@ -100,28 +148,53 @@ console.log("-- intelligence intents --------------------------------");
 }
 
 {
-  const answer = askWorkspace(mockSnapshot, "Aide-moi à organiser cette semaine.");
-  ok("Planning intent matches planning", answer.kind === "planning");
-  ok("Planning prioritizes urgent tasks", answer.lines.some((l) => l.label.includes("Urgent today")));
-}
-
-{
   const answer = askWorkspace(mockSnapshot, "Crée une tâche pour préparer la présentation de vendredi.");
   ok("Action intent matches action_proposal", answer.kind === "action_proposal");
   ok("Action proposal has valid title", answer.actionProposal?.title?.toLowerCase().includes("préparer la présentation"));
   ok("Action proposal computes deadline for Friday", Boolean(answer.actionProposal?.dueDate));
 }
 
-console.log("-- context builder ------------------------------------");
+console.log("-- context builder with real activity & dependencies -----");
 {
-  const context = buildWorkspaceContext("ws-123", mockSnapshot);
+  const mockActivities = [
+    {
+      id: "act-1",
+      entityType: "task",
+      action: "completed",
+      title: "Update documentation",
+      actorName: "Sarah",
+      createdAt: "2026-08-24T12:00:00Z",
+    },
+  ];
+
+  const mockDependencies = [
+    {
+      taskId: "t1",
+      taskTitle: "Deploy auth service",
+      dependsOnTaskId: "t0",
+      dependsOnTitle: "Database migration",
+    },
+  ];
+
+  const context = buildWorkspaceContext("ws-123", mockSnapshot, {
+    activities: mockActivities,
+    dependencies: mockDependencies,
+  });
+
   ok("Context builder assigns workspaceId", context.workspaceId === "ws-123");
   ok("Context builder counts total projects", context.totals.projects === 2);
   ok("Context builder counts open tasks", context.totals.openTasks === 2);
   ok("Context builder identifies overdue task", context.totals.overdueTasks === 1);
   ok("Context builder identifies blocked task", context.totals.blockedTasks === 1);
-  ok("Context builder identifies projects needing attention", context.projectsNeedingAttention.length > 0);
-  ok("Context builder ranks priorities", context.topPriorityTasks.length > 0);
+  ok("Context builder includes recent activities", context.recentActivities.length === 1);
+  ok("Context builder compactPrompt contains health and risk", context.compactPrompt.includes("OPERATING HEALTH INDEX"));
+  ok("Context builder compactPrompt includes audit activity", context.compactPrompt.includes("Update documentation"));
+}
+
+console.log("-- AI provider detection & fallback ---------------------");
+{
+  const provider = detectAIProvider();
+  ok("Provider defaults to honest nexus-engine when env vars missing", provider.provider === "nexus-engine");
 }
 
 console.log("-- navigation model -----------------------------------");

@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getActiveMembership } from "@/lib/workspace";
 import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
-import { askWorkspace, type AskAnswer } from "@/lib/intelligence/advanced";
+import { askWorkspace, reasonWorkspace } from "@/lib/intelligence/advanced";
+import { callAIProvider } from "@/lib/intelligence/ai-provider";
 import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
+import type { ActivityContextItem } from "@/lib/intelligence/types";
 
 // ============================================================
 // NEXUS INTELLIGENCE — STRUCTURED QUERY API
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     // Scoped queries strictly isolated by workspace_id
-    const [tasksRes, projectsRes, goalsRes] = await Promise.all([
+    const [tasksRes, projectsRes, goalsRes, activitiesRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at")
@@ -68,6 +70,12 @@ export async function POST(request: Request) {
         .from("goals")
         .select("id, title, status, progress, target_date, updated_at")
         .eq("workspace_id", workspaceId),
+      supabase
+        .from("activities")
+        .select("id, entity_type, action, metadata, created_at, actor_id")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .limit(30),
     ]);
 
     const snapshot: WorkspaceSnapshot = {
@@ -76,19 +84,32 @@ export async function POST(request: Request) {
       goals: (goalsRes.data ?? []) as WorkspaceSnapshot["goals"],
     };
 
-    const context = buildWorkspaceContext(workspaceId, snapshot);
+    const recentActivities: ActivityContextItem[] = (activitiesRes.data ?? []).map((row) => ({
+      id: row.id,
+      entityType: row.entity_type ?? "item",
+      action: row.action ?? "updated",
+      title: typeof row.metadata?.title === "string" ? row.metadata.title : "Item",
+      actorName: null,
+      createdAt: row.created_at,
+    }));
 
-    // AI Provider optional integration:
-    // If an external LLM key is configured (OPENAI_API_KEY or ANTHROPIC_API_KEY),
-    // it can be leveraged with system prompts injecting this minimal, verified context.
-    // Otherwise, the deterministic NEXUS Context Reasoning Engine delivers
-    // complete, zero-hallucination structured answers directly.
-    const answer: AskAnswer = askWorkspace(snapshot, query);
+    const context = buildWorkspaceContext(workspaceId, snapshot, { activities: recentActivities });
+
+    // 1. Try real AI provider if configured (OpenAI or Anthropic)
+    let structuredResponse = await callAIProvider(query, context);
+
+    // 2. Fallback to deterministic reasoning engine
+    if (!structuredResponse) {
+      structuredResponse = reasonWorkspace(snapshot, query, context);
+    }
+
+    const legacyAnswer = askWorkspace(snapshot, query);
 
     return NextResponse.json({
       success: true,
       query,
-      answer,
+      answer: legacyAnswer,
+      response: structuredResponse,
       context: {
         totals: context.totals,
         healthScore: context.healthScore,
