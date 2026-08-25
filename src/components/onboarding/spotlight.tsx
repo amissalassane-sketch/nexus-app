@@ -101,33 +101,69 @@ export function useGuideTarget(selector?: string, id?: string) {
     let missingTimer: number | undefined;
     let ro: ResizeObserver | null = null;
     let observedEl: HTMLElement | null = null;
+    // Typing in a form mutates the DOM on every keystroke, which fires the
+    // MutationObserver below. Re-measuring is fine — but scrolling and
+    // re-rendering on every keystroke made the ring jitter and stole the
+    // scroll position while the user typed. Only commit a change when the
+    // measured box has actually moved or resized.
+    let last: SpotlightRect | null = null;
+
+    const sameRect = (a: SpotlightRect | null, b: SpotlightRect | null) =>
+      a === b ||
+      (a !== null &&
+        b !== null &&
+        Math.abs(a.top - b.top) < 0.5 &&
+        Math.abs(a.left - b.left) < 0.5 &&
+        Math.abs(a.width - b.width) < 0.5 &&
+        Math.abs(a.height - b.height) < 0.5);
 
     const update = () => {
-      const next = measureGuide(selector);
-      setRect(next);
-
-      if (next) {
-        setMissing(false);
-        if (missingTimer !== undefined) {
-          window.clearTimeout(missingTimer);
-          missingTimer = undefined;
+      const el = selector
+        ? document.querySelector<HTMLElement>(selector)
+        : null;
+      if (!el) {
+        if (last !== null) {
+          last = null;
+          setRect(null);
         }
-        // Track the resolved element's own size/position changes (e.g. it
-        // grows after data loads) without polling on a timer.
-        const el = selector
-          ? document.querySelector<HTMLElement>(selector)
-          : null;
-        if (el && el !== observedEl) {
-          ro?.disconnect();
-          ro = new ResizeObserver(update);
-          ro.observe(el);
-          observedEl = el;
+        if (missingTimer === undefined) {
+          // Give async content a couple of seconds to appear before we show
+          // the "target not found" fallback copy.
+          missingTimer = window.setTimeout(() => setMissing(true), 2000);
         }
-      } else if (missingTimer === undefined) {
-        // Give async content a couple of seconds to appear before we show
-        // the "target not found" fallback copy.
-        missingTimer = window.setTimeout(() => setMissing(true), 2000);
+        return;
       }
+
+      const box = el.getBoundingClientRect();
+      if (box.width < 2 && box.height < 2) return;
+
+      const next = {
+        top: box.top,
+        left: box.left,
+        width: box.width,
+        height: box.height,
+      };
+
+      if (missingTimer !== undefined) {
+        window.clearTimeout(missingTimer);
+        missingTimer = undefined;
+      }
+      setMissing(false);
+
+      // Track the resolved element's own size/position changes (e.g. it
+      // grows after data loads) without polling on a timer.
+      if (el !== observedEl) {
+        ro?.disconnect();
+        ro = new ResizeObserver(update);
+        ro.observe(el);
+        observedEl = el;
+      }
+
+      if (sameRect(last, next)) return;
+      last = next;
+      // Only scroll for real moves — never as a side effect of typing.
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      setRect(next);
     };
 
     update();

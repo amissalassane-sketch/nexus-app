@@ -3,22 +3,25 @@
 import dynamic from "next/dynamic";
 
 // The field is atmosphere, not content: it loads after the hero copy has
-// painted and is never required for the page to be readable.
-const IntelligenceNetwork = dynamic(
+// painted and is never required for the page to be readable. The 3D
+// scene imports Three.js itself inside an effect, one level deeper still.
+const HeroSignalField = dynamic(
   () =>
-    import("@/components/intelligence/intelligence-network").then(
-      (module) => module.IntelligenceNetwork
+    import("@/components/landing/hero-signal-field").then(
+      (module) => module.HeroSignalField
     ),
   { ssr: false }
 );
 
 // ============================================================
 // NEXUS LANDING — HERO FIELD
-// The relationship field behind the headline: small nodes, thin
-// connections, a large translucent NEXUS mark, and a soft floor grid.
-// Everything is masked away from the centre so the copy stays the
-// brightest thing on the screen. Motion pauses off-screen and is
-// disabled entirely under prefers-reduced-motion (engine-level).
+// The relationship field behind the headline, in real 3D: a shallow
+// volume of nodes bound to their nearest neighbours, signal pulses
+// travelling the links, slow system rotation, pointer parallax on
+// the camera. The large translucent NEXUS mark and the soft floor
+// grid stay HTML/CSS, masked away from the centre so the copy stays
+// the brightest thing on the screen. Motion parks off-screen and is
+// disabled under prefers-reduced-motion (engine-level).
 // ============================================================
 
 export function HeroField() {
@@ -47,19 +50,9 @@ export function HeroField() {
       <div className="absolute inset-x-0 top-[22%] h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
       <div className="absolute inset-x-0 top-[68%] h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
 
-      {/* The network itself */}
-      <div className="absolute inset-0 [mask-image:radial-gradient(circle_at_50%_45%,transparent_18%,black_62%)]">
-        <IntelligenceNetwork
-          className="h-full w-full"
-          config={{
-            nodeCount: 72,
-            connectionDistance: 150,
-            calmRadius: 380,
-            calmCenterY: 0.46,
-            nodeOpacity: [0.12, 0.4],
-            linkOpacity: [0.03, 0.12],
-          }}
-        />
+      {/* The 3D constellation itself */}
+      <div className="absolute inset-0 [mask-image:radial-gradient(circle_at_50%_45%,transparent_16%,black_66%)]">
+        <HeroSignalField className="h-full w-full" />
       </div>
 
       {/* Bottom fade into the page */}

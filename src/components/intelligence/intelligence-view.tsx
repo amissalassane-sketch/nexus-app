@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { IntelligenceAsk } from "@/components/intelligence/intelligence-ask";
+import { WorkspaceHealthPanel } from "@/components/intelligence/health-panel";
+import { WeeklyBriefingPanel } from "@/components/intelligence/briefing-panel";
+import { PriorityFocusPanel } from "@/components/intelligence/priority-focus";
+import { ForecastPanel } from "@/components/intelligence/forecast-panel";
 
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/feedback";
@@ -10,17 +14,27 @@ import { SignalCard } from "@/components/intelligence/signal-card";
 import { SignalDetail } from "@/components/intelligence/signal-detail";
 import { IntelligenceCanvas } from "@/components/intelligence/intelligence-canvas";
 import {
+  forecastWorkspace,
+  rankPriorities,
+  weeklyBriefing,
+  workspaceHealth,
+} from "@/lib/intelligence/advanced";
+import {
   SEVERITY_LABEL,
   type Insight,
   type InsightSeverity,
   type WorkspaceContext,
+  type WorkspaceSnapshot,
 } from "@/lib/intelligence/engine";
 
 // ============================================================
 // NEXUS — INTELLIGENCE VIEW
-// The signal queue plus its detail panel. Signals are computed on the
-// server from the real workspace; this layer owns only presentation
-// state (severity filter, selection, session dismissals).
+// The intelligence workspace: ask console, operating index, weekly
+// briefing, focus list and forecast — all computed from the real
+// snapshot by the deterministic engine — above the signal queue
+// and its detail panel. Signals are computed on the server; this
+// layer owns only presentation state (severity filter, selection,
+// session dismissals).
 // ============================================================
 
 const FILTERS: { id: "all" | InsightSeverity; label: string }[] = [
@@ -34,13 +48,21 @@ const FILTERS: { id: "all" | InsightSeverity; label: string }[] = [
 export function IntelligenceView({
   insights,
   context,
+  snapshot,
 }: {
   insights: Insight[];
   context: WorkspaceContext;
+  snapshot: WorkspaceSnapshot;
 }) {
   const [filter, setFilter] = useState<"all" | InsightSeverity>("all");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // The advanced layer is pure and cheap — recompute on new snapshots.
+  const health = useMemo(() => workspaceHealth(snapshot), [snapshot]);
+  const briefing = useMemo(() => weeklyBriefing(snapshot), [snapshot]);
+  const priorities = useMemo(() => rankPriorities(snapshot), [snapshot]);
+  const forecasts = useMemo(() => forecastWorkspace(snapshot), [snapshot]);
 
   const visible = useMemo(
     () => insights.filter((insight) => !hidden.has(insight.id)),
@@ -75,7 +97,16 @@ export function IntelligenceView({
 
   return (
     <div className="flex flex-col gap-5">
-      <IntelligenceAsk context={context} />
+      <IntelligenceAsk snapshot={snapshot} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <WorkspaceHealthPanel health={health} />
+        <WeeklyBriefingPanel briefing={briefing} />
+      </div>
+
+      <PriorityFocusPanel priorities={priorities} />
+      <ForecastPanel forecasts={forecasts} />
+
       <IntelligenceCanvas
         context={context}
         signalCount={visible.length}

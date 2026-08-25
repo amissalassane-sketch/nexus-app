@@ -30,6 +30,17 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // The modal's lifecycle (focus in, scroll lock, Escape, focus out) runs
+  // once per open/close — never per keystroke. `onClose` is usually an
+  // inline closure that changes identity on every parent render (e.g. a
+  // form field typed into), so it lives in a ref and is NOT a dependency:
+  // depending on it stole focus from the field being typed into on every
+  // keystroke, making the focus ring jump elsewhere in the dialog.
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +50,7 @@ export function Modal({
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -57,7 +68,7 @@ export function Modal({
       document.body.style.overflow = overflow;
       previouslyFocused.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
