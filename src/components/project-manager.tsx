@@ -244,6 +244,9 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     }
 
     setSuccess("Project created.");
+    window.dispatchEvent(
+      new CustomEvent("nexus:activation", { detail: { type: "project_created" } })
+    );
     closeForm();
     await fetchProjects(workspaceId);
     syncServerViews();
