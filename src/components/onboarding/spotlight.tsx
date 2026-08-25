@@ -98,22 +98,55 @@ export function useGuideTarget(selector?: string, id?: string) {
   const [missing, setMissing] = useState(false);
 
   useLayoutEffect(() => {
-    let attempts = 0;
+    let missingTimer: number | undefined;
+    let ro: ResizeObserver | null = null;
+    let observedEl: HTMLElement | null = null;
+
     const update = () => {
       const next = measureGuide(selector);
       setRect(next);
-      attempts += 1;
-      if (!next && attempts >= 8) setMissing(true);
-      if (next) setMissing(false);
+
+      if (next) {
+        setMissing(false);
+        if (missingTimer !== undefined) {
+          window.clearTimeout(missingTimer);
+          missingTimer = undefined;
+        }
+        // Track the resolved element's own size/position changes (e.g. it
+        // grows after data loads) without polling on a timer.
+        const el = selector
+          ? document.querySelector<HTMLElement>(selector)
+          : null;
+        if (el && el !== observedEl) {
+          ro?.disconnect();
+          ro = new ResizeObserver(update);
+          ro.observe(el);
+          observedEl = el;
+        }
+      } else if (missingTimer === undefined) {
+        // Give async content a couple of seconds to appear before we show
+        // the "target not found" fallback copy.
+        missingTimer = window.setTimeout(() => setMissing(true), 2000);
+      }
     };
+
     update();
+
+    // The target may not exist yet (route transition, async content).
+    // A MutationObserver reacts the instant it appears, instead of
+    // waiting on an arbitrary polling interval.
+    const mo = new MutationObserver(update);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
-    const timer = window.setInterval(update, 250);
+
     return () => {
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
-      window.clearInterval(timer);
+      mo.disconnect();
+      ro?.disconnect();
+      if (missingTimer !== undefined) window.clearTimeout(missingTimer);
     };
   }, [selector, id]);
 

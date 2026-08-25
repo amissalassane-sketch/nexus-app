@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Boxes,
   CheckSquare,
   ChevronsUpDown,
   CreditCard,
@@ -101,7 +102,6 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const pressure = planPressure(plan);
   const workspaceName = workspace.name ?? "No workspace";
-  const workspaceInitial = workspaceName.trim().slice(0, 1).toUpperCase();
 
   return (
     <div className={cn("flex h-full w-full flex-col", className)}>
@@ -137,9 +137,9 @@ export function WorkspaceSidebar({
             >
               <span
                 aria-hidden="true"
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary"
+                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface-2 text-text-tertiary"
               >
-                {workspaceInitial}
+                <Boxes size={13} strokeWidth={1.75} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium text-text-primary">
