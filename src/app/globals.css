@@ -1802,3 +1802,93 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
     animation: none !important;
   }
 }
+
+/* ============================================================
+   NEXUS — COMMAND PALETTE (⌘K)
+   Quiet command surface: a deeper backdrop than dialogs, one
+   top sheen, rows with an active rail. Motion is micro only.
+   ============================================================ */
+
+.command-backdrop {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes command-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-command-in {
+  animation: command-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top center;
+}
+
+.command-sheen {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.14) 32%,
+    rgba(255, 255, 255, 0.14) 68%,
+    transparent
+  );
+}
+
+.command-row {
+  transition: background-color 100ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 100ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.command-row:hover,
+.command-row[data-active="true"] {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.035) 70%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.command-rail {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(233, 228, 255, 0.85),
+    transparent
+  );
+}
+
+/* Slim, quiet scrollbar for the results list */
+.command-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+.command-list::-webkit-scrollbar {
+  width: 8px;
+}
+.command-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+.command-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-command-in,
+  .command-backdrop {
+    animation: none;
+  }
+}
