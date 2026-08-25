@@ -75,6 +75,13 @@ Empty states always answer three questions: what is missing, why it matters, wha
   hero rises in behind the fade (~1.4s total, once per tab, skipped under
   `prefers-reduced-motion`). The landing is rendered underneath from the first frame —
   nothing waits on JavaScript or the network.
+- **Hero constellation** — `src/components/landing/hero-signal-field.tsx` (scene) and
+  `src/components/landing/hero-field.tsx` (composition): the hero background is a real
+  3D field — 110 nodes bound to their nearest neighbours, a brighter depth layer,
+  signal pulses travelling the links (every fourth carries the lavender intelligence
+  accent), slow rotation and pointer parallax on the camera. Three.js is imported
+  inside an effect (never in the eager graph), the loop parks off-screen and under
+  `prefers-reduced-motion` renders one settled frame.
 - **Pointer depth** — `src/components/landing/landing-atmosphere.tsx` (landing-wide
   ambient light) and `src/components/landing/hero-atmosphere.tsx` (hero grid, light,
   orbits). Transform-only, lerped via `requestAnimationFrame`, disabled on touch
@@ -139,7 +146,8 @@ is testable without a GPU (`npm run verify:scene`).
   formation uses `drawRange`, node appearance uses instance scale.
 - *Idle* — slow rotation, a 0.8% breath, drifting internals, occasional ambient
   link activation.
-- *Reasoning* — every 5–9s (period measured between cycle *starts*): a distant
+- *Reasoning* — every 5–8.4s on desktop (inside the brief's 5–9s window, period
+  measured between cycle *starts*): a distant
   node wakes, a signal hops to a neighbour, that neighbour wakes, a second signal
   carries the result to the core, the core pulses, a neighbourhood lights, and the
   system fades back to idle. Phase-driven, so the rhythm follows the geometry.
@@ -153,7 +161,11 @@ is testable without a GPU (`npm run verify:scene`).
 
 - Three.js is fetched by a real `import()` inside an effect, so it is a chunk the
   bundler cannot merge into the eager graph — the hero copy paints first.
-- ~18 draw calls total; every node, strut and particle is instanced or merged.
+- When the core absorbs a signal it emits a *sonar shell* — an expanding, fading
+  surface so the answer lands on the whole field, not only the core.
+- The camera breathes on two slow periods (~20s / ~37s) so the scene is alive with
+  no pointer at all; parked under `prefers-reduced-motion`.
+- ~19 draw calls total; every node, strut and particle is instanced or merged.
   No post-processing, no shadows, no physics.
 - The loop is *parked*, not throttled, when the hero scrolls out of view or the
   tab is hidden.
@@ -225,6 +237,13 @@ small screens rather than shrunk.
 `?` for the shortcut reference · `Esc` closes any overlay. Shortcuts are ignored while
 typing in a field. See `src/components/keyboard-shortcuts.tsx`.
 
+The command palette (`src/components/command-menu.tsx`) is a scored search — prefix
+matches outrank word starts, word starts outrank substrings and keywords, multi-word
+queries require every token — with inline match highlighting, sticky grouped headers,
+recent commands (localStorage, max 4), direct create actions in the empty state, and
+a status footer (result count, workspace indexing, error states). Pages come from
+`nav-config.ts`; workspace entities are read from Supabase under RLS.
+
 ## Intelligence
 
 `src/lib/intelligence/engine.ts` is a pure, deterministic, dependency-free engine. The
@@ -239,6 +258,28 @@ a verb. `describeWorkspace()` produces the factual context read shown on the can
 
 Recommended actions deep-link into real saved views (`/tasks?filter=overdue|blocked|
 today`), so acting on a signal lands on exactly the work it described.
+
+`src/lib/intelligence/advanced.ts` is the second generation of the engine — same
+contract: pure, deterministic, dependency-free, explainable.
+
+- `workspaceHealth()` — a weighted 0–100 operating index over six factors (deadline
+  debt, blockers, drift, deadline pressure, planning debt, momentum). Every penalty
+  renders next to the raw evidence that produced it; an empty workspace is never
+  scored, it is reported.
+- `weeklyBriefing()` — the executive digest: completions this week versus last, what
+  opened, the deadline outlook, and the next best move.
+- `forecastWorkspace()` — velocity-based completion projections per project, computed
+  from real completions over the trailing 28 days. No history means no projected date,
+  never a fabricated one.
+- `rankPriorities()` — an auditable triage queue: every open task scored on urgency,
+  friction, weight and staleness, with its reasons rendered next to its rank.
+- `askWorkspace()` — deterministic answers to plain-language questions ("what is
+  blocked?", "what should I do next?"). Intent routing plus factual rows plus deep
+  links; no model call, no invented content.
+
+These power the Intelligence workspace view (`/app/intelligence`): the ask console,
+the operating-index dial, the weekly briefing, the focus list and the completion
+forecast, above the signal queue.
 
 ## Authentication
 
