@@ -165,6 +165,14 @@ export class IntelligenceCore implements SceneModule {
   private pulseValue = 0;
   private breath = 0;
 
+  /* ---- pulse wave -------------------------------------------- */
+  /** Expanding shell emitted when the core absorbs a signal. */
+  private readonly wave: Mesh;
+  private readonly waveMaterial: MeshBasicMaterial;
+  /** 0 → 1 across the wave's life; 1 means settled/invisible. */
+  private waveLife = 1;
+  private waveStrength = 0;
+
   constructor(profile: IntelligenceProfile) {
     this.profile = profile;
     const random = createRandom(0x4e5855); // "NXU"
@@ -286,6 +294,27 @@ export class IntelligenceCore implements SceneModule {
     this.heartGlow = new Points(glowGeometry, this.heartGlowMaterial);
     this.heartGlow.frustumCulled = false;
     this.innerGroup.add(this.heartGlow);
+
+    /* ================= PULSE WAVE ================= */
+
+    // A quiet sonar shell the core emits when it absorbs a signal —
+    // the moment the reasoning cycle lands is the moment the whole
+    // field should feel it. Sits on the root so it breathes with the
+    // core; a sphere, so rotation cannot distort it.
+    this.waveMaterial = new MeshBasicMaterial({
+      color: PALETTE.emissive,
+      transparent: true,
+      opacity: 0,
+      blending: AdditiveBlending,
+      depthWrite: false,
+    });
+    this.wave = new Mesh(
+      new SphereGeometry(R.glassShell * 1.05, 28, 18),
+      this.waveMaterial
+    );
+    this.wave.visible = false;
+    this.wave.frustumCulled = false;
+    this.root.add(this.wave);
 
     /* ================= MID LAYER ================= */
 
@@ -465,6 +494,12 @@ export class IntelligenceCore implements SceneModule {
   /** A brief luminous response. `strength` is 0..1. */
   pulse(strength = 1): void {
     this.pulseValue = Math.min(1.25, this.pulseValue + strength);
+    if (strength >= 0.2) {
+      // Emit the sonar shell: the answer becomes something the whole
+      // field can be seen to receive, not only the core.
+      this.waveLife = 0;
+      this.waveStrength = Math.max(this.waveStrength, clamp01(strength));
+    }
   }
 
   /** Drive one mid-layer node's emissive centre. */
@@ -496,6 +531,25 @@ export class IntelligenceCore implements SceneModule {
     // The pulse decays on its own; nothing has to reset it.
     this.pulseValue = damp(this.pulseValue, 0, 2.4, dt);
     const pulse = clamp01(this.pulseValue);
+
+    /* ---- pulse wave ---- */
+    if (this.waveLife < 1) {
+      this.waveLife = Math.min(1, this.waveLife + dt / 1.15);
+      const k = this.waveLife;
+      const ease = 1 - Math.pow(1 - k, 3);
+      this.wave.scale.setScalar(1 + ease * 0.85);
+      this.waveMaterial.opacity =
+        Math.pow(1 - k, 1.7) * 0.13 * this.waveStrength * intro;
+      this.wave.visible =
+        !reducedMotion && k < 1 && this.waveMaterial.opacity > 0.002;
+      if (k >= 1) {
+        this.wave.visible = false;
+        this.waveStrength = 0;
+      }
+    } else if (this.wave.visible) {
+      this.wave.visible = false;
+      this.waveMaterial.opacity = 0;
+    }
 
     /* ---- entrance ---- */
     const heartIn = windowProgress(time, INTRO.heart[0], INTRO.heart[1]);

@@ -55,20 +55,20 @@ interface ChannelTargets {
 
 const TARGETS: Record<PointerState, ChannelTargets> = {
   idle: {
-    activity: 0.18,
-    luminosity: 0.44,
-    networkPresence: 0.6,
-    coreMotion: 0.5,
+    activity: 0.22,
+    luminosity: 0.5,
+    networkPresence: 0.64,
+    coreMotion: 0.55,
   },
   near: {
-    activity: 0.34,
-    luminosity: 0.62,
-    networkPresence: 0.82,
-    coreMotion: 0.7,
+    activity: 0.38,
+    luminosity: 0.66,
+    networkPresence: 0.84,
+    coreMotion: 0.72,
   },
   "over-core": {
-    activity: 0.56,
-    luminosity: 0.88,
+    activity: 0.6,
+    luminosity: 0.9,
     networkPresence: 1,
     coreMotion: 1,
   },
