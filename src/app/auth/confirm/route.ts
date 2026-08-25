@@ -2,33 +2,33 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
-import { getRequestOrigin, safeNextPath } from "@/lib/request-origin";
+import { getRequestOrigin } from "@/lib/request-origin";
 import {
   classifyConfirmationError,
   isRecoveryType,
   redirectWithCookies,
-  resolveUserAuthDestination,
+  getPostAuthDestination,
 } from "@/lib/auth-flow";
+import { safeNextPath } from "@/lib/request-origin";
 
 // ============================================================
 // NEXUS — EMAIL CONFIRMATION ENDPOINT (/auth/confirm)
 //
-// This is the route the Supabase "Confirm signup" email template must point
+// This is the route the Supabase "Confirm signup" email template points
 // to (and the route password-recovery links may use as well):
 //
 //   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
 //   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery
 //
-// It exchanges the token_hash for a real Supabase session on the server,
-// persists that session into the SSR cookies and sends the visitor to the
-// correct NEXUS destination:
+// Lifecycle:
+//   1. Read token_hash + type from URL
+//   2. Validate the token server-side through Supabase
+//   3. Establish the authenticated session (set cookies)
+//   4. For recovery: redirect to /reset-password
+//   5. For signup: ensure workspace, ensure membership, check onboarding
+//   6. Redirect deterministically to /onboarding or /app
 //
-//   recovery          -> /reset-password
-//   signup (verified) -> /onboarding  (onboarding incomplete)
-//                     -> /app         (onboarding complete)
-//   bad link          -> /auth/confirm-error (professional NEXUS error state)
-//
-// It never exposes a raw GoTrue error or a JSON blob to the browser.
+// Never exposes raw Supabase errors or JSON to the browser.
 // ============================================================
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
@@ -68,15 +68,19 @@ export async function GET(request: NextRequest) {
     "This reset link is invalid or has expired. Request a new one."
   )}`;
 
-  // A Google OAuth callback should never land here, but if it does (old link
-  // or a manual URL), keep OAuth in its own well-tested route.
+  // A Google OAuth callback should never land here, but if it does, redirect
+  // to the OAuth callback handler.
   if (source === "oauth") {
-    return NextResponse.redirect(`${origin}/auth/callback${request.nextUrl.search}`);
+    return NextResponse.redirect(
+      `${origin}/auth/callback${request.nextUrl.search}`
+    );
   }
 
   const { config } = readSupabaseConfig();
   if (!config) {
-    return NextResponse.redirect(recovery ? recoveryFailed : confirmErrorUrl(origin, "invalid"));
+    return NextResponse.redirect(
+      recovery ? recoveryFailed : confirmErrorUrl(origin, "invalid")
+    );
   }
 
   // Missing or malformed link — never a raw error page.
@@ -109,6 +113,7 @@ export async function GET(request: NextRequest) {
 
   let confirmError: string | null = null;
   let authUserId: string | null = null;
+  let authUserEmail: string | null = null;
   const otpType = asOtpType(type);
 
   try {
@@ -118,17 +123,29 @@ export async function GET(request: NextRequest) {
         token_hash: tokenHash,
       });
       confirmError = result.error?.message ?? null;
-      authUserId = result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserId =
+        result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserEmail =
+        result.data.user?.email ??
+        result.data.session?.user?.email ??
+        null;
     } else if (code) {
       const result = await supabase.auth.exchangeCodeForSession(code);
       confirmError = result.error?.message ?? null;
-      authUserId = result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserId =
+        result.data.user?.id ?? result.data.session?.user?.id ?? null;
+      authUserEmail =
+        result.data.user?.email ??
+        result.data.session?.user?.email ??
+        null;
     } else {
       confirmError = "Malformed confirmation link.";
     }
   } catch (cause) {
     confirmError =
-      cause instanceof Error ? cause.message : "Authentication failed. Please try again.";
+      cause instanceof Error
+        ? cause.message
+        : "Authentication failed. Please try again.";
   }
 
   // --- Recovery: keep the fresh session, continue to the reset form. -------
@@ -139,12 +156,22 @@ export async function GET(request: NextRequest) {
     return redirectWithCookies(response, `${origin}/reset-password`);
   }
 
-  // --- Email confirmation: verify, then route by account state. ------------
+  // --- Email confirmation: verify, bootstrap, then route by account state. -
   if (confirmError || !authUserId) {
     const reason = classifyConfirmationError(confirmError);
     return NextResponse.redirect(confirmErrorUrl(origin, reason));
   }
 
-  const { destination } = await resolveUserAuthDestination(supabase, authUserId);
-  return redirectWithCookies(response, `${origin}${destination}`);
+  // Bootstrap workspace + membership, then determine destination
+  try {
+    const { destination } = await getPostAuthDestination(
+      supabase,
+      authUserId,
+      authUserEmail ?? undefined
+    );
+    return redirectWithCookies(response, `${origin}${destination}`);
+  } catch {
+    // If bootstrap fails, send to onboarding which will retry
+    return redirectWithCookies(response, `${origin}/onboarding`);
+  }
 }

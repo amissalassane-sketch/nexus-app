@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { humanizeAuthError } from "@/lib/auth-errors";
-import { resolveUserAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Completes a password recovery. The user must already have a session
- * established by /auth/callback after clicking the email link.
+ * established by /auth/confirm or /auth/callback after clicking the email link.
+ *
+ * Password recovery users NEVER go through onboarding — they are existing
+ * users resetting their password. Always redirect to /app.
  */
 export async function POST(request: Request) {
   const { error: configError } = readSupabaseConfig();
@@ -61,10 +63,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const { destination } = await resolveUserAuthDestination(supabase, user.id);
-
+  // Recovery users are existing users — always go to /app, never onboarding.
   return NextResponse.json({
     ok: true,
-    redirectTo: destination,
+    redirectTo: "/app",
   });
 }

@@ -1,11 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
+import { getPostAuthDestination } from "@/lib/auth-flow";
 
 /**
  * Refreshes the Supabase session cookies on every request and enforces
  * route-level authentication. Invoked from `proxy.ts` (Next.js 16 file
  * convention, previously `middleware.ts`).
+ *
+ * Responsibilities:
+ *  1. Refresh session cookies (Supabase SSR)
+ *  2. Redirect unauthenticated users from private routes → /login
+ *  3. Redirect authenticated users from auth forms → correct destination
+ *  4. Intercept stray token_hash/code params → canonical auth routes
+ *
+ * Does NOT check onboarding state (too expensive for middleware).
+ * The app layout handles onboarding gating.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -16,9 +26,6 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // A deployment without Supabase cannot have an authenticated session.
-  // Keep marketing/auth surfaces reachable (the forms explain the missing
-  // configuration), but preserve the protected-route contract instead of
-  // allowing product server components to throw a configuration error.
   if (!config) {
     const publicWithoutAuth =
       pathname === "/" ||
@@ -39,11 +46,7 @@ export async function updateSession(request: NextRequest) {
       : NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Email links sometimes land on Site URL (/), /onboarding or /login with
-  // `?code=` / `?token_hash=` instead of the canonical auth route. Catch them
-  // here so confirmation is handled in one place:
-  //   * token_hash (new NEXUS-branded email template) -> /auth/confirm
-  //   * code (legacy email links and Google OAuth callback) -> /auth/callback
+  // Intercept stray auth codes on non-auth routes
   const authCode = request.nextUrl.searchParams.get("code");
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
   if (
@@ -54,52 +57,46 @@ export async function updateSession(request: NextRequest) {
   ) {
     const target = request.nextUrl.clone();
     target.pathname = tokenHash ? "/auth/confirm" : "/auth/callback";
-    if (pathname.startsWith("/reset-password") && !target.searchParams.get("next")) {
+    if (
+      pathname.startsWith("/reset-password") &&
+      !target.searchParams.get("next")
+    ) {
       target.searchParams.set("next", "/reset-password");
     }
     return NextResponse.redirect(target);
   }
 
-  const supabase = createServerClient(
-    config.url,
-    config.key,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
-          });
-
-          response = NextResponse.next({
-            request,
-          });
-
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
-        },
+  const supabase = createServerClient(config.url, config.key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+
+        response = NextResponse.next({
+          request,
+        });
+
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Route handlers must answer with their own status codes (401/403/400)
-  // instead of being redirected to an HTML page. The session cookies are
-  // still refreshed above, and /api/auth/signin|signup must stay reachable
-  // for users who are in the middle of authenticating.
+  // API routes handle their own auth
   if (pathname.startsWith("/api/")) {
     return response;
   }
 
-  // Public NEXUS Intelligence product landing: /intelligence is a plain
-  // public marketing route for everyone — it never depends on auth or
-  // onboarding state. The authenticated workspace lives at /app/intelligence.
+  // Public routes (marketing + auth surfaces)
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/intelligence" ||
@@ -121,12 +118,25 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/check-email");
 
+  // Unauthenticated users on private routes → /login
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Authenticated users on auth forms → redirect to correct destination
+  // We check onboarding state so users go to /onboarding or /app correctly.
   if (user && isAuthForm) {
-    return NextResponse.redirect(new URL("/app", request.url));
+    try {
+      const { destination } = await getPostAuthDestination(
+        supabase,
+        user.id,
+        user.email
+      );
+      return NextResponse.redirect(new URL(destination, request.url));
+    } catch {
+      // If bootstrap fails, send to /app (the layout will handle it)
+      return NextResponse.redirect(new URL("/app", request.url));
+    }
   }
 
   return response;
