@@ -181,7 +181,8 @@ export async function POST(request: Request) {
   // same ordering that repaired the historical incident. A transient
   // bootstrap failure is reported (diagnostics only) but does not block
   // profile completion: the two state axes stay independent.
-  const membership = await ensurePersonalWorkspaceServer(supabase);
+  const { membership, error: bootstrapError } =
+    await ensurePersonalWorkspaceServer(supabase);
   if (!membership) {
     reportOnboardingDiagnostic({
       requestId,
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
       step: 1,
       userId: user.id,
       operation: "rpc.get_or_create_personal_workspace",
-      message: "bootstrap not verified; profile save continues independently",
+      message: `bootstrap not verified (${bootstrapError}); profile save continues independently`,
     });
   }
 
