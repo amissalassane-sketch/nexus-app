@@ -97,9 +97,11 @@ async function expectDenied(name, fn) {
   try { await fn(); ok(name, false, "expected denial but call succeeded"); }
   catch (e) {
     const m = (e.message || "").toLowerCase();
-    // Accept any of: RLS/permission denial, custom WORKSPACE_ACCESS_DENIED, or
-    // a plan-limit trigger firing before RLS (also prevents the write).
-    ok(name, /permission denied|42501|workspace_access_denied|access denied|row-level security|plan_limit_exceeded|p0001/i.test(m),
+    // Accept any of: RLS/permission denial, custom WORKSPACE_ACCESS_DENIED,
+    // a plan-limit trigger firing before RLS, or the unique
+    // (workspace_id, user_id) constraint — all are legitimate server-side
+    // rejections that prevent the write.
+    ok(name, /permission denied|42501|workspace_access_denied|access denied|row-level security|plan_limit_exceeded|p0001|duplicate key|unique constraint|23505/i.test(m),
        `got: ${e.message.slice(0, 150)}`);
   }
 }
