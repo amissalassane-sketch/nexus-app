@@ -12,7 +12,11 @@ export type AnalyticsEvent =
   | "first_intelligence_interaction"
   | "profile_started"
   | "profile_completed"
-  | "activation_reached";
+  | "activation_reached"
+  | "intelligence_opened"
+  | "intelligence_interaction"
+  | "feature_first_visit"
+  | "tour_replayed";
 
 export function trackEvent(
   event: AnalyticsEvent,

@@ -144,6 +144,7 @@ export function Topbar({
           type="button"
           onClick={onOpenHelp}
           aria-label="NEXUS Guide and help"
+          data-guide="help-button"
           className="hidden h-8 w-8 items-center justify-center rounded-nav text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:flex"
         >
           <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />

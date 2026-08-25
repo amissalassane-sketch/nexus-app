@@ -651,7 +651,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
           <CreateButton
             label="New Task"
             onClick={openCreateForm}
-            data-tour="create-task"
+            data-guide="new-task"
           />
         }
       />
@@ -874,7 +874,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
         }
         footer={
           <>
-            <Button onClick={submitTask} disabled={saving || !workspaceId}>
+            <Button
+              onClick={submitTask}
+              disabled={saving || !workspaceId}
+              data-guide="create-task"
+            >
               {saving
                 ? editingTaskId
                   ? "Saving..."

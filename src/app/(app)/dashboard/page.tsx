@@ -205,7 +205,7 @@ export default async function DashboardPage() {
         : "Your workspace is clear.";
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="page-enter space-y-6" data-guide="dashboard">
       {/* HEADER */}
       <header className="flex flex-col gap-3 border-b border-border-subtle pb-6 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
                 <ButtonLink
                   href="/projects?create=1"
                   size="lg"
-                  data-tour="create-project"
+                  data-guide="new-project"
                 >
                   <FolderKanban size={16} strokeWidth={1.75} />
                   Create your first project

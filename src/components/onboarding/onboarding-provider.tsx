@@ -14,10 +14,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/onboarding/analytics";
 import {
-  GUIDE_STEPS,
+  CONTEXTUAL_TIPS,
+  isActivated,
   isGuideFinished,
   mergeOnboarding,
   nextPendingStep,
+  pickGuidanceLayer,
   shouldAutoStartGuide,
   type OnboardingStepId,
   type PersistedOnboarding,
@@ -30,6 +32,7 @@ import {
   writeRemoteOnboarding,
 } from "@/lib/onboarding/persistence";
 import { GuidedTour } from "@/components/onboarding/guided-tour";
+import { WelcomeScreen } from "@/components/onboarding/welcome-screen";
 import { GetStartedChecklist } from "@/components/onboarding/checklist";
 import { HelpCenter } from "@/components/onboarding/help-center";
 import { ContextualTip } from "@/components/onboarding/contextual-tip";
@@ -38,7 +41,7 @@ type OnboardingContextValue = {
   facts: ProductFacts;
   state: PersistedOnboarding;
   tourActive: boolean;
-  guidanceMode: "tour" | "tip" | "checklist" | "help" | "none";
+  guidanceMode: ReturnType<typeof pickGuidanceLayer>;
   startGuide: () => void;
   skipGuide: () => void;
   completeWelcome: () => void;
@@ -142,9 +145,7 @@ export function OnboardingProvider({
     const boot = async () => {
       const local = readLocalOnboarding(userId);
       const remote = await readRemoteOnboarding(createClient(), userId);
-      const merged = remote
-        ? mergeOnboarding(local, remote)
-        : local;
+      const merged = remote ? mergeOnboarding(local, remote) : local;
       if (cancelled) return;
       setState(merged);
       setHydrated(true);
@@ -159,48 +160,63 @@ export function OnboardingProvider({
     state.status === "idle" && shouldAutoStartGuide(state, facts)
       ? "welcome"
       : state.status === "active" &&
-          isGuideFinished(facts, state.completedSteps)
+          isGuideFinished(facts, state.completedSteps, pathname)
         ? "completed"
         : state.status;
-
-
 
   useEffect(() => {
     const onActivation = (event: Event) => {
       const type = (event as CustomEvent<{ type?: string }>).detail?.type;
-      if (type === "project_created" && !firstFlags.current.project) {
-        firstFlags.current.project = true;
-        trackEvent("first_project_created");
+      if (type === "project_created") {
+        if (!firstFlags.current.project) {
+          firstFlags.current.project = true;
+          trackEvent("first_project_created");
+        }
         persist({
           ...state,
           completedSteps: Array.from(
-            new Set([...state.completedSteps, "create_project"])
+            new Set([...state.completedSteps, "navigate_projects", "create_project"])
           ) as OnboardingStepId[],
         });
+        return;
       }
-      if (type === "task_created" && !firstFlags.current.task) {
-        firstFlags.current.task = true;
-        trackEvent("first_task_created");
+      if (type === "task_created") {
+        if (!firstFlags.current.task) {
+          firstFlags.current.task = true;
+          trackEvent("first_task_created");
+        }
         persist({
           ...state,
           completedSteps: Array.from(
-            new Set([...state.completedSteps, "create_task"])
+            new Set([...state.completedSteps, "navigate_tasks", "create_task"])
           ) as OnboardingStepId[],
         });
+        return;
       }
-      if (type === "goal_created" && !firstFlags.current.goal) {
-        firstFlags.current.goal = true;
-        trackEvent("first_goal_created");
+      if (type === "goal_created") {
+        if (!firstFlags.current.goal) {
+          firstFlags.current.goal = true;
+          trackEvent("first_goal_created");
+        }
+        return;
       }
       if (type === "intelligence") {
         persist({
           ...state,
           intelligenceInteracted: true,
           completedSteps: Array.from(
-            new Set([...state.completedSteps, "intelligence"])
+            new Set([
+              ...state.completedSteps,
+              "navigate_intelligence",
+              "interact_intelligence",
+            ])
           ) as OnboardingStepId[],
         });
         trackEvent("first_intelligence_interaction");
+        if (projectCount > 0 && taskCount > 0) {
+          trackEvent("activation_reached");
+        }
+        return;
       }
       if (type === "profile_completed") {
         trackEvent("profile_completed");
@@ -208,7 +224,7 @@ export function OnboardingProvider({
     };
     window.addEventListener("nexus:activation", onActivation);
     return () => window.removeEventListener("nexus:activation", onActivation);
-  }, [persist, state]);
+  }, [persist, projectCount, state, taskCount]);
 
   const startGuide = useCallback(() => {
     persist({
@@ -218,6 +234,7 @@ export function OnboardingProvider({
       skippedAt: null,
     });
     trackEvent("onboarding_started");
+    trackEvent("tour_replayed");
   }, [persist, state]);
 
   const skipGuide = useCallback(() => {
@@ -239,17 +256,24 @@ export function OnboardingProvider({
       startedAt: state.startedAt ?? new Date().toISOString(),
       completedSteps: nextSteps,
     });
+    trackEvent("onboarding_started");
     trackEvent("onboarding_step_completed", { step: "welcome" });
-    const next = nextPendingStep(facts, nextSteps);
-    if (next?.href) router.push(next.href);
-  }, [facts, persist, router, state]);
+    const next = nextPendingStep(facts, nextSteps, pathname);
+    if (next?.href && next.expectedAction === "navigate") {
+      router.push(next.href);
+    }
+  }, [facts, pathname, persist, router, state]);
 
   const markIntelligence = useCallback(() => {
     persist({
       ...state,
       intelligenceInteracted: true,
       completedSteps: Array.from(
-        new Set([...state.completedSteps, "intelligence"])
+        new Set([
+          ...state.completedSteps,
+          "navigate_intelligence",
+          "interact_intelligence",
+        ])
       ) as OnboardingStepId[],
     });
     trackEvent("first_intelligence_interaction");
@@ -257,25 +281,40 @@ export function OnboardingProvider({
 
   const tourActive =
     hydrated &&
-    (derivedStatus === "welcome" || derivedStatus === "active") &&
-    !isGuideFinished(facts, state.completedSteps);
+    derivedStatus === "active" &&
+    !isGuideFinished(facts, state.completedSteps, pathname);
 
-  const currentStep =
-    derivedStatus === "welcome"
-      ? GUIDE_STEPS[0]
-      : nextPendingStep(facts, state.completedSteps);
+  const showWelcome =
+    hydrated && derivedStatus === "welcome" && !state.completedSteps.includes("welcome");
 
-  const guidanceMode: OnboardingContextValue["guidanceMode"] = helpOpen
-    ? "help"
-    : tourActive
-      ? "tour"
-      : "checklist";
+  const currentStep = nextPendingStep(facts, state.completedSteps, pathname);
+
+  const activated = isActivated(facts);
+  const checklistVisible =
+    !showWelcome &&
+    !tourActive &&
+    !helpOpen &&
+    (!state.dismissedChecklist || !activated);
+
+  const tipVisible =
+    !showWelcome &&
+    !tourActive &&
+    !helpOpen &&
+    Boolean(CONTEXTUAL_TIPS[pathname]) &&
+    !state.seenTips.includes(pathname);
+
+  const guidanceMode = pickGuidanceLayer({
+    helpOpen,
+    tourActive: showWelcome || tourActive,
+    tipVisible,
+    checklistVisible,
+  });
 
   const value = useMemo(
     () => ({
       facts,
       state,
-      tourActive,
+      tourActive: showWelcome || tourActive,
       guidanceMode,
       startGuide,
       skipGuide,
@@ -289,6 +328,7 @@ export function OnboardingProvider({
       facts,
       guidanceMode,
       markIntelligence,
+      showWelcome,
       skipGuide,
       startGuide,
       state,
@@ -299,23 +339,27 @@ export function OnboardingProvider({
   return (
     <OnboardingContext.Provider value={value}>
       {children}
-      {guidanceMode === "tour" && currentStep ? (
+      {showWelcome ? (
+        <WelcomeScreen onStart={completeWelcome} onExplore={skipGuide} />
+      ) : null}
+      {guidanceMode === "tour" && currentStep && !showWelcome ? (
         <GuidedTour
           step={currentStep}
           onSkip={skipGuide}
           onWelcome={completeWelcome}
         />
       ) : null}
-      {guidanceMode !== "tour" ? (
+      {guidanceMode === "checklist" ? (
         <GetStartedChecklist
           facts={facts}
-          dismissed={state.dismissedChecklist}
+          dismissed={state.dismissedChecklist || activated}
+          activated={activated}
           onDismiss={() => persist({ ...state, dismissedChecklist: true })}
           onRestore={() => persist({ ...state, dismissedChecklist: false })}
           onRestart={startGuide}
         />
       ) : null}
-      {guidanceMode !== "tour" && !helpOpen ? (
+      {guidanceMode === "tip" ? (
         <ContextualTip
           pathname={pathname}
           seen={state.seenTips}
@@ -326,8 +370,19 @@ export function OnboardingProvider({
       ) : null}
       <HelpCenter
         open={helpOpen}
+        incomplete={
+          state.status !== "completed" &&
+          state.status !== "skipped" &&
+          !activated
+        }
         onClose={() => setHelpOpen(false)}
         onRestart={startGuide}
+        onContinue={() => {
+          setHelpOpen(false);
+          if (state.status === "skipped") {
+            persist({ ...state, status: "active" });
+          }
+        }}
       />
     </OnboardingContext.Provider>
   );

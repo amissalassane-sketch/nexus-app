@@ -206,7 +206,7 @@ export function WorkspaceSidebar({
               type="button"
               ref={ref}
               onClick={toggle}
-              data-tour="create-project"
+              data-guide="create-project"
               className="flex h-9 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99]"
               {...ariaProps}
             >
@@ -225,7 +225,7 @@ export function WorkspaceSidebar({
           <DropdownLink
             href="/projects?create=1"
             icon={<FolderKanban size={15} strokeWidth={1.75} />}
-            data-tour="create-project"
+            data-guide="new-project"
           >
             Project
           </DropdownLink>
@@ -257,14 +257,18 @@ export function WorkspaceSidebar({
                 countTone={item.accentCount ? "accent" : "muted"}
                 onNavigate={onNavigate}
                 icon={<item.icon size={15} strokeWidth={1.75} />}
-                data-tour={
+                data-guide={
                   item.href === "/app/intelligence"
-                    ? "nav-intelligence"
+                    ? "intelligence-nav"
                     : item.href === "/projects"
-                      ? "nav-projects"
+                      ? "projects-nav"
                       : item.href === "/tasks"
-                        ? "nav-tasks"
-                        : undefined
+                        ? "tasks-nav"
+                        : item.href === "/goals"
+                          ? "goals-nav"
+                          : item.href === "/dashboard"
+                            ? "dashboard"
+                            : undefined
                 }
               />
               ))}
@@ -282,6 +286,7 @@ export function WorkspaceSidebar({
               active={isNavActive(pathname, item.href)}
               onNavigate={onNavigate}
               icon={<item.icon size={15} strokeWidth={1.75} />}
+              data-guide={item.href === "/settings" ? "settings-nav" : undefined}
             />
           ))}
         </div>

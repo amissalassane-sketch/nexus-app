@@ -1,15 +1,19 @@
 // ============================================================
-// NEXUS — ONBOARDING PRODUCT MODEL
-// Declarative first-run guidance. Completion is driven by real
-// product state (projects, tasks, intelligence use), not by
-// clicking "Next". Tour completion is never treated as activation.
+// NEXUS — GUIDANCE MODEL (second pass)
+// Action-based. Navigation can advance a *navigate* step.
+// Create / interact steps require real product facts.
 // ============================================================
+
+import type { CopyKey } from "@/lib/onboarding/i18n";
 
 export const ONBOARDING_STEPS = [
   "welcome",
+  "navigate_projects",
   "create_project",
+  "navigate_tasks",
   "create_task",
-  "intelligence",
+  "navigate_intelligence",
+  "interact_intelligence",
 ] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
@@ -27,6 +31,10 @@ export type ProductFacts = {
   goalCount: number;
   profileComplete: boolean;
   intelligenceInteracted: boolean;
+};
+
+export type GuideContext = ProductFacts & {
+  pathname: string;
 };
 
 export type PersistedOnboarding = {
@@ -51,6 +59,8 @@ export const EMPTY_ONBOARDING: PersistedOnboarding = {
   completedAt: null,
 };
 
+export type ExpectedAction = "acknowledge" | "navigate" | "create" | "interact";
+
 export type GuideStep = {
   id: OnboardingStepId;
   title: string;
@@ -58,7 +68,10 @@ export type GuideStep = {
   actionLabel?: string;
   target?: string;
   href?: string;
-  completion: keyof ProductFacts | "welcome";
+  expectedAction: ExpectedAction;
+  titleKey: CopyKey;
+  bodyKey: CopyKey;
+  actionKey?: CopyKey;
 };
 
 export const GUIDE_STEPS: GuideStep[] = [
@@ -66,45 +79,96 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "welcome",
     title: "Welcome to NEXUS.",
     description:
-      "This is your workspace. I’ll help you get set up in a few steps — by doing the work, not watching a tour.",
-    actionLabel: "Let’s get started",
-    completion: "welcome",
+      "Let’s get your workspace ready. I’ll guide you through the essentials.",
+    actionLabel: "Get started",
+    expectedAction: "acknowledge",
+    titleKey: "guide.welcome.title",
+    bodyKey: "guide.welcome.body",
+    actionKey: "guide.welcome.action",
+  },
+  {
+    id: "navigate_projects",
+    title: "First, let’s create your first project.",
+    description:
+      "Projects are where you organize a major piece of work. Open Projects in the sidebar.",
+    actionLabel: "Open Projects",
+    target: "[data-guide='projects-nav']",
+    href: "/projects",
+    expectedAction: "navigate",
+    titleKey: "guide.navigate_projects.title",
+    bodyKey: "guide.navigate_projects.body",
+    actionKey: "guide.navigate_projects.action",
   },
   {
     id: "create_project",
-    title: "This is your command center.",
+    title: "You’re in Projects.",
     description:
-      "Everything you work on in NEXUS comes together here. Create your first project so NEXUS has something to organize.",
-    actionLabel: "Create a project",
-    target: "[data-tour='create-project']",
+      "Create your first project. Give it a name and save it — NEXUS waits for the real project.",
+    actionLabel: "New project",
+    target: "[data-guide='new-project']",
     href: "/projects?create=1",
-    completion: "projectCount",
+    expectedAction: "create",
+    titleKey: "guide.create_project.title",
+    bodyKey: "guide.create_project.body",
+    actionKey: "guide.create_project.action",
+  },
+  {
+    id: "navigate_tasks",
+    title: "Your first project is ready.",
+    description: "Now give that project something to work on. Open Tasks.",
+    actionLabel: "Open Tasks",
+    target: "[data-guide='tasks-nav']",
+    href: "/tasks",
+    expectedAction: "navigate",
+    titleKey: "guide.navigate_tasks.title",
+    bodyKey: "guide.navigate_tasks.body",
+    actionKey: "guide.navigate_tasks.action",
   },
   {
     id: "create_task",
-    title: "Your first project is ready.",
+    title: "Create your first task.",
     description:
-      "Tasks turn plans into action. Add what needs to be done so the work stays connected to the project.",
-    actionLabel: "Add a task",
-    target: "[data-tour='create-task']",
+      "Tasks turn projects into executable work. Add a real task to continue.",
+    actionLabel: "New task",
+    target: "[data-guide='new-task']",
     href: "/tasks?create=1",
-    completion: "taskCount",
+    expectedAction: "create",
+    titleKey: "guide.create_task.title",
+    bodyKey: "guide.create_task.body",
+    actionKey: "guide.create_task.action",
   },
   {
-    id: "intelligence",
-    title: "This is NEXUS Intelligence.",
+    id: "navigate_intelligence",
+    title: "Meet the intelligence layer.",
     description:
-      "It helps you understand your work, identify what matters, and turn information into action. Open it and ask NEXUS about your workspace.",
+      "NEXUS Intelligence helps you understand your work and turn context into action.",
     actionLabel: "Open Intelligence",
-    target: "[data-tour='nav-intelligence']",
+    target: "[data-guide='intelligence-nav']",
     href: "/app/intelligence",
-    completion: "intelligenceInteracted",
+    expectedAction: "navigate",
+    titleKey: "guide.navigate_intelligence.title",
+    bodyKey: "guide.navigate_intelligence.body",
+    actionKey: "guide.navigate_intelligence.action",
+  },
+  {
+    id: "interact_intelligence",
+    title: "Ask NEXUS about your workspace.",
+    description:
+      "Try asking something about your workspace. Opening the page is not enough.",
+    actionLabel: "Ask NEXUS",
+    target: "[data-guide='intelligence-input']",
+    href: "/app/intelligence",
+    expectedAction: "interact",
+    titleKey: "guide.interact_intelligence.title",
+    bodyKey: "guide.interact_intelligence.body",
+    actionKey: "guide.interact_intelligence.action",
   },
 ];
 
 export type ChecklistItem = {
   id: string;
   label: string;
+  labelKey: CopyKey;
   href: string;
   done: (facts: ProductFacts) => boolean;
 };
@@ -113,84 +177,127 @@ export const CHECKLIST_ITEMS: ChecklistItem[] = [
   {
     id: "project",
     label: "Create your first project",
+    labelKey: "checklist.project",
     href: "/projects?create=1",
     done: (facts) => facts.projectCount > 0,
   },
   {
     id: "task",
-    label: "Add your first task",
+    label: "Create your first task",
+    labelKey: "checklist.task",
     href: "/tasks?create=1",
     done: (facts) => facts.taskCount > 0,
   },
   {
     id: "intelligence",
-    label: "Explore Intelligence",
+    label: "Try NEXUS Intelligence",
+    labelKey: "checklist.intelligence",
     href: "/app/intelligence",
     done: (facts) => facts.intelligenceInteracted,
   },
   {
-    id: "profile",
-    label: "Complete your profile",
-    href: "/settings?tab=profile",
-    done: (facts) => facts.profileComplete,
+    id: "goal",
+    label: "Create your first goal",
+    labelKey: "checklist.goal",
+    href: "/goals?create=1",
+    done: (facts) => facts.goalCount > 0,
   },
 ];
 
 export const CONTEXTUAL_TIPS: Record<
   string,
-  { title: string; body: string }
+  { title: string; body: string; titleKey: CopyKey; bodyKey: CopyKey }
 > = {
   "/projects": {
     title: "Projects",
-    body: "Organize your work around outcomes. NEXUS uses them to detect risk and momentum.",
+    body: "Projects are where your major work lives.",
+    titleKey: "tip.projects.title",
+    bodyKey: "tip.projects.body",
   },
   "/tasks": {
     title: "Tasks",
-    body: "Turn projects into actionable work. Dates and priority help Intelligence see what matters.",
+    body: "Tasks turn projects into executable work.",
+    titleKey: "tip.tasks.title",
+    bodyKey: "tip.tasks.body",
   },
   "/goals": {
     title: "Goals",
-    body: "Keep your work aligned with what you are trying to achieve.",
+    body: "Goals help you keep your work aligned with outcomes.",
+    titleKey: "tip.goals.title",
+    bodyKey: "tip.goals.body",
   },
   "/app/intelligence": {
     title: "Intelligence",
-    body: "Ask NEXUS to help you understand and act on your work. Every signal is derived from your data.",
+    body: "Intelligence connects your context and helps you act on it.",
+    titleKey: "tip.intelligence.title",
+    bodyKey: "tip.intelligence.body",
+  },
+  "/settings": {
+    title: "Settings",
+    body: "Manage your workspace and preferences here.",
+    titleKey: "tip.settings.title",
+    bodyKey: "tip.settings.body",
   },
 };
+
+export function isOnProjects(pathname: string): boolean {
+  return pathname === "/projects" || pathname.startsWith("/projects/");
+}
+
+export function isOnTasks(pathname: string): boolean {
+  return pathname === "/tasks" || pathname.startsWith("/tasks/");
+}
+
+export function isOnIntelligence(pathname: string): boolean {
+  return pathname.includes("/intelligence");
+}
 
 export function isStepSatisfied(
   step: GuideStep,
   facts: ProductFacts,
-  completedSteps: OnboardingStepId[]
+  completedSteps: OnboardingStepId[],
+  pathname = ""
 ): boolean {
   if (completedSteps.includes(step.id)) return true;
-  if (step.completion === "welcome") return completedSteps.includes("welcome");
-  if (step.completion === "projectCount") return facts.projectCount > 0;
-  if (step.completion === "taskCount") return facts.taskCount > 0;
-  if (step.completion === "intelligenceInteracted") {
-    return facts.intelligenceInteracted;
+  switch (step.id) {
+    case "welcome":
+      return completedSteps.includes("welcome");
+    case "navigate_projects":
+      return facts.projectCount > 0 || isOnProjects(pathname);
+    case "create_project":
+      return facts.projectCount > 0;
+    case "navigate_tasks":
+      return facts.taskCount > 0 || isOnTasks(pathname);
+    case "create_task":
+      return facts.taskCount > 0;
+    case "navigate_intelligence":
+      return facts.intelligenceInteracted || isOnIntelligence(pathname);
+    case "interact_intelligence":
+      return facts.intelligenceInteracted;
+    default:
+      return false;
   }
-  return false;
 }
 
 export function nextPendingStep(
   facts: ProductFacts,
-  completedSteps: OnboardingStepId[]
+  completedSteps: OnboardingStepId[],
+  pathname = ""
 ): GuideStep | null {
   for (const step of GUIDE_STEPS) {
-    if (!isStepSatisfied(step, facts, completedSteps)) return step;
+    if (!isStepSatisfied(step, facts, completedSteps, pathname)) return step;
   }
   return null;
 }
 
 export function isGuideFinished(
   facts: ProductFacts,
-  completedSteps: OnboardingStepId[]
+  completedSteps: OnboardingStepId[],
+  pathname = ""
 ): boolean {
-  return nextPendingStep(facts, completedSteps) === null;
+  return nextPendingStep(facts, completedSteps, pathname) === null;
 }
 
-/** Activation is first meaningful value — not signup, not tour done. */
 export function isActivated(facts: ProductFacts): boolean {
   return (
     facts.projectCount > 0 &&
@@ -217,7 +324,6 @@ export function shouldAutoStartGuide(
   if (persisted.status === "welcome" || persisted.status === "active") {
     return !isGuideFinished(facts, persisted.completedSteps);
   }
-  // First visit: idle. Experienced users (already have work) skip first-run.
   if (facts.projectCount > 0 && facts.taskCount > 0) return false;
   return true;
 }
@@ -251,17 +357,23 @@ export function parseOnboarding(raw: unknown): PersistedOnboarding {
     value.status === "completed"
       ? value.status
       : "idle";
-  const completedSteps = Array.isArray(value.completedSteps)
-    ? value.completedSteps.filter((id): id is OnboardingStepId =>
-        (ONBOARDING_STEPS as readonly string[]).includes(id)
-      )
+  const rawSteps = Array.isArray(value.completedSteps)
+    ? (value.completedSteps as unknown[])
     : [];
+  const legacy = rawSteps.flatMap((id): OnboardingStepId[] => {
+    if (typeof id !== "string") return [];
+    if ((ONBOARDING_STEPS as readonly string[]).includes(id)) {
+      return [id as OnboardingStepId];
+    }
+    if (id === "intelligence") return ["interact_intelligence"];
+    return [];
+  });
   const seenTips = Array.isArray(value.seenTips)
     ? value.seenTips.filter((id): id is string => typeof id === "string")
     : [];
   return {
     status,
-    completedSteps,
+    completedSteps: ONBOARDING_STEPS.filter((id) => legacy.includes(id)),
     dismissedChecklist: Boolean(value.dismissedChecklist),
     seenTips,
     intelligenceInteracted: Boolean(value.intelligenceInteracted),
@@ -270,4 +382,24 @@ export function parseOnboarding(raw: unknown): PersistedOnboarding {
     completedAt:
       typeof value.completedAt === "string" ? value.completedAt : null,
   };
+}
+
+/** Clicking Next / Continue never completes a create or interact step. */
+export function canAdvanceWithoutProductEvent(step: GuideStep): boolean {
+  return step.expectedAction === "acknowledge" || step.expectedAction === "navigate";
+}
+
+export type GuidanceLayer = "tour" | "help" | "tip" | "checklist" | "none";
+
+export function pickGuidanceLayer(input: {
+  helpOpen: boolean;
+  tourActive: boolean;
+  tipVisible: boolean;
+  checklistVisible: boolean;
+}): GuidanceLayer {
+  if (input.helpOpen) return "help";
+  if (input.tourActive) return "tour";
+  if (input.tipVisible) return "tip";
+  if (input.checklistVisible) return "checklist";
+  return "none";
 }

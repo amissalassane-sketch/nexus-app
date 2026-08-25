@@ -386,7 +386,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           <CreateButton
             label="New Project"
             onClick={openCreateForm}
-            data-tour="create-project"
+            data-guide="new-project"
           />
         }
       />
@@ -597,7 +597,11 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         }
         footer={
           <>
-            <Button onClick={submitProject} disabled={saving || !workspaceId}>
+            <Button
+              onClick={submitProject}
+              disabled={saving || !workspaceId}
+              data-guide="create-project"
+            >
               {saving
                 ? editingProjectId
                   ? "Saving..."
@@ -616,6 +620,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           <Field label="Name" htmlFor="project-name">
             <Input
               id="project-name"
+              data-guide="project-name"
               value={form.name}
               onChange={(event) =>
                 setForm((current) => ({ ...current, name: event.target.value }))

@@ -8,24 +8,28 @@ import {
   checklistProgress,
   type ProductFacts,
 } from "@/lib/onboarding/model";
+import { browserLocale, t } from "@/lib/onboarding/i18n";
 
 export function GetStartedChecklist({
   facts,
   dismissed,
+  activated,
   onDismiss,
   onRestore,
   onRestart,
 }: {
   facts: ProductFacts;
   dismissed: boolean;
+  activated?: boolean;
   onDismiss: () => void;
   onRestore: () => void;
   onRestart: () => void;
 }) {
+  const locale = browserLocale();
   const { done, total } = checklistProgress(facts);
-  const [open, setOpen] = useState(!dismissed && done < total);
+  const [open, setOpen] = useState(!dismissed && done < total && !activated);
 
-  if (done === total) return null;
+  if (done === total && dismissed) return null;
 
   if (dismissed || !open) {
     return (
@@ -36,23 +40,28 @@ export function GetStartedChecklist({
           setOpen(true);
         }}
         className="fixed bottom-[84px] right-4 z-40 inline-flex h-10 items-center gap-2 rounded-pill border border-border-default bg-bg-surface px-3 text-caption text-text-secondary shadow-dropdown hover:text-text-primary lg:bottom-5"
-        aria-label="Open get started checklist"
+        aria-label={t("checklist.title", locale)}
       >
         <CircleHelp size={14} strokeWidth={1.75} />
-        Get started · {done}/{total}
+        {activated
+          ? t("checklist.progress", locale)
+          : t("checklist.title", locale)}{" "}
+        · {done}/{total}
       </button>
     );
   }
 
   return (
     <section
-      aria-label="Get started with NEXUS"
+      aria-label={t("checklist.title", locale)}
       className="fixed bottom-[84px] right-4 z-40 w-[min(320px,calc(100vw-24px))] rounded-card border border-border-default bg-bg-surface p-3.5 shadow-dropdown lg:bottom-5"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-body-medium text-text-primary">
-            Get started with NEXUS
+            {activated
+              ? t("checklist.progress", locale)
+              : t("checklist.title", locale)}
           </p>
           <p className="mt-0.5 font-mono text-mono text-text-tertiary">
             {done} / {total}
@@ -70,6 +79,11 @@ export function GetStartedChecklist({
           <Minus size={14} />
         </button>
       </div>
+      {activated ? (
+        <p className="mt-2 text-small text-text-secondary">
+          {t("activated.body", locale)}
+        </p>
+      ) : null}
       <ul className="mt-3 space-y-1.5">
         {CHECKLIST_ITEMS.map((item) => {
           const complete = item.done(facts);
@@ -89,7 +103,7 @@ export function GetStartedChecklist({
                   {complete ? <Check size={10} strokeWidth={2.5} /> : null}
                 </span>
                 <span className={complete ? "text-text-tertiary line-through" : ""}>
-                  {item.label}
+                  {t(item.labelKey, locale)}
                 </span>
               </Link>
             </li>
@@ -101,7 +115,7 @@ export function GetStartedChecklist({
         onClick={onRestart}
         className="mt-2 text-caption text-text-tertiary hover:text-text-primary"
       >
-        Restart the guide
+        {t("checklist.restart", locale)}
       </button>
     </section>
   );

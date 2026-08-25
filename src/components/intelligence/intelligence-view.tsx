@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { emitActivation } from "@/lib/onboarding/analytics";
 import Link from "next/link";
+import { IntelligenceAsk } from "@/components/intelligence/intelligence-ask";
+
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/feedback";
 import { SignalCard } from "@/components/intelligence/signal-card";
@@ -73,10 +74,8 @@ export function IntelligenceView({
   };
 
   return (
-    <div
-      className="flex flex-col gap-5"
-      onPointerDown={() => emitActivation("intelligence")}
-    >
+    <div className="flex flex-col gap-5">
+      <IntelligenceAsk context={context} />
       <IntelligenceCanvas
         context={context}
         signalCount={visible.length}

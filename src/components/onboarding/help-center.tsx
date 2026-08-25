@@ -3,44 +3,34 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { browserLocale, t } from "@/lib/onboarding/i18n";
 
 const TOPICS = [
+  { titleKey: "tip.projects.title" as const, bodyKey: "tip.projects.body" as const, href: "/projects" },
+  { titleKey: "tip.tasks.title" as const, bodyKey: "tip.tasks.body" as const, href: "/tasks" },
+  { titleKey: "tip.goals.title" as const, bodyKey: "tip.goals.body" as const, href: "/goals" },
   {
-    title: "Overview",
-    body: "Your command center. What needs attention, and what to do next.",
-    href: "/dashboard",
-  },
-  {
-    title: "Projects",
-    body: "Organize work around outcomes so NEXUS can track risk and momentum.",
-    href: "/projects",
-  },
-  {
-    title: "Tasks",
-    body: "Turn plans into action. Dates and priority feed Intelligence.",
-    href: "/tasks",
-  },
-  {
-    title: "Goals",
-    body: "Keep work aligned with what you are trying to achieve.",
-    href: "/goals",
-  },
-  {
-    title: "Intelligence",
-    body: "Ask NEXUS to understand your workspace and recommend the next step.",
+    titleKey: "tip.intelligence.title" as const,
+    bodyKey: "tip.intelligence.body" as const,
     href: "/app/intelligence",
   },
 ];
 
 export function HelpCenter({
   open,
+  incomplete,
   onClose,
   onRestart,
+  onContinue,
 }: {
   open: boolean;
+  incomplete?: boolean;
   onClose: () => void;
   onRestart: () => void;
+  onContinue?: () => void;
 }) {
+  const locale = browserLocale();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -68,12 +58,12 @@ export function HelpCenter({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="eyebrow text-text-quaternary">NEXUS Guide</p>
+            <p className="eyebrow text-text-quaternary">{t("guide.kicker", locale)}</p>
             <h2
               id="nexus-help-title"
               className="mt-1 text-[18px] font-semibold text-text-primary"
             >
-              Help
+              {t("help.title", locale)}
             </h2>
           </div>
           <button
@@ -93,27 +83,43 @@ export function HelpCenter({
                 onClick={onClose}
                 className="block py-3 hover:bg-accent-ghost"
               >
-                <p className="text-body-medium text-text-primary">{topic.title}</p>
+                <p className="text-body-medium text-text-primary">
+                  {t(topic.titleKey, locale)}
+                </p>
                 <p className="mt-0.5 text-small text-text-secondary">
-                  {topic.body}
+                  {t(topic.bodyKey, locale)}
                 </p>
               </Link>
             </li>
           ))}
         </ul>
         <p className="mt-4 text-caption text-text-tertiary">
-          Shortcuts: ⌘K search · C create · Esc close
+          {t("help.shortcuts", locale)}
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            onRestart();
-            onClose();
-          }}
-          className="mt-3 inline-flex h-9 items-center rounded-input border border-border-default px-3 text-button text-text-secondary hover:text-text-primary"
-        >
-          Restart first-run guide
-        </button>
+        {incomplete ? (
+          <button
+            type="button"
+            onClick={() => {
+              onContinue?.();
+              onRestart();
+              onClose();
+            }}
+            className="mt-3 inline-flex h-9 items-center rounded-input border border-border-default px-3 text-button text-text-secondary hover:text-text-primary"
+          >
+            {t("help.continue", locale)}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              onRestart();
+              onClose();
+            }}
+            className="mt-3 inline-flex h-9 items-center rounded-input border border-border-default px-3 text-button text-text-secondary hover:text-text-primary"
+          >
+            {t("help.replay", locale)}
+          </button>
+        )}
       </div>
     </div>
   );
