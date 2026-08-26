@@ -16,11 +16,18 @@ import {
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
 import { runAgentDeterministic } from "@/lib/intelligence/agent";
+import {
+  applyActionSuccess,
+  emptyMemoryState,
+  updateMemoryAfterTurn,
+} from "@/lib/intelligence/memory";
 import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
   ActionVerification,
   AgentRunResult,
+  IntelligenceMemoryState,
+  IntelligencePreference,
 } from "@/lib/intelligence/types";
 import { emitActivation, trackEvent } from "@/lib/onboarding/analytics";
 import { cn } from "@/lib/cn";
@@ -55,6 +62,42 @@ interface HistoryEntry {
   timestamp: string;
 }
 
+interface CachedMemory {
+  state: IntelligenceMemoryState;
+  preferences: IntelligencePreference[];
+}
+
+/** Local mirror of the server-persisted working memory. It survives
+ *  refresh and other tabs of the same workspace; the server row stays
+ *  the source of truth (the cache only bootstraps the offline/fallback
+ *  path and quick UI continuity). */
+const MEMORY_CACHE_KEY = "nexus.intelligence.memory.v1";
+
+function loadCachedMemory(): CachedMemory | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(MEMORY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedMemory;
+    if (parsed && typeof parsed === "object" && parsed.state && typeof parsed.state === "object") {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheMemory(memory: CachedMemory | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (memory) window.localStorage.setItem(MEMORY_CACHE_KEY, JSON.stringify(memory));
+    else window.localStorage.removeItem(MEMORY_CACHE_KEY);
+  } catch {
+    // Storage unavailable (private mode / quota) — non-blocking.
+  }
+}
+
 function sessionHistoryPayload(history: HistoryEntry[]) {
   return history.map((h) => ({
     id: h.id,
@@ -75,6 +118,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cachedMemory, setCachedMemory] = useState<CachedMemory | null>(() => loadCachedMemory());
 
   // Agentic trace — the real steps the server ran (tools, plan).
   const [agentRun, setAgentRun] = useState<AgentRunResult | null>(null);
@@ -128,6 +172,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         body: JSON.stringify({
           query: value,
           sessionHistory: sessionHistoryPayload(history),
+          memory: cachedMemory ?? undefined,
         }),
         signal: controller.signal,
       });
@@ -140,6 +185,16 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           const structured = data.response as StructuredIntelligenceResponse;
           setCurrentResponse(structured);
           if (data.agent) setAgentRun(data.agent as AgentRunResult);
+          // Server-persisted memory comes back — keep the local mirror
+          // fresh (refresh / other tabs).
+          if (data.memory?.state) {
+            const next: CachedMemory = {
+              state: data.memory.state,
+              preferences: data.memory.preferences ?? [],
+            };
+            setCachedMemory(next);
+            cacheMemory(next);
+          }
           setHistory((prev) => [
             {
               id: `hist-${Date.now()}`,
@@ -162,16 +217,31 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     }
 
     // Deterministic fallback — the full agent loop still runs locally:
-    // intent → real read tools → plan → response (honest nexus-engine).
+    // memory retrieval → reference resolution → real read tools →
+    // plan → response (honest nexus-engine). The memory mirror keeps
+    // working across refreshes even when the API is unavailable.
     const fallback = runAgentDeterministic({
       workspaceId: "client",
       query: value,
       snapshot,
       context: buildWorkspaceContext("client", snapshot),
       sessionHistory: sessionHistoryPayload(history),
+      memory: cachedMemory?.state,
+      preferences: cachedMemory?.preferences,
     });
     setCurrentResponse(fallback.response);
     setAgentRun(fallback.agent);
+    const nextState = updateMemoryAfterTurn(
+      cachedMemory?.state ?? emptyMemoryState(),
+      fallback.response,
+      snapshot
+    );
+    const nextCache: CachedMemory = {
+      state: nextState,
+      preferences: cachedMemory?.preferences ?? [],
+    };
+    setCachedMemory(nextCache);
+    cacheMemory(nextCache);
     setHistory((prev) => [
       {
         id: `hist-${Date.now()}`,
@@ -213,6 +283,32 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           verification: data.verification,
         });
         setConfirmingAction(null);
+
+        // ---- Memory: reflect the verified mutation ----------------
+        // The server already persisted the updated memory; mirror it
+        // locally (fall back to a local pure update when absent).
+        if (data.memory?.state) {
+          const next: CachedMemory = {
+            state: data.memory.state,
+            preferences: data.memory.preferences ?? cachedMemory?.preferences ?? [],
+          };
+          setCachedMemory(next);
+          cacheMemory(next);
+        } else if (cachedMemory?.state) {
+          const entityType =
+            action.type.includes("project") ? "project" : action.type.includes("goal") ? "goal" : "task";
+          const nextState = applyActionSuccess(
+            cachedMemory.state,
+            action.type,
+            data.entityId ?? "",
+            String(action.payload?.title ?? action.payload?.name ?? "Item"),
+            data.verification?.verified === true,
+            entityType
+          );
+          const next: CachedMemory = { state: nextState, preferences: cachedMemory.preferences };
+          setCachedMemory(next);
+          cacheMemory(next);
+        }
 
         // Notify app shell of creation event
         if (action.type === "create_task") {

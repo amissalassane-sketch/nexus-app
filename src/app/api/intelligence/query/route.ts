@@ -7,9 +7,21 @@ import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
 import { askWorkspace } from "@/lib/intelligence/advanced";
 import { runAgent } from "@/lib/intelligence/agent";
 import { classifyIntent } from "@/lib/intelligence/intent";
+import { resolveReference } from "@/lib/intelligence/references";
+import {
+  emptyMemoryState,
+  extractPreference,
+  readMemory,
+  saveMemory,
+  scrubDeletedIds,
+  updateMemoryAfterTurn,
+  upsertPreference,
+} from "@/lib/intelligence/memory";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
+  IntelligenceMemoryState,
+  IntelligencePreference,
   SessionHistoryItem,
   TaskDependencyContextItem,
 } from "@/lib/intelligence/types";
@@ -68,6 +80,38 @@ export async function POST(request: Request) {
     const sessionHistory: SessionHistoryItem[] = rawHistory.filter(
       (h: unknown): h is SessionHistoryItem => Boolean(h && typeof h === "object" && "query" in h && typeof (h as Record<string, unknown>).query === "string")
     );
+
+    // ---- Phase 2: structured working memory ----------------------
+    // Server-persisted memory is the source of truth. When the user
+    // never used Intelligence in this workspace before, the client's
+    // cached state (same workspace) is restored as a starting point.
+    const stored = await readMemory(supabase, workspaceId, user.id);
+    const clientMemoryRaw =
+      body.memory && typeof body.memory === "object"
+        ? (body.memory as { state?: unknown; preferences?: unknown })
+        : undefined;
+    const clientMemory: IntelligenceMemoryState | undefined =
+      clientMemoryRaw?.state && typeof clientMemoryRaw.state === "object"
+        ? (clientMemoryRaw.state as IntelligenceMemoryState)
+        : undefined;
+
+    const memoryState: IntelligenceMemoryState = stored
+      ? scrubDeletedIds(stored.state, stored.state.deletedEntityIds)
+      : clientMemory
+        ? clientMemory
+        : emptyMemoryState();
+
+    const preferences: IntelligencePreference[] = stored?.preferences ?? [];
+
+    // Explicit durable preference? ("souviens-toi que…") — only then.
+    const explicitPreference = extractPreference(query);
+    if (explicitPreference) {
+      preferences.splice(
+        0,
+        preferences.length,
+        ...upsertPreference(preferences, explicitPreference)
+      );
+    }
 
     // Scoped queries strictly isolated by workspace_id
     const [tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes] = await Promise.all([
@@ -131,9 +175,14 @@ export async function POST(request: Request) {
 
     const classified = classifyIntent(query, { snapshot, sessionHistory });
 
+    // Reference resolution against the persisted memory, verified
+    // against the FRESH server snapshot (stale ids → "deleted").
+    const resolution = resolveReference(query, memoryState, snapshot, { verify: true });
+
     // ---- AGENT LOOP ------------------------------------------------
-    // Intent -> server-selected read tools -> (model proposes extra
-    // tools -> server validates -> executes) -> plan -> response.
+    // Memory retrieval -> reference resolution -> intent -> read tools
+    // -> (model proposes extra tools -> server validates -> executes)
+    // -> plan -> response. Proactive signals feed the context.
     const { response: structuredResponse, agent } = await runAgent({
       workspaceId,
       query,
@@ -142,7 +191,16 @@ export async function POST(request: Request) {
       sessionHistory,
       activities: recentActivities,
       dependencies,
+      memory: memoryState,
+      preferences,
+      resolution,
     });
+
+    // ---- MEMORY UPDATE ---------------------------------------------
+    // Reflect the real state of this turn (proposed actions stay
+    // proposed; executed actions only via the verified action route).
+    const updatedMemory = updateMemoryAfterTurn(memoryState, structuredResponse, snapshot);
+    await saveMemory(supabase, workspaceId, user.id, updatedMemory, preferences);
 
     const legacyAnswer = askWorkspace(snapshot, query, sessionHistory);
     const insights = computeInsights(snapshot);
@@ -165,6 +223,13 @@ export async function POST(request: Request) {
       response: structuredResponse,
       agent,
       intent: classified,
+      // The client caches this to survive refresh and other tabs while
+      // the server row remains the source of truth.
+      memory: {
+        state: updatedMemory,
+        preferences,
+        persisted: true,
+      },
       context: {
         totals: context.totals,
         healthScore: context.healthScore,
