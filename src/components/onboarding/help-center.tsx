@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 
 const TOPICS = [
@@ -30,31 +31,57 @@ export function HelpCenter({
   onContinue?: () => void;
 }) {
   const locale = browserLocale();
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    []
+  );
+
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setClosing(false);
+      onClose();
+    }, 160);
+  }, [closing, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, requestClose]);
 
   if (!open) return null;
+
+  const panelClass = cn(
+    "relative z-[76] max-h-[86dvh] w-[min(440px,100vw)] overflow-y-auto rounded-t-card border border-border-default bg-bg-surface p-5 sm:rounded-card",
+    closing ? "animate-scale-out pointer-events-none" : "animate-scale-in"
+  );
 
   return (
     <div className="fixed inset-0 z-[75] flex items-end justify-center sm:items-center">
       <button
         type="button"
         aria-label="Close help"
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
+        className={cn(
+          "absolute inset-0 bg-black/60",
+          closing ? "animate-fade-out" : "animate-fade-in"
+        )}
+        onClick={requestClose}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="nexus-help-title"
-        className="relative z-[76] max-h-[86dvh] w-[min(440px,100vw)] overflow-y-auto rounded-t-card border border-border-default bg-bg-surface p-5 sm:rounded-card"
+        className={panelClass}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -68,7 +95,7 @@ export function HelpCenter({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close"
             className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary hover:bg-accent-ghost hover:text-text-primary"
           >
@@ -80,7 +107,7 @@ export function HelpCenter({
             <li key={topic.href}>
               <Link
                 href={topic.href}
-                onClick={onClose}
+                onClick={requestClose}
                 className="block py-3 hover:bg-accent-ghost"
               >
                 <p className="text-body-medium text-text-primary">
@@ -102,7 +129,7 @@ export function HelpCenter({
             onClick={() => {
               onContinue?.();
               onRestart();
-              onClose();
+              requestClose();
             }}
             className="mt-3 inline-flex h-9 items-center rounded-input border border-border-default px-3 text-button text-text-secondary hover:text-text-primary"
           >
@@ -113,7 +140,7 @@ export function HelpCenter({
             type="button"
             onClick={() => {
               onRestart();
-              onClose();
+              requestClose();
             }}
             className="mt-3 inline-flex h-9 items-center rounded-input border border-border-default px-3 text-button text-text-secondary hover:text-text-primary"
           >

@@ -379,7 +379,8 @@ export function OnboardingProvider({
         onClose={() => setHelpOpen(false)}
         onRestart={startGuide}
         onContinue={() => {
-          setHelpOpen(false);
+          // Closing is owned by HelpCenter (requestClose → onClose) so the
+          // panel can animate out; do not unmount it from here.
           if (state.status === "skipped") {
             persist({ ...state, status: "active" });
           }

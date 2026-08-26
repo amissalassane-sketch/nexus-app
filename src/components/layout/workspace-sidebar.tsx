@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NexusWordmark } from "@/components/nexus-logo";
+import { useCommandKeyLabel } from "@/hooks/use-command-key";
 import {
   Dropdown,
   DropdownLabel,
@@ -102,6 +103,7 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const pressure = planPressure(plan);
   const workspaceName = workspace.name ?? "No workspace";
+  const commandKey = useCommandKeyLabel();
 
   return (
     <div className={cn("flex h-full w-full flex-col", className)}>
@@ -168,15 +170,26 @@ export function WorkspaceSidebar({
             </p>
           </div>
           <DropdownSeparator />
+          {!workspace.name ? (
+            <DropdownLink
+              href="/settings?tab=workspace"
+              icon={<Boxes size={15} strokeWidth={1.75} />}
+              onNavigate={onNavigate}
+            >
+              Set up workspace
+            </DropdownLink>
+          ) : null}
           <DropdownLink
             href="/settings"
             icon={<Sparkles size={15} strokeWidth={1.75} />}
+            onNavigate={onNavigate}
           >
             Workspace settings
           </DropdownLink>
           <DropdownLink
             href="/settings/billing"
             icon={<CreditCard size={15} strokeWidth={1.75} />}
+            onNavigate={onNavigate}
           >
             Plan and billing
           </DropdownLink>
@@ -191,7 +204,7 @@ export function WorkspaceSidebar({
           <Search size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
           <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary">
-            ⌘K
+            {commandKey}
           </kbd>
         </button>
 
@@ -219,12 +232,14 @@ export function WorkspaceSidebar({
           <DropdownLink
             href="/tasks?create=1"
             icon={<CheckSquare size={15} strokeWidth={1.75} />}
+            onNavigate={onNavigate}
           >
             Task
           </DropdownLink>
           <DropdownLink
             href="/projects?create=1"
             icon={<FolderKanban size={15} strokeWidth={1.75} />}
+            onNavigate={onNavigate}
             data-guide="new-project"
           >
             Project
@@ -232,6 +247,7 @@ export function WorkspaceSidebar({
           <DropdownLink
             href="/goals?create=1"
             icon={<Target size={15} strokeWidth={1.75} />}
+            onNavigate={onNavigate}
           >
             Goal
           </DropdownLink>
