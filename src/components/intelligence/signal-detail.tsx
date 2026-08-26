@@ -104,7 +104,10 @@ export function SignalDetail({
         aria-label={`Signal — ${insight.title}`}
         className="fixed inset-y-0 right-0 z-40 flex w-[min(420px,100vw)] flex-col border-l border-border-default bg-bg-subtle animate-panel-in lg:sticky lg:top-0 lg:z-0 lg:h-[calc(100dvh-140px)] lg:w-auto lg:rounded-card lg:border lg:border-border-subtle"
       >
-        <header className="flex shrink-0 items-start gap-3 border-b border-border-subtle px-4 py-3.5">
+        <header
+          className="flex shrink-0 items-start gap-3 border-b border-border-subtle px-4 py-3.5"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.875rem)" }}
+        >
           <span className={cn("mt-0.5 shrink-0", SEVERITY_TEXT[insight.severity])}>
             <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
           </span>
@@ -181,7 +184,10 @@ export function SignalDetail({
           </Section>
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-3">
+        <footer
+          className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-3"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
           <Link
             href={insight.href}
             className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px"

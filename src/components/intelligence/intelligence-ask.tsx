@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   CornerDownLeft,
   History,
   Plus,
@@ -54,6 +55,18 @@ const CATEGORIZED_STARTERS = [
   { label: "Plan", query: "Aide-moi à organiser cette semaine." },
   { label: "Action", query: "Je dois préparer ma présentation de vendredi." },
 ];
+
+/** Agent states, rendered as short labels in the trace disclosure. */
+const AGENT_STATE_LABEL: Record<string, string> = {
+  idle: "En attente",
+  thinking: "Réflexion",
+  planning: "Plan",
+  using_tools: "Outils",
+  executing: "Exécution",
+  verifying: "Vérification",
+  completed: "Terminé",
+  failed: "Échec",
+};
 
 interface HistoryEntry {
   id: string;
@@ -122,6 +135,23 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
 
   // Agentic trace — the real steps the server ran (tools, plan).
   const [agentRun, setAgentRun] = useState<AgentRunResult | null>(null);
+
+  // Agent trace accordions — the summary is always visible; the detailed
+  // step list and tool chips stay collapsed on phones so the answer never
+  // turns into a wall of text.
+  const [traceOpen, setTraceOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+
+  // Multi-line composer — grows up to ~5 rows, Enter sends, Shift+Enter
+  // inserts a newline, so long questions stay readable while typing.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+  }, [query]);
 
   // Action execution state
   const [confirmingAction, setConfirmingAction] = useState<IntelligenceAction | null>(null);
@@ -351,19 +381,27 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
             size={15}
             strokeWidth={1.75}
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lavender/80"
+            className="pointer-events-none absolute left-3 top-3.5 text-lavender/80"
           />
-          <input
+          <textarea
+            ref={composerRef}
             data-guide="intelligence-input"
             disabled={loading}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void send();
+              // Enter sends; Shift+Enter (and mobile keyboards' "return"
+              // without the send key) inserts a newline.
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void send();
+              }
             }}
+            rows={1}
+            enterKeyHint="send"
             placeholder="Ask NEXUS — “Quels projets nécessitent mon attention ?”, “Plan my week”…"
             aria-label="Ask a question about this workspace"
-            className="h-11 w-full rounded-input border border-border-default bg-bg-surface pl-9 pr-10 text-body text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)] disabled:opacity-60 text-[14px]"
+            className="min-h-[44px] w-full resize-none overflow-y-auto rounded-input border border-border-default bg-bg-surface py-2.5 pl-9 pr-10 text-body text-[14px] text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)] disabled:opacity-60"
           />
           {query.trim() ? (
             <button
@@ -371,7 +409,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
               disabled={loading}
               onClick={() => void send()}
               aria-label="Submit query"
-              className="absolute right-1.5 top-1/2 flex min-h-[32px] min-w-[32px] -translate-y-1/2 items-center justify-center rounded-[6px] text-text-quaternary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40"
+              className="absolute right-1.5 top-1.5 flex min-h-[32px] min-w-[32px] items-center justify-center rounded-[6px] text-text-quaternary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40"
             >
               <CornerDownLeft size={14} strokeWidth={1.75} aria-hidden="true" />
             </button>
@@ -628,68 +666,127 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
             </div>
           ) : null}
 
-          {/* Agent workflow — the real states the server went through */}
+          {/* Agent workflow — the real states the server went through.
+              The summary line is always visible; the per-step trace is
+              collapsed so a long agentic run never becomes a wall of
+              text on a phone. */}
           {agentRun && agentRun.steps.length > 0 ? (
-            <div className="mt-4 rounded-input border border-border-subtle bg-bg-subtle/40 px-3 py-2.5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">
-                Workflow agent
-              </p>
-              <ol className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                {agentRun.steps.map((step, index) => (
-                  <li key={`${step.state}-${index}`} className="flex items-center gap-2 text-caption text-text-tertiary">
-                    {index > 0 ? <span aria-hidden="true" className="text-text-quaternary">→</span> : null}
-                    <span className="inline-flex items-center gap-1.5">
+            <div className="mt-4 rounded-input border border-border-subtle bg-bg-subtle/40">
+              <button
+                type="button"
+                onClick={() => setTraceOpen((open) => !open)}
+                aria-expanded={traceOpen}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+              >
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">
+                    Workflow agent
+                  </span>
+                  <span className="font-mono text-[10px] text-text-tertiary">
+                    {agentRun.steps.filter((step) => step.state === "completed").length}/{agentRun.steps.length}{" "}
+                    étapes ·{" "}
+                    {AGENT_STATE_LABEL[
+                      agentRun.steps[agentRun.steps.length - 1]?.state ?? "completed"
+                    ]}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={13}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className={cn(
+                    "shrink-0 text-text-quaternary transition-transform duration-200 ease-nexus",
+                    traceOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              {traceOpen ? (
+                <ol className="flex flex-col border-t border-border-subtle px-3 py-1.5">
+                  {agentRun.steps.map((step, index) => (
+                    <li
+                      key={`${step.state}-${index}`}
+                      className="flex items-center gap-2.5 py-1.5 text-caption text-text-secondary"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "h-1.5 w-1.5 shrink-0 rounded-pill",
+                          step.state === "completed"
+                            ? "bg-success"
+                            : step.state === "failed"
+                              ? "bg-danger"
+                              : "bg-lavender"
+                        )}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{step.label}</span>
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
+                        {AGENT_STATE_LABEL[step.state]}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Tool trace — the real read tools executed for this answer.
+              Collapsed by default on phones; chips remain reachable via
+              the disclosure so the answer stays the primary content. */}
+          {currentResponse.toolCalls && currentResponse.toolCalls.length > 0 ? (
+            <div className="mt-4 border-t border-border-subtle/60 pt-3">
+              <button
+                type="button"
+                onClick={() => setToolsOpen((open) => !open)}
+                aria-expanded={toolsOpen}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
+                  Outils consultés · {currentResponse.toolCalls.length}
+                </span>
+                <ChevronDown
+                  size={13}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className={cn(
+                    "shrink-0 text-text-quaternary transition-transform duration-200 ease-nexus",
+                    toolsOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              {toolsOpen ? (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  {currentResponse.toolCalls.map((call) => (
+                    <span
+                      key={`${call.name}-${JSON.stringify(call.args ?? {})}-${call.status}`}
+                      title={call.summary}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-pill border px-2 py-1 font-mono text-[10px]",
+                        call.status === "error"
+                          ? "border-danger-border bg-danger-bg/30 text-danger"
+                          : call.status === "skipped"
+                            ? "border-border-subtle bg-bg-surface text-text-quaternary line-through"
+                            : "border-border-subtle bg-bg-surface-2 text-text-tertiary"
+                      )}
+                    >
                       <span
                         aria-hidden="true"
                         className={cn(
                           "h-1 w-1 rounded-pill",
-                          step.state === "completed" ? "bg-success" : "bg-lavender"
+                          call.status === "error"
+                            ? "bg-danger"
+                            : call.status === "skipped"
+                              ? "bg-text-quaternary"
+                              : "bg-success"
                         )}
                       />
-                      {step.label}
+                      {call.name}
+                      {call.count !== undefined && call.status === "ok" ? (
+                        <span className="text-text-quaternary">· {call.count}</span>
+                      ) : null}
                     </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : null}
-
-          {/* Tool trace — the real read tools executed for this answer */}
-          {currentResponse.toolCalls && currentResponse.toolCalls.length > 0 ? (
-            <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border-subtle/60 pt-3">
-              <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
-                Outils consultés
-              </span>
-              {currentResponse.toolCalls.map((call) => (
-                <span
-                  key={`${call.name}-${JSON.stringify(call.args ?? {})}-${call.status}`}
-                  title={call.summary}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-pill border px-2 py-1 font-mono text-[10px]",
-                    call.status === "error"
-                      ? "border-danger-border bg-danger-bg/30 text-danger"
-                      : call.status === "skipped"
-                        ? "border-border-subtle bg-bg-surface text-text-quaternary line-through"
-                        : "border-border-subtle bg-bg-surface-2 text-text-tertiary"
-                  )}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "h-1 w-1 rounded-pill",
-                      call.status === "error"
-                        ? "bg-danger"
-                        : call.status === "skipped"
-                          ? "bg-text-quaternary"
-                          : "bg-success"
-                    )}
-                  />
-                  {call.name}
-                  {call.count !== undefined && call.status === "ok" ? (
-                    <span className="text-text-quaternary">· {call.count}</span>
-                  ) : null}
-                </span>
-              ))}
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -934,7 +1031,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         type="button"
                         disabled={loading}
                         onClick={() => void send(qa.query)}
-                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary transition-colors"
+                        className="inline-flex min-h-[40px] sm:min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary active:bg-accent-ghost transition-colors"
                       >
                         <span>{qa.label}</span>
                         <ArrowRight size={12} />
@@ -943,7 +1040,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                       <Link
                         key={qa.label}
                         href={qa.href}
-                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary transition-colors"
+                        className="inline-flex min-h-[40px] sm:min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary active:bg-accent-ghost transition-colors"
                       >
                         <span>{qa.label}</span>
                         <ArrowRight size={12} />
@@ -968,7 +1065,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
             type="button"
             disabled={loading}
             onClick={() => void send(suggestion)}
-            className="inline-flex min-h-[36px] sm:min-h-[28px] items-center rounded-pill border border-border-subtle bg-bg-surface px-3 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary disabled:opacity-40"
+            className="inline-flex min-h-[40px] sm:min-h-[28px] items-center rounded-pill border border-border-subtle bg-bg-surface px-3 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary active:bg-accent-ghost disabled:opacity-40"
           >
             {suggestion}
           </button>

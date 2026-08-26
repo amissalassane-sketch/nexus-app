@@ -86,12 +86,12 @@ export function SignalCard({
         </button>
 
         {/* Why NEXUS flagged this — evidence only, never reasoning traces. */}
-        <div className="mt-3">
+        <div className="mt-2">
           <button
             type="button"
             onClick={() => setExpanded((open) => !open)}
             aria-expanded={expanded}
-            className="inline-flex items-center gap-1.5 text-caption text-text-tertiary transition-colors duration-150 hover:text-text-secondary"
+            className="-ml-1.5 inline-flex min-h-[40px] items-center gap-1.5 rounded-input px-1.5 text-caption text-text-tertiary transition-colors duration-150 hover:text-text-secondary active:bg-accent-ghost sm:min-h-[28px]"
           >
             <ChevronDown
               size={12}
@@ -124,10 +124,10 @@ export function SignalCard({
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <Link
             href={insight.href}
-            className="inline-flex h-7 items-center gap-1.5 rounded-input border border-border-default px-2.5 text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
+            className="inline-flex h-9 items-center gap-1.5 rounded-input border border-border-default px-3 text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover sm:h-7 sm:px-2.5"
           >
             {insight.cta}
             <ArrowRight size={12} strokeWidth={1.75} aria-hidden="true" />
@@ -136,7 +136,7 @@ export function SignalCard({
             <button
               type="button"
               onClick={() => onOpen(insight)}
-              className="inline-flex h-7 items-center rounded-input px-2.5 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+              className="inline-flex h-9 items-center rounded-input px-3 text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover sm:h-7 sm:px-2.5"
             >
               View context
             </button>
