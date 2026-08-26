@@ -15,7 +15,6 @@
 //     retry on transient network/5xx failures.
 // ============================================================
 
-import type { StoredSignalRow } from "./signals";
 import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
@@ -29,7 +28,8 @@ import type {
   SessionHistoryItem,
   QuickAction,
 } from "./types";
-
+import type { StoredSignalRow } from "./signals";
+import type { IntelligenceMission } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
 import { mapLegacyIntentToId, riskForAction } from "./intent";
 import { READ_TOOL_NAMES } from "./tools";
@@ -198,6 +198,8 @@ export async function callAIProvider(
     /** Active proactive signals (Phase 3) — derived, verified context
      *  the agent can reference; never a substitute for real rows. */
     signals?: StoredSignalRow[];
+    /** Active mission (Phase 4) — persistent multi-step objective. */
+    mission?: IntelligenceMission;
   }
 ): Promise<StructuredIntelligenceResponse | null> {
   const config = options?.config ?? detectAIProvider();
@@ -212,6 +214,10 @@ export async function callAIProvider(
     options?.preferences && options.preferences.length > 0
       ? `\n\nUSER EXPLICIT PREFERENCES (durable, user-requested):\n${options.preferences.map((p) => `- ${p.value}`).join("\n")}`
       : "";
+  const missionBlock =
+    options?.mission
+      ? `\n\nACTIVE MISSION (persistent objective, steps are verified server-side):\n- ${options.mission.title} (progress ${options.mission.progress}%)\n- Current step: ${options.mission.currentStepId ?? "none"}\n- Next best action: ${options.mission.nextBestAction?.label ?? "none"}`
+      : "";
   const signalsBlock =
     options?.signals && options.signals.length > 0
       ? `\n\nCURRENT PROACTIVE SIGNALS (verified, derived from the workspace):\n${options.signals
@@ -219,8 +225,7 @@ export async function callAIProvider(
           .map((signal) => `- [${signal.severity.toUpperCase()}] ${signal.title} — ${signal.summary}`)
           .join("\n")}`
       : "";
-
-  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}${preferencesBlock}${signalsBlock}\n\nUSER QUESTION:\n${query}`;
+  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}${preferencesBlock}${signalsBlock}${missionBlock}\n\nUSER QUESTION:\n${query}`;
 
   try {
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];

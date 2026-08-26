@@ -12,15 +12,17 @@
     "test:intelligence-agent": "npx tsx supabase/tests/intelligence-agent.test.mjs",
     "test:intelligence-agent-v2": "npx tsx supabase/tests/intelligence-agent-v2.test.mjs",
     "test:intelligence-memory": "npx tsx supabase/tests/intelligence-memory.test.mjs",
-    "test:agent": "npm run test:intelligence-agent && npm run test:intelligence-agent-v2 && npm run test:intelligence-memory && npm run test:intelligence-signals && npm run test:intelligence-proactive && npm run test:intelligence",
-    "demo:agent": "tsx scripts/demo-agent-loop.ts",
-    "demo:memory": "tsx scripts/demo-memory-scenario.ts",
-    "verify:scene": "tsx scripts/verify-intelligence-scene.ts",
-    "verify:production-onboarding": "node scripts/verify-production-onboarding.mjs",
     "test:intelligence-signals": "npx tsx supabase/tests/intelligence-signals.test.mjs",
     "test:intelligence-proactive": "npx tsx supabase/tests/intelligence-proactive.test.mjs",
+    "test:intelligence-mission": "npx tsx supabase/tests/intelligence-mission.test.mjs",
+    "test:agent": "npm run test:intelligence-agent && npm run test:intelligence-agent-v2 && npm run test:intelligence-memory && npm run test:intelligence-signals && npm run test:intelligence-proactive && npm run test:intelligence-mission && npm run test:intelligence",
+    "demo:agent": "tsx scripts/demo-agent-loop.ts",
+    "demo:memory": "tsx scripts/demo-memory-scenario.ts",
     "demo:signals": "tsx scripts/demo-signals.ts",
-    "demo:proactive": "tsx scripts/demo-proactive.ts"
+    "demo:proactive": "tsx scripts/demo-proactive.ts",
+    "demo:mission": "tsx scripts/demo-mission.ts",
+    "verify:scene": "tsx scripts/verify-intelligence-scene.ts",
+    "verify:production-onboarding": "node scripts/verify-production-onboarding.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

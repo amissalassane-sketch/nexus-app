@@ -40,6 +40,7 @@ import type {
   AgentState,
   IntelligenceAction,
   IntelligenceMemoryState,
+  IntelligenceMission,
   IntelligencePlan,
   IntelligencePlanStep,
   IntelligencePreference,
@@ -66,6 +67,10 @@ export interface AgentInput {
   /** Phase 3 — active proactive signals as derived context (the agent
    *  can reference them; they never replace real workspace rows). */
   signals?: StoredSignalRow[];
+  /** Phase 4 — the active mission (persistent multi-step objective).
+   *  The agent can reference it; steps are only completed by verified
+   *  read-backs, never by the model. */
+  mission?: IntelligenceMission;
   /** Reference resolution pre-computed by the route (server has the
    *  persisted memory). When absent, the agent resolves it itself. */
   resolution?: ReferenceResolution;
@@ -668,6 +673,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
     timeoutMs: input.timeoutMs,
     preferences: input.preferences,
     signals: input.signals,
+    mission: input.mission,
   });
 
   if (aiResponse) {

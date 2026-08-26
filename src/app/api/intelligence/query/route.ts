@@ -18,10 +18,19 @@ import {
   upsertPreference,
 } from "@/lib/intelligence/memory";
 import { readSignals } from "@/lib/intelligence/signal-store";
+import {
+  createMissionObject,
+  detectMissionRequest,
+  findRelatedEntities,
+  readActiveMissions,
+  runMissionLoop,
+  saveMission,
+} from "@/lib/intelligence/mission";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
   IntelligenceMemoryState,
+  IntelligenceMission,
   IntelligencePreference,
   SessionHistoryItem,
   TaskDependencyContextItem,
@@ -188,6 +197,38 @@ export async function POST(request: Request) {
       .filter((signal) => signal.status !== "dismissed" && signal.status !== "resolved")
       .slice(0, 5);
 
+    // ---- PHASE 4 — MISSION -------------------------------------------------
+    // "Prépare-moi pour ma présentation de vendredi" → create a mission.
+    // "Où en est ma présentation ?" / "Et maintenant ?" → resume the last
+    // active mission (memory.lastMissionId, else most recent active).
+    let mission: IntelligenceMission | null = null;
+    const missionRequest = detectMissionRequest(query);
+    if (missionRequest) {
+      const related = findRelatedEntities(snapshot, missionRequest.keyword);
+      const created = createMissionObject(missionRequest, workspaceId, user.id, snapshot, related);
+      mission = runMissionLoop(created, snapshot, activeSignals);
+      await saveMission(supabase, mission);
+      memoryState.lastMissionId = mission.id;
+      memoryState.lastQuery = query;
+    } else {
+      const resumeQuery =
+        /où en est|ou en est|et maintenant|et maintenant\?|et après|et apres|where (is|are)|how is.*going|what now/.test(query.toLowerCase());
+      const candidates = await readActiveMissions(supabase, workspaceId, user.id);
+      const target =
+        (memoryState.lastMissionId
+          ? candidates.find((m) => m.id === memoryState.lastMissionId)
+          : undefined) ??
+        candidates[0] ??
+        null;
+      if (target && (resumeQuery || candidates.length > 0)) {
+        mission = runMissionLoop(target, snapshot, activeSignals);
+        if (JSON.stringify(mission.steps.map((s) => [s.id, s.status])) !== JSON.stringify(target.steps.map((s) => [s.id, s.status]))) {
+          await saveMission(supabase, mission);
+        }
+        memoryState.lastMissionId = mission.id;
+      }
+    }
+
     // ---- AGENT LOOP ------------------------------------------------
     // Memory retrieval -> reference resolution -> intent -> read tools
     // -> (model proposes extra tools -> server validates -> executes)
@@ -204,6 +245,7 @@ export async function POST(request: Request) {
       preferences,
       resolution,
       signals: activeSignals,
+      mission: mission ?? undefined,
     });
 
     // ---- MEMORY UPDATE ---------------------------------------------
@@ -233,6 +275,7 @@ export async function POST(request: Request) {
       response: structuredResponse,
       agent,
       intent: classified,
+      mission,
       // The client caches this to survive refresh and other tabs while
       // the server row remains the source of truth.
       memory: {
