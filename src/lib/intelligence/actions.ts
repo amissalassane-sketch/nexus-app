@@ -113,7 +113,7 @@ async function verifyTask(
 ): Promise<ActionVerification> {
   const { data } = await db
     .from("tasks")
-    .select("id, title, status, priority, due_at, project_id, completed_at, updated_at")
+    .select("id, workspace_id, title, status, priority, due_at, project_id, completed_at, updated_at")
     .eq("id", taskId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -147,7 +147,7 @@ async function verifyProject(
 ): Promise<ActionVerification> {
   const { data } = await db
     .from("projects")
-    .select("id, name, status, progress, due_date, updated_at")
+    .select("id, workspace_id, name, status, progress, due_date, updated_at")
     .eq("id", projectId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -180,7 +180,7 @@ async function verifyGoal(
 ): Promise<ActionVerification> {
   const { data } = await db
     .from("goals")
-    .select("id, title, status, progress, target_date")
+    .select("id, workspace_id, title, status, progress, target_date")
     .eq("id", goalId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -260,6 +260,7 @@ export async function executeIntelligenceAction(
         priority,
         status: "todo",
         due_at: dueAt,
+        workspace_id: workspaceId,
       });
       if (!verification.verified) throw new ActionError(`Task was created but verification failed: ${verification.mismatched.join(", ")}`, 500);
       return { success: true, actionType, entityId: task.id, message: `Task “${title}” created and verified`, verified: verification, entity: task };
@@ -293,6 +294,7 @@ export async function executeIntelligenceAction(
         status: "planning",
         progress: 0,
         due_date: dueDate,
+        workspace_id: workspaceId,
       });
       if (!verification.verified) throw new ActionError("Project was created but verification failed", 500);
       return { success: true, actionType, entityId: project.id, message: `Project “${name}” created and verified`, verified: verification, entity: project };
@@ -315,7 +317,12 @@ export async function executeIntelligenceAction(
         .select("id, title, status, progress, target_date")
         .single();
       if (error || !goal) throw new ActionError(error?.message ?? "Failed to create goal", 500);
-      const verification = await verifyGoal(db, workspaceId, goal.id, { title, status: "active", progress: 0 });
+      const verification = await verifyGoal(db, workspaceId, goal.id, {
+        title,
+        status: "active",
+        progress: 0,
+        workspace_id: workspaceId,
+      });
       if (!verification.verified) throw new ActionError("Goal was created but verification failed", 500);
       return { success: true, actionType, entityId: goal.id, message: `Goal “${title}” created and verified`, verified: verification, entity: goal };
     }
@@ -467,6 +474,55 @@ export async function executeIntelligenceAction(
         : { verified: true, summary: "Project removed from this workspace", matched: ["deleted"], mismatched: [] };
       if (!verification.verified) throw new ActionError("Project deletion could not be verified", 500);
       return { success: true, actionType, entityId: projectId, message: `Project deleted and verified`, verified: verification, entity: { id: projectId } };
+    }
+
+    case "update_goal": {
+      const goalId = requireTarget(await resolveEntity(db, "goals", workspaceId, payload), "goal");
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      const expected: Record<string, unknown> = {};
+      const title = stringValue(payload.title);
+      if (title) {
+        updates.title = title;
+        expected.title = title;
+      }
+      if (payload.status && ["active", "completed", "cancelled"].includes(payload.status as string)) {
+        updates.status = payload.status;
+        expected.status = payload.status;
+      }
+      if (typeof payload.progress === "number" || typeof payload.progress === "string") {
+        const progress = Math.min(100, Math.max(0, Number(payload.progress)));
+        updates.progress = progress;
+        expected.progress = progress;
+      }
+      if (payload.targetDate !== undefined || payload.target_date !== undefined) {
+        updates.target_date = normalizeDailyDate(payload.targetDate ?? payload.target_date);
+        expected.target_date = updates.target_date;
+      }
+      if (Object.keys(expected).length === 0) throw new ActionError("No updatable field provided", 422);
+
+      const { data: updated, error } = await db
+        .from("goals")
+        .update(updates)
+        .eq("id", goalId)
+        .eq("workspace_id", workspaceId)
+        .select("id, title, status, progress, target_date")
+        .single();
+      if (error || !updated) throw new ActionError(error?.message ?? "Failed to update goal", 500);
+      const verification = await verifyGoal(db, workspaceId, goalId, expected);
+      if (!verification.verified) throw new ActionError("Goal update could not be verified", 500);
+      return { success: true, actionType, entityId: goalId, message: `Goal updated and verified`, verified: verification, entity: updated };
+    }
+
+    case "delete_goal": {
+      const goalId = requireTarget(await resolveEntity(db, "goals", workspaceId, payload), "goal");
+      const { error } = await db.from("goals").delete().eq("id", goalId).eq("workspace_id", workspaceId);
+      if (error) throw new ActionError(error?.message ?? "Failed to delete goal", 500);
+      const { data } = await db.from("goals").select("id").eq("id", goalId).eq("workspace_id", workspaceId).maybeSingle();
+      const verification: ActionVerification = data
+        ? { verified: false, summary: "Goal still exists after delete", matched: [], mismatched: ["row still present"] }
+        : { verified: true, summary: "Goal removed from this workspace", matched: ["deleted"], mismatched: [] };
+      if (!verification.verified) throw new ActionError("Goal deletion could not be verified", 500);
+      return { success: true, actionType, entityId: goalId, message: `Goal deleted and verified`, verified: verification, entity: { id: goalId } };
     }
 
     default:
