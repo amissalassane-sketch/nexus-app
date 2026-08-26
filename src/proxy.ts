@@ -16,6 +16,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Static assets — including the web app manifest and app icons, which
+    // must never be gated behind an auth redirect (browsers fetch them
+    // before any session exists, e.g. when offering "Add to home screen").
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
   ],
 };

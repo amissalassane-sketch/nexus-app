@@ -63,11 +63,25 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
   },
   formatDetection: { telephone: false },
+  // iOS add-to-home-screen preparation (no service worker yet — the app
+  // remains a classic web app; this only makes the installed shell feel
+  // native when an offline layer is added later).
+  appleWebApp: {
+    capable: true,
+    title: "NEXUS",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#000000",
   colorScheme: "dark",
+  // Required for `env(safe-area-inset-*)` to resolve on iOS: without
+  // `viewport-fit=cover` the browser letterboxes the layout and the safe
+  // area insets are always 0. The shell uses the insets to keep the mobile
+  // header, drawer, bottom navigation and sheets clear of the notch and
+  // home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
