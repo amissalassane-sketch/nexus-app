@@ -63,7 +63,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "work",
-    label: "Work",
+    label: "WORK",
     items: [
       {
         href: "/projects",
@@ -90,7 +90,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "workspace",
-    label: "Workspace",
+    label: "WORKSPACE",
     items: [
       {
         href: "/activity",
@@ -145,12 +145,12 @@ export const ALL_NAV_ENTRIES: NavEntry[] = [
   ...NAV_FOOTER,
 ];
 
-/** Compact mobile navigation: five slots, the last one opens the drawer. */
+/** Compact mobile navigation: four primary destinations + the drawer trigger. */
 export const MOBILE_NAV: NavEntry[] = [
-  ALL_NAV_ENTRIES[0],
-  ALL_NAV_ENTRIES[1],
-  ALL_NAV_ENTRIES[3],
-  ALL_NAV_ENTRIES[5],
+  ALL_NAV_ENTRIES[0], // Overview
+  ALL_NAV_ENTRIES[1], // Intelligence
+  ALL_NAV_ENTRIES[2], // Projects
+  ALL_NAV_ENTRIES[3], // Tasks
 ];
 
 const TITLES: Record<string, string> = {

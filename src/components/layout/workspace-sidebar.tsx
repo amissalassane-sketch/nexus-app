@@ -132,7 +132,7 @@ export function WorkspaceSidebar({
               type="button"
               ref={ref}
               onClick={toggle}
-              className="flex h-11 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-bg-surface/50 px-2 text-left transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface"
+              className="flex h-11 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-bg-surface/50 px-2 text-left transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border"
               {...ariaProps}
             >
               <span
@@ -186,7 +186,7 @@ export function WorkspaceSidebar({
         <button
           type="button"
           onClick={openCommandPalette}
-          className="flex h-9 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-transparent px-2.5 text-left text-[13px] text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-accent-ghost hover:text-text-secondary"
+          className="flex h-9 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-transparent px-2.5 text-left text-[13px] text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-accent-ghost hover:text-text-secondary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border"
         >
           <Search size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
@@ -207,7 +207,7 @@ export function WorkspaceSidebar({
               ref={ref}
               onClick={toggle}
               data-guide="create-project"
-              className="flex h-9 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99]"
+              className="flex h-9 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
               {...ariaProps}
             >
               <Plus size={15} strokeWidth={2} aria-hidden="true" />
@@ -276,7 +276,7 @@ export function WorkspaceSidebar({
           </div>
         ))}
 
-        <SectionLabel>Account</SectionLabel>
+        <SectionLabel>ACCOUNT</SectionLabel>
         <div className="flex flex-col gap-0.5">
           {NAV_FOOTER.map((item) => (
             <NavItem

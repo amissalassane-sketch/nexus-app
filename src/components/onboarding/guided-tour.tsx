@@ -115,6 +115,25 @@ export function GuidedTour({
   const { rect, missing } = useGuideTarget(step.target, step.id);
   const isWelcome = step.id === "welcome";
   const isMobile = useIsMobile();
+  const [pending, setPending] = useState(false);
+  const [prevStepId, setPrevStepId] = useState(step.id);
+  const [modalActive, setModalActive] = useState(false);
+
+  if (prevStepId !== step.id) {
+    setPrevStepId(step.id);
+    setPending(false);
+  }
+
+  useEffect(() => {
+    const checkModal = () => {
+      const modal = document.querySelector("[role='dialog'][aria-modal='true']");
+      setModalActive(Boolean(modal));
+    };
+    checkModal();
+    const mo = new MutationObserver(checkModal);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => mo.disconnect();
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -125,15 +144,28 @@ export function GuidedTour({
   }, [onSkip]);
 
   const go = () => {
+    if (pending) return;
+    setPending(true);
     if (isWelcome) {
       onWelcome();
       return;
     }
-    if (step.href) router.push(step.href);
+    if (step.href) {
+      router.push(step.href);
+    }
   };
 
+  const mobileStyle = (() => {
+    if (!rect) return { left: 12, right: 12, bottom: 88 };
+    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+    if (rect.top + rect.height / 2 > vh / 2) {
+      return { left: 12, right: 12, top: 68 };
+    }
+    return { left: 12, right: 12, bottom: 88 };
+  })();
+
   const cardStyle = isMobile
-    ? { left: 12, right: 12, bottom: 88 }
+    ? mobileStyle
     : placeCard(isWelcome ? null : rect).style;
 
   return (
@@ -147,7 +179,8 @@ export function GuidedTour({
         aria-describedby="nexus-guide-body"
         className={cn(
           "pointer-events-auto absolute z-[71] w-[min(360px,calc(100vw-24px))] rounded-card border border-border-default bg-bg-surface p-4 shadow-dropdown",
-          !reduced && "animate-fade-in transition-[top,left,right,bottom] duration-200 ease-nexus",
+          !reduced && "animate-fade-in transition-[top,left,right,bottom,opacity] duration-200 ease-nexus",
+          modalActive && "pointer-events-none opacity-20",
           isMobile && "w-auto"
         )}
         style={cardStyle}
@@ -168,18 +201,46 @@ export function GuidedTour({
           {step.actionKey || isWelcome ? (
             <button
               type="button"
+              disabled={pending}
+              aria-busy={pending || undefined}
               onClick={go}
-              className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg hover:bg-accent-hover"
+              className="inline-flex h-9 items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-140 hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-60"
             >
-              {step.actionKey
-                ? t(step.actionKey, locale)
-                : t("guide.continue", locale)}
+              {pending ? (
+                <svg
+                  className="h-3.5 w-3.5 animate-spin"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="6.5"
+                    stroke="currentColor"
+                    strokeOpacity="0.25"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              ) : null}
+              <span>
+                {step.actionKey
+                  ? t(step.actionKey, locale)
+                  : t("guide.continue", locale)}
+              </span>
             </button>
           ) : null}
           <button
             type="button"
+            disabled={pending}
             onClick={onSkip}
-            className="inline-flex h-9 items-center rounded-input px-3 text-button text-text-tertiary hover:text-text-primary"
+            className="inline-flex h-9 items-center rounded-input px-3 text-button text-text-tertiary transition-colors duration-140 hover:text-text-primary disabled:opacity-50"
           >
             {t("guide.skip", locale)}
           </button>

@@ -25,7 +25,7 @@ export function measureGuide(selector?: string): SpotlightRect | null {
   };
 }
 
-/** Four-pane overlay so the target stays clickable. */
+/** Four-pane overlay so the target stays clickable, yielding pointer events if a modal dialog is active. */
 export function Spotlight({
   rect,
   reduced,
@@ -33,11 +33,24 @@ export function Spotlight({
   rect: SpotlightRect | null;
   reduced: boolean;
 }) {
+  const [modalActive, setModalActive] = useState(false);
+
+  useEffect(() => {
+    const checkModal = () => {
+      const modal = document.querySelector("[role='dialog'][aria-modal='true']");
+      setModalActive(Boolean(modal));
+    };
+    checkModal();
+    const mo = new MutationObserver(checkModal);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => mo.disconnect();
+  }, []);
+
   const pad = 8;
   if (!rect) {
     return (
       <div
-        className="pointer-events-none absolute inset-0 bg-black/40"
+        className="pointer-events-none absolute inset-0 bg-black/40 transition-opacity duration-200"
         aria-hidden="true"
       />
     );
@@ -48,7 +61,11 @@ export function Spotlight({
   const width = rect.width + pad * 2;
   const height = rect.height + pad * 2;
 
-  const pane = "pointer-events-auto absolute bg-black/50";
+  // When a modal dialog is open, yield pointer events so the user can type and submit without obstacle
+  const pane = cn(
+    "absolute bg-black/50 transition-opacity duration-200",
+    modalActive ? "pointer-events-none opacity-20" : "pointer-events-auto"
+  );
 
   return (
     <>
@@ -68,6 +85,7 @@ export function Spotlight({
       <div
         className={cn(
           "pointer-events-none absolute rounded-input ring-2 ring-white/70",
+          modalActive && "opacity-0",
           !reduced && "transition-all duration-200"
         )}
         style={{ top, left, width, height }}

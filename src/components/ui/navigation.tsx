@@ -29,6 +29,7 @@ export function NavItem({
   count,
   countTone = "muted",
   onNavigate,
+  className,
   ...rest
 }: {
   href: string;
@@ -38,6 +39,7 @@ export function NavItem({
   count?: number;
   countTone?: "muted" | "accent";
   onNavigate?: () => void;
+  className?: string;
 } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
     <Link
@@ -46,10 +48,11 @@ export function NavItem({
       aria-current={active ? "page" : undefined}
       {...rest}
       className={cn(
-        "group relative flex h-[34px] items-center gap-2.5 rounded-nav border px-2.5 text-[13px] transition-colors duration-150 ease-nexus",
+        "group relative flex h-[34px] items-center gap-2.5 rounded-nav border px-2.5 text-[13px] outline-none transition-colors duration-150 ease-nexus focus-visible:border-border-focus focus-visible:ring-1 focus-visible:ring-lavender-border",
         active
-          ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary"
-          : "border-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+          ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary shadow-xs"
+          : "border-transparent text-text-secondary hover:border-border-subtle/40 hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover",
+        className
       )}
     >
       <span
@@ -74,7 +77,7 @@ export function NavItem({
         <span
           className={cn(
             "shrink-0 font-mono text-mono tabular-nums",
-            countTone === "accent" ? "text-lavender" : "text-text-quaternary"
+            countTone === "accent" ? "text-lavender font-medium" : "text-text-quaternary"
           )}
         >
           {count}
@@ -84,7 +87,7 @@ export function NavItem({
   );
 }
 
-/** Compact bottom-navigation item used below `md`. */
+/** Compact bottom-navigation item used below `lg`. */
 export function MobileNavItem({
   href,
   label,
@@ -92,6 +95,8 @@ export function MobileNavItem({
   active,
   badge,
   onNavigate,
+  className,
+  ...rest
 }: {
   href: string;
   label: string;
@@ -99,15 +104,18 @@ export function MobileNavItem({
   active?: boolean;
   badge?: number;
   onNavigate?: () => void;
-}) {
+  className?: string;
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
     <Link
       href={href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
+      {...rest}
       className={cn(
-        "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 transition-colors duration-150 ease-nexus",
-        active ? "text-text-primary" : "text-text-tertiary"
+        "relative flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 outline-none transition-colors duration-150 ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border",
+        active ? "text-text-primary font-medium" : "text-text-tertiary hover:text-text-secondary",
+        className
       )}
     >
       <span className="relative">
@@ -124,7 +132,7 @@ export function MobileNavItem({
         aria-hidden="true"
         className={cn(
           "absolute -top-px h-[2px] w-8 rounded-pill bg-lavender transition-opacity duration-150",
-          active ? "opacity-80" : "opacity-0"
+          active ? "opacity-90" : "opacity-0"
         )}
       />
     </Link>

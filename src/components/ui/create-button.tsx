@@ -12,7 +12,33 @@ import { cn } from "@/lib/cn";
 // ============================================================
 
 const shell =
-  "group inline-flex h-9 items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-40";
+  "group relative inline-flex h-9 items-center justify-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-40";
+
+function Spinner() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 animate-spin"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="currentColor"
+        strokeOpacity="0.25"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function Badge({ icon }: { icon?: ReactNode }) {
   return (
@@ -28,6 +54,7 @@ export function CreateButton({
   icon,
   className,
   disabled,
+  loading = false,
   ariaLabel,
   ...rest
 }: {
@@ -36,18 +63,20 @@ export function CreateButton({
   icon?: ReactNode;
   className?: string;
   disabled?: boolean;
+  loading?: boolean;
   ariaLabel?: string;
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "className">) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       aria-label={ariaLabel ?? label}
       className={cn(shell, className)}
       {...rest}
     >
-      <Badge icon={icon} />
+      {loading ? <Spinner /> : <Badge icon={icon} />}
       <span>{label}</span>
     </button>
   );
