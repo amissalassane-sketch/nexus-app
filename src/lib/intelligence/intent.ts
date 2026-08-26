@@ -144,17 +144,25 @@ export function classifyIntent(
   options?: {
     snapshot?: WorkspaceSnapshot;
     sessionHistory?: SessionHistoryItem[];
+    /** Target resolved by the reference resolver (memory). Used as a
+     *  priority fallback for referential intents — never guessed. */
+    resolvedTarget?: IntelligenceTarget;
   }
 ): IntelligenceIntentResult {
   const normalized = normalize(query);
   const snapshot = options?.snapshot;
   const history = options?.sessionHistory ?? [];
+  const resolvedTarget = options?.resolvedTarget;
 
   if (!normalized) {
     return { intent: "GENERAL_ASSISTANCE", risk: "none", confidence: 0.3 };
   }
 
   const last = lastHistoryAction(history);
+  /** Priority order for referential targets: explicit name in query →
+   *  memory-resolved target → last session target. */
+  const refTarget = (fallback: IntelligenceTarget | undefined): IntelligenceTarget | undefined =>
+    resolvedTarget ?? referentialTarget(normalized, last.target) ?? fallback;
 
   // Conversation continuations — resolve "le"/"cette tâche" to the last
   // referenced entity / proposed action before keyword scanning.
@@ -205,7 +213,7 @@ export function classifyIntent(
   if (hasAny(normalized, "supprime", "delete", "efface", "remove", "annule cette", "annule")) {
     const taskNamed = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
     const projectNamed = snapshot ? extractNamedEntity(snapshot, normalized, "project") : undefined;
-    const referential = referentialTarget(normalized, last.target);
+    const referential = refTarget(last.target);
     const target: IntelligenceTarget = taskNamed
       ? { type: "task", ...taskNamed }
       : projectNamed
@@ -224,7 +232,7 @@ export function classifyIntent(
   // COMPLETE
   if (hasAny(normalized, "marque comme termine", "marque comme faite", "marque cette tache comme terminee", "marque cette tache comme faite", "complete", "termine la", "terminer", "finis la", "cloture", "done", "marque tache")) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
-    const target = named ?? referentialTarget(normalized, last.target);
+    const target = named ?? refTarget(last.target);
     return {
       intent: "COMPLETE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
@@ -267,16 +275,23 @@ export function classifyIntent(
   }
 
   // MOVE — explicit move verbs, or a day-name follow-up on the last
-  // referenced task ("Et pour vendredi ?" / "And for Friday?")
-  const hasDayFollowUp = (last.target?.type === "task" || last.target?.id) && hasAny(
+  // referenced task ("Et pour vendredi ?", "Et reporte-la à vendredi")
+  const hasDayFollowUp = (last.target?.type === "task" || last.target?.id || resolvedTarget?.id) && hasAny(
     normalized,
     "pour lundi", "pour mardi", "pour mercredi", "pour jeudi", "pour vendredi", "pour samedi", "pour dimanche",
+    "a lundi", "a mardi", "a mercredi", "a jeudi", "a vendredi", "a samedi", "a dimanche",
+    "au lundi", "au mardi", "au mercredi", "au jeudi", "au vendredi", "au samedi", "au dimanche",
     "for monday", "for tuesday", "for wednesday", "for thursday", "for friday", "for saturday", "for sunday",
     "et pour", "and for"
   );
-  if (hasAny(normalized, "decale", "déplace", "reporter", "move", "shift", "reschedule", "remets a", "pousse a") || hasDayFollowUp) {
+  if (
+    hasAny(
+      normalized,
+      "decale", "déplace", "reporter", "reporte", "reportes", "remets", "move", "shift", "reschedule", "remets a", "pousse a", "recale"
+    ) || hasDayFollowUp
+  ) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
-    const target = named ?? referentialTarget(normalized, last.target) ?? (last.target?.type === "task" || last.target?.type === "project" ? last.target : undefined);
+    const target = named ?? refTarget(last.target?.type === "task" || last.target?.type === "project" ? last.target : undefined);
     return {
       intent: "MOVE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
@@ -299,7 +314,7 @@ export function classifyIntent(
     )
   ) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
-    const target = named ?? referentialTarget(normalized, last.target);
+    const target = named ?? refTarget(last.target);
     return {
       intent: "UPDATE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
@@ -369,9 +384,15 @@ export function classifyIntent(
   // EXPLAIN
   if (hasAny(normalized, "pourquoi", "why is", "why does", "explique", "explain", "comment ce projet")) {
     const target = snapshot ? extractNamedEntity(snapshot, normalized, "project") : undefined;
+    const resolved = refTarget(last.target);
     return {
       intent: "EXPLAIN",
-      target: { type: "project", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
+      target: {
+        type: "project",
+        id: target?.id ?? resolved?.id,
+        label: target?.label ?? resolved?.label,
+        query: strippedTarget(normalized),
+      },
       risk: "none",
       confidence: 0.85,
     };

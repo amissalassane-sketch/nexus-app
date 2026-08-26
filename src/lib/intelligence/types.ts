@@ -212,6 +212,8 @@ export interface AgentRunResult {
   needsConfirmation: boolean;
   provider: "openai" | "anthropic" | "nexus-engine";
   sources: string[];
+  /** Dev trace of the memory used (not shown to the user). */
+  memory?: MemoryTrace;
 }
 
 export interface ActivityContextItem {
@@ -242,4 +244,112 @@ export interface SessionHistoryItem {
   actionType?: IntelligenceActionType;
   target?: IntelligenceTarget;
   timestamp?: string;
+}
+
+// ============================================================
+// MEMORY (Phase 2) — structured working memory
+// ============================================================
+
+export type MemoryEntityType = "task" | "project" | "goal";
+
+/** A real entity known to the agent, referenced by id. Memory never
+ *  creates entities: every id here was returned by a real read or
+ *  by a verified server mutation. */
+export interface MemoryEntityRef {
+  id: string;
+  title: string;
+  type: MemoryEntityType;
+  dueDate?: string | null;
+  projectName?: string | null;
+}
+
+export interface MemoryLastAction {
+  type: IntelligenceActionType;
+  /** proposed = shown for confirmation, never executed yet;
+   *  executed = server mutation succeeded AND was verified;
+   *  failed = the server rejected the mutation. */
+  status: "proposed" | "executed" | "failed";
+  entityId?: string | null;
+  entityLabel?: string | null;
+  verified?: boolean;
+  payload?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface MemoryPendingConfirmation {
+  actionType: IntelligenceActionType;
+  entityId?: string | null;
+  entityLabel?: string | null;
+  timestamp: string;
+}
+
+/** Compact short-term working memory — one row per (user, workspace). */
+export interface IntelligenceMemoryState {
+  conversationId: string;
+  lastIntent?: IntelligenceIntentId | null;
+  lastQuery?: string | null;
+  /** Last resolved target (pronouns, ordinals, verbs all resolve here). */
+  lastTarget?: IntelligenceTarget | null;
+  /** Last entities displayed to the user, in order (max 8). This is
+   *  what "la deuxième" indexes into. */
+  lastItems: MemoryEntityRef[];
+  lastPlan?: { summary: string; stepCount: number } | null;
+  /** Last mutation action. NEVER set to executed without a verified
+   *  server read-back. */
+  lastAction?: MemoryLastAction | null;
+  /** A mutation proposed but not yet confirmed by the human. */
+  pendingConfirmation?: MemoryPendingConfirmation | null;
+  /** Entity ids known to have been deleted (reference invalidation). */
+  deletedEntityIds: string[];
+  updatedAt: string;
+}
+
+/** Persistent, explicitly-requested preference (never inferred from a
+ *  casual sentence). */
+export interface IntelligencePreference {
+  key: string;
+  value: string;
+  source: "explicit" | "confirmed";
+  createdAt: string;
+}
+
+// ============================================================
+// REFERENCE RESOLUTION
+// ============================================================
+
+export type ReferenceResolutionKind =
+  | "explicit" // entity named in the query, found in the snapshot
+  | "ordinal" // "la deuxième" → lastItems[1]
+  | "pronoun" // "celle-ci", "cette tâche(-là)", "ce projet"
+  | "previous" // "le projet précédent", "la tâche précédente"
+  | "verb-suffix" // "reporte-la", "supprime-la", "mets-les"
+  | "repeat" // "pareil", "fais la même chose"
+  | "why" // "pourquoi ?" → the subject just discussed
+  | "deleted" // referenced entity no longer exists
+  | "ambiguous" // needs clarification — NEVER guess
+  | "none";
+
+export interface ReferenceResolution {
+  kind: ReferenceResolutionKind;
+  /** Resolved target when the reference is concrete. */
+  target?: IntelligenceTarget;
+  entity?: MemoryEntityRef | null;
+  /** Ordinal index into memory.lastItems, when applicable. */
+  index?: number | null;
+  /** Real candidates (lastItems) for an ambiguous reference. */
+  candidates?: MemoryEntityRef[];
+  /** Short clarification question, when kind === "ambiguous". */
+  question?: string;
+  /** Human-readable reason, used for the dev trace only. */
+  reason?: string;
+}
+
+/** Dev observability trace of the memory used for one request. */
+export interface MemoryTrace {
+  retrieved: boolean;
+  fromClient: boolean;
+  referenceResolved?: ReferenceResolution;
+  entity?: MemoryEntityRef | null;
+  action?: MemoryLastAction | null;
+  preferences: number;
 }
