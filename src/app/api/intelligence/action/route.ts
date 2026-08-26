@@ -15,7 +15,8 @@ import {
   saveMemory,
 } from "@/lib/intelligence/memory";
 import { markSignalActed } from "@/lib/intelligence/signal-store";
-
+import { applyVerifiedActionToStep, readMission, runMissionLoop, saveMission } from "@/lib/intelligence/mission";
+import { readSignals } from "@/lib/intelligence/signal-store";
 import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type { IntelligenceActionType } from "@/lib/intelligence/types";
 
@@ -76,6 +77,10 @@ export async function POST(request: Request) {
     // Optional: when the action came from a proactive signal, mark the
     // signal as "acted" after the VERIFIED mutation (observability).
     const signalId = typeof body.signalId === "string" ? body.signalId : null;
+    // Phase 4: when the action belongs to a mission step, the step is
+    // updated only after the verified read-back (completed/failed).
+    const missionId = typeof body.missionId === "string" ? body.missionId : null;
+    const missionStepId = typeof body.missionStepId === "string" ? body.missionStepId : null;
 
     if (!actionType) {
       return NextResponse.json({ error: "Action type is required" }, { status: 400 });
@@ -136,6 +141,25 @@ export async function POST(request: Request) {
         await markSignalActed(supabase, workspaceId, user.id, signalId);
       }
 
+      // Phase 4 — mission step update (verified read-back only).
+      let mission = null;
+      if (missionId && missionStepId) {
+        const storedMission = await readMission(supabase, workspaceId, user.id, missionId);
+        if (storedMission) {
+          mission = applyVerifiedActionToStep(storedMission, missionStepId, {
+            verified: result.verified.verified,
+            matched: result.verified.matched,
+            summary: result.verified.summary,
+          });
+          const signals = (await readSignals(supabase, workspaceId, user.id)).filter(
+            (signal) => signal.status !== "resolved"
+          );
+          const { tasks, projects, goals } = await loadMissionSnapshot(supabase, workspaceId);
+          mission = runMissionLoop(mission, { tasks, projects, goals }, signals);
+          await saveMission(supabase, mission);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         actionType: result.actionType,
@@ -147,6 +171,7 @@ export async function POST(request: Request) {
         memory: updatedMemory
           ? { state: updatedMemory, preferences: stored?.preferences ?? [], persisted: true }
           : undefined,
+        mission,
       });
     } catch (err) {
       // ---- MEMORY UPDATE (failure) --------------------------------
@@ -157,7 +182,19 @@ export async function POST(request: Request) {
           const failed = applyActionFailure(memoryState, actionType, String(payload.title ?? payload.name ?? "Item"));
           await saveMemory(supabase, workspaceId, user.id, failed, stored?.preferences ?? []);
         }
-        return NextResponse.json({ error: err.message }, { status: err.status });
+        // Phase 4 — a failed mutation marks the mission step failed.
+        if (missionId && missionStepId) {
+          const storedMission = await readMission(supabase, workspaceId, user.id, missionId);
+          if (storedMission) {
+            const failedMission = applyVerifiedActionToStep(storedMission, missionStepId, {
+              verified: false,
+              matched: [],
+              summary: err.message,
+            });
+            await saveMission(supabase, failedMission);
+          }
+        }
+        return NextResponse.json({ error: err.message, mission: missionId && missionStepId ? await readMission(supabase, workspaceId, user.id, missionId) : undefined }, { status: err.status });
       }
       throw err;
     }
@@ -168,4 +205,32 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/** Minimal snapshot loader for mission re-evaluation (one read pass,
+ *  no activities/dependencies needed for step statuses). */
+async function loadMissionSnapshot(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string
+): Promise<WorkspaceSnapshot> {
+  const [tasksRes, projectsRes, goalsRes] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at")
+      .eq("workspace_id", workspaceId)
+      .limit(500),
+    supabase
+      .from("projects")
+      .select("id, name, status, due_date, progress, goal_id, updated_at, created_at")
+      .eq("workspace_id", workspaceId),
+    supabase
+      .from("goals")
+      .select("id, title, status, progress, target_date, updated_at")
+      .eq("workspace_id", workspaceId),
+  ]);
+  return {
+    tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],
+    projects: (projectsRes.data ?? []) as WorkspaceSnapshot["projects"],
+    goals: (goalsRes.data ?? []) as WorkspaceSnapshot["goals"],
+  };
 }

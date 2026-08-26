@@ -304,6 +304,9 @@ export interface IntelligenceMemoryState {
   pendingConfirmation?: MemoryPendingConfirmation | null;
   /** Entity ids known to have been deleted (reference invalidation). */
   deletedEntityIds: string[];
+  /** Phase 4 — the last mission the user worked on ("Où en est ma
+   *  présentation ?" / "Et maintenant ?" resume it). */
+  lastMissionId?: string | null;
   updatedAt: string;
 }
 
@@ -355,4 +358,99 @@ export interface MemoryTrace {
   entity?: MemoryEntityRef | null;
   action?: MemoryLastAction | null;
   preferences: number;
+}
+
+// ============================================================
+// MISSION (Phase 4) — multi-step orchestration engine
+// ============================================================
+
+export type MissionStepStatus =
+  | "planned"
+  | "ready"
+  | "in_progress"
+  | "blocked"
+  | "waiting"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type MissionStatus = "active" | "blocked" | "completed" | "failed" | "cancelled";
+
+export type MissionKind = "prepare" | "catchup" | "general";
+
+/** Deterministic, verifiable completion condition of a step. The step
+ *  is completed ONLY when this rule is satisfied against real data
+ *  (snapshot rows or a verified server read-back) — never by the LLM. */
+export type MissionStepCompletionRule =
+  | { kind: "linked_tasks_exist" } // ≥1 related task found in the snapshot
+  | { kind: "no_linked_blocked" } // none of the related tasks is blocked
+  | { kind: "linked_tasks_dated" } // all related open tasks have a due date
+  | { kind: "plan_ready" } // ≥1 related task is open (not done)
+  | { kind: "target_done" } // the target entity is actually done
+  | { kind: "action_verified" }; // the step's action was executed + verified
+
+export interface MissionTargetEntity {
+  type: "task" | "project" | "goal";
+  id: string | null;
+  label: string | null;
+}
+
+export interface MissionStep {
+  id: string;
+  title: string;
+  description: string;
+  status: MissionStepStatus;
+  order: number;
+  dependencies: string[];
+  completionRule: MissionStepCompletionRule;
+  targetEntity: MissionTargetEntity | null;
+  /** The action to propose when the step is ready (confirmation-gated
+   *  for mutations; navigation for reads). */
+  action: IntelligenceAction | null;
+  /** Present only after a verified server read-back of this step's
+   *  action. */
+  verification: ActionVerification | null;
+  blockedReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MissionContext {
+  relatedTaskIds: string[];
+  relatedProjectIds: string[];
+  keyword: string | null;
+  deadline: string | null;
+  deadlineLabel: string | null;
+  blockerLabels: string[];
+  /** Ids of related tasks currently blocked (real rows). */
+  blockerTaskIds: string[];
+  /** Active signals touching the mission's entities (Phase 3 link). */
+  signals: { type: string; title: string; severity: string }[];
+}
+
+export interface MissionNextBestAction {
+  stepId: string;
+  label: string;
+  reason: string;
+  kind: "navigate" | "mutate" | "none";
+  action?: IntelligenceAction;
+  href?: string;
+}
+
+export interface IntelligenceMission {
+  id: string;
+  userId: string;
+  workspaceId: string;
+  title: string;
+  objective: string;
+  kind: MissionKind;
+  status: MissionStatus;
+  progress: number;
+  currentStepId: string | null;
+  steps: MissionStep[];
+  context: MissionContext;
+  nextBestAction: MissionNextBestAction | null;
+  lastEvaluatedAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
