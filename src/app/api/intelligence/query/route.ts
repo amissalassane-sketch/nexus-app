@@ -7,7 +7,11 @@ import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
 import { askWorkspace, reasonWorkspace } from "@/lib/intelligence/advanced";
 import { callAIProvider } from "@/lib/intelligence/ai-provider";
 import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
-import type { ActivityContextItem } from "@/lib/intelligence/types";
+import type {
+  ActivityContextItem,
+  TaskDependencyContextItem,
+  SessionHistoryItem,
+} from "@/lib/intelligence/types";
 
 // ============================================================
 // NEXUS INTELLIGENCE — STRUCTURED QUERY API
@@ -54,8 +58,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const rawHistory = Array.isArray(body.sessionHistory) ? body.sessionHistory : [];
+    const sessionHistory: SessionHistoryItem[] = rawHistory.filter(
+      (h: unknown): h is SessionHistoryItem => Boolean(h && typeof h === "object" && "query" in h && typeof (h as Record<string, unknown>).query === "string")
+    );
+
     // Scoped queries strictly isolated by workspace_id
-    const [tasksRes, projectsRes, goalsRes, activitiesRes] = await Promise.all([
+    const [tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at")
@@ -76,6 +85,10 @@ export async function POST(request: Request) {
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false })
         .limit(30),
+      supabase
+        .from("task_dependencies")
+        .select("task_id, depends_on_task_id")
+        .eq("workspace_id", workspaceId),
     ]);
 
     const snapshot: WorkspaceSnapshot = {
@@ -93,17 +106,32 @@ export async function POST(request: Request) {
       createdAt: row.created_at,
     }));
 
-    const context = buildWorkspaceContext(workspaceId, snapshot, { activities: recentActivities });
+    const taskMap = new Map<string, string>();
+    for (const t of snapshot.tasks) {
+      taskMap.set(t.id, t.title);
+    }
+
+    const dependencies: TaskDependencyContextItem[] = (dependenciesRes.data ?? []).map((dep) => ({
+      taskId: dep.task_id,
+      taskTitle: taskMap.get(dep.task_id) ?? "Task",
+      dependsOnTaskId: dep.depends_on_task_id,
+      dependsOnTitle: taskMap.get(dep.depends_on_task_id) ?? "Prerequisite",
+    }));
+
+    const context = buildWorkspaceContext(workspaceId, snapshot, {
+      activities: recentActivities,
+      dependencies,
+    });
 
     // 1. Try real AI provider if configured (OpenAI or Anthropic)
-    let structuredResponse = await callAIProvider(query, context);
+    let structuredResponse = await callAIProvider(query, context, sessionHistory);
 
     // 2. Fallback to deterministic reasoning engine
     if (!structuredResponse) {
-      structuredResponse = reasonWorkspace(snapshot, query, context);
+      structuredResponse = reasonWorkspace(snapshot, query, context, sessionHistory);
     }
 
-    const legacyAnswer = askWorkspace(snapshot, query);
+    const legacyAnswer = askWorkspace(snapshot, query, sessionHistory);
 
     return NextResponse.json({
       success: true,

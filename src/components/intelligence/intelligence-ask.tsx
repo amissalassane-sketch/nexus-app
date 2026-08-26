@@ -98,7 +98,16 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
       const response = await fetch("/api/intelligence/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: value }),
+        body: JSON.stringify({
+          query: value,
+          sessionHistory: history.map((h) => ({
+            id: h.id,
+            query: h.query,
+            intent: h.response.intent,
+            headline: h.response.headline,
+            targetEntities: h.response.items?.map((i) => i.title),
+          })),
+        }),
         signal: controller.signal,
       });
 
@@ -131,7 +140,15 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     }
 
     // Deterministic fallback execution on client
-    const fallbackResponse = reasonWorkspace(snapshot, value);
+    const fallbackHistory = history.map((h) => ({
+      id: h.id,
+      query: h.query,
+      intent: h.response.intent,
+      headline: h.response.headline,
+      targetEntities: h.response.items?.map((i) => i.title),
+    }));
+
+    const fallbackResponse = reasonWorkspace(snapshot, value, undefined, fallbackHistory);
     setCurrentResponse(fallbackResponse);
     setHistory((prev) => [
       {
@@ -513,13 +530,17 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                 /* Inline Confirmation Box */
                 <div className="mt-3 rounded-input border border-border-default bg-bg-surface p-3.5 animate-scale-in">
                   <p className="text-small font-medium text-text-primary">
-                    Confirm workspace creation:
+                    {confirmingAction.type === "create_project"
+                      ? "Confirm project creation in workspace:"
+                      : "Confirm task creation in workspace:"}
                   </p>
                   <dl className="mt-2 flex flex-col divide-y divide-border-subtle border-y border-border-subtle text-caption text-text-secondary py-1">
                     <div className="flex justify-between py-1.5">
-                      <dt className="text-text-tertiary">Title</dt>
+                      <dt className="text-text-tertiary">
+                        {confirmingAction.type === "create_project" ? "Project name" : "Task title"}
+                      </dt>
                       <dd className="font-medium text-text-primary">
-                        {confirmingAction.payload?.title ?? confirmingAction.payload?.name}
+                        {confirmingAction.payload?.name ?? confirmingAction.payload?.title}
                       </dd>
                     </div>
                     {confirmingAction.payload?.priority ? (
@@ -527,6 +548,14 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                         <dt className="text-text-tertiary">Priority</dt>
                         <dd className="capitalize text-text-primary">
                           {confirmingAction.payload.priority}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {confirmingAction.payload?.status ? (
+                      <div className="flex justify-between py-1.5">
+                        <dt className="text-text-tertiary">Status</dt>
+                        <dd className="capitalize text-text-primary">
+                          {confirmingAction.payload.status}
                         </dd>
                       </div>
                     ) : null}
@@ -580,6 +609,36 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                   ) : null}
                 </div>
               )}
+
+              {/* Contextual Quick Actions */}
+              {currentResponse.quickActions && currentResponse.quickActions.length > 0 ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-border-subtle/50">
+                  <span className="eyebrow text-text-quaternary mr-1 select-none">Quick shortcuts:</span>
+                  {currentResponse.quickActions.map((qa) =>
+                    qa.query ? (
+                      <button
+                        key={qa.label}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => void send(qa.query)}
+                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary transition-colors"
+                      >
+                        <span>{qa.label}</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    ) : qa.href ? (
+                      <Link
+                        key={qa.label}
+                        href={qa.href}
+                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary transition-colors"
+                      >
+                        <span>{qa.label}</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    ) : null
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

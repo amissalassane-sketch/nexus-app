@@ -9,6 +9,8 @@ import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
   IntelligenceActionType,
+  SessionHistoryItem,
+  QuickAction,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
 
@@ -80,17 +82,23 @@ JSON RESPONSE FORMAT:
     "confirmationRequired": true,
     "payload": {
       "title": "Proposed task or project title",
+      "name": "Proposed project name if create_project",
       "priority": "low" | "medium" | "high" | "urgent",
       "dueDate": "YYYY-MM-DD or null",
       "projectId": "target project id or null"
     }
   },
+  "quickActions": [
+    {"label": "View projects", "href": "/projects"},
+    {"label": "Plan my day", "query": "Organise ma journée"}
+  ],
   "suggestions": ["Follow-up question 1", "Follow-up question 2"]
 }`;
 
 export async function callAIProvider(
   query: string,
-  context: WorkspaceContextSummary
+  context: WorkspaceContextSummary,
+  sessionHistory?: SessionHistoryItem[]
 ): Promise<StructuredIntelligenceResponse | null> {
   const config = detectAIProvider();
   if (config.provider === "nexus-engine" || !config.apiKey) {
@@ -103,6 +111,17 @@ export async function callAIProvider(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+    const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
+    if (sessionHistory && sessionHistory.length > 0) {
+      for (const item of sessionHistory.slice(0, 3).reverse()) {
+        historyMessages.push({ role: "user", content: item.query });
+        historyMessages.push({
+          role: "assistant",
+          content: JSON.stringify({ headline: item.headline, intent: item.intent }),
+        });
+      }
+    }
+
     if (config.provider === "openai") {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -114,6 +133,7 @@ export async function callAIProvider(
           model: config.model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
+            ...historyMessages,
             { role: "user", content: promptContent },
           ],
           response_format: { type: "json_object" },
@@ -135,6 +155,11 @@ export async function callAIProvider(
     }
 
     if (config.provider === "anthropic") {
+      const anthropicMessages = [
+        ...historyMessages.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: promptContent },
+      ];
+
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -145,7 +170,7 @@ export async function callAIProvider(
         body: JSON.stringify({
           model: config.model,
           system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: promptContent }],
+          messages: anthropicMessages,
           max_tokens: 1200,
           temperature: 0.1,
         }),
@@ -261,6 +286,22 @@ function validateAndNormalizeResponse(
     }
   }
 
+  const quickActions: QuickAction[] = [];
+  if (Array.isArray(data.quickActions)) {
+    for (const qa of data.quickActions) {
+      if (qa && typeof qa === "object") {
+        const item = qa as Record<string, unknown>;
+        if (typeof item.label === "string") {
+          quickActions.push({
+            label: item.label,
+            href: typeof item.href === "string" ? item.href : undefined,
+            query: typeof item.query === "string" ? item.query : undefined,
+          });
+        }
+      }
+    }
+  }
+
   const suggestions = Array.isArray(data.suggestions)
     ? data.suggestions.filter((s): s is string => typeof s === "string")
     : [];
@@ -278,6 +319,7 @@ function validateAndNormalizeResponse(
     },
     items: items.length > 0 ? items : undefined,
     action,
+    quickActions: quickActions.length > 0 ? quickActions : undefined,
     suggestions: suggestions.length > 0 ? suggestions : ["What should I do next?", "What is blocked?"],
   };
 }

@@ -25,6 +25,7 @@ import {
 import type {
   StructuredIntelligenceResponse,
   IntelligenceItem,
+  SessionHistoryItem,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
 
@@ -618,15 +619,219 @@ const has = (tokens: string[], ...needles: string[]) =>
 export function reasonWorkspace(
   snapshot: WorkspaceSnapshot,
   query: string,
-  context?: WorkspaceContextSummary
+  context?: WorkspaceContextSummary,
+  sessionHistory?: SessionHistoryItem[]
 ): StructuredIntelligenceResponse {
   const now = snapshot.now ?? new Date();
   const open = snapshot.tasks.filter(isActiveTask);
   const lowerQuery = query.toLowerCase().trim();
   const tokens = lowerQuery.split(/\s+/).filter(Boolean);
 
+  const projectMap = new Map<string, ProjectLike>();
+  for (const p of snapshot.projects) {
+    projectMap.set(p.id, p);
+  }
+
+  // 0. EMPTY WORKSPACE GUARD (Section 14)
+  if (snapshot.projects.length === 0 && snapshot.tasks.length === 0) {
+    return {
+      query,
+      intent: "general",
+      headline: "Intelligence is ready.",
+      narrative: "Create a project and a few tasks so NEXUS can start detecting priorities, risks and opportunities.",
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Projects", value: "0" },
+          { label: "Tasks", value: "0" },
+          { label: "Status", value: "Workspace is empty" },
+        ],
+        traceCount: "Workspace initialized · Waiting for first records",
+        sources: ["Workspace Telemetry"],
+      },
+      action: {
+        id: "act-create-first-project",
+        type: "create_project",
+        label: "Create first project",
+        description: "Initialize your workspace with a project",
+        confirmationRequired: true,
+        payload: {
+          name: "Main Initiative",
+          status: "planning",
+        },
+      },
+      quickActions: [
+        { label: "Create project", href: "/projects?create=1" },
+        { label: "Create task", href: "/tasks?create=1" },
+      ],
+      suggestions: [
+        "Create your first project",
+        "How does NEXUS Intelligence work?",
+      ],
+    };
+  }
+
+  // 0.1 CONVERSATIONAL SESSION MEMORY FOLLOW-UP (Section 11)
+  const isFollowUp =
+    sessionHistory &&
+    sessionHistory.length > 0 &&
+    (lowerQuery.includes("lequel") ||
+      lowerQuery.includes("laquelle") ||
+      lowerQuery.includes("which one") ||
+      lowerQuery.includes("le premier") ||
+      lowerQuery.includes("la première") ||
+      lowerQuery.includes("the first one") ||
+      lowerQuery.includes("et pour") ||
+      lowerQuery.includes("plus urgent") ||
+      lowerQuery.includes("most urgent"));
+
+  if (isFollowUp) {
+    const previous = sessionHistory[0];
+    const candidateProjects = snapshot.projects.filter((p) =>
+      previous.targetEntities?.length ? previous.targetEntities.includes(p.name) : true
+    );
+
+    const scored = candidateProjects.map((project) => {
+      const pTasks = open.filter((t) => t.project_id === project.id);
+      const pOverdue = pTasks.filter((t) => t.due_at && asDate(t.due_at)!.getTime() < now.getTime());
+      const pBlocked = pTasks.filter((t) => t.status === "blocked");
+      const pDue = asDate(project.due_date);
+      let score = 0;
+      const reasons: string[] = [];
+
+      if (pDue && pDue.getTime() < now.getTime()) {
+        score += 50;
+        reasons.push(`Deadline passed on ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(pDue)}`);
+      } else if (pDue && daysUntil(pDue, now) <= 7) {
+        score += 30;
+        reasons.push(`Deadline in ${daysUntil(pDue, now)} days`);
+      }
+      if (pBlocked.length > 0) {
+        score += 25;
+        reasons.push(`${plural(pBlocked.length, "task")} blocked`);
+      }
+      if (pOverdue.length > 0) {
+        score += 20;
+        reasons.push(`${plural(pOverdue.length, "task")} overdue`);
+      }
+
+      return { project, score, reasons, pTasks, pBlocked, pOverdue };
+    }).sort((a, b) => b.score - a.score);
+
+    const topProject = scored[0];
+    if (topProject && topProject.score > 0) {
+      return {
+        query,
+        intent: "prioritization",
+        headline: `“${topProject.project.name}” is the most urgent initiative`,
+        narrative: `Contextual follow-up to “${previous.query}”: Among the identified projects, “${topProject.project.name}” requires action first. ${topProject.reasons.join(". ")}.`,
+        provider: "nexus-engine",
+        evidence: {
+          metrics: [
+            { label: "Urgent project", value: topProject.project.name },
+            { label: "Primary reason", value: topProject.reasons[0] },
+            { label: "Blocked tasks", value: String(topProject.pBlocked.length) },
+            { label: "Overdue tasks", value: String(topProject.pOverdue.length) },
+          ],
+          traceCount: `Resolved from previous query context (${previous.headline})`,
+          sources: ["Session Memory", "Project Analysis"],
+        },
+        items: [
+          {
+            id: topProject.project.id,
+            title: topProject.project.name,
+            subtitle: `Status: ${topProject.project.status ?? "planning"} · Progress: ${Math.round(topProject.project.progress ?? 0)}%`,
+            badge: { label: "MOST URGENT", tone: "danger" },
+            href: "/projects",
+            reasons: topProject.reasons,
+          },
+          ...(topProject.pBlocked.length > 0 ? [{
+            id: topProject.pBlocked[0].id,
+            title: `Blocker: ${topProject.pBlocked[0].title}`,
+            subtitle: "Resolve this task to unblock the project",
+            badge: { label: "BLOCKER", tone: "danger" as const },
+            href: "/tasks?filter=blocked",
+            reasons: ["Critical path impediment"],
+          }] : []),
+        ],
+        action: {
+          id: `act-open-${topProject.project.id}`,
+          type: "open_project",
+          label: `Open “${topProject.project.name}”`,
+          confirmationRequired: false,
+          payload: { url: "/projects" },
+        },
+        quickActions: [
+          { label: "View tasks", href: "/tasks" },
+          { label: "Plan my day", query: "Organise ma journée" },
+        ],
+        suggestions: [
+          "Quelles sont mes 3 prochaines tâches prioritaires ?",
+          "Comment avancer sur ce projet ?",
+          "Aide-moi à organiser cette semaine.",
+        ],
+      };
+    }
+  }
+
   // 1. ACTION (Task or Project creation intent)
-  if (
+  const isCreateProject =
+    lowerQuery.startsWith("crée un projet") ||
+    lowerQuery.startsWith("créer un projet") ||
+    lowerQuery.startsWith("ajoute un projet") ||
+    lowerQuery.startsWith("ajouter un projet") ||
+    lowerQuery.startsWith("create a project") ||
+    lowerQuery.startsWith("add a project") ||
+    lowerQuery.startsWith("new project");
+
+  if (isCreateProject) {
+    const rawName = lowerQuery
+      .replace(/^(crée|créer|ajoute|ajouter)\s+un\s+projet\s*(pour\s+(mon|notre|le|la)?|de\s+(mon|notre|le|la)?|pour|de|:)?\s*/i, "")
+      .replace(/^(create|add)\s+(a\s+)?project\s*(for\s+(my|our|the)?|to\s+(my|our|the)?|for|to|:)?\s*/i, "")
+      .replace(/^new\s+project\s*(:)?\s*/i, "")
+      .replace(/[.]+$/, "")
+      .trim();
+
+    const name = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : "New Project";
+
+    return {
+      query,
+      intent: "action",
+      headline: `Recommended action: Create project “${name}”`,
+      narrative: `It is recommended to create a dedicated project for “${name}” so your team can organize tasks, track deadlines and monitor momentum.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Proposed name", value: name },
+          { label: "Default status", value: "Planning" },
+        ],
+        traceCount: "Parsed from intent · Verified workspace action",
+        sources: ["User Prompt", "Workspace Registry"],
+      },
+      action: {
+        id: `act-proj-${Date.now()}`,
+        type: "create_project",
+        label: "Create project",
+        description: `Create project “${name}” in current workspace`,
+        confirmationRequired: true,
+        payload: {
+          name,
+          status: "planning",
+        },
+      },
+      quickActions: [
+        { label: "Open projects", href: "/projects" },
+        { label: "Plan my day", query: "Organise ma journée" },
+      ],
+      suggestions: [
+        "Quels projets nécessitent mon attention ?",
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Aide-moi à organiser cette semaine.",
+      ],
+    };
+  }
+
+  const isCreateTask =
     lowerQuery.startsWith("crée une tâche") ||
     lowerQuery.startsWith("créer une tâche") ||
     lowerQuery.startsWith("ajoute une tâche") ||
@@ -636,8 +841,9 @@ export function reasonWorkspace(
     lowerQuery.startsWith("new task") ||
     lowerQuery.includes("dois préparer") ||
     lowerQuery.includes("faut préparer") ||
-    lowerQuery.includes("besoin de préparer")
-  ) {
+    lowerQuery.includes("besoin de préparer");
+
+  if (isCreateTask) {
     const rawTitle = lowerQuery
       .replace(/^(je\s+dois|il\s+faut|j'ai\s+besoin\s+de)\s+/i, "")
       .replace(/^(crée|créer|ajoute|ajouter)\s+une\s+tâche\s*(pour|de|:)?\s*/i, "")
@@ -691,6 +897,103 @@ export function reasonWorkspace(
           status: "todo",
         },
       },
+      quickActions: [
+        { label: "Open task board", href: "/tasks" },
+        { label: "Plan my day", query: "Organise ma journée" },
+      ],
+      suggestions: [
+        "Quelles sont mes 3 prochaines tâches prioritaires ?",
+        "Quels projets nécessitent mon attention ?",
+        "Aide-moi à organiser cette semaine.",
+      ],
+    };
+  }
+
+  // 2. DAILY OPERATIONAL PLANNING ("Organise ma journée" — Section 10)
+  const isDayPlanning =
+    lowerQuery.includes("organise ma journée") ||
+    lowerQuery.includes("organise la journée") ||
+    lowerQuery.includes("organiser ma journée") ||
+    lowerQuery.includes("plan my day") ||
+    lowerQuery.includes("planning du jour") ||
+    lowerQuery.includes("programme du jour") ||
+    (lowerQuery.includes("que") && lowerQuery.includes("faire aujourd'hui"));
+
+  if (isDayPlanning) {
+    const overdue = open.filter((t) => t.due_at && asDate(t.due_at)!.getTime() < now.getTime());
+    const dueToday = open.filter((t) => t.due_at && daysUntil(asDate(t.due_at)!, now) === 0);
+    const blocked = open.filter((t) => t.status === "blocked");
+    const highPriority = open.filter((t) => (t.priority === "urgent" || t.priority === "high") && !overdue.includes(t) && !dueToday.includes(t));
+
+    const pool = [
+      ...overdue.map((t) => ({ task: t, reason: `Overdue by ${plural(Math.abs(daysUntil(asDate(t.due_at)!, now)), "day")}`, urgency: 1 })),
+      ...blocked.map((t) => ({ task: t, reason: "Blocker holding downstream work", urgency: 2 })),
+      ...dueToday.map((t) => ({ task: t, reason: "Deadline lands today", urgency: 3 })),
+      ...highPriority.map((t) => ({ task: t, reason: `${t.priority ?? "High"} priority commitment`, urgency: 4 })),
+      ...open.filter((t) => !overdue.includes(t) && !dueToday.includes(t) && !blocked.includes(t) && !highPriority.includes(t)).map((t) => ({ task: t, reason: "Active backlog deliverable", urgency: 5 })),
+    ];
+
+    const uniqueTasks = Array.from(new Map(pool.map((p) => [p.task.id, p])).values());
+    const daySchedule: IntelligenceItem[] = [];
+
+    const timeSlots = ["09:00", "10:30", "14:00", "15:30"];
+    for (let i = 0; i < Math.min(timeSlots.length, uniqueTasks.length); i++) {
+      const item = uniqueTasks[i];
+      const slot = timeSlots[i];
+      daySchedule.push({
+        id: `slot-${i}`,
+        title: `${slot} — ${item.task.title}`,
+        subtitle: `Reason: ${item.reason} · Project: ${item.task.project_id ? (projectMap.get(item.task.project_id)?.name ?? "General") : "General"}`,
+        badge: {
+          label: slot,
+          tone: item.urgency === 1 || item.urgency === 2 ? "danger" : item.urgency === 3 ? "warning" : "neutral",
+        },
+        href: "/tasks",
+        reasons: [`Reason: ${item.reason}`],
+      });
+    }
+
+    if (daySchedule.length === 0) {
+      daySchedule.push({
+        id: "slot-empty",
+        title: "No urgent tasks scheduled for today",
+        subtitle: "Your queue is clear. Good window for strategic deep work.",
+        badge: { label: "CLEAR", tone: "success" },
+        href: "/tasks?create=1",
+        reasons: ["No open commitments in workspace"],
+      });
+    }
+
+    return {
+      query,
+      intent: "planning",
+      headline: "Operational schedule for today",
+      narrative: daySchedule.length > 1
+        ? `NEXUS structured your workday based on verified deadlines and dependencies: clear overdue debt first at 09:00, address blockers before noon, and execute scheduled commitments this afternoon.`
+        : `Your workspace has no immediate deadline debt today. A clear window to advance strategic projects or add new deliverables.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "09:00 Focus", value: uniqueTasks[0]?.task.title ? uniqueTasks[0].task.title.slice(0, 24) : "Open slot" },
+          { label: "Overdue debt", value: String(overdue.length) },
+          { label: "Due today", value: String(dueToday.length) },
+          { label: "Blockers", value: String(blocked.length) },
+        ],
+        traceCount: `Sequenced ${daySchedule.length} time-blocks from verified workspace data`,
+        sources: ["Today Schedule", "Task Due Dates"],
+      },
+      items: daySchedule,
+      action: uniqueTasks.length > 0 ? {
+        id: "act-start-today",
+        type: "open_task",
+        label: `Start with "${uniqueTasks[0].task.title}"`,
+        confirmationRequired: false,
+        payload: { url: "/tasks" },
+      } : undefined,
+      quickActions: [
+        { label: "Open task board", href: "/tasks" },
+        { label: "Inspect projects", href: "/projects" },
+      ],
       suggestions: [
         "Quelles sont mes 3 prochaines tâches prioritaires ?",
         "Quels projets nécessitent mon attention ?",
@@ -1042,14 +1345,22 @@ export function reasonWorkspace(
     };
   }
 
-  // 6. DÉTECTION (Blocked projects, overdue work, approaching risks)
+  // 6. DÉTECTION (Blocked projects, overdue work, impediments)
   if (
     lowerQuery.includes("projets bloqu") ||
     lowerQuery.includes("projet bloqu") ||
     lowerQuery.includes("projets semblent bloqu") ||
     lowerQuery.includes("blocked project") ||
     lowerQuery.includes("projects blocked") ||
-    lowerQuery.includes("stalled project")
+    lowerQuery.includes("stalled project") ||
+    lowerQuery.includes("bloqu") ||
+    lowerQuery.includes("block") ||
+    lowerQuery.includes("stuck") ||
+    lowerQuery.includes("stall") ||
+    lowerQuery.includes("empêche") ||
+    lowerQuery.includes("empeche") ||
+    lowerQuery.includes("overdue") ||
+    lowerQuery.includes("en retard")
   ) {
     const blockedProjects = snapshot.projects
       .map((project) => {
@@ -1165,7 +1476,8 @@ export function reasonWorkspace(
 
 export function askWorkspace(
   snapshot: WorkspaceSnapshot,
-  query: string
+  query: string,
+  sessionHistory?: SessionHistoryItem[]
 ): AskAnswer {
   const lowerQuery = query.toLowerCase().trim();
   const tokens = lowerQuery.split(/\s+/).filter(Boolean);
@@ -1198,7 +1510,7 @@ export function askWorkspace(
     return projectAnswer(nameMatch, snapshot, snapshot.now ?? new Date());
   }
 
-  const reasoned = reasonWorkspace(snapshot, query);
+  const reasoned = reasonWorkspace(snapshot, query, undefined, sessionHistory);
   const lines: { label: string; value: string }[] = [];
 
   for (const m of reasoned.evidence.metrics) {

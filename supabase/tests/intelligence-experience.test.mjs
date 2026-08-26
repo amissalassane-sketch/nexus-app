@@ -100,6 +100,15 @@ console.log("-- intelligence 6 core capabilities (reasonWorkspace) ---");
 }
 
 {
+  const res = reasonWorkspace(mockSnapshot, "Organise ma journée.");
+  ok("C. Planification du jour: intent is planning", res.intent === "planning");
+  ok("C. Planification du jour: structured time slots", res.items?.some((i) => i.title.includes("09:00")));
+  ok("C. Planification du jour: 09:00 clears overdue debt", res.items?.[0]?.title.includes("09:00"));
+  ok("C. Planification du jour: 09:00 task is Deploy auth service", res.items?.[0]?.title.includes("Deploy auth service"));
+  ok("C. Planification du jour: has quick actions", (res.quickActions?.length ?? 0) > 0);
+}
+
+{
   const res = reasonWorkspace(mockSnapshot, "Résume mon activité cette semaine.");
   ok("D. Synthèse: intent is synthesis", res.intent === "synthesis");
   ok("D. Synthèse: mentions completed tasks", res.evidence.metrics.some((m) => m.label.includes("Completed")));
@@ -120,6 +129,41 @@ console.log("-- intelligence 6 core capabilities (reasonWorkspace) ---");
   ok("F. Action: action type is create_task", res.action?.type === "create_task");
   ok("F. Action: extracted title is clean", res.action?.payload?.title?.toLowerCase().includes("préparer ma présentation"));
   ok("F. Action: calculated deadline for Friday", Boolean(res.action?.payload?.dueDate));
+}
+
+{
+  const res = reasonWorkspace(mockSnapshot, "Crée un projet pour mon portfolio.");
+  ok("F. Action: creates project intent", res.intent === "action");
+  ok("F. Action: action type is create_project", res.action?.type === "create_project");
+  ok("F. Action: requires confirmation", res.action?.confirmationRequired === true);
+  ok("F. Action: extracted name is Portfolio", res.action?.payload?.name === "Portfolio");
+}
+
+console.log("-- session memory & follow-ups -------------------------");
+{
+  const turn1History = [
+    {
+      id: "turn-1",
+      query: "Quels projets sont en retard ?",
+      intent: "analysis",
+      headline: "2 projects require attention",
+      targetEntities: ["Website Redesign", "API Migration"],
+    },
+  ];
+
+  const res = reasonWorkspace(mockSnapshot, "Et lequel est le plus urgent ?", undefined, turn1History);
+  ok("Session follow-up: resolves pronoun follow-up", res.intent === "prioritization");
+  ok("Session follow-up: identifies Website Redesign as most urgent", res.headline.includes("Website Redesign"));
+  ok("Session follow-up: evidence traces back to previous turn", res.evidence.traceCount.includes("previous query"));
+}
+
+console.log("-- empty workspace handling ----------------------------");
+{
+  const emptySnapshot = { now: new Date("2026-08-25T10:00:00Z"), projects: [], tasks: [], goals: [] };
+  const res = reasonWorkspace(emptySnapshot, "Que dois-je faire ?");
+  ok("Empty workspace: headline explains ready state", res.headline === "Intelligence is ready.");
+  ok("Empty workspace: guides to create first project", res.action?.type === "create_project");
+  ok("Empty workspace: provides quick action links", (res.quickActions?.length ?? 0) >= 2);
 }
 
 console.log("-- intelligence legacy adapter (askWorkspace) ------------");
@@ -209,6 +253,39 @@ console.log("-- navigation model -----------------------------------");
   ok("Mobile nav includes Intelligence", mobileHrefs.includes("/app/intelligence"));
   ok("Mobile nav includes Projects", mobileHrefs.includes("/projects"));
   ok("Mobile nav includes Tasks", mobileHrefs.includes("/tasks"));
+}
+
+console.log("-- natural language & synonyms (FR / EN) --------------");
+{
+  const res1 = reasonWorkspace(mockSnapshot, "Qu'est-ce qui risque de prendre du retard ?");
+  ok("Synonym: 'Qu'est-ce qui risque de prendre du retard' -> analysis", res1.intent === "analysis");
+  ok("Synonym: analysis includes evidence", res1.evidence.metrics.length > 0);
+
+  const res2 = reasonWorkspace(mockSnapshot, "What should I do first?");
+  ok("Synonym: 'What should I do first?' -> prioritization", res2.intent === "prioritization");
+  ok("Synonym: prioritization top task identified", res2.items?.[0]?.title === "Deploy auth service");
+
+  const res3 = reasonWorkspace(mockSnapshot, "Qu'est-ce qui a changé récemment ?");
+  ok("Synonym: 'Qu'est-ce qui a changé récemment' -> synthesis", res3.intent === "synthesis");
+
+  const res4 = reasonWorkspace(mockSnapshot, "Qu'est-ce qui empêche mon travail d'avancer ?");
+  ok("Synonym: 'Qu'est-ce qui empêche mon travail d'avancer' -> detection", res4.intent === "detection");
+}
+
+console.log("-- task dependencies & blocker tracing in context ------");
+{
+  const mockDeps = [
+    {
+      taskId: "t1",
+      taskTitle: "Deploy auth service",
+      dependsOnTaskId: "t0",
+      dependsOnTitle: "Database migration",
+    },
+  ];
+
+  const context = buildWorkspaceContext("ws-123", mockSnapshot, { dependencies: mockDeps });
+  const blockedTask = context.blockedTasksDetail.find((b) => b.id === "t1");
+  ok("Context traces blocker dependency to prerequisite task", blockedTask?.blockedBy?.includes("Database migration"));
 }
 
 console.log(`\n================ ${passed} passed / ${failed} failed ================`);

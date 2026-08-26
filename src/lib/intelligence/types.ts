@@ -41,6 +41,13 @@ export interface IntelligenceAction {
   };
 }
 
+export interface QuickAction {
+  label: string;
+  href?: string;
+  query?: string;
+  icon?: string;
+}
+
 export interface IntelligenceItem {
   id: string;
   title: string;
@@ -66,6 +73,7 @@ export interface StructuredIntelligenceResponse {
   };
   items?: IntelligenceItem[];
   action?: IntelligenceAction;
+  quickActions?: QuickAction[];
   suggestions: string[];
 }
 
@@ -83,4 +91,14 @@ export interface TaskDependencyContextItem {
   taskTitle: string;
   dependsOnTaskId: string;
   dependsOnTitle: string;
+}
+
+export interface SessionHistoryItem {
+  id: string;
+  query: string;
+  intent: IntelligenceIntent;
+  headline: string;
+  targetEntities?: string[];
+  actionTaken?: string;
+  timestamp?: string;
 }
