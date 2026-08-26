@@ -26,6 +26,7 @@ import type {
   StructuredIntelligenceResponse,
   IntelligenceItem,
   IntelligenceActionType,
+  IntelligenceTarget,
   SessionHistoryItem,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
@@ -673,7 +674,9 @@ function reasonWorkspaceCore(
   snapshot: WorkspaceSnapshot,
   query: string,
   context?: WorkspaceContextSummary,
-  sessionHistory?: SessionHistoryItem[]
+  sessionHistory?: SessionHistoryItem[],
+  /** Memory-resolved target (Phase 2). */
+  resolvedTarget?: IntelligenceTarget
 ): StructuredIntelligenceResponse {
   const now = snapshot.now ?? new Date();
   const open = snapshot.tasks.filter(isActiveTask);
@@ -827,7 +830,7 @@ function reasonWorkspaceCore(
     }
   }
 
-  const classified = classifyIntent(query, { snapshot, sessionHistory });
+  const classified = classifyIntent(query, { snapshot, sessionHistory, resolvedTarget });
 
   // 1.0 CONVERSATION CONTINUATION — "Et après ?", "Fais-le", "this task"
   // Resolves the referential phrases against the previous turn's action and
@@ -904,11 +907,23 @@ function reasonWorkspaceCore(
     };
   }
 
-  // 1.0.1 SEARCH — locate a real task/project by name
+  // 1.0.1 SEARCH — locate a real task/project by name, or resolve
+  // « ouvre-la » / « open it » via the memory-resolved target.
   if (classified.intent === "SEARCH") {
     const task = findTaskByQuery(snapshot, query);
     const project = task ? null : findProjectByQuery(snapshot, query);
-    const entity = task ? { type: "task" as const, id: task.id, label: task.title } : project ? { type: "project" as const, id: project.id, label: project.name } : null;
+    const entity =
+      task
+        ? { type: "task" as const, id: task.id, label: task.title }
+        : project
+          ? { type: "project" as const, id: project.id, label: project.name }
+          : resolvedTarget?.id
+            ? {
+                type: (resolvedTarget.type === "project" ? "project" : "task") as "task" | "project",
+                id: resolvedTarget.id,
+                label: resolvedTarget.label ?? "Item",
+              }
+            : null;
     if (!entity) {
       return {
         query,
@@ -1005,7 +1020,9 @@ function reasonWorkspaceCore(
     const project = task ? null : findProjectByQuery(snapshot, query);
     const sessionEntity = lastTurn?.target?.id
       ? { type: lastTurn.target.type === "project" ? ("project" as const) : ("task" as const), id: lastTurn.target.id, label: lastTurn.target.label ?? "" }
-      : null;
+      : resolvedTarget?.id
+        ? { type: resolvedTarget.type === "project" ? ("project" as const) : ("task" as const), id: resolvedTarget.id, label: resolvedTarget.label ?? "" }
+        : null;
     const entity = task
       ? { type: "task" as const, id: task.id, label: task.title }
       : project
@@ -1103,7 +1120,9 @@ function reasonWorkspaceCore(
     const project = task ? null : findProjectByQuery(snapshot, query);
     const sessionEntity = lastTurn?.target?.id
       ? { type: (lastTurn.target.type === "project" ? "project" : "task") as "task" | "project", id: lastTurn.target.id, label: lastTurn.target.label ?? "" }
-      : null;
+      : resolvedTarget?.id
+        ? { type: (resolvedTarget.type === "project" ? "project" : "task") as "task" | "project", id: resolvedTarget.id, label: resolvedTarget.label ?? "" }
+        : null;
     const entity = task
       ? { type: "task" as const, id: task.id, label: task.title }
       : project
@@ -1902,10 +1921,13 @@ export function reasonWorkspace(
   snapshot: WorkspaceSnapshot,
   query: string,
   context?: WorkspaceContextSummary,
-  sessionHistory?: SessionHistoryItem[]
+  sessionHistory?: SessionHistoryItem[],
+  /** Target resolved by the reference resolver (Phase 2 memory). Used
+   *  as a priority fallback for referential branches — never guessed. */
+  resolvedTarget?: IntelligenceTarget
 ): StructuredIntelligenceResponse {
-  const response = reasonWorkspaceCore(snapshot, query, context, sessionHistory);
-  const classified = classifyIntent(query, { snapshot, sessionHistory });
+  const response = reasonWorkspaceCore(snapshot, query, context, sessionHistory, resolvedTarget);
+  const classified = classifyIntent(query, { snapshot, sessionHistory, resolvedTarget });
   return {
     ...response,
     intentId: response.intentId ?? mapLegacyIntentToId(response.intent, response.action?.type),

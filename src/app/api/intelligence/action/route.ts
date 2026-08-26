@@ -8,6 +8,14 @@ import {
   ActionError,
   riskForIntelligenceAction,
 } from "@/lib/intelligence/actions";
+import {
+  applyActionFailure,
+  applyActionSuccess,
+  readMemory,
+  saveMemory,
+} from "@/lib/intelligence/memory";
+
+import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type { IntelligenceActionType } from "@/lib/intelligence/types";
 
 // ============================================================
@@ -81,6 +89,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Unsupported action type "${actionType}"` }, { status: 400 });
     }
 
+    // ---- Phase 2: load the working memory to update ---------------
+    const stored = await readMemory(supabase, workspaceId, user.id);
+    const memoryState = stored?.state;
+
     try {
       const result = await executeIntelligenceAction(
         supabase,
@@ -90,6 +102,29 @@ export async function POST(request: Request) {
         payload
       );
 
+      // ---- MEMORY UPDATE (only after server verification) ---------
+      // A verified mutation is recorded as executed with the REAL id;
+      // deletions invalidate the reference for future turns.
+      const entityLabel =
+        result.entity?.title ?? result.entity?.name ?? payload.title ?? payload.name ?? "Item";
+      const entityType: "task" | "project" | "goal" =
+        actionType.includes("project") ? "project" : actionType.includes("goal") ? "goal" : "task";
+
+      const updatedMemory = memoryState
+        ? applyActionSuccess(
+            memoryState,
+            result.actionType,
+            result.entityId,
+            String(entityLabel),
+            result.verified.verified,
+            entityType
+          )
+        : undefined;
+
+      if (updatedMemory) {
+        await saveMemory(supabase, workspaceId, user.id, updatedMemory, stored?.preferences ?? []);
+      }
+
       return NextResponse.json({
         success: true,
         actionType: result.actionType,
@@ -98,9 +133,19 @@ export async function POST(request: Request) {
         entity: result.entity,
         verification: result.verified,
         risk: riskForIntelligenceAction(actionType),
+        memory: updatedMemory
+          ? { state: updatedMemory, preferences: stored?.preferences ?? [], persisted: true }
+          : undefined,
       });
     } catch (err) {
+      // ---- MEMORY UPDATE (failure) --------------------------------
+      // A failed/rejected action is recorded as FAILED — never as
+      // executed, never as verified.
       if (err instanceof ActionError) {
+        if (memoryState) {
+          const failed = applyActionFailure(memoryState, actionType, String(payload.title ?? payload.name ?? "Item"));
+          await saveMemory(supabase, workspaceId, user.id, failed, stored?.preferences ?? []);
+        }
         return NextResponse.json({ error: err.message }, { status: err.status });
       }
       throw err;

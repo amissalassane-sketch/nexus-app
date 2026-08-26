@@ -20,6 +20,7 @@ import type {
   IntelligenceAction,
   IntelligenceActionType,
   IntelligenceIntentId,
+  IntelligencePreference,
   IntelligenceRisk,
   IntelligenceTarget,
   IntelligenceToolCall,
@@ -27,6 +28,7 @@ import type {
   SessionHistoryItem,
   QuickAction,
 } from "./types";
+
 import type { WorkspaceContextSummary } from "./context-builder";
 import { mapLegacyIntentToId, riskForAction } from "./intent";
 import { READ_TOOL_NAMES } from "./tools";
@@ -190,6 +192,8 @@ export async function callAIProvider(
     fetchImpl?: typeof fetch;
     /** Overrides the default 10s provider timeout (used by tests). */
     timeoutMs?: number;
+    /** Explicitly-requested durable preferences (Phase 2 memory). */
+    preferences?: IntelligencePreference[];
   }
 ): Promise<StructuredIntelligenceResponse | null> {
   const config = options?.config ?? detectAIProvider();
@@ -200,7 +204,12 @@ export async function callAIProvider(
     return null;
   }
 
-  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}\n\nUSER QUESTION:\n${query}`;
+  const preferencesBlock =
+    options?.preferences && options.preferences.length > 0
+      ? `\n\nUSER EXPLICIT PREFERENCES (durable, user-requested):\n${options.preferences.map((p) => `- ${p.value}`).join("\n")}`
+      : "";
+
+  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}${preferencesBlock}\n\nUSER QUESTION:\n${query}`;
 
   try {
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
