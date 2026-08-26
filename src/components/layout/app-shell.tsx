@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, LifeBuoy, LogOut, Menu, UserRound, X } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { CommandMenu } from "@/components/command-menu";
 import { Topbar } from "@/components/layout/topbar";
@@ -44,7 +45,9 @@ function AppShellInner({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  const [navClosing, setNavClosing] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const navCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -77,8 +80,23 @@ function AppShellInner({
 
   // The drawer is closed by the thing that navigates (`onNavigate` on every
   // sidebar item), not by an effect watching the pathname — no cascading
-  // render, and the state change stays attached to the user's action.
-  const closeNav = useCallback(() => setNavOpen(false), []);
+  // render, and the state change stays attached to the user's action. The
+  // drawer plays a short reverse animation before unmounting instead of
+  // vanishing the instant the navigation lands.
+  const openNav = useCallback(() => {
+    if (navCloseTimer.current) clearTimeout(navCloseTimer.current);
+    setNavClosing(false);
+    setNavOpen(true);
+  }, []);
+
+  const closeNav = useCallback(() => {
+    if (navClosing) return;
+    setNavClosing(true);
+    navCloseTimer.current = setTimeout(() => {
+      setNavOpen(false);
+      setNavClosing(false);
+    }, 160);
+  }, [navClosing]);
 
   useEffect(() => {
     if (!navOpen) return;
@@ -88,6 +106,13 @@ function AppShellInner({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [navOpen, closeNav]);
+
+  useEffect(
+    () => () => {
+      if (navCloseTimer.current) clearTimeout(navCloseTimer.current);
+    },
+    []
+  );
 
   return (
     <ToastProvider>
@@ -119,7 +144,7 @@ function AppShellInner({
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle px-3 sm:px-4 lg:hidden">
             <button
               type="button"
-              onClick={() => setNavOpen(true)}
+              onClick={openNav}
               aria-label="Open navigation"
               aria-expanded={navOpen}
               className="flex h-9 w-9 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
@@ -241,7 +266,7 @@ function AppShellInner({
             ))}
             <button
               type="button"
-              onClick={() => setNavOpen(true)}
+              onClick={openNav}
               aria-label="More destinations"
               className="flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-colors duration-150 hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
             >
@@ -262,18 +287,29 @@ function AppShellInner({
 
         {/* Drawer — the full sidebar below lg */}
         {navOpen ? (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className={cn(
+              "fixed inset-0 z-50 lg:hidden",
+              navClosing && "pointer-events-none"
+            )}
+          >
             <button
               type="button"
               aria-label="Close navigation"
               onClick={closeNav}
-              className="absolute inset-0 bg-black/70 animate-fade-in"
+              className={cn(
+                "absolute inset-0 bg-black/70",
+                navClosing ? "animate-fade-out" : "animate-fade-in"
+              )}
             />
             <div
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
-              className="absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle animate-panel-in"
+              className={cn(
+                "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle",
+                navClosing ? "animate-panel-out" : "animate-panel-in"
+              )}
             >
               <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-4">
                 <NexusWordmark size={20} />

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
+import { useCommandKeyLabel } from "@/hooks/use-command-key";
 import {
   Dropdown,
   DropdownItem,
@@ -51,6 +52,7 @@ export function Topbar({
   const crumbs = breadcrumbFor(pathname);
   const hasName = Boolean(user.name?.trim());
   const initial = (user.name ?? "").trim().slice(0, 1).toUpperCase();
+  const commandKey = useCommandKeyLabel();
 
   const handleLogout = async () => {
     try {
@@ -105,7 +107,7 @@ export function Topbar({
         <Search size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
         <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary">
-          ⌘K
+          {commandKey}
         </kbd>
       </button>
 

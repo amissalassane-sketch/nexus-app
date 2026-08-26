@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:onboarding": "npx tsx supabase/tests/onboarding-product.test.mjs",
     "test:intelligence": "npx tsx supabase/tests/intelligence-experience.test.mjs",
+    "test:intelligence-agent": "npx tsx supabase/tests/intelligence-agent.test.mjs",
     "verify:scene": "tsx scripts/verify-intelligence-scene.ts",
     "verify:production-onboarding": "node scripts/verify-production-onboarding.mjs"
   },

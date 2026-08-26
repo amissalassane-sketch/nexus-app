@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 import { useReducedMotion } from "@/components/onboarding/spotlight";
 import { cn } from "@/lib/cn";
@@ -15,29 +15,47 @@ export function WelcomeScreen({
   const locale = browserLocale();
   const reduced = useReducedMotion();
   const [pending, setPending] = useState<"start" | "explore" | null>(null);
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    []
+  );
 
   const handleStart = () => {
-    if (pending) return;
+    if (pending || closing) return;
     setPending("start");
-    onStart();
+    setClosing(true);
+    closeTimer.current = setTimeout(onStart, 160);
   };
 
   const handleExplore = () => {
-    if (pending) return;
+    if (pending || closing) return;
     setPending("explore");
-    onExplore();
+    setClosing(true);
+    closeTimer.current = setTimeout(onExplore, 160);
   };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center">
-      <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
+      <div
+        className={cn(
+          "absolute inset-0 bg-black/45",
+          !reduced && (closing ? "animate-fade-out" : "animate-fade-in")
+        )}
+        aria-hidden="true"
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="nexus-welcome-title"
         className={cn(
           "relative z-[71] w-[min(420px,100%)] rounded-card border border-border-default bg-bg-surface p-6 shadow-dropdown",
-          !reduced && "animate-fade-in"
+          !reduced && (closing ? "animate-scale-out" : "animate-scale-in"),
+          closing && "pointer-events-none"
         )}
       >
         <p className="eyebrow text-text-quaternary">

@@ -216,6 +216,7 @@ export function CommandMenu() {
   const router = useRouter();
   const listboxId = useId();
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [entities, setEntities] = useState<Command[]>([]);
@@ -227,11 +228,24 @@ export function CommandMenu() {
   const listRef = useRef<HTMLDivElement>(null);
   const fetchedRef = useRef(false);
   const restoreFocus = useRef<HTMLElement | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const closeMenu = useCallback(() => {
-    setOpen(false);
-    restoreFocus.current?.focus?.();
-  }, []);
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setClosing(false);
+      setOpen(false);
+      restoreFocus.current?.focus?.();
+    }, 160);
+  }, [closing]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    []
+  );
 
   // Load real tasks / projects / goals once, lazily.
   const loadEntities = useCallback(async () => {
@@ -320,35 +334,42 @@ export function CommandMenu() {
     }
   }, []);
 
-  const openMenu = useCallback(() => {
-    restoreFocus.current = document.activeElement as HTMLElement | null;
-    setOpen(true);
-    setQuery("");
-    setActiveIndex(0);
-    setRecents(
-      readRecents()
-        .map((id) => allCommandsById.get(id))
-        .filter((command): command is Command => Boolean(command))
-    );
-    void loadEntities();
-  }, [loadEntities]);
+  const openMenu = useCallback(
+    (initialQuery = "") => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setClosing(false);
+      setOpen(true);
+      setQuery(initialQuery);
+      setActiveIndex(0);
+      setRecents(
+        readRecents()
+          .map((id) => allCommandsById.get(id))
+          .filter((command): command is Command => Boolean(command))
+      );
+      void loadEntities();
+    },
+    [loadEntities]
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        if (open) closeMenu();
+        if (open) requestClose();
         else openMenu();
       }
     };
     const onOpen = () => openMenu();
+    const onCreate = () => openMenu("create");
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("nexus:open-command", onOpen);
+    window.addEventListener("nexus:create-command", onCreate);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("nexus:open-command", onOpen);
+      window.removeEventListener("nexus:create-command", onCreate);
     };
-  }, [open, openMenu, closeMenu]);
+  }, [open, openMenu, requestClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -429,16 +450,17 @@ export function CommandMenu() {
   const runCommand = useCallback(
     (command: Command) => {
       rememberRecent(command.id);
-      setOpen(false);
+      requestClose();
       router.push(command.href);
     },
-    [router]
+    [requestClose, router]
   );
 
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (closing) return;
     if (event.key === "Escape") {
       event.preventDefault();
-      closeMenu();
+      requestClose();
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       setActiveIndex((index) => (flat.length ? (index + 1) % flat.length : 0));
@@ -487,11 +509,19 @@ export function CommandMenu() {
         type="button"
         aria-label="Close command palette"
         tabIndex={-1}
-        onClick={closeMenu}
-        className="command-backdrop fixed inset-0"
+        onClick={requestClose}
+        className={cn(
+          "command-backdrop fixed inset-0",
+          closing && "command-backdrop-out"
+        )}
       />
 
-      <div className="command-panel relative w-full max-w-[680px] animate-command-in overflow-hidden rounded-panel border border-border-default bg-bg-surface shadow-overlay ring-1 ring-inset ring-white/[0.03]">
+      <div
+        className={cn(
+          "command-panel relative w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface shadow-overlay ring-1 ring-inset ring-white/[0.03]",
+          closing ? "animate-command-out" : "animate-command-in"
+        )}
+      >
         {/* Top sheen — one quiet light across the header */}
         <div className="command-sheen pointer-events-none absolute inset-x-0 top-0 h-px" aria-hidden="true" />
 

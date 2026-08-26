@@ -38,6 +38,8 @@ export function Dropdown({
   width = 240,
   label,
   className,
+  open: openProp,
+  onOpenChange,
 }: {
   trigger: (props: {
     open: boolean;
@@ -50,15 +52,42 @@ export function Dropdown({
   width?: number;
   label: string;
   className?: string;
+  /** Controlled open state. Use with `onOpenChange` to drive the menu externally. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const openedAt = useRef(0);
 
-  const close = useCallback(() => setOpen(false), []);
-  const toggle = useCallback(() => setOpen((value) => !value), []);
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (isControlled) {
+        onOpenChange?.(next);
+      } else {
+        setInternalOpen(next);
+      }
+    },
+    [isControlled, onOpenChange]
+  );
+
+  const close = useCallback(() => setOpen(false), [setOpen]);
+  const toggle = useCallback(() => {
+    // Guard a double-click on the trigger: a second click within the open
+    // transition would otherwise open and instantly close the menu.
+    if (open && Date.now() - openedAt.current < 140) return;
+    setOpen(!open);
+  }, [open, setOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    openedAt.current = Date.now();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -85,7 +114,7 @@ export function Dropdown({
       document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -209,6 +238,9 @@ export function DropdownLink({
   icon,
   active,
   trailing,
+  onNavigate,
+  onClick,
+  className,
   ...rest
 }: {
   href: string;
@@ -216,6 +248,8 @@ export function DropdownLink({
   icon?: ReactNode;
   active?: boolean;
   trailing?: ReactNode;
+  /** Called in addition to closing the menu when the link is activated. */
+  onNavigate?: () => void;
 } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   const { close } = useContext(DropdownContext);
 
@@ -224,8 +258,12 @@ export function DropdownLink({
       href={href}
       role="menuitem"
       data-dropdown-item
-      onClick={close}
-      className={cn(itemClasses, active && activeClasses)}
+      onClick={(event) => {
+        onNavigate?.();
+        onClick?.(event);
+        close();
+      }}
+      className={cn(itemClasses, active && activeClasses, className)}
       {...rest}
     >
       {icon ? <span className="shrink-0 text-current">{icon}</span> : null}

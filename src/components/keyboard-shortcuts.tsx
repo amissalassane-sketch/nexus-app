@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/cn";
+import { useCommandKeyLabel } from "@/hooks/use-command-key";
 
 // ============================================================
 // NEXUS — KEYBOARD SHORTCUTS
@@ -39,8 +41,27 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function KeyboardShortcuts() {
   const router = useRouter();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const commandKey = useCommandKeyLabel();
   const pendingGoto = useRef(false);
   const gotoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setClosing(false);
+      setHelpOpen(false);
+    }, 160);
+  }, [closing]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -50,7 +71,7 @@ export function KeyboardShortcuts() {
       const key = event.key.toLowerCase();
 
       if (event.key === "Escape") {
-        setHelpOpen(false);
+        requestClose();
         return;
       }
 
@@ -75,7 +96,7 @@ export function KeyboardShortcuts() {
 
       if (key === "c") {
         event.preventDefault();
-        window.dispatchEvent(new Event("nexus:create"));
+        window.dispatchEvent(new Event("nexus:create-command"));
         return;
       }
 
@@ -87,7 +108,10 @@ export function KeyboardShortcuts() {
 
       if (event.key === "?") {
         event.preventDefault();
-        setHelpOpen((open) => !open);
+        setHelpOpen((open) => {
+          if (closing) return open;
+          return !open;
+        });
       }
     };
 
@@ -96,12 +120,12 @@ export function KeyboardShortcuts() {
       document.removeEventListener("keydown", onKeyDown);
       if (gotoTimer.current) clearTimeout(gotoTimer.current);
     };
-  }, [router]);
+  }, [closing, requestClose, router]);
 
   if (!helpOpen) return null;
 
   const rows: [string, string][] = [
-    ["⌘K", "Open the command palette"],
+    [commandKey, "Open the command palette"],
     ["/", "Search the workspace"],
     ["G then O", "Go to Overview"],
     ["G then I", "Go to Intelligence"],
@@ -122,10 +146,18 @@ export function KeyboardShortcuts() {
       <button
         type="button"
         aria-label="Close keyboard shortcuts"
-        onClick={() => setHelpOpen(false)}
-        className="absolute inset-0 bg-black/70 animate-fade-in"
+        onClick={requestClose}
+        className={cn(
+          "absolute inset-0 bg-black/70",
+          closing ? "animate-fade-out" : "animate-fade-in"
+        )}
       />
-      <div className="relative w-full max-w-[420px] rounded-card border border-border-default bg-bg-surface p-5 shadow-overlay animate-scale-in">
+      <div
+        className={cn(
+          "relative w-full max-w-[420px] rounded-card border border-border-default bg-bg-surface p-5 shadow-overlay",
+          closing ? "animate-scale-out pointer-events-none" : "animate-scale-in"
+        )}
+      >
         <h2 className="text-h3 text-text-primary">Keyboard shortcuts</h2>
         <p className="mt-1 text-caption text-text-tertiary">
           NEXUS is built to be driven without a mouse.
