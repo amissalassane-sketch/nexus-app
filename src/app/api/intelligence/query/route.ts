@@ -4,25 +4,29 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getActiveMembership } from "@/lib/workspace";
 import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
-import { askWorkspace, reasonWorkspace } from "@/lib/intelligence/advanced";
-import { callAIProvider } from "@/lib/intelligence/ai-provider";
-import { classifyIntent, mapLegacyIntentToId, riskForAction } from "@/lib/intelligence/intent";
+import { askWorkspace } from "@/lib/intelligence/advanced";
+import { runAgent } from "@/lib/intelligence/agent";
+import { classifyIntent } from "@/lib/intelligence/intent";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
-  TaskDependencyContextItem,
   SessionHistoryItem,
-  StructuredIntelligenceResponse,
+  TaskDependencyContextItem,
 } from "@/lib/intelligence/types";
 
 // ============================================================
-// NEXUS INTELLIGENCE — STRUCTURED QUERY API
+// NEXUS INTELLIGENCE — AGENTIC QUERY API
 // POST /api/intelligence/query
 //
 // Pipeline:
 // User -> Intelligence UI -> API Route -> Scoped Context Builder ->
-// Authorized Nexus Data -> AI Provider / Structured Reasoning ->
-// Validated Response -> UI
+// Agent loop (intent -> tool selection -> real read tools ->
+//   [AI proposes extra tools -> server validates -> executes] ->
+//   plan -> response) -> Verified Response -> UI
+//
+// Security: session + active membership re-validated here; every read
+// is scoped to the authenticated user's active workspace; the agent
+// never touches Supabase directly (it consumes the scoped snapshot).
 // ============================================================
 
 export async function POST(request: Request) {
@@ -127,30 +131,18 @@ export async function POST(request: Request) {
 
     const classified = classifyIntent(query, { snapshot, sessionHistory });
 
-    // 1. Try real AI provider if configured (OpenAI or Anthropic)
-    let structuredResponse: StructuredIntelligenceResponse | null = await callAIProvider(
+    // ---- AGENT LOOP ------------------------------------------------
+    // Intent -> server-selected read tools -> (model proposes extra
+    // tools -> server validates -> executes) -> plan -> response.
+    const { response: structuredResponse, agent } = await runAgent({
+      workspaceId,
       query,
+      snapshot,
       context,
-      sessionHistory
-    );
-
-    // 2. Fallback to deterministic reasoning engine
-    if (!structuredResponse) {
-      structuredResponse = reasonWorkspace(snapshot, query, context, sessionHistory);
-    }
-
-    // 3. Normalize the external response with the structured intent contract.
-    structuredResponse = {
-      ...structuredResponse,
-      intentId: structuredResponse.intentId ?? mapLegacyIntentToId(structuredResponse.intent, structuredResponse.action?.type),
-      target: structuredResponse.target ?? classified.target,
-      action: structuredResponse.action
-        ? {
-            ...structuredResponse.action,
-            risk: structuredResponse.action.risk ?? riskForAction(structuredResponse.action.type),
-          }
-        : undefined,
-    };
+      sessionHistory,
+      activities: recentActivities,
+      dependencies,
+    });
 
     const legacyAnswer = askWorkspace(snapshot, query, sessionHistory);
     const insights = computeInsights(snapshot);
@@ -171,6 +163,7 @@ export async function POST(request: Request) {
       query,
       answer: legacyAnswer,
       response: structuredResponse,
+      agent,
       intent: classified,
       context: {
         totals: context.totals,

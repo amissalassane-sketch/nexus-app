@@ -45,10 +45,12 @@ export type IntelligenceActionType =
   | "create_goal"
   | "update_task"
   | "update_project"
+  | "update_goal"
   | "complete_task"
   | "move_task"
   | "delete_task"
   | "delete_project"
+  | "delete_goal"
   | "open_project"
   | "open_task"
   | "view_blocked_tasks"
@@ -132,6 +134,84 @@ export interface StructuredIntelligenceResponse {
   suggestions: string[];
   /** Present after a server-executed action; shows the verified result. */
   verification?: ActionVerification;
+
+  // ============================================================
+  // AGENTIC CONTRACT (Phase 4 — Tool system / Planner)
+  // All optional so legacy consumers and the client-side fallback
+  // keep working unchanged.
+  // ============================================================
+  /** The read tools actually executed to answer this request. Every
+   *  entry is real: a tool that was selected and ran against the
+   *  workspace snapshot (never a claim). */
+  toolCalls?: IntelligenceToolCall[];
+  /** Explicit plan when the request required planning. */
+  plan?: IntelligencePlan;
+  /** 0–1 confidence in the answer. Deterministic, data-backed answers
+   *  are scored high; model answers carry the model's own score. */
+  confidence?: number;
+  /** True when the response proposes an action that must be confirmed
+   *  by the human before the server executes it. */
+  needsConfirmation?: boolean;
+  /** Top-level source provenance (mirrors evidence.sources). */
+  sources?: string[];
+}
+
+// ============================================================
+// TOOL SYSTEM — explicit, server-validated tool contract
+// ============================================================
+
+/** One tool invocation actually performed by the agent (read-only). */
+export interface IntelligenceToolCall {
+  name: string;
+  args?: Record<string, unknown>;
+  status: "ok" | "error" | "skipped";
+  /** Human-readable, factual summary of what the tool found. */
+  summary: string;
+  /** How many entities the tool returned (0 when none). */
+  count?: number;
+  durationMs?: number;
+}
+
+export interface IntelligencePlanStep {
+  id: string;
+  title: string;
+  description: string;
+  href?: string;
+  /** Optional proposed actions attached to this step (always
+   *  confirmation-gated; the server never executes them alone). */
+  actions?: IntelligenceAction[];
+}
+
+export interface IntelligencePlan {
+  /** One-line human summary of the analysis behind the plan,
+   *  e.g. "J'ai analysé 4 projets et 17 tâches." */
+  summary: string;
+  steps: IntelligencePlanStep[];
+  /** True when at least one step carries a mutation. */
+  needsConfirmation: boolean;
+}
+
+/** Agent lifecycle states surfaced by the UI. */
+export type AgentState =
+  | "idle"
+  | "thinking"
+  | "planning"
+  | "using_tools"
+  | "executing"
+  | "verifying"
+  | "completed"
+  | "failed";
+
+export interface AgentRunResult {
+  state: AgentState;
+  /** Ordered, honest trace of what the agent did for this request. */
+  steps: { label: string; state: AgentState }[];
+  toolCalls: IntelligenceToolCall[];
+  plan?: IntelligencePlan;
+  confidence: number;
+  needsConfirmation: boolean;
+  provider: "openai" | "anthropic" | "nexus-engine";
+  sources: string[];
 }
 
 export interface ActivityContextItem {

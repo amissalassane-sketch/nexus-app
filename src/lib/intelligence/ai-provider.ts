@@ -3,6 +3,16 @@
 // Connects to OpenAI or Anthropic using standard REST fetch.
 // 100% dependency-free. Strictly falls back to deterministic
 // reasoning when unconfigured, timed out, or unavailable.
+//
+// Agentic contract (Phase 4):
+//   - The model PROPOSES: intent, plan, tool calls, arguments,
+//     confidence. The server DECIDES: permissions, validation,
+//     execution, confirmation, security.
+//   - Model-proposed tool calls are validated against the read-only
+//     tool registry; the server executes them; mutations never run
+//     here.
+//   - Bounded requests: AbortController + timeout + one controlled
+//     retry on transient network/5xx failures.
 // ============================================================
 
 import type {
@@ -12,11 +22,14 @@ import type {
   IntelligenceIntentId,
   IntelligenceRisk,
   IntelligenceTarget,
+  IntelligenceToolCall,
+  IntelligencePlan,
   SessionHistoryItem,
   QuickAction,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
 import { mapLegacyIntentToId, riskForAction } from "./intent";
+import { READ_TOOL_NAMES } from "./tools";
 
 export type AIProviderName = "openai" | "anthropic" | "nexus-engine";
 
@@ -48,19 +61,44 @@ export function detectAIProvider(): AIProviderConfig {
   return { provider: "nexus-engine" };
 }
 
+/** The read-only tool catalog the model may propose calls against. */
+function toolCatalogPrompt(): string {
+  const lines: string[] = [];
+  for (const name of [...READ_TOOL_NAMES].sort()) {
+    const def = name; // names are self-describing; descriptions come from the registry comment above
+    lines.push(`- ${def}`);
+  }
+  return lines.join("\n");
+}
+
 const SYSTEM_PROMPT = `You are NEXUS Intelligence, an executive operational intelligence engine for modern teams.
-You analyze workspace state and help operators understand what needs attention, what is progressing, what is blocked, and what to do next.
+You analyze workspace state and help operators understand what needs attention, what is progressing, what is blocked, and what to do next. You answer in the language the user used (French or English).
 
 STRICT OPERATIONAL RULES:
 1. ONLY use facts from the provided verified workspace context. NEVER invent projects, tasks, due dates, statuses, or activities.
 2. If data is missing or empty, state it plainly. Do not guess.
 3. Be concise, direct, professional, and clear.
 4. Output MUST be valid JSON adhering to the specified schema.
+5. You propose; the server decides. Never describe executing a mutation — the server executes actions and verifies them.
+
+AVAILABLE READ-ONLY TOOLS (you may propose calling more of them via "toolCalls"; the server validates and executes them):
+${toolCatalogPrompt()}
+
+TOOL CALLING RULES:
+- Only propose read-only tools from the list above. Never invent tool names.
+- If the provided context already answers the request, return "toolCalls": [].
+- Never propose mutation or navigation tools — mutations are proposed through the "action" field and executed server-side after human confirmation.
+
+PLANNING RULES:
+- For planning requests ("organise ma journée", "plan my day/week", catch-up plans...) include a "plan" object with a one-line factual "summary" and ordered "steps".
+- The summary must look like "J'ai analysé X projets et Y tâches. Voici le plan que je recommande." (or English), derived from the context.
+- Never expose internal chain-of-thought: steps are user-facing recommendations only.
 
 JSON RESPONSE FORMAT:
 {
   "query": "the original question",
   "intent": "analysis" | "prioritization" | "planning" | "synthesis" | "detection" | "action" | "general",
+  "intentId": "ANALYZE" | "PRIORITIZE" | "PLAN" | "SUMMARIZE" | "DETECT" | "SEARCH" | "CREATE" | "UPDATE" | "COMPLETE" | "MOVE" | "DELETE" | "EXPLAIN" | "GENERAL_ASSISTANCE",
   "headline": "A short, authoritative summary headline",
   "narrative": "A concise paragraph explaining the situation and evidence",
   "evidence": {
@@ -96,12 +134,52 @@ JSON RESPONSE FORMAT:
       "query": "free-text reference to the entity, when no id is known"
     }
   },
+  "plan": {
+    "summary": "One-line factual summary of the analysis behind the plan",
+    "steps": [{"title": "Step title", "description": "Step description", "href": "/tasks"}],
+    "needsConfirmation": false
+  },
+  "toolCalls": [{"name": "get_projects", "args": {}}],
+  "confidence": 0.85,
+  "needsConfirmation": false,
+  "sources": ["Projects", "Tasks"],
   "quickActions": [
     {"label": "View projects", "href": "/projects"},
     {"label": "Plan my day", "query": "Organise ma journée"}
   ],
   "suggestions": ["Follow-up question 1", "Follow-up question 2"]
 }`;
+
+/** One controlled retry on transient failures (network error, 5xx,
+ *  429). Aborts/timeouts are never retried — the bound must hold. */
+async function fetchWithRetry(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  maxAttempts = 2
+): Promise<Response> {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetchImpl(url, { ...init, signal: controller.signal });
+      clearTimeout(timeoutId);
+      if ((res.status === 429 || res.status >= 500) && attempt < maxAttempts - 1) {
+        continue; // transient server error — controlled retry
+      }
+      return res;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error;
+      const aborted =
+        error instanceof DOMException && error.name === "AbortError";
+      if (aborted || attempt >= maxAttempts - 1) throw error;
+    }
+  }
+  throw lastError;
+}
 
 export async function callAIProvider(
   query: string,
@@ -125,9 +203,6 @@ export async function callAIProvider(
   const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}\n\nUSER QUESTION:\n${query}`;
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
     if (sessionHistory && sessionHistory.length > 0) {
       for (const item of sessionHistory.slice(0, 3).reverse()) {
@@ -140,27 +215,30 @@ export async function callAIProvider(
     }
 
     if (config.provider === "openai") {
-      const res = await fetchImpl("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
+      const res = await fetchWithRetry(
+        fetchImpl,
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: config.model,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              ...historyMessages,
+              { role: "user", content: promptContent },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+            max_tokens: 1600,
+          }),
         },
-        body: JSON.stringify({
-          model: config.model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...historyMessages,
-            { role: "user", content: promptContent },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.1,
-          max_tokens: 1200,
-        }),
-        signal: controller.signal,
-      });
+        timeoutMs
+      );
 
-      clearTimeout(timeoutId);
       if (!res.ok) return null;
 
       const data = await res.json();
@@ -177,24 +255,27 @@ export async function callAIProvider(
         { role: "user", content: promptContent },
       ];
 
-      const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": config.apiKey,
-          "anthropic-version": "2023-06-01",
+      const res = await fetchWithRetry(
+        fetchImpl,
+        "https://api.anthropic.com/v1/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": config.apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: config.model,
+            system: SYSTEM_PROMPT,
+            messages: anthropicMessages,
+            max_tokens: 1600,
+            temperature: 0.1,
+          }),
         },
-        body: JSON.stringify({
-          model: config.model,
-          system: SYSTEM_PROMPT,
-          messages: anthropicMessages,
-          max_tokens: 1200,
-          temperature: 0.1,
-        }),
-        signal: controller.signal,
-      });
+        timeoutMs
+      );
 
-      clearTimeout(timeoutId);
       if (!res.ok) return null;
 
       const data = await res.json();
@@ -279,10 +360,12 @@ function validateAndNormalizeResponse(
       "create_goal",
       "update_task",
       "update_project",
+      "update_goal",
       "complete_task",
       "move_task",
       "delete_task",
       "delete_project",
+      "delete_goal",
       "open_project",
       "open_task",
       "view_blocked_tasks",
@@ -315,6 +398,10 @@ function validateAndNormalizeResponse(
             projectId: typeof rawPayload.projectId === "string" ? rawPayload.projectId : null,
             description: typeof rawPayload.description === "string" ? rawPayload.description : undefined,
             url: typeof rawPayload.url === "string" ? rawPayload.url : undefined,
+            taskId: typeof rawPayload.taskId === "string" ? rawPayload.taskId : undefined,
+            goalId: typeof rawPayload.goalId === "string" ? rawPayload.goalId : undefined,
+            query: typeof rawPayload.query === "string" ? rawPayload.query : undefined,
+            confirmDeletion: rawPayload.confirmDeletion === true ? true : undefined,
           }
         : undefined;
 
@@ -333,6 +420,64 @@ function validateAndNormalizeResponse(
       };
     }
   }
+
+  // ---- Phase 4: agentic fields ----------------------------------
+  const toolCalls: IntelligenceToolCall[] = [];
+  if (Array.isArray(data.toolCalls)) {
+    for (const tc of data.toolCalls) {
+      if (tc && typeof tc === "object" && typeof (tc as Record<string, unknown>).name === "string") {
+        const call = tc as Record<string, unknown>;
+        toolCalls.push({
+          name: String(call.name),
+          args:
+            call.args && typeof call.args === "object"
+              ? (call.args as Record<string, unknown>)
+              : {},
+          status: "ok",
+          summary: "Proposé par le modèle — validation et exécution par le serveur",
+          count: 0,
+        });
+      }
+    }
+  }
+
+  let plan: IntelligencePlan | undefined;
+  if (data.plan && typeof data.plan === "object") {
+    const rawPlan = data.plan as Record<string, unknown>;
+    if (typeof rawPlan.summary === "string" && Array.isArray(rawPlan.steps)) {
+      const steps: IntelligencePlan["steps"] = [];
+      for (const step of rawPlan.steps.slice(0, 8)) {
+        if (step && typeof step === "object") {
+          const s = step as Record<string, unknown>;
+          if (typeof s.title === "string" && s.title.trim()) {
+            steps.push({
+              id: `model-plan-${steps.length + 1}`,
+              title: s.title,
+              description: typeof s.description === "string" ? s.description : "",
+              href: typeof s.href === "string" ? s.href : undefined,
+            });
+          }
+        }
+      }
+      if (steps.length > 0) {
+        plan = {
+          summary: rawPlan.summary,
+          steps,
+          needsConfirmation: rawPlan.needsConfirmation === true,
+        };
+      }
+    }
+  }
+
+  const confidence =
+    typeof data.confidence === "number" && Number.isFinite(data.confidence)
+      ? Math.min(1, Math.max(0, data.confidence))
+      : undefined;
+  const needsConfirmation =
+    typeof data.needsConfirmation === "boolean" ? data.needsConfirmation : undefined;
+  const sources = Array.isArray(data.sources)
+    ? data.sources.filter((s): s is string => typeof s === "string")
+    : undefined;
 
   const quickActions: QuickAction[] = [];
   if (Array.isArray(data.quickActions)) {
@@ -371,5 +516,10 @@ function validateAndNormalizeResponse(
     action,
     quickActions: quickActions.length > 0 ? quickActions : undefined,
     suggestions: suggestions.length > 0 ? suggestions : ["What should I do next?", "What is blocked?"],
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    plan,
+    confidence,
+    needsConfirmation,
+    sources,
   };
 }

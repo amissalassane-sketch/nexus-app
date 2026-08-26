@@ -10,6 +10,9 @@
     "test:onboarding": "npx tsx supabase/tests/onboarding-product.test.mjs",
     "test:intelligence": "npx tsx supabase/tests/intelligence-experience.test.mjs",
     "test:intelligence-agent": "npx tsx supabase/tests/intelligence-agent.test.mjs",
+    "test:intelligence-agent-v2": "npx tsx supabase/tests/intelligence-agent-v2.test.mjs",
+    "test:agent": "npm run test:intelligence-agent && npm run test:intelligence-agent-v2 && npm run test:intelligence",
+    "demo:agent": "tsx scripts/demo-agent-loop.ts",
     "verify:scene": "tsx scripts/verify-intelligence-scene.ts",
     "verify:production-onboarding": "node scripts/verify-production-onboarding.mjs"
   },

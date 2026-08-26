@@ -202,7 +202,7 @@ export function classifyIntent(
   }
 
   // DELETE
-  if (hasAny(normalized, "supprime", "delete", "efface", "remove", "annule cette")) {
+  if (hasAny(normalized, "supprime", "delete", "efface", "remove", "annule cette", "annule")) {
     const taskNamed = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
     const projectNamed = snapshot ? extractNamedEntity(snapshot, normalized, "project") : undefined;
     const referential = referentialTarget(normalized, last.target);
@@ -234,21 +234,70 @@ export function classifyIntent(
     };
   }
 
-  // MOVE
-  if (hasAny(normalized, "decale", "déplace", "reporter", "move", "shift", "reschedule", "remets a", "pousse a")) {
+  // PLAN — checked early so planning phrasing ("en priorité") never
+  // leaks into UPDATE/prioritize matches.
+  if (
+    hasAny(
+      normalized,
+      "organise ma journee",
+      "organiser ma journee",
+      "organise ma semaine",
+      "organiser ma semaine",
+      "plan my day",
+      "plan my week",
+      "programme du jour",
+      "schedule",
+      "planning",
+      "aide moi à organiser",
+      "aide moi a organiser",
+      "fais moi un plan",
+      "fais-moi un plan",
+      "un plan pour",
+      "rattrap",
+      "rattrape",
+      "catch up",
+      "prepares moi",
+      "prépare-moi",
+      "prepare me",
+      "prepare-moi",
+      "un planning"
+    ) || /\bplan\b/.test(normalized)
+  ) {
+    return { intent: "PLAN", target: { type: "workspace" }, risk: "none", confidence: 0.94 };
+  }
+
+  // MOVE — explicit move verbs, or a day-name follow-up on the last
+  // referenced task ("Et pour vendredi ?" / "And for Friday?")
+  const hasDayFollowUp = (last.target?.type === "task" || last.target?.id) && hasAny(
+    normalized,
+    "pour lundi", "pour mardi", "pour mercredi", "pour jeudi", "pour vendredi", "pour samedi", "pour dimanche",
+    "for monday", "for tuesday", "for wednesday", "for thursday", "for friday", "for saturday", "for sunday",
+    "et pour", "and for"
+  );
+  if (hasAny(normalized, "decale", "déplace", "reporter", "move", "shift", "reschedule", "remets a", "pousse a") || hasDayFollowUp) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
-    const target = named ?? referentialTarget(normalized, last.target);
+    const target = named ?? referentialTarget(normalized, last.target) ?? (last.target?.type === "task" || last.target?.type === "project" ? last.target : undefined);
     return {
       intent: "MOVE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
       actionType: "move_task",
       risk: "low",
-      confidence: 0.85,
+      confidence: hasDayFollowUp ? 0.9 : 0.85,
     };
   }
 
-  // UPDATE
-  if (hasAny(normalized, "change la priorite", "update priority", "mets a jour", "modifie la", "edite la", "change le statut", "update status", "update task")) {
+  // UPDATE — including priority phrasing ("Mets cette tâche en urgente",
+  // "Passe-la en haute priorité", "Set this task as urgent")
+  if (
+    hasAny(
+      normalized,
+      "change la priorite", "update priority", "mets a jour", "modifie la", "edite la", "change le statut", "update status", "update task",
+      "en urgente", "en priorite", "en haute", "en basse", "en moyenne",
+      "mets la en", "passe la en", "passes la en", "met la en", "mets en", "passe en",
+      "as urgent", "as high", "as low", "as medium", "set as urgent", "make it urgent", "set priority",
+      "priorite urgente", "priorite haute", "priorite basse", "priority urgent", "priority high"
+    )
+  ) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
     const target = named ?? referentialTarget(normalized, last.target);
     return {
@@ -256,7 +305,7 @@ export function classifyIntent(
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
       actionType: "update_task",
       risk: "medium",
-      confidence: 0.85,
+      confidence: 0.9,
     };
   }
 
@@ -345,26 +394,6 @@ export function classifyIntent(
     };
   }
 
-  // PLAN
-  if (
-    hasAny(
-      normalized,
-      "organise ma journee",
-      "organiser ma journee",
-      "organise ma semaine",
-      "organiser ma semaine",
-      "plan my day",
-      "plan my week",
-      "programme du jour",
-      "schedule",
-      "planning",
-      "aide moi à organiser",
-      "aide moi a organiser"
-    )
-  ) {
-    return { intent: "PLAN", target: { type: "workspace" }, risk: "none", confidence: 0.94 };
-  }
-
   // SUMMARIZE
   if (
     hasAny(
@@ -450,9 +479,11 @@ export function riskForAction(type: IntelligenceActionType): "low" | "medium" | 
   switch (type) {
     case "delete_task":
     case "delete_project":
+    case "delete_goal":
       return "high";
     case "update_project":
     case "update_task":
+    case "update_goal":
       return "medium";
     case "create_task":
     case "create_project":
@@ -494,6 +525,69 @@ export function mapLegacyIntentToId(
     default:
       return "GENERAL_ASSISTANCE";
   }
+}
+
+export type ExtractedPriority = "low" | "medium" | "high" | "urgent";
+
+/** Extracts an explicit priority from natural language ("urgente",
+ *  "haute priorité", "as urgent", "low"...). Returns null when the
+ *  query does not state a priority. */
+export function extractPriorityFromQuery(query: string): ExtractedPriority | null {
+  const normalized = normalize(query).replace(/[.!?,;:]+$/g, "");
+  const words = new Set(normalized.split(" ").filter(Boolean));
+
+  const hasUrgent =
+    words.has("urgente") ||
+    words.has("urgent") ||
+    normalized.includes("priorite urgente") ||
+    normalized.includes("priority urgent");
+  if (hasUrgent) return "urgent";
+
+  const hasHigh =
+    normalized.includes("haute") ||
+    normalized.includes("haute priorite") ||
+    words.has("high") ||
+    normalized.includes("high priority") ||
+    normalized.includes("priorite haute") ||
+    normalized.includes("priority high");
+  if (hasHigh) return "high";
+
+  const hasMedium =
+    normalized.includes("moyenne") ||
+    normalized.includes("priorite moyenne") ||
+    words.has("medium") ||
+    normalized.includes("medium priority") ||
+    normalized.includes("priority medium");
+  if (hasMedium) return "medium";
+
+  const hasLow =
+    normalized.includes("basse") ||
+    normalized.includes("priorite basse") ||
+    words.has("low") ||
+    normalized.includes("low priority") ||
+    normalized.includes("priority low");
+  if (hasLow) return "low";
+
+  return null;
+}
+
+/** Extracts a due day/datetime from natural language ("vendredi",
+ *  "vendredi prochain", "friday", "demain", "tomorrow") as ISO date. */
+export function extractDueDateFromQuery(query: string, now: Date = new Date()): string | null {
+  const normalized = normalize(query);
+  for (const day of ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) {
+    if (normalized.includes(day)) {
+      const iso = dueDayToIsoDayName(day, now);
+      if (iso) return iso;
+    }
+  }
+  if (normalized.includes("demain") || normalized.includes("tomorrow")) {
+    return dueDayToIsoDayName("tomorrow", now);
+  }
+  if (normalized.includes("aujourd") || normalized.includes("today")) {
+    return dueDayToIsoDayName("today", now);
+  }
+  return null;
 }
 
 export function dueDayToIsoDayName(dueDay: string, now: Date = new Date()): string | null {

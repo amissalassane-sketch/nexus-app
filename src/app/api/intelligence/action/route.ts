@@ -28,10 +28,12 @@ const EXECUTABLE_ACTIONS = new Set<IntelligenceActionType>([
   "create_goal",
   "update_task",
   "update_project",
+  "update_goal",
   "complete_task",
   "move_task",
   "delete_task",
   "delete_project",
+  "delete_goal",
 ]);
 
 export async function POST(request: Request) {

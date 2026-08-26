@@ -32,6 +32,7 @@ import type { WorkspaceContextSummary } from "./context-builder";
 import {
   classifyIntent,
   dueDayToIsoDayName,
+  extractPriorityFromQuery,
   mapLegacyIntentToId,
   riskForAction,
 } from "./intent";
@@ -1047,6 +1048,14 @@ function reasonWorkspaceCore(
         narrative = "Tell NEXUS the new date (e.g. “décale à lundi”, “move to monday”) and the action will be prepared.";
       }
     }
+    if (classified.intent === "UPDATE") {
+      const priority = extractPriorityFromQuery(query);
+      if (priority) {
+        payload = { ...payload, priority };
+        headline = `Set “${entity.label}” to ${priority} priority`;
+        narrative = `The task priority will be set to ${priority}. NEXUS re-reads the task after the update before confirming.`;
+      }
+    }
     if (classified.intent === "COMPLETE") {
       headline = `Complete “${entity.label}”?`;
       narrative = "This marks the real task as done. NEXUS verifies status and completion date after the mutation.";
@@ -1065,6 +1074,7 @@ function reasonWorkspaceCore(
           { label: "Action", value: actionType.replace("_", " ") },
           { label: "Target", value: entity.label },
           ...(classified.intent === "MOVE" && payload.dueDate ? [{ label: "New due date", value: String(payload.dueDate) }] : []),
+          ...(classified.intent === "UPDATE" && payload.priority ? [{ label: "New priority", value: String(payload.priority) }] : []),
         ],
         traceCount: "Target resolved within the active workspace",
         sources: ["Workspace Registry", "Task Attributes"],
@@ -1091,11 +1101,14 @@ function reasonWorkspaceCore(
   if (classified.intent === "DELETE") {
     const task = findTaskByQuery(snapshot, query);
     const project = task ? null : findProjectByQuery(snapshot, query);
+    const sessionEntity = lastTurn?.target?.id
+      ? { type: (lastTurn.target.type === "project" ? "project" : "task") as "task" | "project", id: lastTurn.target.id, label: lastTurn.target.label ?? "" }
+      : null;
     const entity = task
       ? { type: "task" as const, id: task.id, label: task.title }
       : project
         ? { type: "project" as const, id: project.id, label: project.name }
-        : null;
+        : sessionEntity;
     if (!entity) {
       return {
         query,
@@ -1383,16 +1396,31 @@ function reasonWorkspaceCore(
   }
 
   // 2. ANALYSE (Projects needing attention, risk of delays, key issues)
+  // A planning request ("plan pour rattraper mes tâches en retard")
+  // must never be hijacked by the "retard" keyword — planning wins.
+  const isPlanningRequest =
+    lowerQuery.includes("organis") ||
+    lowerQuery.includes("plan") ||
+    lowerQuery.includes("planning") ||
+    lowerQuery.includes("schedule") ||
+    lowerQuery.includes("rattrap") ||
+    lowerQuery.includes("rattrape") ||
+    lowerQuery.includes("catch up") ||
+    lowerQuery.includes("aide-moi") ||
+    lowerQuery.includes("aide moi") ||
+    lowerQuery.includes("prépare") ||
+    lowerQuery.includes("prepare");
   if (
-    lowerQuery.includes("attention") ||
-    lowerQuery.includes("nécessitent") ||
-    lowerQuery.includes("need attention") ||
-    lowerQuery.includes("require attention") ||
-    lowerQuery.includes("retard") ||
-    lowerQuery.includes("slipping") ||
-    lowerQuery.includes("problème") ||
-    lowerQuery.includes("issues") ||
-    (has(tokens, "attention") && has(tokens, "projet", "projets", "project", "projects"))
+    !isPlanningRequest &&
+    (lowerQuery.includes("attention") ||
+      lowerQuery.includes("nécessitent") ||
+      lowerQuery.includes("need attention") ||
+      lowerQuery.includes("require attention") ||
+      lowerQuery.includes("retard") ||
+      lowerQuery.includes("slipping") ||
+      lowerQuery.includes("problème") ||
+      lowerQuery.includes("issues") ||
+      (has(tokens, "attention") && has(tokens, "projet", "projets", "project", "projects")))
   ) {
     const projectsNeedingAttention = snapshot.projects
       .map((project) => {
@@ -1556,7 +1584,18 @@ function reasonWorkspaceCore(
     lowerQuery.includes("schedule") ||
     lowerQuery.includes("comment avancer") ||
     lowerQuery.includes("aide-moi à organiser") ||
-    lowerQuery.includes("aide moi à organiser")
+    lowerQuery.includes("aide moi à organiser") ||
+    lowerQuery.includes("plan pour") ||
+    lowerQuery.includes("plan de rattrapage") ||
+    lowerQuery.includes("rattrap") ||
+    lowerQuery.includes("rattrape") ||
+    lowerQuery.includes("catch up") ||
+    lowerQuery.includes("fais-moi un plan") ||
+    lowerQuery.includes("fais moi un plan") ||
+    lowerQuery.includes("prepare-moi") ||
+    lowerQuery.includes("prepare me") ||
+    lowerQuery.includes("prépare-moi") ||
+    lowerQuery.includes("un planning")
   ) {
     const weekAhead = now.getTime() + 7 * 86_400_000;
     const overdue = open.filter((t) => {

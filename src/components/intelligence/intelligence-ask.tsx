@@ -13,14 +13,14 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import {
-  reasonWorkspace,
-} from "@/lib/intelligence/advanced";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
+import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
+import { runAgentDeterministic } from "@/lib/intelligence/agent";
 import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
   ActionVerification,
+  AgentRunResult,
 } from "@/lib/intelligence/types";
 import { emitActivation, trackEvent } from "@/lib/onboarding/analytics";
 import { cn } from "@/lib/cn";
@@ -76,6 +76,9 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Agentic trace — the real steps the server ran (tools, plan).
+  const [agentRun, setAgentRun] = useState<AgentRunResult | null>(null);
+
   // Action execution state
   const [confirmingAction, setConfirmingAction] = useState<IntelligenceAction | null>(null);
   const [executingAction, setExecutingAction] = useState(false);
@@ -111,6 +114,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     setError(null);
     setConfirmingAction(null);
     setExecutedActionResult(null);
+    setAgentRun(null);
 
     emitActivation("intelligence");
     trackEvent("intelligence_interaction");
@@ -135,6 +139,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         if (data.response) {
           const structured = data.response as StructuredIntelligenceResponse;
           setCurrentResponse(structured);
+          if (data.agent) setAgentRun(data.agent as AgentRunResult);
           setHistory((prev) => [
             {
               id: `hist-${Date.now()}`,
@@ -156,14 +161,22 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
       setLoading(false);
     }
 
-    // Deterministic fallback execution on client
-    const fallbackResponse = reasonWorkspace(snapshot, value, undefined, sessionHistoryPayload(history));
-    setCurrentResponse(fallbackResponse);
+    // Deterministic fallback — the full agent loop still runs locally:
+    // intent → real read tools → plan → response (honest nexus-engine).
+    const fallback = runAgentDeterministic({
+      workspaceId: "client",
+      query: value,
+      snapshot,
+      context: buildWorkspaceContext("client", snapshot),
+      sessionHistory: sessionHistoryPayload(history),
+    });
+    setCurrentResponse(fallback.response);
+    setAgentRun(fallback.agent);
     setHistory((prev) => [
       {
         id: `hist-${Date.now()}`,
         query: value,
-        response: fallbackResponse,
+        response: fallback.response,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
       ...prev.slice(0, 9),
@@ -396,13 +409,15 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         </div>
       ) : null}
 
-      {/* Loading state with live reasoning indicator */}
+      {/* Loading state — honest agent-in-flight indicator. The request
+          is real: intent → read tools → (AI) → plan → response. No fake
+          sub-steps are shown while the server is still working. */}
       {loading ? (
         <div className="mx-3 mb-3 animate-fade-in rounded-input border border-border-subtle bg-bg-surface/50 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-small text-text-secondary">
               <span className="h-2 w-2 rounded-pill bg-lavender animate-ping" />
-              <span>Analyzing live workspace context & computing evidence…</span>
+              <span>{"L'agent analyse votre workspace réel…"}</span>
             </div>
             <button
               type="button"
@@ -426,6 +441,14 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
               <span className="inline-flex items-center rounded-[5px] border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-secondary">
                 {currentResponse.intent.toUpperCase()}
               </span>
+              {currentResponse.confidence !== undefined ? (
+                <span
+                  title="Confiance dans la réponse"
+                  className="inline-flex items-center rounded-[5px] border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-tertiary"
+                >
+                  {(currentResponse.confidence * 100).toFixed(0)}% confiance
+                </span>
+              ) : null}
               <span className="text-caption text-text-quaternary hidden sm:inline">
                 {currentResponse.evidence.traceCount}
               </span>
@@ -461,6 +484,115 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
                     {metric.value}
                   </span>
                 </div>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Plan — an explicit, useful plan derived from real reads */}
+          {currentResponse.plan && currentResponse.plan.steps.length > 0 ? (
+            <div className="mt-4 rounded-input border border-lavender-border/40 bg-lavender/5 p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="eyebrow text-lavender">Plan recommandé</span>
+                {currentResponse.plan.needsConfirmation ? (
+                  <span className="rounded-[4px] border border-warning-border bg-warning-bg/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning">
+                    Confirmation requise
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-small font-medium text-text-primary">
+                {currentResponse.plan.summary}
+              </p>
+              <ol className="mt-2.5 flex flex-col gap-1.5">
+                {currentResponse.plan.steps.map((step) => (
+                  <li key={step.id} className="flex items-start gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border border-border-subtle bg-bg-surface font-mono text-[10px] text-text-tertiary"
+                    >
+                      {step.id.replace(/[^0-9]/g, "") || "•"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-caption font-medium text-text-primary">{step.title}</p>
+                      {step.description ? (
+                        <p className="text-caption text-text-tertiary">{step.description}</p>
+                      ) : null}
+                    </div>
+                    {step.href ? (
+                      <Link
+                        href={step.href}
+                        className="mt-0.5 inline-flex min-h-[32px] shrink-0 items-center gap-1 text-caption font-medium text-text-tertiary hover:text-text-primary"
+                      >
+                        <span>Ouvrir</span>
+                        <ArrowRight size={12} strokeWidth={1.75} />
+                      </Link>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
+          {/* Agent workflow — the real states the server went through */}
+          {agentRun && agentRun.steps.length > 0 ? (
+            <div className="mt-4 rounded-input border border-border-subtle bg-bg-subtle/40 px-3 py-2.5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">
+                Workflow agent
+              </p>
+              <ol className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {agentRun.steps.map((step, index) => (
+                  <li key={`${step.state}-${index}`} className="flex items-center gap-2 text-caption text-text-tertiary">
+                    {index > 0 ? <span aria-hidden="true" className="text-text-quaternary">→</span> : null}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "h-1 w-1 rounded-pill",
+                          step.state === "completed" ? "bg-success" : "bg-lavender"
+                        )}
+                      />
+                      {step.label}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
+          {/* Tool trace — the real read tools executed for this answer */}
+          {currentResponse.toolCalls && currentResponse.toolCalls.length > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border-subtle/60 pt-3">
+              <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
+                Outils consultés
+              </span>
+              {currentResponse.toolCalls.map((call) => (
+                <span
+                  key={`${call.name}-${JSON.stringify(call.args ?? {})}-${call.status}`}
+                  title={call.summary}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-pill border px-2 py-1 font-mono text-[10px]",
+                    call.status === "error"
+                      ? "border-danger-border bg-danger-bg/30 text-danger"
+                      : call.status === "skipped"
+                        ? "border-border-subtle bg-bg-surface text-text-quaternary line-through"
+                        : "border-border-subtle bg-bg-surface-2 text-text-tertiary"
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "h-1 w-1 rounded-pill",
+                      call.status === "error"
+                        ? "bg-danger"
+                        : call.status === "skipped"
+                          ? "bg-text-quaternary"
+                          : "bg-success"
+                    )}
+                  />
+                  {call.name}
+                  {call.count !== undefined && call.status === "ok" ? (
+                    <span className="text-text-quaternary">· {call.count}</span>
+                  ) : null}
+                </span>
               ))}
             </div>
           ) : null}
