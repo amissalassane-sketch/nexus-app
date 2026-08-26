@@ -15,6 +15,7 @@ import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
 import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Skeleton, SkeletonRows } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
@@ -116,6 +117,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const submitting = useRef(false);
 
   // Quick create ("+ Add task" inline) + inline title editing.
+  // Destructive confirmation — the ConfirmDialog gates the delete; the
+  // mutation itself is unchanged.
+  const [confirmingDelete, setConfirmingDelete] = useState<Task | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickTitle, setQuickTitle] = useState("");
   const [quickSaving, setQuickSaving] = useState(false);
@@ -430,9 +434,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
   };
 
   const deleteTask = async (taskId: string) => {
-    const confirmed = window.confirm("Delete this task?");
-    if (!confirmed) return;
-
+    // Entry is gated by the ConfirmDialog — the mutation is unchanged.
     // Instant optimistic update
     const previous = tasks;
     setTasks((current) => current.filter((item) => item.id !== taskId));
@@ -566,7 +568,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
     return (
       <li
         key={task.id}
-        className="group flex min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-1.5 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
+        className="group flex min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-2 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
       >
         <Checkbox
           checked={done}
@@ -574,45 +576,58 @@ function TaskManagerInner({ userId }: { userId: string }) {
           label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
         />
 
-        {inlineEditId === task.id ? (
-          <input
-            autoFocus
-            value={inlineTitle}
-            onChange={(event) => setInlineTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void saveInlineTitle();
-              if (event.key === "Escape") cancelInlineEdit();
-            }}
-            onBlur={() => void saveInlineTitle()}
-            className="h-8 min-w-0 flex-1 rounded-input border border-border-focus bg-bg-surface px-2.5 text-body text-text-primary outline-none"
-            aria-label={`Rename ${task.title}`}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => populateEditForm(task)}
-            onDoubleClick={() => beginInlineEdit(task)}
-            className="min-w-0 flex-1 text-left"
-            title="Double-click to rename"
-          >
+        <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
+          {inlineEditId === task.id ? (
+            <input
+              autoFocus
+              value={inlineTitle}
+              onChange={(event) => setInlineTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void saveInlineTitle();
+                if (event.key === "Escape") cancelInlineEdit();
+              }}
+              onBlur={() => void saveInlineTitle()}
+              className="h-8 min-w-0 w-full rounded-input border border-border-focus bg-bg-surface px-2.5 text-body text-text-primary outline-none"
+              aria-label={`Rename ${task.title}`}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => populateEditForm(task)}
+              onDoubleClick={() => beginInlineEdit(task)}
+              className="min-w-0 text-left"
+              title="Double-click to rename"
+            >
+              <span
+                className={cn(
+                  "block truncate text-body text-text-primary",
+                  done && "strike text-text-tertiary"
+                )}
+              >
+                {task.title}
+              </span>
+              {task.description ? (
+                <span className="block truncate text-caption text-text-tertiary">
+                  {task.description}
+                </span>
+              ) : null}
+            </button>
+          )}
+
+          {/* Mobile meta line — priority, status and due date live under
+              the title below md so the row stays readable on a phone. */}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
+            <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
+            <Badge tone={done ? "success" : "neutral"}>{STATUS_LABELS[task.status]}</Badge>
             <span
               className={cn(
-                "block truncate text-body text-text-primary",
-                done && "strike text-text-tertiary"
+                "font-mono text-mono tabular-nums",
+                isOverdue ? "text-danger" : "text-text-tertiary"
               )}
             >
-              {task.title}
+              {formatDate(task.due_at) ?? "No date"}
             </span>
-            {task.description ? (
-              <span className="block truncate text-caption text-text-tertiary">
-                {task.description}
-              </span>
-            ) : null}
-          </button>
-        )}
-
-        <div className="flex shrink-0 items-center gap-1.5 md:hidden">
-          <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority.slice(0, 3)}</Badge>
+          </div>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
@@ -622,7 +637,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
         <span
           className={cn(
-            "w-14 shrink-0 text-right font-mono text-mono tabular-nums",
+            "hidden w-14 shrink-0 text-right font-mono text-mono tabular-nums md:block",
             isOverdue ? "text-danger" : "text-text-tertiary"
           )}
         >
@@ -640,7 +655,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
           <Button
             variant="icon"
             aria-label={`Delete ${task.title}`}
-            onClick={() => void deleteTask(task.id)}
+            onClick={() => setConfirmingDelete(task)}
             className="hover:text-danger"
           >
             <Trash2 size={15} strokeWidth={1.75} />
@@ -700,7 +715,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
               aria-selected={active}
               onClick={() => setView(entry.id)}
               className={cn(
-                "inline-flex h-7 items-center rounded-input border px-2.5 text-caption transition-colors duration-150 ease-nexus",
+                "inline-flex h-9 items-center rounded-input border px-2.5 text-caption transition-colors duration-150 ease-nexus sm:h-7",
                 active
                   ? "border-border-strong bg-accent-ghost-hover text-text-primary"
                   : "border-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-secondary"
@@ -981,6 +996,18 @@ function TaskManagerInner({ userId }: { userId: string }) {
         </div>
       </Modal>
 
+      <ConfirmDialog
+        open={confirmingDelete !== null}
+        onClose={() => setConfirmingDelete(null)}
+        title={confirmingDelete ? `Delete “${confirmingDelete.title}”?` : "Delete task?"}
+        description="This task will be permanently removed from the workspace."
+        confirmLabel="Delete task"
+        onConfirm={() => {
+          const task = confirmingDelete;
+          setConfirmingDelete(null);
+          if (task) void deleteTask(task.id);
+        }}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
@@ -85,6 +86,9 @@ function GoalManagerInner({ userId }: { userId: string }) {
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  // Destructive confirmation — the ConfirmDialog gates the delete; the
+  // mutation itself is unchanged.
+  const [confirmingDelete, setConfirmingDelete] = useState<Goal | null>(null);
   const submitting = useRef(false);
 
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
@@ -306,9 +310,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
   };
 
   const deleteGoal = async (goalId: string) => {
-    const confirmed = window.confirm("Delete this goal?");
-    if (!confirmed) return;
-
+    // Entry is gated by the ConfirmDialog — the mutation is unchanged.
     // Instant optimistic update
     const previous = goals;
     setGoals((current) => current.filter((item) => item.id !== goalId));
@@ -427,7 +429,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
                     <Button
                       variant="icon"
                       aria-label={`Delete ${goal.title}`}
-                      onClick={() => void deleteGoal(goal.id)}
+                      onClick={() => setConfirmingDelete(goal)}
                       className="hover:text-danger"
                     >
                       <Trash2 size={15} strokeWidth={1.75} />
@@ -575,6 +577,19 @@ function GoalManagerInner({ userId }: { userId: string }) {
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmingDelete !== null}
+        onClose={() => setConfirmingDelete(null)}
+        title={confirmingDelete ? `Delete “${confirmingDelete.title}”?` : "Delete goal?"}
+        description="This goal will be permanently removed from the workspace."
+        confirmLabel="Delete goal"
+        onConfirm={() => {
+          const goal = confirmingDelete;
+          setConfirmingDelete(null);
+          if (goal) void deleteGoal(goal.id);
+        }}
+      />
     </div>
   );
 }
