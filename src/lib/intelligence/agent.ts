@@ -31,6 +31,7 @@ import {
 import { buildPlan } from "./planner";
 import { legacyIntentFromId } from "./memory";
 import { resolveReference, resolutionToTarget } from "./references";
+import type { StoredSignalRow } from "./signals";
 import type { WorkspaceContextSummary } from "./context-builder";
 import type { WorkspaceSnapshot } from "./engine";
 import type {
@@ -62,6 +63,9 @@ export interface AgentInput {
   /** Phase 2 — structured working memory (server-persisted). */
   memory?: IntelligenceMemoryState;
   preferences?: IntelligencePreference[];
+  /** Phase 3 — active proactive signals as derived context (the agent
+   *  can reference them; they never replace real workspace rows). */
+  signals?: StoredSignalRow[];
   /** Reference resolution pre-computed by the route (server has the
    *  persisted memory). When absent, the agent resolves it itself. */
   resolution?: ReferenceResolution;
@@ -313,6 +317,14 @@ function buildAgentResult(
     provider: options.provider,
     sources: options.response.sources ?? options.response.evidence?.sources ?? [],
     memory: options.memoryTrace,
+    signals:
+      input.signals && input.signals.length > 0
+        ? {
+            count: input.signals.length,
+            top: input.signals.slice(0, 5).map((signal) => signal.fingerprint),
+            usedAsContext: true,
+          }
+        : undefined,
   };
 }
 
@@ -655,6 +667,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
     fetchImpl: input.fetchImpl,
     timeoutMs: input.timeoutMs,
     preferences: input.preferences,
+    signals: input.signals,
   });
 
   if (aiResponse) {

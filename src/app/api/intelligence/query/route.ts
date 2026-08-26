@@ -17,6 +17,7 @@ import {
   updateMemoryAfterTurn,
   upsertPreference,
 } from "@/lib/intelligence/memory";
+import { readSignals } from "@/lib/intelligence/signal-store";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
         .limit(500),
       supabase
         .from("projects")
-        .select("id, name, status, due_date, progress, updated_at, created_at")
+        .select("id, name, status, due_date, progress, goal_id, updated_at, created_at")
         .eq("workspace_id", workspaceId),
       supabase
         .from("goals")
@@ -179,6 +180,14 @@ export async function POST(request: Request) {
     // against the FRESH server snapshot (stale ids → "deleted").
     const resolution = resolveReference(query, memoryState, snapshot, { verify: true });
 
+    // Phase 3 — active proactive signals as derived context. Read from
+    // the persisted store (cheap, no recalculation per request); the
+    // full recalculation happens on GET /api/intelligence/signals and
+    // after verified mutations.
+    const activeSignals = (await readSignals(supabase, workspaceId, user.id))
+      .filter((signal) => signal.status !== "dismissed" && signal.status !== "resolved")
+      .slice(0, 5);
+
     // ---- AGENT LOOP ------------------------------------------------
     // Memory retrieval -> reference resolution -> intent -> read tools
     // -> (model proposes extra tools -> server validates -> executes)
@@ -194,6 +203,7 @@ export async function POST(request: Request) {
       memory: memoryState,
       preferences,
       resolution,
+      signals: activeSignals,
     });
 
     // ---- MEMORY UPDATE ---------------------------------------------

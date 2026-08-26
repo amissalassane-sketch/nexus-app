@@ -14,6 +14,7 @@ import {
   readMemory,
   saveMemory,
 } from "@/lib/intelligence/memory";
+import { markSignalActed } from "@/lib/intelligence/signal-store";
 
 import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type { IntelligenceActionType } from "@/lib/intelligence/types";
@@ -72,6 +73,9 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const actionType = body.type as IntelligenceActionType | undefined;
     const payload = body.payload && typeof body.payload === "object" ? { ...body.payload } : {};
+    // Optional: when the action came from a proactive signal, mark the
+    // signal as "acted" after the VERIFIED mutation (observability).
+    const signalId = typeof body.signalId === "string" ? body.signalId : null;
 
     if (!actionType) {
       return NextResponse.json({ error: "Action type is required" }, { status: 400 });
@@ -123,6 +127,13 @@ export async function POST(request: Request) {
 
       if (updatedMemory) {
         await saveMemory(supabase, workspaceId, user.id, updatedMemory, stored?.preferences ?? []);
+      }
+
+      // Signal observability: a verified mutation marks the source
+      // signal as "acted" (the problem itself resolves on next refresh
+      // when the fingerprint disappears).
+      if (signalId) {
+        await markSignalActed(supabase, workspaceId, user.id, signalId);
       }
 
       return NextResponse.json({

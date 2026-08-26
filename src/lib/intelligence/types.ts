@@ -214,6 +214,9 @@ export interface AgentRunResult {
   sources: string[];
   /** Dev trace of the memory used (not shown to the user). */
   memory?: MemoryTrace;
+  /** Dev trace of the proactive signals used as context (not shown to
+   *  the user). */
+  signals?: { count: number; top: string[]; usedAsContext: boolean };
 }
 
 export interface ActivityContextItem {

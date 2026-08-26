@@ -15,6 +15,7 @@
 //     retry on transient network/5xx failures.
 // ============================================================
 
+import type { StoredSignalRow } from "./signals";
 import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
@@ -194,6 +195,9 @@ export async function callAIProvider(
     timeoutMs?: number;
     /** Explicitly-requested durable preferences (Phase 2 memory). */
     preferences?: IntelligencePreference[];
+    /** Active proactive signals (Phase 3) — derived, verified context
+     *  the agent can reference; never a substitute for real rows. */
+    signals?: StoredSignalRow[];
   }
 ): Promise<StructuredIntelligenceResponse | null> {
   const config = options?.config ?? detectAIProvider();
@@ -208,8 +212,15 @@ export async function callAIProvider(
     options?.preferences && options.preferences.length > 0
       ? `\n\nUSER EXPLICIT PREFERENCES (durable, user-requested):\n${options.preferences.map((p) => `- ${p.value}`).join("\n")}`
       : "";
+  const signalsBlock =
+    options?.signals && options.signals.length > 0
+      ? `\n\nCURRENT PROACTIVE SIGNALS (verified, derived from the workspace):\n${options.signals
+          .slice(0, 5)
+          .map((signal) => `- [${signal.severity.toUpperCase()}] ${signal.title} — ${signal.summary}`)
+          .join("\n")}`
+      : "";
 
-  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}${preferencesBlock}\n\nUSER QUESTION:\n${query}`;
+  const promptContent = `VERIFIED WORKSPACE CONTEXT:\n${context.compactPrompt}${preferencesBlock}${signalsBlock}\n\nUSER QUESTION:\n${query}`;
 
   try {
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];

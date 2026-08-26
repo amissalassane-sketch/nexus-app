@@ -310,7 +310,8 @@ export function classifyIntent(
       "en urgente", "en priorite", "en haute", "en basse", "en moyenne",
       "mets la en", "passe la en", "passes la en", "met la en", "mets en", "passe en",
       "as urgent", "as high", "as low", "as medium", "set as urgent", "make it urgent", "set priority",
-      "priorite urgente", "priorite haute", "priorite basse", "priority urgent", "priority high"
+      "priorite urgente", "priorite haute", "priorite basse", "priority urgent", "priority high",
+      "debloque", "débloque", "debloquer", "débloquer", "unblock", "deblock"
     )
   ) {
     const named = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
@@ -399,7 +400,7 @@ export function classifyIntent(
   }
 
   // SEARCH
-  if (hasAny(normalized, "cherche", "trouve", "où est", "search", "find", "where is")) {
+  if (hasAny(normalized, "cherche", "trouve", "où est", "search", "find", "where is", "ouvre", "ouverture", "open", "affiche", "montre", "va sur")) {
     const task = snapshot ? extractNamedEntity(snapshot, normalized, "task") : undefined;
     const project = snapshot ? extractNamedEntity(snapshot, normalized, "project") : undefined;
     return {
