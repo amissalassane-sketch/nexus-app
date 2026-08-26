@@ -139,7 +139,7 @@ export function IntelligenceView({
                   disabled={disabled}
                   onClick={() => setFilter(entry.id)}
                   className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-input border px-2.5 text-caption transition-colors duration-150 ease-nexus",
+                    "inline-flex h-9 items-center gap-1.5 rounded-input border px-2.5 text-caption transition-colors duration-150 ease-nexus sm:h-7",
                     filter === entry.id
                       ? "border-border-strong bg-accent-ghost-hover text-text-primary"
                       : "border-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-secondary",

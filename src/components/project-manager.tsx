@@ -15,6 +15,7 @@ import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
 import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
@@ -85,6 +86,9 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   const [form, setForm] = useState<ProjectForm>(blankProjectForm());
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  // Destructive confirmation — the ConfirmDialog gates the delete; the
+  // mutation itself is unchanged.
+  const [confirmingDelete, setConfirmingDelete] = useState<Project | null>(null);
   const submitting = useRef(false);
 
   const { limitResult, guardCreate, handleMutationError, dismiss } = useFeatureGate(
@@ -351,9 +355,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   };
 
   const deleteProject = async (projectId: string) => {
-    const confirmed = window.confirm("Delete this project?");
-    if (!confirmed) return;
-
+    // Entry is gated by the ConfirmDialog — the mutation is unchanged.
     // Instant optimistic update
     const previous = projects;
     setProjects((current) => current.filter((p) => p.id !== projectId));
@@ -592,7 +594,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                         <Button
                           variant="icon"
                           aria-label={`Delete ${project.name}`}
-                          onClick={() => void deleteProject(project.id)}
+                          onClick={() => setConfirmingDelete(project)}
                           className="hover:text-danger"
                         >
                           <Trash2 size={15} strokeWidth={1.75} />
@@ -710,6 +712,19 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmingDelete !== null}
+        onClose={() => setConfirmingDelete(null)}
+        title={confirmingDelete ? `Delete “${confirmingDelete.name}”?` : "Delete project?"}
+        description="This project and its link to workspace activity will be permanently removed."
+        confirmLabel="Delete project"
+        onConfirm={() => {
+          const project = confirmingDelete;
+          setConfirmingDelete(null);
+          if (project) void deleteProject(project.id);
+        }}
+      />
     </div>
   );
 }

@@ -378,7 +378,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
                         <button
                           type="button"
                           onClick={() => void markAsRead(notification.id)}
-                          className="text-caption text-text-secondary opacity-0 transition-opacity duration-150 focus-visible:opacity-100 group-hover:opacity-100 hover:text-text-primary"
+                          className="-ml-1 inline-flex min-h-[40px] items-center rounded-input px-1 text-caption text-text-secondary opacity-100 transition-opacity duration-150 hover:text-text-primary active:bg-accent-ghost focus-visible:opacity-100 sm:min-h-0 sm:opacity-0 sm:group-hover:opacity-100"
                         >
                           Mark as read
                         </button>

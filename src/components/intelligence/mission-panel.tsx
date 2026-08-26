@@ -170,7 +170,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
       {mission ? (
         <div className="px-4 pb-4 sm:px-5">
           <h3 className="mt-1 text-h3 font-semibold text-text-primary">{mission.title}</h3>
-          <p className="mt-0.5 text-caption text-text-tertiary">{mission.objective}</p>
+          <p className="mt-0.5 text-small text-text-secondary">{mission.objective}</p>
 
           {/* Progress */}
           <div className="mt-3">
@@ -212,7 +212,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                     <Icon size={13} strokeWidth={2} className={step.status === "in_progress" ? "animate-spin" : undefined} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-caption font-medium", completed ? "text-text-tertiary line-through" : "text-text-primary")}>
+                    <p className={cn("text-[13px] leading-[19px] font-medium", completed ? "text-text-tertiary line-through" : "text-text-primary")}>
                       {step.title}
                     </p>
                     {blocked && step.blockedReason ? (
@@ -220,7 +220,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                     ) : null}
                     {failed ? <p className="mt-0.5 text-caption text-danger">{step.verification?.summary ?? "Étape échouée"}</p> : null}
                   </div>
-                  <span className="shrink-0 text-[10px] font-mono uppercase tracking-wider text-text-quaternary">
+                  <span className="shrink-0 pt-0.5 text-[10px] font-mono uppercase tracking-wider text-text-quaternary">
                     {STATUS_LABEL[step.status]}
                   </span>
                 </li>
@@ -230,10 +230,10 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
 
           {/* Next best action */}
           {mission.nextBestAction ? (
-            <div className="mt-3.5 rounded-input border border-border-subtle bg-bg-surface/60 p-3">
-              <p className="text-caption text-text-tertiary">Prochaine action</p>
-              <p className="mt-0.5 text-small font-medium text-text-primary">{mission.nextBestAction.label}</p>
-              <p className="text-caption text-text-tertiary">{mission.nextBestAction.reason}</p>
+            <div className="mt-3.5 rounded-input border border-lavender-border/30 bg-bg-surface/60 p-3.5">
+              <p className="eyebrow text-lavender">Prochaine meilleure action</p>
+              <p className="mt-1 text-[13px] font-medium text-text-primary">{mission.nextBestAction.label}</p>
+              <p className="mt-0.5 text-caption text-text-tertiary">{mission.nextBestAction.reason}</p>
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button
                   loading={executing}

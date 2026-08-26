@@ -102,7 +102,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed bottom-[76px] right-4 z-[80] flex w-[min(360px,calc(100vw-32px))] flex-col gap-2 lg:bottom-5 lg:right-5"
+        className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] right-4 z-[80] flex w-[min(360px,calc(100vw-32px))] flex-col gap-2 lg:bottom-5 lg:right-5"
       >
         {toasts.map((entry) => {
           const Icon = TONE_ICON[entry.tone];

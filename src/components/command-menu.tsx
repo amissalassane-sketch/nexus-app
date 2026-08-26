@@ -684,9 +684,11 @@ export function CommandMenu() {
 
         {/* ---- Status footer ---- */}
         <div className="flex h-9 items-center gap-4 border-t border-border-subtle bg-bg-subtle/60 px-4">
-          <Hint keys="↑↓" label="Navigate" />
-          <Hint keys="↵" label="Open" />
-          <Hint keys="esc" label="Close" />
+          <span className="hidden sm:contents">
+            <Hint keys="↑↓" label="Navigate" />
+            <Hint keys="↵" label="Open" />
+            <Hint keys="esc" label="Close" />
+          </span>
           <span className="ml-auto flex items-center gap-3">
             {state === "error" ? (
               <span className="flex items-center gap-1.5 text-caption text-text-tertiary">

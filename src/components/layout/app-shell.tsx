@@ -9,7 +9,11 @@ import { NexusWordmark } from "@/components/nexus-logo";
 import { CommandMenu } from "@/components/command-menu";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileNavItem } from "@/components/ui/navigation";
-import { MOBILE_NAV, isNavActive } from "@/components/layout/nav-config";
+import {
+  MOBILE_NAV,
+  breadcrumbFor,
+  isNavActive,
+} from "@/components/layout/nav-config";
 import { ToastProvider } from "@/components/ui/toast";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { ProfileCompletionPrompt } from "@/components/profile/profile-completion-prompt";
@@ -140,75 +144,86 @@ function AppShellInner({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Compact header below lg — carries brand + drawer trigger + quick search, help & account */}
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle px-3 sm:px-4 lg:hidden">
-            <button
-              type="button"
-              onClick={openNav}
-              aria-label="Open navigation"
-              aria-expanded={navOpen}
-              className="flex h-9 w-9 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
-            >
-              <Menu size={19} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-            <Link href="/dashboard" aria-label="NEXUS — Overview" className="outline-none focus-visible:ring-1 focus-visible:ring-lavender-border rounded-nav">
-              <NexusWordmark size={19} priority />
-            </Link>
-            <div className="ml-auto flex items-center gap-1">
+          {/* Mobile header below lg — safe-area aware, carries the current
+              page title, the drawer trigger and the compact actions. The
+              title replaces the wordmark on phones: the brand lives in the
+              drawer, the header answers "where am I?". */}
+          <header
+            className="shrink-0 border-b border-border-subtle bg-bg-base lg:hidden"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <div className="flex h-14 items-center gap-1.5 px-2 sm:px-3">
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
-                aria-label="Search NEXUS"
-                className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+                onClick={openNav}
+                aria-label="Open navigation"
+                aria-expanded={navOpen}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  aria-hidden="true"
+                <Menu size={19} strokeWidth={1.75} aria-hidden="true" />
+              </button>
+              <p
+                className="min-w-0 flex-1 truncate px-1 text-[14px] font-medium tracking-[-0.01em] text-text-primary"
+                aria-live="polite"
+              >
+                {breadcrumbFor(pathname).slice(-1)[0] ?? "NEXUS"}
+              </p>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
+                  aria-label="Search NEXUS"
+                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
                 >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" />
-                </svg>
-              </button>
-              <Link
-                href="/notifications"
-                aria-label={counts.unreadNotifications > 0 ? `Notifications — ${counts.unreadNotifications} unread` : "Notifications"}
-                className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
-              >
-                <Bell size={15} strokeWidth={1.75} aria-hidden="true" />
-                {counts.unreadNotifications > 0 ? (
-                  <span
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
                     aria-hidden="true"
-                    className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-lavender"
-                  />
-                ) : null}
-              </Link>
-              <button
-                type="button"
-                onClick={openHelp}
-                aria-label="Help & Guide"
-                data-guide="help-button"
-                className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
-              >
-                <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={openProfileModal}
-                aria-label="Account profile"
-                className="flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong"
-              >
-                {user.name?.trim() ? (
-                  user.name.trim().slice(0, 1).toUpperCase()
-                ) : (
-                  <UserRound size={13} strokeWidth={1.75} aria-hidden="true" />
-                )}
-              </button>
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                </button>
+                <Link
+                  href="/notifications"
+                  aria-label={counts.unreadNotifications > 0 ? `Notifications — ${counts.unreadNotifications} unread` : "Notifications"}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                >
+                  <Bell size={16} strokeWidth={1.75} aria-hidden="true" />
+                  {counts.unreadNotifications > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-2 top-2 h-1.5 w-1.5 rounded-pill bg-lavender"
+                    />
+                  ) : null}
+                </Link>
+                <button
+                  type="button"
+                  onClick={openHelp}
+                  aria-label="Help & Guide"
+                  data-guide="help-button"
+                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                >
+                  <LifeBuoy size={16} strokeWidth={1.75} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={openProfileModal}
+                  aria-label="Account profile"
+                  className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[12px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong active:bg-accent-ghost"
+                >
+                  {user.name?.trim() ? (
+                    user.name.trim().slice(0, 1).toUpperCase()
+                  ) : (
+                    <UserRound size={14} strokeWidth={1.75} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
           </header>
 
@@ -311,16 +326,21 @@ function AppShellInner({
                 navClosing ? "animate-panel-out" : "animate-panel-in"
               )}
             >
-              <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-4">
-                <NexusWordmark size={20} />
-                <button
-                  type="button"
-                  onClick={closeNav}
-                  aria-label="Close navigation"
-                  className="flex h-8 w-8 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
-                >
-                  <X size={17} strokeWidth={1.75} aria-hidden="true" />
-                </button>
+              <div
+                className="shrink-0 border-b border-border-subtle"
+                style={{ paddingTop: "env(safe-area-inset-top)" }}
+              >
+                <div className="flex h-14 items-center justify-between px-4">
+                  <NexusWordmark size={20} />
+                  <button
+                    type="button"
+                    onClick={closeNav}
+                    aria-label="Close navigation"
+                    className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+                  >
+                    <X size={17} strokeWidth={1.75} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <WorkspaceSidebar
@@ -331,7 +351,7 @@ function AppShellInner({
                   onNavigate={closeNav}
                 />
               </div>
-              <div className="shrink-0 border-t border-border-subtle p-3 bg-bg-surface/30">
+              <div className="shrink-0 border-t border-border-subtle bg-bg-surface/30 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                 <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
@@ -339,7 +359,7 @@ function AppShellInner({
                       closeNav();
                       openHelp();
                     }}
-                    className="inline-flex h-8 items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
                   >
                     <LifeBuoy size={14} strokeWidth={1.75} />
                     <span>Help & Guide</span>
@@ -347,7 +367,7 @@ function AppShellInner({
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary hover:bg-danger-bg hover:text-danger"
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary hover:bg-danger-bg hover:text-danger"
                   >
                     <LogOut size={13} strokeWidth={1.75} />
                     <span>Sign out</span>

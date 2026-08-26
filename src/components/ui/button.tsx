@@ -36,14 +36,18 @@ const variants: Record<ButtonVariant, string> = {
     "bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary active:translate-y-px disabled:opacity-40",
   danger:
     "border border-danger-border bg-transparent text-danger hover:bg-danger-bg active:translate-y-px disabled:opacity-40",
-  icon: "h-8 w-8 shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40",
+  // 36px hit area on touch screens, 32px where a precise pointer exists.
+  icon: "h-9 w-9 shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover disabled:opacity-40 sm:h-8 sm:w-8",
 };
 
+// Touch-first: one extra step of height below `sm` so the buttons people
+// reach for on a phone are never 36px targets; desktop keeps the compact
+// control scale.
 const sizes: Record<ButtonSize, string> = {
   xs: "h-7 px-2.5 text-caption",
-  sm: "h-8 px-3 text-caption",
-  md: "h-9 px-3.5 text-button",
-  lg: "h-10 px-4 text-button",
+  sm: "h-9 px-3 text-caption sm:h-8",
+  md: "h-10 px-4 text-button sm:h-9 sm:px-3.5",
+  lg: "h-11 px-4 text-button sm:h-10",
 };
 
 export function buttonClasses({

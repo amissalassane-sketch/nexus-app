@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 // ============================================================
 
 const shell =
-  "group relative inline-flex h-9 items-center justify-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-40";
+  "group relative inline-flex h-10 items-center justify-center gap-2 rounded-input bg-accent px-4 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-40 sm:h-9 sm:px-3.5";
 
 function Spinner() {
   return (

@@ -48,7 +48,7 @@ export function NavItem({
       aria-current={active ? "page" : undefined}
       {...rest}
       className={cn(
-        "group relative flex h-[34px] items-center gap-2.5 rounded-nav border px-2.5 text-[13px] outline-none transition-colors duration-150 ease-nexus focus-visible:border-border-focus focus-visible:ring-1 focus-visible:ring-lavender-border",
+        "group relative flex h-10 items-center gap-2.5 rounded-nav border px-2.5 text-[13px] outline-none transition-colors duration-150 ease-nexus focus-visible:border-border-focus focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-[34px]",
         active
           ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary shadow-xs"
           : "border-transparent text-text-secondary hover:border-border-subtle/40 hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover",
@@ -114,7 +114,9 @@ export function MobileNavItem({
       {...rest}
       className={cn(
         "relative flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 outline-none transition-colors duration-150 ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border",
-        active ? "text-text-primary font-medium" : "text-text-tertiary hover:text-text-secondary",
+        active
+          ? "font-medium text-text-primary"
+          : "text-text-tertiary hover:text-text-secondary active:text-text-primary",
         className
       )}
     >
@@ -127,7 +129,7 @@ export function MobileNavItem({
           />
         ) : null}
       </span>
-      <span className="max-w-full truncate text-[10.5px] leading-none">{label}</span>
+      <span className="max-w-full truncate text-[11px] leading-none">{label}</span>
       <span
         aria-hidden="true"
         className={cn(
