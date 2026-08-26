@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { IntelligenceAsk } from "@/components/intelligence/intelligence-ask";
+import { ProactiveSignalsPanel } from "@/components/intelligence/proactive-signals-panel";
 import { WorkspaceHealthPanel } from "@/components/intelligence/health-panel";
 import { WeeklyBriefingPanel } from "@/components/intelligence/briefing-panel";
 import { PriorityFocusPanel } from "@/components/intelligence/priority-focus";
@@ -49,10 +50,12 @@ export function IntelligenceView({
   insights,
   context,
   snapshot,
+  workspaceId,
 }: {
   insights: Insight[];
   context: WorkspaceContext;
   snapshot: WorkspaceSnapshot;
+  workspaceId: string | null;
 }) {
   const [filter, setFilter] = useState<"all" | InsightSeverity>("all");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -97,6 +100,7 @@ export function IntelligenceView({
 
   return (
     <div className="flex flex-col gap-5">
+      {workspaceId ? <ProactiveSignalsPanel workspaceId={workspaceId} /> : null}
       <IntelligenceAsk snapshot={snapshot} />
 
       <div className="grid gap-5 lg:grid-cols-2">

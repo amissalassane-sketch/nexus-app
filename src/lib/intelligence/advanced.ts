@@ -1072,6 +1072,16 @@ function reasonWorkspaceCore(
         headline = `Set “${entity.label}” to ${priority} priority`;
         narrative = `The task priority will be set to ${priority}. NEXUS re-reads the task after the update before confirming.`;
       }
+      // "Débloque-la" / "Unblock it" → move the task out of blocked.
+      const normalizedUpdate = query
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      if (normalizedUpdate.includes("debloque") || normalizedUpdate.includes("unblock") || normalizedUpdate.includes("deblock")) {
+        payload = { ...payload, status: "in_progress" };
+        headline = `Unblock “${entity.label}”`;
+        narrative = `The task status will be set to in_progress, unblocking anything that depends on it. NEXUS re-reads the task after the update before confirming.`;
+      }
     }
     if (classified.intent === "COMPLETE") {
       headline = `Complete “${entity.label}”?`;
@@ -1539,8 +1549,16 @@ function reasonWorkspaceCore(
     lowerQuery.includes("prochaines tâches") ||
     lowerQuery.includes("faire en premier") ||
     lowerQuery.includes("faire aujourd'hui") ||
-    lowerQuery.includes("what should i do first") ||
-    lowerQuery.includes("what to do today")
+    lowerQuery.includes("je dois faire") ||
+    lowerQuery.includes("que dois je faire") ||
+    lowerQuery.includes("que dois-je faire") ||
+    lowerQuery.includes("dois je faire") ||
+    lowerQuery.includes("dois faire") ||
+    lowerQuery.includes("je fais maintenant") ||
+    lowerQuery.includes("what should i do") ||
+    lowerQuery.includes("what to do") ||
+    lowerQuery.includes("what do i need to do") ||
+    lowerQuery.includes("what is next")
   ) {
     const ranked = rankPriorities(snapshot, 3);
     const items: IntelligenceItem[] = ranked.map((r, idx) => ({

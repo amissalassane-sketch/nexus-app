@@ -295,6 +295,33 @@ export function applyActionFailure(
   };
 }
 
+/** Points the working memory at a specific real entity (used when the
+ *  user focuses a proactive signal, so "pourquoi ?" / "débloque-la"
+ *  resolve to the signalled entity). Never creates an entity: the id
+ *  must come from a real read or a stored signal row. */
+export function focusMemoryOnEntity(
+  prev: IntelligenceMemoryState,
+  entity: { type: "task" | "project" | "goal" | "workspace" | null; id: string | null; label: string | null },
+  contextLabel: string,
+  now: Date = new Date()
+): IntelligenceMemoryState {
+  if (!entity?.id) return { ...prev, lastQuery: contextLabel, updatedAt: now.toISOString() };
+  const type: "task" | "project" | "goal" =
+    entity.type === "project" ? "project" : entity.type === "goal" ? "goal" : "task";
+  const target: IntelligenceTarget = { type, id: entity.id, label: entity.label ?? "Item" };
+  const existing = prev.lastItems.find((item) => item.id === entity.id);
+  const lastItems = existing
+    ? prev.lastItems
+    : [{ id: entity.id, title: entity.label ?? "Item", type }, ...prev.lastItems].slice(0, MEMORY_MAX_ITEMS);
+  return {
+    ...prev,
+    lastQuery: contextLabel,
+    lastTarget: target,
+    lastItems,
+    updatedAt: now.toISOString(),
+  };
+}
+
 /** Removes references to deleted ids defensively (used on read). */
 export function scrubDeletedIds(
   state: IntelligenceMemoryState,
