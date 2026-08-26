@@ -169,7 +169,7 @@ export function Dropdown({
             onKeyDown={onMenuKeyDown}
             style={{ width }}
             className={cn(
-              "absolute top-[calc(100%+6px)] z-[60] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown animate-scale-in",
+              "absolute top-[calc(100%+6px)] z-[60] max-w-[calc(100vw-24px)] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown animate-scale-in",
               align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left"
             )}
           >
@@ -182,7 +182,7 @@ export function Dropdown({
 }
 
 const itemClasses =
-  "relative flex h-8 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-[13px] text-text-secondary outline-none transition-colors duration-200 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-40";
+  "relative flex h-9 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-[13px] text-text-secondary outline-none transition-colors duration-200 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary active:bg-accent-ghost aria-disabled:cursor-not-allowed aria-disabled:opacity-40 sm:h-8";
 
 const activeClasses = "bg-accent-ghost-hover text-text-primary";
 
