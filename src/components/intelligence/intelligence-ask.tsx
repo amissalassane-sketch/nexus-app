@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,16 +9,18 @@ import {
   History,
   Plus,
   RefreshCw,
+  ShieldAlert,
   Sparkles,
   X,
 } from "lucide-react";
 import {
   reasonWorkspace,
 } from "@/lib/intelligence/advanced";
-import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
+import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
+  ActionVerification,
 } from "@/lib/intelligence/types";
 import { emitActivation, trackEvent } from "@/lib/onboarding/analytics";
 import { cn } from "@/lib/cn";
@@ -53,6 +55,19 @@ interface HistoryEntry {
   timestamp: string;
 }
 
+function sessionHistoryPayload(history: HistoryEntry[]) {
+  return history.map((h) => ({
+    id: h.id,
+    query: h.query,
+    intent: h.response.intent,
+    intentId: h.response.intentId,
+    headline: h.response.headline,
+    targetEntities: h.response.items?.map((i) => i.title),
+    actionType: h.response.action?.type,
+    target: h.response.target,
+  }));
+}
+
 export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,12 +79,20 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   // Action execution state
   const [confirmingAction, setConfirmingAction] = useState<IntelligenceAction | null>(null);
   const [executingAction, setExecutingAction] = useState(false);
+  const [verifyingAction, setVerifyingAction] = useState(false);
   const [executedActionResult, setExecutedActionResult] = useState<{
     success: boolean;
     message: string;
     entityId?: string;
     actionType?: string;
+    verification?: ActionVerification;
   } | null>(null);
+
+  const proactive = useMemo(() => {
+    return computeInsights(snapshot)
+      .filter((insight) => insight.severity !== "positive")
+      .slice(0, 3);
+  }, [snapshot]);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -100,13 +123,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: value,
-          sessionHistory: history.map((h) => ({
-            id: h.id,
-            query: h.query,
-            intent: h.response.intent,
-            headline: h.response.headline,
-            targetEntities: h.response.items?.map((i) => i.title),
-          })),
+          sessionHistory: sessionHistoryPayload(history),
         }),
         signal: controller.signal,
       });
@@ -140,15 +157,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     }
 
     // Deterministic fallback execution on client
-    const fallbackHistory = history.map((h) => ({
-      id: h.id,
-      query: h.query,
-      intent: h.response.intent,
-      headline: h.response.headline,
-      targetEntities: h.response.items?.map((i) => i.title),
-    }));
-
-    const fallbackResponse = reasonWorkspace(snapshot, value, undefined, fallbackHistory);
+    const fallbackResponse = reasonWorkspace(snapshot, value, undefined, sessionHistoryPayload(history));
     setCurrentResponse(fallbackResponse);
     setHistory((prev) => [
       {
@@ -162,8 +171,9 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
   };
 
   const handleConfirmAction = async (action: IntelligenceAction) => {
-    if (executingAction) return;
+    if (executingAction || verifyingAction) return;
     setExecutingAction(true);
+    setVerifyingAction(true);
     setError(null);
 
     try {
@@ -172,7 +182,11 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: action.type,
-          payload: action.payload,
+          payload: {
+            ...action.payload,
+            confirmed: true,
+            confirmDeletion: action.risk === "high" ? true : undefined,
+          },
         }),
       });
 
@@ -183,6 +197,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           message: data.message ?? "Action completed successfully",
           entityId: data.entityId,
           actionType: data.actionType,
+          verification: data.verification,
         });
         setConfirmingAction(null);
 
@@ -201,6 +216,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
       setError("Network error while executing action. Please try again.");
     } finally {
       setExecutingAction(false);
+      setVerifyingAction(false);
     }
   };
 
@@ -355,6 +371,31 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
         </div>
       ) : null}
 
+      {/* Proactive read — honest signals before the user asks anything */}
+      {!loading && !currentResponse && proactive.length > 0 ? (
+        <div className="mx-3 mb-3 animate-fade-in rounded-input border border-lavender-border/30 bg-lavender/5 p-3.5">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={14} strokeWidth={1.75} className="text-lavender" aria-hidden="true" />
+            <p className="text-caption font-medium text-text-primary">
+              {proactive.length} thing{proactive.length === 1 ? "" : "s"} need your attention
+            </p>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1">
+            {proactive.map((insight) => (
+              <li key={insight.id} className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-small text-text-secondary">{insight.title}</span>
+                <Link
+                  href={insight.href}
+                  className="shrink-0 text-caption font-medium text-text-tertiary hover:text-text-primary"
+                >
+                  View
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {/* Loading state with live reasoning indicator */}
       {loading ? (
         <div className="mx-3 mb-3 animate-fade-in rounded-input border border-border-subtle bg-bg-surface/50 p-4">
@@ -483,9 +524,21 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
           {/* Action Recommendation & Execution Card */}
           {currentResponse.action ? (
             <div className="mt-4 rounded-card border border-lavender-border/40 bg-lavender/5 p-4">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="eyebrow text-lavender">Action Recommendation</span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
+                <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
+                  <span
+                    className={cn(
+                      "rounded-[4px] border px-1.5 py-0.5",
+                      currentResponse.action.risk === "high"
+                        ? "border-danger-border bg-danger-bg/40 text-danger"
+                        : currentResponse.action.risk === "medium"
+                          ? "border-warning-border bg-warning-bg/40 text-warning"
+                          : "border-border-subtle bg-bg-surface-2 text-text-tertiary"
+                    )}
+                  >
+                    {currentResponse.action.risk ?? "low"} risk
+                  </span>
                   {currentResponse.action.type.replace("_", " ")}
                 </span>
               </div>
@@ -503,44 +556,76 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
 
               {/* Execution Success feedback */}
               {executedActionResult?.success ? (
-                <div className="mt-3 flex items-center justify-between gap-2 rounded-input border border-success-border bg-success-bg/40 px-3.5 py-2.5 text-small text-success animate-fade-in">
-                  <div className="flex items-center gap-2">
-                    <Check size={16} strokeWidth={2.5} />
-                    <span className="font-medium">{executedActionResult.message}</span>
+                <div className="mt-3 rounded-input border border-success-border bg-success-bg/40 px-3.5 py-2.5 text-small text-success animate-fade-in">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Check size={16} strokeWidth={2.5} />
+                      <span className="font-medium">{executedActionResult.message}</span>
+                    </div>
+                    {executedActionResult.actionType === "create_task" ? (
+                      <Link
+                        href="/tasks"
+                        className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
+                      >
+                        <span>Open in Tasks</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/projects"
+                        className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
+                      >
+                        <span>Open in {executedActionResult.actionType?.includes("goal") ? "Goals" : "Projects"}</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    )}
                   </div>
-                  {executedActionResult.actionType === "create_task" ? (
-                    <Link
-                      href="/tasks"
-                      className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
-                    >
-                      <span>Open in Tasks</span>
-                      <ArrowRight size={12} />
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/projects"
-                      className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
-                    >
-                      <span>Open in Projects</span>
-                      <ArrowRight size={12} />
-                    </Link>
-                  )}
+                  {executedActionResult.verification ? (
+                    <div className="mt-2 border-t border-success-border/40 pt-2 text-caption text-success/80">
+                      {executedActionResult.verification.verified ? (
+                        <span className="flex items-center gap-1.5">
+                          <Check size={12} strokeWidth={2.5} />
+                          Verified · {executedActionResult.verification.summary} · {executedActionResult.verification.matched.join(", ")}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <X size={12} strokeWidth={2.5} />
+                          Verification failed · {executedActionResult.verification.mismatched.join(", ") || "result could not be confirmed"}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               ) : confirmingAction ? (
                 /* Inline Confirmation Box */
                 <div className="mt-3 rounded-input border border-border-default bg-bg-surface p-3.5 animate-scale-in">
-                  <p className="text-small font-medium text-text-primary">
-                    {confirmingAction.type === "create_project"
-                      ? "Confirm project creation in workspace:"
-                      : "Confirm task creation in workspace:"}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-small font-medium text-text-primary">
+                      {confirmingAction.type === "create_project"
+                        ? "Confirm project creation in workspace:"
+                        : confirmingAction.type === "create_goal"
+                          ? "Confirm goal creation in workspace:"
+                          : confirmingAction.type === "complete_task"
+                            ? "Confirm task completion in workspace:"
+                            : confirmingAction.type === "move_task"
+                              ? "Confirm task reschedule in workspace:"
+                              : confirmingAction.type === "delete_task" || confirmingAction.type === "delete_project"
+                                ? "Confirm destructive action in workspace:"
+                                : "Confirm task creation in workspace:"}
+                    </p>
+                    {confirmingAction.risk === "high" ? (
+                      <span className="rounded-[4px] border border-danger-border bg-danger-bg/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-danger">
+                        High risk
+                      </span>
+                    ) : null}
+                  </div>
                   <dl className="mt-2 flex flex-col divide-y divide-border-subtle border-y border-border-subtle text-caption text-text-secondary py-1">
                     <div className="flex justify-between py-1.5">
                       <dt className="text-text-tertiary">
-                        {confirmingAction.type === "create_project" ? "Project name" : "Task title"}
+                        {confirmingAction.type === "create_project" ? "Project name" : confirmingAction.type === "create_goal" ? "Goal title" : "Task"}
                       </dt>
                       <dd className="font-medium text-text-primary">
-                        {confirmingAction.payload?.name ?? confirmingAction.payload?.title}
+                        {confirmingAction.payload?.name ?? confirmingAction.payload?.title ?? confirmingAction.payload?.query}
                       </dd>
                     </div>
                     {confirmingAction.payload?.priority ? (
@@ -571,11 +656,11 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
-                      loading={executingAction}
+                      loading={executingAction || verifyingAction}
                       onClick={() => void handleConfirmAction(confirmingAction)}
                       className="min-h-[44px] sm:min-h-[36px]"
                     >
-                      Confirm and execute
+                      {verifyingAction ? "Executing & verifying…" : "Confirm and execute"}
                     </Button>
                     <Button
                       variant="ghost"

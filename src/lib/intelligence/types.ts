@@ -13,9 +13,42 @@ export type IntelligenceIntent =
   | "action"
   | "general";
 
+/** Structured Operation intent (Phase 3). Kept separate from the legacy
+ *  `intent` label so existing UI and engine contracts stay compatible. */
+export type IntelligenceIntentId =
+  | "ANALYZE"
+  | "PRIORITIZE"
+  | "PLAN"
+  | "SUMMARIZE"
+  | "DETECT"
+  | "SEARCH"
+  | "CREATE"
+  | "UPDATE"
+  | "COMPLETE"
+  | "MOVE"
+  | "DELETE"
+  | "EXPLAIN"
+  | "GENERAL_ASSISTANCE";
+
+export type IntelligenceRisk = "low" | "medium" | "high" | "none";
+
+export interface IntelligenceTarget {
+  type: "task" | "project" | "goal" | "workspace" | null;
+  query?: string;
+  id?: string;
+  label?: string;
+}
+
 export type IntelligenceActionType =
   | "create_task"
   | "create_project"
+  | "create_goal"
+  | "update_task"
+  | "update_project"
+  | "complete_task"
+  | "move_task"
+  | "delete_task"
+  | "delete_project"
   | "open_project"
   | "open_task"
   | "view_blocked_tasks"
@@ -23,12 +56,24 @@ export type IntelligenceActionType =
   | "view_risky_projects"
   | "navigate";
 
+export interface ActionVerification {
+  verified: boolean;
+  /** Free-text summary of the resource read back after the mutation. */
+  summary: string;
+  /** Expected vs actual fields that matched. */
+  matched: string[];
+  /** Expected vs actual fields that did not match, if any. */
+  mismatched: string[];
+}
+
 export interface IntelligenceAction {
   id: string;
   type: IntelligenceActionType;
   label: string;
   description?: string;
   confirmationRequired: boolean;
+  /** Risk class used by the UI and the server approval gate. */
+  risk?: IntelligenceRisk;
   payload?: {
     title?: string;
     name?: string;
@@ -36,8 +81,14 @@ export interface IntelligenceAction {
     status?: string;
     dueDate?: string | null;
     projectId?: string | null;
+    taskId?: string | null;
+    goalId?: string | null;
     description?: string;
     url?: string;
+    /** Entity query used when no concrete id is available yet. */
+    query?: string;
+    /** High-risk destructive actions require an explicit confirmation flag. */
+    confirmDeletion?: boolean;
   };
 }
 
@@ -63,6 +114,10 @@ export interface IntelligenceItem {
 export interface StructuredIntelligenceResponse {
   query: string;
   intent: IntelligenceIntent;
+  /** Structured operation intent (Phase 3). */
+  intentId?: IntelligenceIntentId;
+  /** Entity this response reasoning targeted, when applicable. */
+  target?: IntelligenceTarget;
   headline: string;
   narrative: string;
   provider: "openai" | "anthropic" | "nexus-engine";
@@ -75,6 +130,8 @@ export interface StructuredIntelligenceResponse {
   action?: IntelligenceAction;
   quickActions?: QuickAction[];
   suggestions: string[];
+  /** Present after a server-executed action; shows the verified result. */
+  verification?: ActionVerification;
 }
 
 export interface ActivityContextItem {
@@ -97,8 +154,12 @@ export interface SessionHistoryItem {
   id: string;
   query: string;
   intent: IntelligenceIntent;
+  intentId?: IntelligenceIntentId;
   headline: string;
   targetEntities?: string[];
   actionTaken?: string;
+  /** The proposed action from the previous turn, when present. */
+  actionType?: IntelligenceActionType;
+  target?: IntelligenceTarget;
   timestamp?: string;
 }

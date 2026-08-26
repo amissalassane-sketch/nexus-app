@@ -25,9 +25,16 @@ import {
 import type {
   StructuredIntelligenceResponse,
   IntelligenceItem,
+  IntelligenceActionType,
   SessionHistoryItem,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
+import {
+  classifyIntent,
+  dueDayToIsoDayName,
+  mapLegacyIntentToId,
+  riskForAction,
+} from "./intent";
 
 function asDate(value: string | null | undefined): Date | null {
   if (!value) return null;
@@ -55,6 +62,51 @@ function priorityWeight(priority: string | null | undefined): number {
 }
 
 const PROJECT_ACTIVE_STATUSES = new Set(["planning", "active", "paused"]);
+
+/** Resolves a task referenced by its title in the snapshot. Never invents one. */
+function findTaskByQuery(snapshot: WorkspaceSnapshot, query: string): TaskLike | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  const byTitle = snapshot.tasks.find(
+    (task) => task.title.length >= 3 && q.includes(task.title.toLowerCase())
+  );
+  if (byTitle) return byTitle;
+  const tokens = q.split(/\s+/).filter((token) => token.length >= 4);
+  const matches = snapshot.tasks.filter((task) => {
+    const title = task.title.toLowerCase();
+    return tokens.some((token) => title.includes(token));
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+/** Resolves a project referenced by its name in the snapshot. Never invents one. */
+function findProjectByQuery(snapshot: WorkspaceSnapshot, query: string): ProjectLike | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  const byName = snapshot.projects.find(
+    (project) => project.name.length >= 3 && q.includes(project.name.toLowerCase())
+  );
+  if (byName) return byName;
+  const tokens = q.split(/\s+/).filter((token) => token.length >= 4);
+  const matches = snapshot.projects.filter((project) => {
+    const name = project.name.toLowerCase();
+    return tokens.some((token) => name.includes(token));
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+/** Detects a natural language due day ("vendredi" / "monday") and returns an ISO date. */
+function naturalLanguageDueDate(query: string, now: Date): string | null {
+  const normalized = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const words: string[] = [];
+  for (const day of ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) {
+    if (normalized.includes(day)) words.push(day);
+  }
+  if (normalized.includes("demain") || normalized.includes("tomorrow")) words.push("tomorrow");
+  if (normalized.includes("aujourd") || normalized.includes("today")) words.push("today");
+  const day = words[0];
+  return day ? dueDayToIsoDayName(day, now) : null;
+}
 
 // ============================================================
 // 1 — WORKSPACE HEALTH
@@ -616,7 +668,7 @@ const has = (tokens: string[], ...needles: string[]) =>
  * Pure, deterministic, evidence-grounded. Maps the user's intent to one of the
  * 6 core capabilities (Analysis, Prioritization, Planning, Synthesis, Detection, Action).
  */
-export function reasonWorkspace(
+function reasonWorkspaceCore(
   snapshot: WorkspaceSnapshot,
   query: string,
   context?: WorkspaceContextSummary,
@@ -772,6 +824,334 @@ export function reasonWorkspace(
         ],
       };
     }
+  }
+
+  const classified = classifyIntent(query, { snapshot, sessionHistory });
+
+  // 1.0 CONVERSATION CONTINUATION — "Et après ?", "Fais-le", "this task"
+  // Resolves the referential phrases against the previous turn's action and
+  // the previous plan, so a follow-up is never a silent no-op.
+  const lastTurn = sessionHistory?.[0];
+  const normalizedQuery = query
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-–—]/g, " ")
+    .trim();
+  const isNextStepQuery = /et (apres|ensuite)|what next|then what/.test(normalizedQuery);
+  if (isNextStepQuery && lastTurn) {
+    const previousItems = lastTurn.targetEntities ?? [];
+    const nextItems = previousItems.slice(1);
+    return {
+      query,
+      intent: "planning",
+      intentId: "PLAN",
+      target: lastTurn.target ?? { type: "workspace" },
+      headline: nextItems.length > 0 ? "Next step in the current plan" : "Plan complete",
+      narrative:
+        nextItems.length > 0
+          ? `Continuing from the previous plan, the next step is: ${nextItems.join(", ")}.`
+          : "The previous plan has no remaining steps. Ask for a new day or week plan whenever you are ready.",
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [{ label: "Previous turn", value: lastTurn.headline }],
+        traceCount: `Resolved from session context (${lastTurn.query})`,
+        sources: ["Session Memory", "Workspace Plan"],
+      },
+      action: {
+        id: "act-next-plan-step",
+        type: "open_task",
+        label: nextItems.length > 0 ? "Open next step" : "Plan again",
+        description: nextItems.length > 0 ? "Open the tasks view to continue the current plan." : "Generate a new plan for today or this week.",
+        confirmationRequired: false,
+        risk: "none",
+        payload: { url: "/tasks" },
+      },
+      suggestions: ["Plan ma journée.", "Plan ma semaine.", "Quelles sont mes prioritaires ?"],
+    };
+  }
+
+  const isExecuteLast = /fais le|fais la|vas y|va y|do it|go ahead|execute/i.test(normalizedQuery);
+  if (isExecuteLast && lastTurn?.actionType && lastTurn.actionType !== "open_task" && lastTurn.actionType !== "open_project" && lastTurn.actionType !== "navigate") {
+    const actionType = lastTurn.actionType;
+    return {
+      query,
+      intent: "action",
+      intentId: mapLegacyIntentToId("action", actionType),
+      target: lastTurn.target ?? { type: "task" },
+      headline: `Execute proposed action: ${actionType.replace("_", " ")}`,
+      narrative: `This repeats the action proposed in the previous turn, targeting the same verified workspace resource.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [{ label: "Action", value: actionType.replace("_", " ") }],
+        traceCount: `Resolved from session context (${lastTurn.query})`,
+        sources: ["Session Memory"],
+      },
+      action: {
+        id: `act-repeat-${actionType}`,
+        type: actionType,
+        label: actionType.replace("_", " "),
+        description: "Execute the previously proposed action after confirmation.",
+        confirmationRequired: true,
+        risk: riskForAction(actionType),
+        payload: {
+          taskId: lastTurn.target?.id,
+          title: lastTurn.target?.label,
+        },
+      },
+      suggestions: ["Confirmer cette action.", "Annuler.", "Quels projets nécessitent mon attention ?"],
+    };
+  }
+
+  // 1.0.1 SEARCH — locate a real task/project by name
+  if (classified.intent === "SEARCH") {
+    const task = findTaskByQuery(snapshot, query);
+    const project = task ? null : findProjectByQuery(snapshot, query);
+    const entity = task ? { type: "task" as const, id: task.id, label: task.title } : project ? { type: "project" as const, id: project.id, label: project.name } : null;
+    if (!entity) {
+      return {
+        query,
+        intent: "general",
+        intentId: "SEARCH",
+        target: classified.target,
+        headline: "No matching workspace item",
+        narrative: "No task or project in this workspace matches that reference. The search is scoped to your workspace only.",
+        provider: "nexus-engine",
+        evidence: { metrics: [{ label: "Scope", value: "Current workspace" }], traceCount: "Search scoped to verified workspace records", sources: ["Workspace Registry"] },
+        suggestions: ["Quels projets nécessitent mon attention ?", "Recherche une tâche.", "Recherche un projet."],
+      };
+    }
+    const href = entity.type === "task" ? "/tasks" : "/projects";
+    return {
+      query,
+      intent: entity.type === "task" ? "prioritization" : "analysis",
+      intentId: "SEARCH",
+      target: entity,
+      headline: `Found: ${entity.label}`,
+      narrative: `This is a real ${entity.type} in your workspace. Open the corresponding view to inspect it.`,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [{ label: "Item", value: entity.label }, { label: "Type", value: entity.type }],
+        traceCount: "Resolved from verified workspace records",
+        sources: [entity.type === "task" ? "Tasks" : "Projects"],
+      },
+      action: {
+        id: `act-open-${entity.type}-${entity.id}`,
+        type: entity.type === "task" ? "open_task" : "open_project",
+        label: `Open ${entity.label}`,
+        confirmationRequired: false,
+        risk: "none",
+        payload: { url: href, taskId: entity.type === "task" ? entity.id : undefined, projectId: entity.type === "project" ? entity.id : undefined },
+      },
+      suggestions: ["Qu'est-ce qui est en retard ?", "Quels projets nécessitent mon attention ?"],
+    };
+  }
+
+  // 1.0.2 EXPLAIN — why a real project is progressing badly
+  if (classified.intent === "EXPLAIN") {
+    const project = findProjectByQuery(snapshot, query) ?? snapshot.projects[0];
+    const projectTasks = project ? open.filter((t) => t.project_id === project.id) : [];
+    const overdue = projectTasks.filter((t) => {
+      const d = asDate(t.due_at);
+      return d !== null && d.getTime() < now.getTime();
+    });
+    const blocked = projectTasks.filter((t) => t.status === "blocked");
+    const progress = Math.round(project?.progress ?? 0);
+    const due = asDate(project?.due_date);
+
+    const reasons: string[] = [];
+    if (due && due.getTime() < now.getTime()) reasons.push("project deadline has passed");
+    else if (due && daysUntil(due, now) <= 7) reasons.push(`deadline is inside ${daysUntil(due, now)} days`);
+    if (blocked.length > 0) reasons.push(`${plural(blocked.length, "task")} blocked`);
+    if (overdue.length > 0) reasons.push(`${plural(overdue.length, "task")} overdue`);
+    if (project?.status === "paused") reasons.push("project is paused");
+
+    return {
+      query,
+      intent: "analysis",
+      intentId: "EXPLAIN",
+      target: project ? { type: "project", id: project.id, label: project.name } : { type: "workspace" },
+      headline: project ? `Why “${project.name}” needs attention` : "Workspace explanation",
+      narrative: project && reasons.length > 0
+        ? `The evidence is read directly from the workspace: ${reasons.join(", ")}. Progress is ${progress}%.`
+        : "NEXUS cannot find a project-level signal to explain a slowdown — nothing in the verified data currently indicates a risk.",
+      provider: "nexus-engine",
+      evidence: {
+        metrics: project ? [
+          { label: "Progress", value: `${progress}%` },
+          { label: "Open tasks", value: String(projectTasks.length) },
+          { label: "Blocked", value: String(blocked.length) },
+          { label: "Overdue", value: String(overdue.length) },
+        ] : [{ label: "Scope", value: "Current workspace" }],
+        traceCount: "Derived from verified project and task records",
+        sources: ["Projects Registry", "Task Attributes"],
+      },
+      items: project && reasons.length > 0 ? [{
+        id: project.id,
+        title: project.name,
+        subtitle: `Progress ${progress}%`,
+        badge: { label: "AT RISK", tone: "danger" },
+        href: "/projects",
+        reasons,
+      }] : undefined,
+      suggestions: ["Quels projets nécessitent mon attention ?", "Qu'est-ce qui est bloqué ?", "Plan ma semaine."],
+    };
+  }
+
+  // 1.0.3 COMPLETE / MOVE / UPDATE — mutate a real task or project
+  if (classified.intent === "COMPLETE" || classified.intent === "MOVE" || classified.intent === "UPDATE") {
+    const task = findTaskByQuery(snapshot, query);
+    const project = task ? null : findProjectByQuery(snapshot, query);
+    const sessionEntity = lastTurn?.target?.id
+      ? { type: lastTurn.target.type === "project" ? ("project" as const) : ("task" as const), id: lastTurn.target.id, label: lastTurn.target.label ?? "" }
+      : null;
+    const entity = task
+      ? { type: "task" as const, id: task.id, label: task.title }
+      : project
+        ? { type: "project" as const, id: project.id, label: project.name }
+        : sessionEntity;
+
+    if (!entity) {
+      return {
+        query,
+        intent: "general",
+        intentId: classified.intent,
+        target: classified.target,
+        headline: "No matching task to update",
+        narrative: "No task in this workspace matches that reference. Name the task exactly, or ask NEXUS to search for it first.",
+        provider: "nexus-engine",
+        evidence: { metrics: [{ label: "Scope", value: "Current workspace" }], traceCount: "Target resolution scoped to verified workspace records", sources: ["Workspace Registry"] },
+        suggestions: ["Recherche cette tâche.", "Quels projets nécessitent mon attention ?"],
+      };
+    }
+
+    const actionType: IntelligenceActionType =
+      classified.intent === "COMPLETE"
+        ? "complete_task"
+        : classified.intent === "MOVE"
+          ? "move_task"
+          : "update_task";
+
+    let headline = `Proposed action: ${actionType.replace("_", " ")}`;
+    let narrative = `NEXUS would ${actionType.replace("_", " ")} “${entity.label}” in this workspace. The action is proposed for your confirmation and will be verified before success is reported.`;
+    let payload: Record<string, unknown> = { taskId: entity.id, query: entity.label };
+
+    if (classified.intent === "MOVE") {
+      const dueDate = naturalLanguageDueDate(query, now);
+      if (dueDate) {
+        payload = { ...payload, dueDate };
+        headline = `Move “${entity.label}” to its new date`;
+        narrative = `The new due date is ${dueDate}. NEXUS re-reads the task after the update before confirming.`;
+      } else {
+        headline = `Where should “${entity.label}” move?`;
+        narrative = "Tell NEXUS the new date (e.g. “décale à lundi”, “move to monday”) and the action will be prepared.";
+      }
+    }
+    if (classified.intent === "COMPLETE") {
+      headline = `Complete “${entity.label}”?`;
+      narrative = "This marks the real task as done. NEXUS verifies status and completion date after the mutation.";
+    }
+
+    return {
+      query,
+      intent: "action",
+      intentId: classified.intent,
+      target: { type: entity.type, id: entity.id, label: entity.label },
+      headline,
+      narrative,
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [
+          { label: "Action", value: actionType.replace("_", " ") },
+          { label: "Target", value: entity.label },
+          ...(classified.intent === "MOVE" && payload.dueDate ? [{ label: "New due date", value: String(payload.dueDate) }] : []),
+        ],
+        traceCount: "Target resolved within the active workspace",
+        sources: ["Workspace Registry", "Task Attributes"],
+      },
+      action: {
+        id: `act-${actionType}-${entity.id}`,
+        type: actionType,
+        label:
+          classified.intent === "COMPLETE"
+            ? "Complete task"
+            : classified.intent === "MOVE"
+              ? "Move task"
+              : "Update task",
+        description: narrative,
+        confirmationRequired: true,
+        risk: riskForAction(actionType),
+        payload: payload as never,
+      },
+      suggestions: ["Confirmer l'action.", "Quels projets nécessitent mon attention ?", "Qu'est-ce qui est en retard ?"],
+    };
+  }
+
+  // 1.0.4 DELETE — high risk, requires explicit confirmation
+  if (classified.intent === "DELETE") {
+    const task = findTaskByQuery(snapshot, query);
+    const project = task ? null : findProjectByQuery(snapshot, query);
+    const entity = task
+      ? { type: "task" as const, id: task.id, label: task.title }
+      : project
+        ? { type: "project" as const, id: project.id, label: project.name }
+        : null;
+    if (!entity) {
+      return {
+        query,
+        intent: "general",
+        intentId: "DELETE",
+        target: classified.target,
+        headline: "No matching item to delete",
+        narrative: "No task or project in this workspace matches that reference. NEXUS will never delete without a real target.",
+        provider: "nexus-engine",
+        evidence: { metrics: [{ label: "Scope", value: "Current workspace" }], traceCount: "Target resolution scoped to verified workspace records", sources: ["Workspace Registry"] },
+        suggestions: ["Recherche cette tâche.", "Quels projets nécessitent mon attention ?"],
+      };
+    }
+    const actionType = entity.type === "task" ? "delete_task" : "delete_project";
+    return {
+      query,
+      intent: "action",
+      intentId: "DELETE",
+      target: { type: entity.type, id: entity.id, label: entity.label },
+      headline: `Delete “${entity.label}”?`,
+      narrative: "This is a destructive action. It requires an explicit confirmation and is executed server-side only after the target is re-validated in this workspace.",
+      provider: "nexus-engine",
+      evidence: {
+        metrics: [{ label: "Action", value: actionType.replace("_", " ") }, { label: "Target", value: entity.label }],
+        traceCount: "Destructive action · workspace-scoped target resolved",
+        sources: ["Workspace Registry"],
+      },
+      action: {
+        id: `act-${actionType}-${entity.id}`,
+        type: actionType,
+        label: entity.type === "task" ? "Delete task" : "Delete project",
+        description: "Permanently delete the target after explicit confirmation.",
+        confirmationRequired: true,
+        risk: "high",
+        payload: { taskId: entity.type === "task" ? entity.id : undefined, projectId: entity.type === "project" ? entity.id : undefined, query: entity.label, confirmDeletion: true },
+      },
+      suggestions: ["Annuler.", "Quels projets nécessitent mon attention ?", "Qu'est-ce qui est en retard ?"],
+    };
+  }
+
+  // 1.0.5 CREATE GOAL
+  if (classified.intent === "CREATE" && classified.target?.type === "goal") {
+    const title = classified.target.query ? classified.target.query.charAt(0).toUpperCase() + classified.target.query.slice(1) : "New Goal";
+    return {
+      query,
+      intent: "action",
+      intentId: "CREATE",
+      target: { type: "goal" },
+      headline: `Recommended action: Create goal “${title}”`,
+      narrative: `Create a goal for “${title}” so NEXUS can measure progress against a real target.`,
+      provider: "nexus-engine",
+      evidence: { metrics: [{ label: "Proposed goal", value: title }], traceCount: "Parsed from intent · Verified workspace action", sources: ["User Prompt", "Workspace Context"] },
+      action: { id: `act-goal-${Date.now()}`, type: "create_goal", label: "Create this goal", description: `Create goal “${title}” in the current workspace`, confirmationRequired: true, risk: "low", payload: { title } },
+      quickActions: [{ label: "Open goals", href: "/goals" }],
+      suggestions: ["Quels projets nécessitent mon attention ?", "Plan ma semaine."],
+    };
   }
 
   // 1. ACTION (Task or Project creation intent)
@@ -1471,6 +1851,32 @@ export function reasonWorkspace(
       "Quels projets semblent bloqués ?",
       "Aide-moi à organiser cette semaine.",
     ],
+  };
+}
+
+/**
+ * Public entry point: deterministic reasoning, then normalized with the
+ * structured intent contract (Phase 3). This keeps the core function
+ * untouched so existing callers and tests keep their behavior.
+ */
+export function reasonWorkspace(
+  snapshot: WorkspaceSnapshot,
+  query: string,
+  context?: WorkspaceContextSummary,
+  sessionHistory?: SessionHistoryItem[]
+): StructuredIntelligenceResponse {
+  const response = reasonWorkspaceCore(snapshot, query, context, sessionHistory);
+  const classified = classifyIntent(query, { snapshot, sessionHistory });
+  return {
+    ...response,
+    intentId: response.intentId ?? mapLegacyIntentToId(response.intent, response.action?.type),
+    target: response.target ?? classified.target,
+    action: response.action
+      ? {
+          ...response.action,
+          risk: response.action.risk ?? riskForAction(response.action.type),
+        }
+      : undefined,
   };
 }
 

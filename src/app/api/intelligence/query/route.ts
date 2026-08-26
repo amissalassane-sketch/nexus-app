@@ -6,11 +6,13 @@ import { getActiveMembership } from "@/lib/workspace";
 import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
 import { askWorkspace, reasonWorkspace } from "@/lib/intelligence/advanced";
 import { callAIProvider } from "@/lib/intelligence/ai-provider";
-import type { WorkspaceSnapshot } from "@/lib/intelligence/engine";
+import { classifyIntent, mapLegacyIntentToId, riskForAction } from "@/lib/intelligence/intent";
+import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
   TaskDependencyContextItem,
   SessionHistoryItem,
+  StructuredIntelligenceResponse,
 } from "@/lib/intelligence/types";
 
 // ============================================================
@@ -123,25 +125,60 @@ export async function POST(request: Request) {
       dependencies,
     });
 
+    const classified = classifyIntent(query, { snapshot, sessionHistory });
+
     // 1. Try real AI provider if configured (OpenAI or Anthropic)
-    let structuredResponse = await callAIProvider(query, context, sessionHistory);
+    let structuredResponse: StructuredIntelligenceResponse | null = await callAIProvider(
+      query,
+      context,
+      sessionHistory
+    );
 
     // 2. Fallback to deterministic reasoning engine
     if (!structuredResponse) {
       structuredResponse = reasonWorkspace(snapshot, query, context, sessionHistory);
     }
 
+    // 3. Normalize the external response with the structured intent contract.
+    structuredResponse = {
+      ...structuredResponse,
+      intentId: structuredResponse.intentId ?? mapLegacyIntentToId(structuredResponse.intent, structuredResponse.action?.type),
+      target: structuredResponse.target ?? classified.target,
+      action: structuredResponse.action
+        ? {
+            ...structuredResponse.action,
+            risk: structuredResponse.action.risk ?? riskForAction(structuredResponse.action.type),
+          }
+        : undefined,
+    };
+
     const legacyAnswer = askWorkspace(snapshot, query, sessionHistory);
+    const insights = computeInsights(snapshot);
+    const proactive = insights
+      .filter((insight) => insight.severity !== "positive")
+      .slice(0, 3)
+      .map((insight) => ({
+        id: insight.id,
+        title: insight.title,
+        reason: insight.reason,
+        severity: insight.severity,
+        href: insight.href,
+        evidence: insight.evidence,
+      }));
 
     return NextResponse.json({
       success: true,
       query,
       answer: legacyAnswer,
       response: structuredResponse,
+      intent: classified,
       context: {
         totals: context.totals,
         healthScore: context.healthScore,
         healthBand: context.healthBand,
+        openTasks: context.totals.openTasks,
+        attentionCount: proactive.length,
+        proactive,
       },
     });
   } catch (error) {

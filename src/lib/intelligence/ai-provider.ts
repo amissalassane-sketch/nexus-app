@@ -9,10 +9,14 @@ import type {
   StructuredIntelligenceResponse,
   IntelligenceAction,
   IntelligenceActionType,
+  IntelligenceIntentId,
+  IntelligenceRisk,
+  IntelligenceTarget,
   SessionHistoryItem,
   QuickAction,
 } from "./types";
 import type { WorkspaceContextSummary } from "./context-builder";
+import { mapLegacyIntentToId, riskForAction } from "./intent";
 
 export type AIProviderName = "openai" | "anthropic" | "nexus-engine";
 
@@ -76,16 +80,20 @@ JSON RESPONSE FORMAT:
   ],
   "action": {
     "id": "unique-action-id",
-    "type": "create_task" | "create_project" | "view_blocked_tasks" | "view_overdue_tasks" | "view_risky_projects" | "navigate",
+    "type": "create_task" | "create_project" | "create_goal" | "update_task" | "update_project" | "complete_task" | "move_task" | "delete_task" | "delete_project" | "view_blocked_tasks" | "view_overdue_tasks" | "view_risky_projects" | "navigate",
     "label": "Action label",
     "description": "What this action will do",
     "confirmationRequired": true,
+    "risk": "low" | "medium" | "high",
     "payload": {
       "title": "Proposed task or project title",
       "name": "Proposed project name if create_project",
+      "taskId": "existing task id for update/complete/move/delete",
+      "projectId": "target project id or null",
       "priority": "low" | "medium" | "high" | "urgent",
+      "status": "todo" | "in_progress" | "in_review" | "blocked" | "done",
       "dueDate": "YYYY-MM-DD or null",
-      "projectId": "target project id or null"
+      "query": "free-text reference to the entity, when no id is known"
     }
   },
   "quickActions": [
@@ -98,9 +106,18 @@ JSON RESPONSE FORMAT:
 export async function callAIProvider(
   query: string,
   context: WorkspaceContextSummary,
-  sessionHistory?: SessionHistoryItem[]
+  sessionHistory?: SessionHistoryItem[],
+  options?: {
+    config?: AIProviderConfig;
+    fetchImpl?: typeof fetch;
+    /** Overrides the default 10s provider timeout (used by tests). */
+    timeoutMs?: number;
+  }
 ): Promise<StructuredIntelligenceResponse | null> {
-  const config = detectAIProvider();
+  const config = options?.config ?? detectAIProvider();
+  const fetchImpl = options?.fetchImpl ?? fetch;
+  const timeoutMs = options?.timeoutMs ?? 10000;
+
   if (config.provider === "nexus-engine" || !config.apiKey) {
     return null;
   }
@@ -109,7 +126,7 @@ export async function callAIProvider(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
     if (sessionHistory && sessionHistory.length > 0) {
@@ -123,7 +140,7 @@ export async function callAIProvider(
     }
 
     if (config.provider === "openai") {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      const res = await fetchImpl("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,7 +177,7 @@ export async function callAIProvider(
         { role: "user", content: promptContent },
       ];
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -208,6 +225,25 @@ function validateAndNormalizeResponse(
   const intent = typeof data.intent === "string" && ["analysis", "prioritization", "planning", "synthesis", "detection", "action"].includes(data.intent)
     ? (data.intent as StructuredIntelligenceResponse["intent"])
     : "general";
+  const rawIntentId = data.intentId;
+  const intentId: IntelligenceIntentId | undefined =
+    typeof rawIntentId === "string" &&
+    ["ANALYZE", "PRIORITIZE", "PLAN", "SUMMARIZE", "DETECT", "SEARCH", "CREATE", "UPDATE", "COMPLETE", "MOVE", "DELETE", "EXPLAIN", "GENERAL_ASSISTANCE"].includes(rawIntentId)
+      ? (rawIntentId as IntelligenceIntentId)
+      : mapLegacyIntentToId(intent);
+  const rawTarget = data.target && typeof data.target === "object" ? (data.target as Record<string, unknown>) : undefined;
+  const targetType: IntelligenceTarget["type"] =
+    rawTarget?.type === "task" || rawTarget?.type === "project" || rawTarget?.type === "goal" || rawTarget?.type === "workspace"
+      ? rawTarget.type
+      : null;
+  const target: IntelligenceTarget | undefined = rawTarget
+    ? {
+        type: targetType,
+        query: typeof rawTarget.query === "string" ? rawTarget.query : undefined,
+        id: typeof rawTarget.id === "string" ? rawTarget.id : undefined,
+        label: typeof rawTarget.label === "string" ? rawTarget.label : undefined,
+      }
+    : undefined;
 
   const rawEvidence = data.evidence as Record<string, unknown> | undefined;
   const metrics: { label: string; value: string }[] = [];
@@ -240,6 +276,13 @@ function validateAndNormalizeResponse(
     const validActionTypes: IntelligenceActionType[] = [
       "create_task",
       "create_project",
+      "create_goal",
+      "update_task",
+      "update_project",
+      "complete_task",
+      "move_task",
+      "delete_task",
+      "delete_project",
       "open_project",
       "open_task",
       "view_blocked_tasks",
@@ -275,12 +318,17 @@ function validateAndNormalizeResponse(
           }
         : undefined;
 
+      const actionType = act.type as IntelligenceActionType;
       action = {
         id: String(act.id ?? "act-1"),
-        type: act.type as IntelligenceActionType,
+        type: actionType,
         label: act.label,
         description: typeof act.description === "string" ? act.description : undefined,
         confirmationRequired: Boolean(act.confirmationRequired ?? true),
+        risk:
+          typeof act.risk === "string" && ["low", "medium", "high"].includes(act.risk)
+            ? (act.risk as IntelligenceRisk)
+            : riskForAction(actionType),
         payload,
       };
     }
@@ -309,6 +357,8 @@ function validateAndNormalizeResponse(
   return {
     query,
     intent,
+    intentId,
+    target,
     headline,
     narrative,
     provider,
