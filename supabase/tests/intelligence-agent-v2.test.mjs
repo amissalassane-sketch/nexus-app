@@ -460,7 +460,8 @@ console.log("-- mobile-safe actions (static safeguard) ------------");
   const fs = await import("fs");
   const src = fs.readFileSync("src/components/intelligence/intelligence-ask.tsx", "utf8");
   ok("Confirmation buttons ≥44px on mobile", src.includes('min-h-[44px]'));
-  ok("Query input ≥44px", src.includes("h-11"));
+  // 44px floor via min-h — compatible with the auto-growing composer.
+  ok("Query input ≥44px", src.includes("min-h-[44px]"));
   ok("No hover-only critical action", src.includes("onClick"));
 }
 

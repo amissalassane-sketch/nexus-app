@@ -27,11 +27,9 @@ export class BackgroundField implements SceneModule {
 
   private readonly geometry: BufferGeometry;
   private readonly material: PointsMaterial;
-  private readonly count: number;
 
   constructor(count: number, texture: Texture) {
     const random = createRandom(0x424744); // "BGD"
-    this.count = count;
 
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);

@@ -294,6 +294,10 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
     ]),
   };
 
+  // Additive extension point (preview harnesses): extra tables merged
+  // over the defaults, without touching the seeded e2e state. Existing
+  // callers (shared.tables) are unaffected.
+  if (shared?.extraTables) Object.assign(tables, shared.extraTables);
   if (shared) shared.tables = tables;
 
   // TLS options turn this instance into an HTTPS listener (sandbox preview).

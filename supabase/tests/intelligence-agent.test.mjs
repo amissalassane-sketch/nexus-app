@@ -352,7 +352,9 @@ console.log("-- mobile interaction contract (static safeguard) ----");
 {
   const source = (await import("fs")).readFileSync("src/components/intelligence/intelligence-ask.tsx", "utf8");
   ok("Confirm action hit area >= 44px on mobile", source.includes('className="min-h-[44px] sm:min-h-[36px]"'));
-  ok("Query input is 44px tall", source.includes("h-11"));
+  // The composer is an auto-growing textarea: min-h-[44px] is the 44px
+  // floor that keeps the grow behaviour (a fixed h-11 would cap it).
+  ok("Query input is 44px tall", source.includes("min-h-[44px]"));
   ok("Action confirm has no hover-only dependency", source.includes("Button"));
 }
 

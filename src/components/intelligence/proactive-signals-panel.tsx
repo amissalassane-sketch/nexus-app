@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, ShieldAlert, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, RefreshCw, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   SIGNAL_CONSTANTS,
+  SIGNAL_TYPE_LABEL,
   type ProactiveSeverity,
   type StoredSignalRow,
   type SuggestedSignalAction,
@@ -47,6 +48,20 @@ const SEVERITY_LABEL: Record<ProactiveSeverity, string> = {
   info: "Info",
 };
 
+/** Entity naming for the "Concerne :" line — the entity the signal is
+ *  about, in the user's words, never an internal row key. */
+const ENTITY_LABEL: Record<string, string> = {
+  task: "Tâche",
+  project: "Projet",
+  goal: "Objectif",
+  workspace: "Workspace",
+};
+
+function entityLabelFor(signal: StoredSignalRow): string {
+  const kind = ENTITY_LABEL[signal.entityType ?? ""] ?? "Élément";
+  return signal.entityLabel ? `${kind} — ${signal.entityLabel}` : kind;
+}
+
 interface SignalsResponse {
   signals: StoredSignalRow[];
   attentionCount: number;
@@ -71,6 +86,11 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const seenSent = useRef<Set<string>>(new Set());
 
+  // Whether a previous pass left signals on screen — lets the offline
+  // message say "what you see is still available" without making the
+  // refresh callback depend on the signals state.
+  const hasSignalsRef = useRef(false);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -82,18 +102,25 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       });
       const data = (await res.json()) as SignalsResponse & { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Impossible de charger les signaux");
-        setSignals([]);
-        setAttentionCount(0);
+        setError(
+          hasSignalsRef.current
+            ? "Connexion perdue. Les signaux affichés restent disponibles."
+            : (data.error ?? "Impossible de charger les signaux.")
+        );
         return;
       }
-      setSignals(data.signals ?? []);
+      const next = data.signals ?? [];
+      hasSignalsRef.current = next.length > 0;
+      setSignals(next);
       setAttentionCount(data.attentionCount ?? 0);
       setCriticalCount(data.criticalCount ?? 0);
     } catch {
-      setError("Réseau indisponible — signaux non chargés");
-      setSignals([]);
-      setAttentionCount(0);
+      // Offline ≠ no data: whatever is already rendered stays on screen.
+      setError(
+        hasSignalsRef.current
+          ? "Connexion perdue. Les signaux affichés restent disponibles."
+          : "Connexion perdue. Les signaux seront chargés dès le retour du réseau."
+      );
     } finally {
       setLoading(false);
     }
@@ -220,7 +247,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
             aria-label="Rafraîchir les signaux"
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-input text-text-tertiary transition-colors hover:bg-accent-ghost hover:text-text-primary"
           >
-            <ArrowRight size={14} strokeWidth={1.75} className="rotate-0" />
+            <RefreshCw size={14} strokeWidth={1.75} />
           </button>
         </div>
       </div>
@@ -260,7 +287,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                     {SEVERITY_LABEL[signal.severity]}
                   </Badge>
                   <span className="font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
-                    {signal.type.replace(/_/g, " ")}
+                    {SIGNAL_TYPE_LABEL[signal.type] ?? signal.type.replace(/_/g, " ")}
                   </span>
                 </div>
                 <button
@@ -275,6 +302,16 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
 
               <h4 className="mt-1.5 text-body font-semibold text-text-primary">{signal.title}</h4>
               <p className="mt-0.5 text-small text-text-secondary">{signal.summary}</p>
+              {signal.entityLabel ? (
+                <p className="mt-1 text-caption text-text-tertiary">
+                  Concerne : {entityLabelFor(signal)}{" "}
+                  {signal.affectedCount > 1 ? (
+                    <span className="font-mono text-text-quaternary">
+                      · {signal.affectedCount} éléments touchés
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
 
               {/* Evidence — factual, derived from real rows */}
               <button
