@@ -102,9 +102,11 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       });
       const data = (await res.json()) as SignalsResponse & { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Impossible de charger les signaux");
-        setSignals([]);
-        setAttentionCount(0);
+        setError(
+          hasSignalsRef.current
+            ? "Connexion perdue. Les signaux affichés restent disponibles."
+            : (data.error ?? "Impossible de charger les signaux.")
+        );
         return;
       }
       const next = data.signals ?? [];

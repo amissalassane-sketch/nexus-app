@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "npm run test:unit && npm run test:mobile",
-    "test:unit": "node --import tsx supabase/tests/intelligence-agent.test.mjs && node --import tsx supabase/tests/intelligence-agent-v2.test.mjs && node --import tsx supabase/tests/intelligence-memory.test.mjs && node --import tsx supabase/tests/intelligence-proactive.test.mjs && node --import tsx supabase/tests/intelligence-signals.test.mjs && node --import tsx supabase/tests/intelligence-mission.test.mjs && node --import tsx supabase/tests/intelligence-experience.test.mjs && node --import tsx supabase/tests/onboarding-product.test.mjs && node --import tsx supabase/tests/schema-errors.test.mjs",
-    "test:mobile": "node scripts/test-mobile-ux.mjs"
+    "test:unit": "node --import tsx supabase/tests/intelligence-agent.test.mjs && node --import tsx supabase/tests/intelligence-agent-v2.test.mjs && node --import tsx supabase/tests/intelligence-memory.test.mjs && node --import tsx supabase/tests/intelligence-proactive.test.mjs && node --import tsx supabase/tests/intelligence-signals.test.mjs && node --import tsx supabase/tests/intelligence-mission.test.mjs && node --import tsx supabase/tests/intelligence-experience.test.mjs && node --import tsx supabase/tests/onboarding-product.test.mjs && node --import tsx supabase/tests/schema-errors.test.mjs && node --import tsx supabase/tests/mobile-experience.test.mjs",
+    "test:mobile": "node scripts/test-mobile-ux.mjs",
+    "test:mobile-experience": "node --import tsx supabase/tests/mobile-experience.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
