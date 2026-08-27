@@ -17,7 +17,17 @@ export const metadata = {
     "NEXUS continuously analyses your workspace and surfaces what matters next.",
 };
 
-export default async function IntelligencePage() {
+export default async function IntelligencePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ask?: string; q?: string }>;
+}) {
+  const params = await searchParams;
+  // ?ask=1 focuses the console (mobile home CTA); ?q= prefills a
+  // starter without sending it.
+  const autoFocusAsk = params.ask === "1";
+  const initialAskQuery =
+    typeof params.q === "string" && params.q.trim() ? params.q.trim().slice(0, 500) : "";
   const user = await requireUser();
   const supabase = await createClient();
   const { membership } = await getActiveMembership(supabase, user.id);
@@ -107,6 +117,8 @@ export default async function IntelligencePage() {
           context={context}
           snapshot={snapshot}
           workspaceId={workspaceId}
+          autoFocusAsk={autoFocusAsk}
+          initialAskQuery={initialAskQuery}
         />
       )}
     </div>

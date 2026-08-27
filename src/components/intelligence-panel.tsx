@@ -77,14 +77,14 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Link
           href={insight.href}
-          className="inline-flex h-9 items-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px"
+          className="inline-flex h-11 items-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px sm:h-9"
         >
           {insight.cta}
           <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
         </Link>
         <Link
           href="/app/intelligence"
-          className="inline-flex h-9 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
+          className="inline-flex h-11 items-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary sm:h-9"
         >
           All signals
         </Link>

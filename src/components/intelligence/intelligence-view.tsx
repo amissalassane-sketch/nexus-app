@@ -52,11 +52,17 @@ export function IntelligenceView({
   context,
   snapshot,
   workspaceId,
+  autoFocusAsk = false,
+  initialAskQuery = "",
 }: {
   insights: Insight[];
   context: WorkspaceContext;
   snapshot: WorkspaceSnapshot;
   workspaceId: string | null;
+  /** Focus the Ask console on mount (deep link ?ask=1). */
+  autoFocusAsk?: boolean;
+  /** Prefill the Ask composer (?q=), never auto-sent. */
+  initialAskQuery?: string;
 }) {
   const [filter, setFilter] = useState<"all" | InsightSeverity>("all");
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -103,7 +109,11 @@ export function IntelligenceView({
     <div className="flex flex-col gap-5">
       {workspaceId ? <MissionPanel workspaceId={workspaceId} /> : null}
       {workspaceId ? <ProactiveSignalsPanel workspaceId={workspaceId} /> : null}
-      <IntelligenceAsk snapshot={snapshot} />
+      <IntelligenceAsk
+        snapshot={snapshot}
+        autoFocus={autoFocusAsk}
+        initialQuery={initialAskQuery}
+      />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <WorkspaceHealthPanel health={health} />

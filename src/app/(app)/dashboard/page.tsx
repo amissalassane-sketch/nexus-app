@@ -20,6 +20,10 @@ import {
   type WorkspaceSnapshot,
 } from "@/lib/intelligence/engine";
 import { ActivityList, type ActivityRow } from "@/components/activity-list";
+import { MobileOverview } from "@/components/mobile-home/mobile-overview";
+import { readActiveMissions } from "@/lib/intelligence/mission";
+import type { IntelligenceMission } from "@/lib/intelligence/types";
+import { withTimeout } from "@/lib/auth-flow";
 import { getActiveMembership } from "@/lib/workspace";
 
 // ============================================================
@@ -142,19 +146,33 @@ export default async function DashboardPage() {
         .limit(6)
     : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null });
 
+  // Active mission for the phone surface — best effort: the stored
+  // state is read once, bounded, and a failure degrades to "no mission"
+  // rather than holding the overview open.
+  const missionPromise: Promise<IntelligenceMission[]> = workspaceId
+    ? withTimeout(
+        Promise.resolve(readActiveMissions(supabase, workspaceId, user.id)),
+        4_000,
+        "MISSION_READ_TIMEOUT"
+      ).catch(() => [] as IntelligenceMission[])
+    : Promise.resolve([]);
+
   const [
     snapshot,
     recentProjectsResult,
     recentGoalsResult,
     recentActivitiesResult,
+    missions,
   ] = await Promise.all([
     snapshotPromise,
     recentProjectsPromise,
     recentGoalsPromise,
     recentActivitiesPromise,
+    missionPromise,
   ]);
 
   const context = describeWorkspace(snapshot);
+  const activeMission = missions.length > 0 ? missions[0] : null;
   const insights = computeInsights(snapshot);
   const focus = nextBestAction(snapshot);
   const needsAttention = insights
@@ -296,6 +314,20 @@ export default async function DashboardPage() {
             </Alert>
           ) : null}
 
+          {/* PHONE SURFACE — attention → mission → next action →
+              recent context → ask, rendered from the same reads as the
+              desktop overview. Hidden from lg where the full overview
+              stays the reference experience. */}
+          <MobileOverview
+            insights={needsAttention}
+            focus={focus}
+            mission={activeMission}
+            recentActivities={recentActivities}
+            activitiesUnavailable={activitiesUnavailable}
+            context={context}
+          />
+
+          <div className="hidden space-y-6 lg:block">
           {/* NEXT ACTION */}
           <FocusPanel insight={focus} />
 
@@ -605,6 +637,7 @@ export default async function DashboardPage() {
           </Panel>
         </div>
       </div>
+          </div>
         </>
       )}
     </div>

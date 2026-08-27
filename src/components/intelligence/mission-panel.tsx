@@ -287,8 +287,9 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
 
   return (
     <section
+      id="mission"
       aria-label="Mission Intelligence"
-      className="relative overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/60"
+      className="relative scroll-mt-20 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/60"
     >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent"

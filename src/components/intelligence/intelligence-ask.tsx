@@ -124,8 +124,19 @@ function sessionHistoryPayload(history: HistoryEntry[]) {
   }));
 }
 
-export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
-  const [query, setQuery] = useState("");
+export function IntelligenceAsk({
+  snapshot,
+  autoFocus = false,
+  initialQuery = "",
+}: {
+  snapshot: WorkspaceSnapshot;
+  /** Focus the composer on mount (deep link from the mobile home CTA). */
+  autoFocus?: boolean;
+  /** Prefill the composer WITHOUT sending — the user always presses
+   *  send; a deep link never triggers a query on its own. */
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [currentResponse, setCurrentResponse] = useState<StructuredIntelligenceResponse | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -152,6 +163,16 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
   }, [query]);
+
+  // Deep link (?ask=1): put the composer in front of the user — on a
+  // phone this opens the keyboard exactly where the home CTA pointed.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = composerRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+  }, [autoFocus]);
 
   // Action execution state
   const [confirmingAction, setConfirmingAction] = useState<IntelligenceAction | null>(null);
@@ -365,6 +386,7 @@ export function IntelligenceAsk({ snapshot }: { snapshot: WorkspaceSnapshot }) {
 
   return (
     <section
+      id="nexus-ask"
       aria-label="Ask the workspace"
       className="relative overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/60"
     >
