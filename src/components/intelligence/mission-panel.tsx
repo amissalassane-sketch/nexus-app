@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import type { IntelligenceMission, MissionStep, MissionStepStatus } from "@/lib/intelligence/types";
 
 // ============================================================
-// NEXUS — MISSION PANEL (Phase 4)
-// ============================================================
+// NEXUS — MISSION PANEL (Phase 4 & 6)
 // Displays the active mission: title, progress, steps (with status
-// icons), the deterministic next best action, and actions
-// (continue / unblock / cancel). Mutations always go through
-// POST /api/intelligence/action with human confirmation and a
-// verified read-back — a step is never marked completed by the UI.
+// icons, order, dependencies), the deterministic next best action,
+// and actions (continue / unblock / cancel). Mutations always go
+// through POST /api/intelligence/action with human confirmation and
+// a verified read-back — a step is never marked completed by the UI.
 // Mobile-safe: ≥44px touch targets, no hover-only features.
 // ============================================================
 
@@ -186,15 +185,17 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
             </div>
           </div>
 
-          {/* Steps */}
-          <ul className="mt-3 flex flex-col gap-1">
+          {/* Steps - compact mobile format with order, status, dependencies, action */}
+          <ul className="mt-3 space-y-1">
             {mission.steps.map((step: MissionStep) => {
               const Icon = STATUS_ICON[step.status];
               const completed = step.status === "completed";
               const failed = step.status === "failed";
               const blocked = step.status === "blocked";
+              const { order = 0, title, status, blockedReason, action } = step;
+
               return (
-                <li key={step.id} className="flex items-start gap-2.5">
+                <li key={step.id} className="flex items-start gap-2">
                   <span
                     className={cn(
                       "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
@@ -213,12 +214,18 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className={cn("text-[13px] leading-[19px] font-medium", completed ? "text-text-tertiary line-through" : "text-text-primary")}>
-                      {step.title}
+                      #{order + 1} {title}
                     </p>
-                    {blocked && step.blockedReason ? (
-                      <p className="mt-0.5 text-caption text-warning">{step.blockedReason}</p>
+                    {blocked && step.blockedReason && (
+                      <p className="mt-0.5 text-caption text-warning">
+                        Dépendance: {step.blockedReason}
+                      </p>
+                    )}
+                    {failed ? (
+                      <p className="mt-0.5 text-caption text-danger">
+                        {step.verification?.summary ?? "Étape échouée"}
+                      </p>
                     ) : null}
-                    {failed ? <p className="mt-0.5 text-caption text-danger">{step.verification?.summary ?? "Étape échouée"}</p> : null}
                   </div>
                   <span className="shrink-0 pt-0.5 text-[10px] font-mono uppercase tracking-wider text-text-quaternary">
                     {STATUS_LABEL[step.status]}
@@ -237,7 +244,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button
                   loading={executing}
-                  onClick={() => void continueMission(mission.nextBestAction!)}
+                  onClick={() => void continueMission(mission.nextBestAction)}
                   className="min-h-[44px]"
                 >
                   {mission.status === "blocked" ? "Débloquer" : "Continuer"}
