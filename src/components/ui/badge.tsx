@@ -3,9 +3,8 @@ import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS — BADGE
-// Small, desaturated, mono. Used for status, priority and severity.
-// Severity is never communicated by colour alone: the label always
-// carries the meaning, and signal cards add an icon and a position.
+// Enhanced with smooth transitions for status/priority changes.
+// Never teleport — always transition. GPU-friendly.
 // ============================================================
 
 export type BadgeTone =
@@ -43,13 +42,18 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-[20px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[5px] border px-1.5 font-mono text-[10.5px] uppercase leading-none tracking-[0.06em]",
+        "inline-flex h-[20px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[5px] border px-1.5 font-mono text-[10.5px] uppercase leading-none tracking-[0.06em] transition-[background-color,border-color,color,transform,opacity] duration-[200ms] ease-nexus will-change-transform",
         tones[tone],
+        "animate-[badge-in_180ms_var(--ease-nexus)_both]",
         className
       )}
     >
-      {icon ? <span className="shrink-0">{icon}</span> : null}
-      {children}
+      {icon ? (
+        <span className="shrink-0 transition-transform duration-150 ease-nexus">
+          {icon}
+        </span>
+      ) : null}
+      <span className="transition-opacity duration-150 ease-nexus">{children}</span>
     </span>
   );
 }
@@ -67,7 +71,7 @@ export function CountBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-[20px] items-center rounded-[5px] border border-border-subtle bg-bg-surface px-1.5 font-mono text-[10.5px] leading-none tabular-nums text-text-tertiary",
+        "inline-flex h-[20px] items-center rounded-[5px] border border-border-subtle bg-bg-surface px-1.5 font-mono text-[10.5px] leading-none tabular-nums text-text-tertiary transition-[transform,opacity] duration-[200ms] ease-nexus will-change-transform",
         className
       )}
       aria-label={label}
@@ -97,8 +101,16 @@ export function StatusDot({
 
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
-      <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-pill", dot)} />
-      <span className="truncate text-caption text-text-secondary">{children}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "h-1.5 w-1.5 rounded-pill transition-[transform,opacity,background-color] duration-[200ms] ease-nexus",
+          dot
+        )}
+      />
+      <span className="truncate text-caption text-text-secondary transition-colors duration-150 ease-nexus">
+        {children}
+      </span>
     </span>
   );
 }

@@ -3,13 +3,11 @@ import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS — FORM CONTROLS
-// 40px (44px on auth), 8px radius, near-black surface, 8% border.
-// Labels are always present — placeholders never carry the meaning.
-// Focus is a border shift plus a restrained lavender ring.
+// Enhanced with motion: focus transitions, checkbox pop, pressed states.
 // ============================================================
 
 const field =
-  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.14)] disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-[border-color,background-color,box-shadow,transform] duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.14)] disabled:cursor-not-allowed disabled:opacity-50 will-change-transform";
 
 export function Input({
   className,
@@ -72,18 +70,15 @@ export function Field({
   action?: ReactNode;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-1.5 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <label
-          htmlFor={htmlFor}
-          className="text-caption font-medium text-text-secondary"
-        >
+        <label htmlFor={htmlFor} className="text-caption font-medium text-text-secondary">
           {label}
         </label>
         {action}
       </div>
       {children}
-      {hint ? <p className="text-caption text-text-tertiary">{hint}</p> : null}
+      {hint ? <p className="text-caption text-text-tertiary animate-[intelligence-state-in_180ms_var(--ease-nexus)_both]">{hint}</p> : null}
     </div>
   );
 }
@@ -110,10 +105,10 @@ export function Checkbox({
       disabled={disabled}
       onClick={onChange}
       className={cn(
-        "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors duration-150 ease-nexus disabled:cursor-not-allowed disabled:opacity-40",
+        "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-[background-color,border-color,color,transform,box-shadow] duration-[180ms] ease-nexus disabled:cursor-not-allowed disabled:opacity-40 will-change-transform active:scale-[0.85]",
         checked
-          ? "border-accent bg-accent text-accent-fg"
-          : "border-border-strong bg-transparent hover:border-border-focus",
+          ? "border-accent bg-accent text-accent-fg shadow-[0_0_0_2px_rgba(255,255,255,0.08)] animate-[check-pop_280ms_var(--ease-nexus)_both]"
+          : "border-border-strong bg-transparent hover:border-border-focus hover:bg-white/[0.02] active:bg-white/[0.04]",
         className
       )}
     >
@@ -128,6 +123,7 @@ export function Checkbox({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
+          className="animate-[check-pop_200ms_var(--ease-nexus)_both]"
         >
           <path d="M2.5 6.2l2.4 2.4L9.6 3.9" />
         </svg>

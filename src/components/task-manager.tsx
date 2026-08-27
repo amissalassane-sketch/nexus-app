@@ -125,6 +125,10 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [quickSaving, setQuickSaving] = useState(false);
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
   const [inlineTitle, setInlineTitle] = useState("");
+  // Motion states — task interactions should communicate transition
+  const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
+  const [exitingTasks, setExitingTasks] = useState<Set<string>>(new Set());
+  const [newTaskIds, setNewTaskIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const showToast = (tone: "success" | "danger", message: string) =>
     toast(tone, message);
@@ -160,7 +164,16 @@ function TaskManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setTasks((data as Task[]) ?? []);
+    const nextTasks = (data as Task[]) ?? [];
+    setTasks((prev) => {
+      const prevIds = new Set(prev.map((t) => t.id));
+      const newIds = nextTasks.filter((t) => !prevIds.has(t.id)).map((t) => t.id);
+      if (newIds.length > 0) {
+        setNewTaskIds(new Set(newIds));
+        setTimeout(() => setNewTaskIds(new Set()), 500);
+      }
+      return nextTasks;
+    });
     setLoading(false);
   };
 
@@ -383,19 +396,45 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const toggleTaskStatus = async (task: Task) => {
     const previousStatus = task.status;
     const nextStatus: TaskStatus = previousStatus === "done" ? "todo" : "done";
+    const isCompleting = nextStatus === "done";
 
-    // Optimistic update — the row flips immediately.
-    setTasks((current) =>
-      current.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              status: nextStatus,
-              completed_at: nextStatus === "done" ? new Date().toISOString() : null,
-            }
-          : item
-      )
-    );
+    if (isCompleting) {
+      setCompletingTasks((prev) => new Set(prev).add(task.id));
+      // Delay the status change slightly to show checkbox pop animation
+      setTimeout(() => {
+        setTasks((current) =>
+          current.map((item) =>
+            item.id === task.id
+              ? {
+                  ...item,
+                  status: "done" as TaskStatus,
+                  completed_at: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+        setTimeout(() => {
+          setCompletingTasks((prev) => {
+            const next = new Set(prev);
+            next.delete(task.id);
+            return next;
+          });
+        }, 300);
+      }, 180);
+    } else {
+      // Reopening — immediate
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id
+            ? {
+                ...item,
+                status: "todo" as TaskStatus,
+                completed_at: null,
+              }
+            : item
+        )
+      );
+    }
 
     const { error: updateError } = await supabase
       .from("tasks")
@@ -407,8 +446,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (updateError) {
+      setCompletingTasks((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
       if (await handleMutationError(updateError.message)) {
-        // Rollback the optimistic change on a plan-limit rejection.
         setTasks((current) =>
           current.map((item) =>
             item.id === task.id ? { ...item, status: previousStatus } : item
@@ -416,7 +459,6 @@ function TaskManagerInner({ userId }: { userId: string }) {
         );
         return;
       }
-      // Rollback + surface the error as a toast.
       setTasks((current) =>
         current.map((item) =>
           item.id === task.id ? { ...item, status: previousStatus } : item
@@ -434,10 +476,16 @@ function TaskManagerInner({ userId }: { userId: string }) {
   };
 
   const deleteTask = async (taskId: string) => {
-    // Entry is gated by the ConfirmDialog — the mutation is unchanged.
-    // Instant optimistic update
+    // Motion: deliberate but fast exit animation before removal
+    setExitingTasks((prev) => new Set(prev).add(taskId));
+    await new Promise((resolve) => setTimeout(resolve, 180));
     const previous = tasks;
     setTasks((current) => current.filter((item) => item.id !== taskId));
+    setExitingTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskId);
+      return next;
+    });
     if (editingTaskId === taskId) closeForm();
 
     const { error: deleteError } = await supabase
@@ -561,20 +609,46 @@ function TaskManagerInner({ userId }: { userId: string }) {
     view !== "all" ||
     query.trim().length > 0;
 
-  const renderRow = (task: Task) => {
+  const renderRow = (task: Task, index: number) => {
     const done = task.status === "done";
     const isOverdue = !done && task.due_at ? new Date(task.due_at) < today : false;
+    const isCompleting = completingTasks.has(task.id);
+    const isExiting = exitingTasks.has(task.id);
+    const isNew = newTaskIds.has(task.id);
 
     return (
       <li
         key={task.id}
-        className="group flex min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-2 last:border-b-0 transition-colors duration-150 ease-nexus hover:bg-bg-surface/60"
+        data-task-id={task.id}
+        className={cn(
+          "group flex min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-2 last:border-b-0 transition-[background-color,transform,opacity,border-color] duration-[200ms] ease-nexus will-change-transform task-row",
+          "hover:bg-bg-surface/60",
+          isCompleting && "task-row-completing bg-accent-ghost/30",
+          isExiting && "task-row-exit",
+          isNew && "task-row-enter",
+          !isNew && !isCompleting && !isExiting && "animate-[task-enter_260ms_var(--ease-nexus)_both]",
+          done && "opacity-75"
+        )}
+        style={{
+          animationDelay: isNew || isCompleting || isExiting ? undefined : `${Math.min(index, 12) * 24}ms`,
+        }}
       >
-        <Checkbox
-          checked={done}
-          onChange={() => void toggleTaskStatus(task)}
-          label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
-        />
+        <div
+          className={cn(
+            "transition-transform duration-150 ease-nexus",
+            isCompleting && "animate-[check-pop_280ms_var(--ease-nexus)_both]"
+          )}
+        >
+          <Checkbox
+            checked={done || isCompleting}
+            onChange={() => void toggleTaskStatus(task)}
+            label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
+            className={cn(
+              "task-checkbox",
+              isCompleting && "task-checkbox-checked border-success bg-success text-white"
+            )}
+          />
+        </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch">
           {inlineEditId === task.id ? (
@@ -614,14 +688,17 @@ function TaskManagerInner({ userId }: { userId: string }) {
             </button>
           )}
 
-          {/* Mobile meta line — priority, status and due date live under
-              the title below md so the row stays readable on a phone. */}
+          {/* Mobile meta line */}
           <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
-            <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
-            <Badge tone={done ? "success" : "neutral"}>{STATUS_LABELS[task.status]}</Badge>
+            <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
+              {task.priority}
+            </Badge>
+            <Badge tone={done ? "success" : "neutral"} className="task-status-badge task-status-badge-enter">
+              {STATUS_LABELS[task.status]}
+            </Badge>
             <span
               className={cn(
-                "font-mono text-mono tabular-nums",
+                "font-mono text-mono tabular-nums transition-colors duration-200 ease-nexus",
                 isOverdue ? "text-danger" : "text-text-tertiary"
               )}
             >
@@ -631,8 +708,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
-          <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
-          <Badge tone={done ? "success" : "neutral"}>{STATUS_LABELS[task.status]}</Badge>
+          <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
+            {task.priority}
+          </Badge>
+          <Badge tone={done ? "success" : "neutral"} className="task-status-badge task-status-badge-enter">
+            {STATUS_LABELS[task.status]}
+          </Badge>
         </div>
 
         <span
@@ -881,7 +962,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                   )
                 ) : null}
 
-                {rows.length > 0 ? <ul>{rows.map(renderRow)}</ul> : null}
+                {rows.length > 0 ? <ul>{rows.map((task, idx) => renderRow(task, idx))}</ul> : null}
               </div>
             );
           })

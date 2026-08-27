@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 
 // ============================================================
 // NEXUS — MODAL
-// Centered dialog on larger screens; a safe-area bottom sheet on
-// phones (below `sm`), where a centered box would overflow the
-// viewport or float unreachably above the keyboard. Escape closes,
-// overlay click closes, focus moves in and returns to the trigger,
-// background scroll locked. The sheet never exceeds the viewport:
-// the header and footer stay pinned, the body scrolls inside.
-// No dependency.
+// Enter → settle, close → disappear. Transform + opacity only.
+// Mobile sheets slide naturally from bottom. Backdrop blurs.
+// Exit animation before unmount. Focus management preserved.
 // ============================================================
 
 export function Modal({
@@ -35,20 +31,38 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
-  // The modal's lifecycle (focus in, scroll lock, Escape, focus out) runs
-  // once per open/close — never per keystroke. `onClose` is usually an
-  // inline closure that changes identity on every parent render (e.g. a
-  // form field typed into), so it lives in a ref and is NOT a dependency:
-  // depending on it stole focus from the field being typed into on every
-  // keystroke, making the focus ring jump elsewhere in the dialog.
+  const [isClosing, setIsClosing] = useState(false);
+  const [shouldRender, setShouldRender] = useState(open);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   });
 
+  // Handle open/close with exit animation — intentional state sync for motion
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsClosing(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShouldRender(true);
+      return;
+    }
+
+    if (shouldRender && !isClosing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsClosing(true);
+      closeTimer.current = setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+      }, 220);
+    }
+  }, [open, shouldRender, isClosing]);
+
+  useEffect(() => {
+    if (!shouldRender || isClosing) return;
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
 
@@ -63,19 +77,31 @@ export function Modal({
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
 
-    const focusable = panelRef.current?.querySelector<HTMLElement>(
-      "input, textarea, select, button, [href], [tabindex]:not([tabindex='-1'])"
-    );
-    focusable?.focus();
+    // Focus first interactive element with slight delay for animation
+    const timer = setTimeout(() => {
+      const focusable = panelRef.current?.querySelector<HTMLElement>(
+        "input, textarea, select, button, [href], [tabindex]:not([tabindex='-1'])"
+      );
+      focusable?.focus();
+    }, 60);
 
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = overflow;
-      previouslyFocused.current?.focus?.();
+      if (!isClosing) {
+        previouslyFocused.current?.focus?.();
+      }
     };
-  }, [open]);
+  }, [shouldRender, isClosing]);
 
-  if (!open) return null;
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  if (!shouldRender) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto sm:items-center sm:p-4">
@@ -84,7 +110,12 @@ export function Modal({
         aria-label="Close dialog"
         tabIndex={-1}
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-[2px] animate-fade-in"
+        className={cn(
+          "fixed inset-0 bg-black/70 backdrop-blur-[3px] will-change-transform",
+          isClosing
+            ? "animate-[fade-out_180ms_var(--ease-nexus)_both]"
+            : "animate-[fade-in_200ms_var(--ease-nexus)_both]"
+        )}
       />
 
       <div
@@ -93,33 +124,55 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface shadow-overlay animate-sheet-in sm:my-8 sm:max-h-none sm:w-auto sm:rounded-card sm:animate-scale-in",
-          size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"
+          "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface shadow-overlay will-change-transform",
+          size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
+          isClosing
+            ? "animate-[sheet-out_220ms_var(--ease-nexus)_both] sm:animate-[scale-out_180ms_var(--ease-nexus)_both]"
+            : "animate-[sheet-in_320ms_var(--ease-nexus)_both] sm:animate-[scale-in_280ms_var(--ease-nexus)_both]"
         )}
       >
-        {/* Sheet grip — phones only, a visual affordance, not a control */}
-        <div aria-hidden="true" className="flex shrink-0 justify-center pt-2.5 sm:hidden">
-          <span className="h-1 w-9 rounded-pill bg-white/15" />
+        {/* Sheet grip — phones only */}
+        <div
+          aria-hidden="true"
+          className="flex shrink-0 justify-center pt-2.5 sm:hidden"
+        >
+          <span className="h-1 w-9 rounded-pill bg-white/15 transition-colors duration-200" />
         </div>
 
         <div className="mb-4 flex shrink-0 items-start justify-between gap-4 px-5 pt-3 sm:px-6 sm:pt-6">
-          <div>
-            <h2 className="text-h2 text-text-primary">{title}</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-h2 text-text-primary animate-[intelligence-state-in_240ms_var(--ease-nexus)_both]">
+              {title}
+            </h2>
             {description ? (
-              <p className="mt-1 text-small text-text-secondary">{description}</p>
+              <p className="mt-1 text-small text-text-secondary animate-[intelligence-state-in_240ms_var(--ease-nexus)_80ms_both]">
+                {description}
+              </p>
             ) : null}
           </div>
-          <Button variant="icon" onClick={onClose} aria-label="Close dialog">
+          <Button
+            variant="icon"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="shrink-0 transition-transform duration-150 ease-nexus active:scale-90"
+          >
             <X size={16} strokeWidth={1.75} />
           </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-1 sm:px-6 sm:pb-0">
-          {children}
+          <div
+            className={cn(
+              "transition-opacity duration-200 ease-nexus",
+              isClosing ? "opacity-0" : "opacity-100"
+            )}
+          >
+            {children}
+          </div>
         </div>
 
         {footer ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-6 sm:pb-0">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-6 sm:pb-4">
             {footer}
           </div>
         ) : null}
