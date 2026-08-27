@@ -230,7 +230,7 @@ function scored(
   entity: SignalEntityRef | null,
   affectedCount: number,
   suggestedActions: SuggestedSignalAction[],
-  now: Date,
+  _now: Date,
   extra: { breakdown: SignalScoreBreakdown[]; confidence?: number; detectedFrom?: string | null }
 ): DetectedSignal {
   const points = extra.breakdown.reduce((sum, factor) => sum + factor.points, 0);
@@ -903,7 +903,7 @@ export function mergeSignalsWithState(
 }
 
 /** Refreshes the factual fields of a stored row from a detection. */
-function refreshRowFields(existing: StoredSignalRow, detected: DetectedSignal): Partial<StoredSignalRow> {
+function refreshRowFields(_existing: StoredSignalRow, detected: DetectedSignal): Partial<StoredSignalRow> {
   return {
     type: detected.type,
     severity: detected.severity,
