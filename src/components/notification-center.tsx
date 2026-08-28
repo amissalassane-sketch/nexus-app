@@ -259,19 +259,24 @@ export function NotificationCenter({ userId }: { userId: string }) {
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
-              title="No active workspace"
-              description="This account is not linked to an active workspace yet, so there is nothing to notify you about."
+              title="Workspace connecting"
+              description="Your personal workspace is being prepared. Notifications will appear here once connected."
               icon={<Bell size={17} strokeWidth={1.75} />}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
+                  Retry connection
+                </Button>
+              }
             />
           </div>
         ) : visible.length === 0 ? (
           <div className="p-4">
             <EmptyState
-              title={tab === "unread" ? "Nothing unread" : "No notifications yet"}
+              title={tab === "unread" ? "No unread notifications" : "No notifications yet"}
               description={
                 tab === "unread"
-                  ? "You have read everything in this workspace."
-                  : "When work changes or NEXUS detects something new, it lands here."
+                  ? "You are all caught up on updates and signals in this workspace."
+                  : "When work changes or NEXUS detects risks and recommendations, you will be notified here."
               }
               icon={<Bell size={17} strokeWidth={1.75} />}
               action={

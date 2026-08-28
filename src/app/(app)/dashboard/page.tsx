@@ -3,6 +3,7 @@ import {
   ArrowRight,
   CheckSquare,
   FolderKanban,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ import { getProfileSummary, requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Metric, Panel } from "@/components/ui/card";
+import { Panel } from "@/components/ui/card";
 import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
 import { FocusPanel, InsightRow } from "@/components/intelligence-panel";
 import {
@@ -19,6 +20,7 @@ import {
   nextBestAction,
   type WorkspaceSnapshot,
 } from "@/lib/intelligence/engine";
+import { workspaceHealth } from "@/lib/intelligence/advanced";
 import { ActivityList, type ActivityRow } from "@/components/activity-list";
 import { MobileOverview } from "@/components/mobile-home/mobile-overview";
 import { readActiveMissions } from "@/lib/intelligence/mission";
@@ -35,15 +37,6 @@ import { getActiveMembership } from "@/lib/workspace";
 
 export const metadata = {
   title: "Overview — NEXUS",
-};
-
-type DashboardTask = {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  due_at: string | null;
-  created_at: string;
 };
 
 const formatDate = (value: string | null | undefined) => {
@@ -175,6 +168,7 @@ export default async function DashboardPage() {
   const activeMission = missions.length > 0 ? missions[0] : null;
   const insights = computeInsights(snapshot);
   const focus = nextBestAction(snapshot);
+  const health = workspaceHealth(snapshot);
   const needsAttention = insights
     .filter((insight) => insight.severity !== "positive")
     .slice(0, 4);
@@ -183,23 +177,6 @@ export default async function DashboardPage() {
   const recentGoals = recentGoalsResult.data ?? [];
   const recentActivities = (recentActivitiesResult.data ?? []) as ActivityRow[];
   const activitiesUnavailable = Boolean(recentActivitiesResult.error);
-
-  const priorityWeight = { urgent: 4, high: 3, medium: 2, low: 1 };
-  const nowStr = new Date().toISOString();
-
-  const priorityTasks = (snapshot.tasks as DashboardTask[])
-    .filter((task) => task.status !== "done" && task.status !== "cancelled")
-    .sort((a, b) => {
-      const pA = priorityWeight[a.priority as keyof typeof priorityWeight] ?? 0;
-      const pB = priorityWeight[b.priority as keyof typeof priorityWeight] ?? 0;
-      if (pB !== pA) return pB - pA;
-      if (a.due_at && b.due_at)
-        return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
-      if (a.due_at) return -1;
-      if (b.due_at) return 1;
-      return 0;
-    })
-    .slice(0, 5);
 
   const workspaceName = workspace?.name ?? null;
   const showWorkspaceWarning = Boolean(
@@ -220,88 +197,256 @@ export default async function DashboardPage() {
         } a decision.`
       : context.openTasks > 0
         ? "Nothing is at risk. Here is what is moving."
-        : "Your workspace is clear.";
+        : "No open tasks right now. Create one to get moving.";
+
+  const onboardingStepsDone =
+    1 +
+    (profile.profileComplete ? 1 : 0) +
+    (context.projects > 0 ? 1 : 0) +
+    (context.tasks > 0 ? 1 : 0);
 
   return (
     <div className="page-enter space-y-6" data-guide="dashboard">
-      {/* HEADER */}
-      <header className="flex flex-col gap-3 border-b border-border-subtle pb-6 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <p className="eyebrow text-text-quaternary">
-            {new Intl.DateTimeFormat("en", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            }).format(new Date())}
-          </p>
-          <h1 className="mt-2.5 text-[26px] font-semibold leading-[32px] tracking-[-0.03em] text-text-primary">
+      {/* OPERATIONAL SITUATION HEADER */}
+      <header className="flex flex-col gap-4 border-b border-border-subtle pb-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-quaternary">
+            <span className="flex items-center gap-1.5 text-text-tertiary">
+              <span className="h-1.5 w-1.5 rounded-pill bg-lavender" aria-hidden="true" />
+              NEXUS OPERATING SYSTEM
+            </span>
+            <span>·</span>
+            <span>{workspaceName ?? "PERSONAL WORKSPACE"}</span>
+            <span>·</span>
+            <span className="text-success font-medium">LIVE READ</span>
+          </div>
+
+          <h1 className="mt-2 text-[26px] font-semibold leading-[32px] tracking-[-0.03em] text-text-primary sm:text-[30px]">
             {greeting(new Date())}
             {firstName ? `, ${firstName}` : ""}.
           </h1>
-          <p className="mt-1.5 text-small text-text-secondary">
-            {attentionLine}{" "}
-            {workspaceName ? (
-              <span className="text-text-tertiary">
-                NEXUS analysed activity in {workspaceName}.
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-small">
+            <span className="font-medium text-text-primary">
+              {health.band === "steady"
+                ? "Your workspace is steady."
+                : health.band === "watch"
+                  ? "Pressure is building in your workspace."
+                  : "Attention needed today."}
+            </span>
+            <span className="hidden sm:inline text-text-quaternary">·</span>
+            <span className="inline-flex items-center gap-1.5 text-text-secondary">
+              Operational health:
+              <span className="font-mono font-semibold text-text-primary tabular-nums">
+                {health.score}
               </span>
-            ) : null}
-          </p>
+              <Badge
+                tone={
+                  health.band === "critical"
+                    ? "danger"
+                    : health.band === "watch"
+                      ? "warning"
+                      : "success"
+                }
+              >
+                {health.band.toUpperCase()}
+              </Badge>
+            </span>
+            <span className="hidden sm:inline text-text-quaternary">·</span>
+            <span className="text-text-tertiary">
+              {needsAttention.length} {needsAttention.length === 1 ? "signal" : "signals"} · {context.dueThisWeek} approaching {context.dueThisWeek === 1 ? "deadline" : "deadlines"} · {context.blockedTasks} {context.blockedTasks === 1 ? "blocker" : "blockers"}
+            </span>
+          </div>
         </div>
 
-        <Link
-          href="/app/intelligence"
-          className="group inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary md:self-auto"
-        >
-          Open Intelligence
-          <ArrowRight
-            size={14}
-            strokeWidth={1.75}
-            aria-hidden="true"
-            className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
-          />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/app/intelligence?ask=1"
+            className="group inline-flex h-9 items-center gap-1.5 rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
+          >
+            <Sparkles size={14} className="text-lavender" aria-hidden="true" />
+            <span>Ask NEXUS</span>
+            <kbd className="hidden font-mono text-[10px] text-text-quaternary sm:inline">⌘J</kbd>
+          </Link>
+          <Link
+            href="/app/intelligence"
+            className="group inline-flex h-9 items-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
+          >
+            <span>Open Intelligence</span>
+            <ArrowRight
+              size={14}
+              strokeWidth={1.75}
+              aria-hidden="true"
+              className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
+            />
+          </Link>
+        </div>
       </header>
 
-      {isNewWorkspace ? (
-        <section className="overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70">
-          <div className="px-6 py-10 sm:px-10 sm:py-14">
-            <div className="max-w-[620px]">
-              <p className="eyebrow text-lavender">Your workspace is ready</p>
-              <h2 className="mt-3 text-[22px] font-semibold leading-[28px] tracking-[-0.025em] text-text-primary">
+      {showWorkspaceWarning ? (
+        <section className="overflow-hidden rounded-card border border-warning-border/40 bg-warning-bg/15 p-6 sm:p-8 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
+          <div className="max-w-[620px]">
+            <p className="eyebrow text-warning">Workspace setup pending</p>
+            <h2 className="mt-2 text-h2 font-semibold text-text-primary">
+              Connecting to your workspace
+            </h2>
+            <p className="mt-2 text-body text-text-secondary">
+              We couldn&apos;t verify an active workspace for your session yet. Please retry the connection or review your workspace settings.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <ButtonLink href="/dashboard" size="md">
+                Retry connection
+              </ButtonLink>
+              <ButtonLink href="/settings?tab=workspace" variant="secondary" size="md">
+                Workspace settings
+              </ButtonLink>
+            </div>
+          </div>
+        </section>
+      ) : isNewWorkspace ? (
+        <section className="overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
+          <div className="px-6 py-8 sm:px-10 sm:py-12">
+            <div className="max-w-[640px]">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-pill bg-lavender animate-pulse" aria-hidden="true" />
+                <p className="eyebrow text-lavender">
+                  Your workspace is ready · LET NEXUS UNDERSTAND YOU ({onboardingStepsDone}/5)
+                </p>
+              </div>
+              <h2 className="mt-2.5 text-[22px] font-semibold leading-[28px] tracking-[-0.025em] text-text-primary">
                 Welcome to NEXUS.
               </h2>
-              <p className="mt-2.5 max-w-[52ch] text-body text-text-secondary">
-                Your workspace starts here. Create your first project and NEXUS
-                will help you turn it into actionable work.
+              <p className="mt-2 text-body text-text-secondary">
+                NEXUS doesn&apos;t just store tasks — it understands your work, detects what is at risk, and orchestrates what to do next. Complete these steps to activate intelligence:
               </p>
 
-              <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                <ButtonLink
-                  href="/projects?create=1"
-                  size="lg"
-                  data-guide="new-project"
-                >
-                  <FolderKanban size={16} strokeWidth={1.75} />
-                  Create your first project
-                </ButtonLink>
-                <ButtonLink href="/tasks?create=1" size="lg" variant="secondary">
-                  <CheckSquare size={16} strokeWidth={1.75} />
-                  Create a task
-                </ButtonLink>
-              </div>
+              {/* 5-step progressive model */}
+              <ul className="mt-5 space-y-2 rounded-card border border-border-subtle bg-bg-surface/50 p-3.5">
+                <li className="flex items-center gap-3 text-small">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-success text-black font-semibold text-[11px]">
+                    ✓
+                  </span>
+                  <span className="text-text-primary font-medium">01 Workspace</span>
+                  <span className="text-text-secondary text-caption">Connected</span>
+                  <span className="ml-auto font-mono text-mono text-text-quaternary">verified</span>
+                </li>
+                <li className="flex items-center gap-3 text-small">
+                  {profile.profileComplete ? (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-success text-black font-semibold text-[11px]">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border border-border-strong text-text-tertiary font-mono text-[10px]">
+                      2
+                    </span>
+                  )}
+                  <span className={profile.profileComplete ? "text-text-secondary line-through" : "text-text-primary font-medium"}>
+                    02 Profile
+                  </span>
+                  <span className="text-text-secondary text-caption">Tell NEXUS who you are</span>
+                  <span className="ml-auto font-mono text-mono text-text-quaternary">
+                    {profile.profileComplete ? "done" : "identity"}
+                  </span>
+                </li>
+                <li className="flex items-center gap-3 text-small">
+                  {context.projects > 0 ? (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-success text-black font-semibold text-[11px]">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border border-border-strong text-text-tertiary font-mono text-[10px]">
+                      3
+                    </span>
+                  )}
+                  <span className={context.projects > 0 ? "text-text-secondary line-through" : "text-text-primary font-medium"}>
+                    03 Context
+                  </span>
+                  <span className="text-text-secondary text-caption">Add your first project</span>
+                  <span className="ml-auto font-mono text-mono text-text-quaternary">
+                    {context.projects > 0 ? "created" : "context"}
+                  </span>
+                </li>
+                <li className="flex items-center gap-3 text-small">
+                  {context.tasks > 0 ? (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-success text-black font-semibold text-[11px]">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border border-border-strong text-text-tertiary font-mono text-[10px]">
+                      4
+                    </span>
+                  )}
+                  <span className={context.tasks > 0 ? "text-text-secondary line-through" : "text-text-primary font-medium"}>
+                    04 Execution
+                  </span>
+                  <span className="text-text-secondary text-caption">Create your first task</span>
+                  <span className="ml-auto font-mono text-mono text-text-quaternary">
+                    {context.tasks > 0 ? "created" : "action"}
+                  </span>
+                </li>
+                <li className="flex items-center gap-3 text-small">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border border-border-strong text-text-tertiary font-mono text-[10px]">
+                    5
+                  </span>
+                  <span className="text-text-primary font-medium">
+                    05 Intelligence
+                  </span>
+                  <span className="text-text-secondary text-caption">Ask NEXUS what matters</span>
+                  <span className="ml-auto font-mono text-mono text-text-quaternary">
+                    intelligence
+                  </span>
+                </li>
+              </ul>
 
-              <Link
-                href="/app/intelligence"
-                className="group mt-5 inline-flex items-center gap-1.5 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-              >
-                Explore NEXUS Intelligence
-                <ArrowRight
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden="true"
-                  className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
-                />
-              </Link>
+              {/* SINGLE DOMINANT PRIMARY CTA */}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                {!profile.profileComplete ? (
+                  <ButtonLink
+                    href="/settings?tab=profile"
+                    size="lg"
+                  >
+                    Setup your profile
+                  </ButtonLink>
+                ) : context.projects === 0 ? (
+                  <ButtonLink
+                    href="/projects?create=1"
+                    size="lg"
+                    data-guide="new-project"
+                  >
+                    <FolderKanban size={16} strokeWidth={1.75} />
+                    Create your first project
+                  </ButtonLink>
+                ) : context.tasks === 0 ? (
+                  <ButtonLink
+                    href="/tasks?create=1"
+                    size="lg"
+                    data-guide="new-task"
+                  >
+                    <CheckSquare size={16} strokeWidth={1.75} />
+                    Create your first task
+                  </ButtonLink>
+                ) : (
+                  <ButtonLink
+                    href="/app/intelligence?ask=1"
+                    size="lg"
+                  >
+                    <Sparkles size={16} strokeWidth={1.75} />
+                    Ask NEXUS what matters
+                  </ButtonLink>
+                )}
+                <Link
+                  href="/app/intelligence"
+                  className="group inline-flex items-center gap-1.5 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary px-1 py-1.5"
+                >
+                  Explore NEXUS Intelligence
+                  <ArrowRight
+                    size={13}
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                    className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
+                  />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -328,315 +473,429 @@ export default async function DashboardPage() {
           />
 
           <div className="hidden space-y-6 lg:block">
-          {/* NEXT ACTION */}
-          <FocusPanel insight={focus} />
-
-      {/* NEEDS ATTENTION — the operational signals, highest value first */}
-      <Panel
-        title="Needs attention"
-        description="Derived from deadlines, blocked work and project momentum"
-        bodyClassName="p-0"
-        actions={
-          <Link
-            href="/app/intelligence"
-            className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-          >
-            All signals
-          </Link>
-        }
-      >
-        {needsAttention.length === 0 ? (
-          <div className="flex items-center gap-3 px-4 py-4">
-            <span
-              aria-hidden="true"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-success-border bg-success-bg text-success"
+            {/* LAYER 1 — SITUATION (Operational Diagnostic & Context Brief) */}
+            <section
+              aria-label="Workspace situation"
+              className="overflow-hidden rounded-card border border-border-subtle bg-bg-surface/60 p-5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.5)] transition-[border-color] duration-200 ease-nexus hover:border-border-strong animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]"
             >
-              <CheckSquare size={15} strokeWidth={1.75} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-body-medium text-text-primary">
-                No risk detected in this workspace.
-              </p>
-              <p className="text-caption text-text-tertiary">
-                Nothing is overdue, blocked or drifting.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <ul>
-            {needsAttention.map((insight, index) => (
-              <InsightRow key={insight.id} insight={insight} index={index} />
-            ))}
-          </ul>
-        )}
-      </Panel>
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 rounded-pill",
+                        health.band === "critical"
+                          ? "bg-danger animate-pulse"
+                          : health.band === "watch"
+                            ? "bg-warning"
+                            : "bg-success"
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="eyebrow text-text-quaternary">
+                      SITUATION · OPERATING INDEX
+                    </span>
+                  </div>
+                  <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-text-primary tabular-nums">
+                    {health.score}/100
+                  </span>
+                  <Badge
+                    tone={
+                      health.band === "critical"
+                        ? "danger"
+                        : health.band === "watch"
+                          ? "warning"
+                          : "success"
+                    }
+                  >
+                    {health.band.toUpperCase()}
+                  </Badge>
+                </div>
 
-      {/* WORKSPACE STATE */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-3 lg:grid-cols-5 [&>*]:border-b [&>*]:border-r [&>*]:border-border-subtle">
-        <Metric label="Open tasks" value={context.openTasks} />
-        <Metric
-          label="Overdue"
-          value={context.overdueTasks}
-          tone={context.overdueTasks > 0 ? "danger" : "default"}
-        />
-        <Metric
-          label="Blocked"
-          value={context.blockedTasks}
-          tone={context.blockedTasks > 0 ? "warning" : "default"}
-        />
-        <Metric label="Due this week" value={context.dueThisWeek} />
-        <Metric label="Completed" value={`${context.completionRate}%`} />
-      </div>
+                <span className="font-mono text-[11px] text-text-quaternary">
+                  {context.projects} {context.projects === 1 ? "project" : "projects"} · {context.openTasks} open {context.openTasks === 1 ? "task" : "tasks"} · {context.goals} {context.goals === 1 ? "goal" : "goals"}
+                </span>
+              </div>
 
-      {/* CONTENT GRID */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          <Panel
-            title="Priority tasks"
-            description="Sorted by priority, then due date"
-            bodyClassName="p-0"
-            actions={
-              <Link
-                href="/tasks"
-                className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
+              <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                <div className="max-w-2xl">
+                  <h2 className="text-h3 font-semibold text-text-primary">
+                    {health.headline}
+                  </h2>
+                  <p className="mt-1 text-small text-text-secondary">
+                    {attentionLine} {context.blockedTasks > 0 ? `${context.blockedTasks} tasks are currently stalled by dependencies.` : "No blockers detected in your active projects."}
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Health Diagnostic Factor Pills */}
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 rounded-input border border-border-subtle bg-bg-subtle/50 p-2.5">
+                <div className="min-w-0">
+                  <span className="block truncate text-caption text-text-quaternary">
+                    Deadlines
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-0.5 block truncate font-mono text-body-medium font-medium",
+                      context.overdueTasks > 0 ? "text-danger" : "text-text-primary"
+                    )}
+                  >
+                    {context.overdueTasks > 0 ? `${context.overdueTasks} overdue` : "On schedule"}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="block truncate text-caption text-text-quaternary">
+                    Blockers
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-0.5 block truncate font-mono text-body-medium font-medium",
+                      context.blockedTasks > 0 ? "text-warning" : "text-text-primary"
+                    )}
+                  >
+                    {context.blockedTasks > 0 ? `${context.blockedTasks} blocked` : "Clear"}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="block truncate text-caption text-text-quaternary">
+                    Active Momentum
+                  </span>
+                  <span className="mt-0.5 block truncate font-mono text-body-medium font-medium text-text-primary">
+                    {context.projects > 0 ? `${context.projects} active` : "None"}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="block truncate text-caption text-text-quaternary">
+                    Throughput
+                  </span>
+                  <span className="mt-0.5 block truncate font-mono text-body-medium font-medium text-text-primary">
+                    {context.completionRate}%
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {/* IF ACTIVE MISSION: SPOTLIGHT COMMAND CARD */}
+            {activeMission && activeMission.status !== "completed" && activeMission.status !== "cancelled" ? (
+              <section
+                aria-label="Active mission"
+                className="overflow-hidden rounded-card border-2 border-lavender-border/50 bg-bg-surface/90 p-5 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)] animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]"
               >
-                View all
-              </Link>
-            }
-          >
-            {priorityTasks.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  title="Create your first task"
-                  description="Your queue is clear. Create tasks with priorities and deadlines so NEXUS can help you focus on what matters next."
-                  icon={<CheckSquare size={17} strokeWidth={1.75} />}
-                  action={
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-pill bg-lavender animate-pulse" aria-hidden="true" />
+                    <span className="eyebrow text-lavender font-semibold tracking-wider">
+                      ACTIVE MISSION IN PROGRESS
+                    </span>
+                    {activeMission.status === "blocked" ? (
+                      <span className="rounded-[4px] border border-warning-border bg-warning-bg/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning">
+                        Blocked
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+                    {activeMission.steps.filter((s) => s.status === "completed").length}/{activeMission.steps.length} steps completed ({activeMission.progress}%)
+                  </span>
+                </div>
+
+                <div className="mt-3.5 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-h2 font-semibold text-text-primary">
+                      {activeMission.title}
+                    </h3>
+                    <p className="mt-1 text-small text-text-secondary leading-relaxed max-w-2xl">
+                      {activeMission.objective}
+                    </p>
+                  </div>
+                  <ButtonLink
+                    href="/app/intelligence#mission"
+                    size="md"
+                    className="shrink-0 font-medium"
+                  >
+                    {activeMission.status === "blocked" ? "Unblock mission" : "Continue mission"}
+                    <ArrowRight size={14} strokeWidth={2} />
+                  </ButtonLink>
+                </div>
+
+                <div className="mt-3.5">
+                  <Progress
+                    value={activeMission.progress}
+                    tone={activeMission.status === "blocked" ? "warning" : "white"}
+                  />
+                </div>
+              </section>
+            ) : null}
+
+            {/* LAYER 3 & 4 — DECISION & EXECUTION (Single Dominant Next Best Action) */}
+            <FocusPanel insight={focus} />
+
+            {/* LAYER 2 — INTERPRETATION & WHAT MATTERS (Needs attention signals) */}
+            <Panel
+              title="Needs attention"
+              description="Derived from deadlines, blocked work and project momentum"
+              bodyClassName="p-0"
+              actions={
+                <Link
+                  href="/app/intelligence"
+                  className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
+                >
+                  All signals
+                </Link>
+              }
+            >
+              {needsAttention.length === 0 ? (
+                <div className="flex items-center gap-3 px-4 py-4">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-success-border bg-success-bg text-success"
+                  >
+                    <CheckSquare size={15} strokeWidth={1.75} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-body-medium text-text-primary">
+                      No risk detected in this workspace.
+                    </p>
+                    <p className="text-caption text-text-tertiary">
+                      Nothing is overdue, blocked or drifting.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ul>
+                  {needsAttention.map((insight, index) => (
+                    <InsightRow key={insight.id} insight={insight} index={index} />
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            {/* LAYER 6 — GIVE NEXUS AN OBJECTIVE (Intention Command Strip) */}
+            <section
+              aria-label="Direct intelligence objective"
+              className="overflow-hidden rounded-card border border-lavender-border/40 bg-lavender/5 p-5 transition-all duration-200 ease-nexus hover:border-lavender-border/70"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={15} className="text-lavender" aria-hidden="true" />
+                    <span className="eyebrow text-lavender">TELL NEXUS WHAT MATTERS</span>
+                  </div>
+                  <h3 className="mt-1 text-h3 font-semibold text-text-primary">
+                    Direct your workspace with natural intention
+                  </h3>
+                  <p className="mt-0.5 text-small text-text-secondary">
+                    State an objective. NEXUS understands the context, detects risks, recommends a plan, and acts with your confirmation.
+                  </p>
+                </div>
+                <ButtonLink
+                  href="/app/intelligence?ask=1"
+                  size="md"
+                  className="shrink-0"
+                >
+                  Open Command Center
+                  <ArrowRight size={14} strokeWidth={2} />
+                </ButtonLink>
+              </div>
+
+              {/* Natural Starters */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-lavender-border/20">
+                <span className="font-mono text-[11px] text-text-quaternary uppercase tracking-wider">
+                  Quick starters:
+                </span>
+                <Link
+                  href="/app/intelligence?q=Aide-moi%20%C3%A0%20organiser%20cette%20semaine"
+                  className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
+                >
+                  Organiser cette semaine
+                </Link>
+                <Link
+                  href="/app/intelligence?q=Quels%20projets%20n%C3%A9cessitent%20mon%20attention%20%3F"
+                  className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
+                >
+                  Quels projets nécessitent mon attention ?
+                </Link>
+                <Link
+                  href="/app/intelligence?q=Quelles%20sont%20mes%203%20prochaines%20t%C3%A2ches%20prioritaires%20%3F"
+                  className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
+                >
+                  Mes 3 priorités immédiates
+                </Link>
+              </div>
+            </section>
+
+            {/* LAYER 5 & CONTEXT PILLARS (What Changed + Active Context) */}
+            <div className="grid gap-5 lg:grid-cols-3">
+              {/* Activity / Delta Column */}
+              <div className="space-y-5 lg:col-span-2">
+                <Panel
+                  title="What changed · Recent activity"
+                  description="Recent completions, status shifts, and updates verified in your workspace"
+                  bodyClassName="p-0"
+                  actions={
                     <Link
-                      href="/tasks?create=1"
-                      className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
+                      href="/activity"
+                      className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
                     >
-                      Create a task
+                      View all
                     </Link>
                   }
-                />
+                >
+                  <ActivityList
+                    activities={recentActivities}
+                    unavailable={activitiesUnavailable}
+                    compact
+                  />
+                </Panel>
               </div>
-            ) : (
-              <ul>
-                {priorityTasks.map((task) => {
-                  const overdue = Boolean(task.due_at && task.due_at < nowStr);
-                  return (
-                    <li key={task.id}>
-                      <Link
-                        href="/tasks"
-                        className="flex h-11 items-center gap-3 border-b border-border-subtle px-4 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="h-[15px] w-[15px] shrink-0 rounded-[5px] border border-border-strong"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-body text-text-primary">
-                          {task.title}
-                        </span>
-                        {task.priority === "urgent" || task.priority === "high" ? (
-                          <Badge
-                            tone={task.priority === "urgent" ? "danger" : "warning"}
-                            className="hidden sm:inline-flex"
-                          >
-                            {task.priority}
-                          </Badge>
-                        ) : null}
-                        <span
-                          className={cn(
-                            "w-12 shrink-0 text-right font-mono text-mono tabular-nums",
-                            overdue ? "text-danger" : "text-text-quaternary"
-                          )}
-                        >
-                          {formatDate(task.due_at)}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
 
-          <Panel
-            title="Projects"
-            description="Most recently created"
-            bodyClassName="p-0"
-            actions={
-              <Link
-                href="/projects"
-                className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-              >
-                View all
-              </Link>
-            }
-          >
-            {recentProjects.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  title="Create your first project"
-                  description="Give NEXUS something real to organize. Create your first project to give NEXUS the context it needs to detect risk and momentum."
-                  icon={<FolderKanban size={17} strokeWidth={1.75} />}
-                  action={
+              {/* Context Pillars: Projects & Goals */}
+              <div className="space-y-5">
+                <Panel
+                  title="Projects context"
+                  description="Active initiatives tracked by NEXUS"
+                  bodyClassName="p-0"
+                  actions={
                     <Link
-                      href="/projects?create=1"
-                      className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
+                      href="/projects"
+                      className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
                     >
-                      Create a project
+                      View all
                     </Link>
                   }
-                />
-              </div>
-            ) : (
-              <ul>
-                {recentProjects.map((project) => {
-                  const progress = Math.min(
-                    100,
-                    Math.max(0, Number(project.progress ?? 0))
-                  );
-                  return (
-                    <li key={project.id as string}>
-                      <Link
-                        href="/projects"
-                        className="flex items-center gap-3 border-b border-border-subtle px-4 py-3 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
-                        >
-                          <FolderKanban size={15} strokeWidth={1.75} />
-                        </span>
-
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2">
-                            <span className="min-w-0 truncate text-body-medium text-text-primary">
-                              {project.name as string}
-                            </span>
-                            <span className="eyebrow shrink-0 text-text-quaternary">
-                              {project.status as string}
-                            </span>
-                          </span>
-                          <Progress
-                            value={progress}
-                            label={`${project.name as string} progress`}
-                            className="mt-2 max-w-sm"
-                          />
-                        </span>
-
-                        <span className="shrink-0 text-right">
-                          <span className="block font-mono text-mono tabular-nums text-text-secondary">
-                            {progress}%
-                          </span>
-                          {project.due_date ? (
-                            <span className="mt-0.5 block font-mono text-mono tabular-nums text-text-quaternary">
-                              {formatDate(project.due_date as string)}
-                            </span>
-                          ) : null}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="space-y-5">
-          <Panel
-            title="Goals"
-            bodyClassName="p-0"
-            actions={
-              <Link
-                href="/goals"
-                className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-              >
-                View all
-              </Link>
-            }
-          >
-            {recentGoals.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  title="Set your first goal"
-                  description="Define what this workspace is working towards so NEXUS can measure progress against it."
-                  icon={<Target size={17} strokeWidth={1.75} />}
-                  action={
-                    <Link
-                      href="/goals?create=1"
-                      className="inline-flex h-8 items-center rounded-input border border-border-default px-3 text-caption text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
-                    >
-                      Set a goal
-                    </Link>
-                  }
-                />
-              </div>
-            ) : (
-              <ul>
-                {recentGoals.map((goal) => {
-                  const progress = Math.min(
-                    100,
-                    Math.max(0, Number(goal.progress ?? 0))
-                  );
-                  return (
-                    <li
-                      key={goal.id as string}
-                      className="border-b border-border-subtle px-4 py-3 last:border-b-0"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                >
+                  {recentProjects.length === 0 ? (
+                    <div className="p-4">
+                      <EmptyState
+                        title="No projects yet"
+                        description="Projects provide context so NEXUS can detect deadlines and blocked work."
+                        icon={<FolderKanban size={17} strokeWidth={1.75} />}
+                        action={
                           <Link
-                            href="/goals"
-                            className="block truncate text-body-medium text-text-primary transition-colors hover:text-white"
+                            href="/projects?create=1"
+                            className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
                           >
-                            {goal.title as string}
+                            Create a project
                           </Link>
-                          {goal.target_date ? (
-                            <p className="eyebrow mt-1 text-text-quaternary">
-                              {formatDate(goal.target_date as string)}
-                            </p>
-                          ) : null}
-                        </div>
-                        <span className="font-mono text-mono tabular-nums text-text-primary">
-                          {progress}%
-                        </span>
-                      </div>
-                      <Progress
-                        value={progress}
-                        label={`${goal.title as string} progress`}
-                        className="mt-2.5"
+                        }
                       />
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
+                    </div>
+                  ) : (
+                    <ul>
+                      {recentProjects.map((project) => {
+                        const progress = Math.min(
+                          100,
+                          Math.max(0, Number(project.progress ?? 0))
+                        );
+                        return (
+                          <li key={project.id as string}>
+                            <Link
+                              href="/projects"
+                              className="flex items-center gap-3 border-b border-border-subtle px-4 py-3 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]"
+                            >
+                              <span
+                                aria-hidden="true"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
+                              >
+                                <FolderKanban size={13} strokeWidth={1.75} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                  <span className="min-w-0 truncate text-body-medium text-text-primary">
+                                    {project.name as string}
+                                  </span>
+                                  <span className="eyebrow shrink-0 text-text-quaternary">
+                                    {project.status as string}
+                                  </span>
+                                </span>
+                                <Progress
+                                  value={progress}
+                                  label={`${project.name as string} progress`}
+                                  className="mt-1.5 max-w-sm"
+                                />
+                              </span>
+                              <span className="shrink-0 text-right font-mono text-mono tabular-nums text-text-secondary">
+                                {progress}%
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </Panel>
 
-          <Panel
-            title="Activity"
-            bodyClassName="p-0"
-            actions={
-              <Link
-                href="/activity"
-                className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-              >
-                View all
-              </Link>
-            }
-          >
-            <ActivityList
-              activities={recentActivities}
-              unavailable={activitiesUnavailable}
-              compact
-            />
-          </Panel>
-        </div>
-      </div>
+                <Panel
+                  title="Goals alignment"
+                  description="Target outcomes measuring real progress"
+                  bodyClassName="p-0"
+                  actions={
+                    <Link
+                      href="/goals"
+                      className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
+                    >
+                      View all
+                    </Link>
+                  }
+                >
+                  {recentGoals.length === 0 ? (
+                    <div className="p-4">
+                      <EmptyState
+                        title="Set your first goal"
+                        description="Define key outcomes to measure whether your work is making progress."
+                        icon={<Target size={17} strokeWidth={1.75} />}
+                        action={
+                          <Link
+                            href="/goals?create=1"
+                            className="inline-flex h-8 items-center rounded-input border border-border-default px-3 text-caption text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                          >
+                            Set a goal
+                          </Link>
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <ul>
+                      {recentGoals.map((goal) => {
+                        const progress = Math.min(
+                          100,
+                          Math.max(0, Number(goal.progress ?? 0))
+                        );
+                        return (
+                          <li
+                            key={goal.id as string}
+                            className="border-b border-border-subtle px-4 py-3 last:border-b-0"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <Link
+                                  href="/goals"
+                                  className="block truncate text-body-medium text-text-primary transition-colors hover:text-white"
+                                >
+                                  {goal.title as string}
+                                </Link>
+                                {goal.target_date ? (
+                                  <p className="eyebrow mt-0.5 text-text-quaternary">
+                                    Target: {formatDate(goal.target_date as string)}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <span className="font-mono text-mono tabular-nums text-text-primary">
+                                {progress}%
+                              </span>
+                            </div>
+                            <Progress
+                              value={progress}
+                              label={`${goal.title as string} progress`}
+                              className="mt-2"
+                            />
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </Panel>
+              </div>
+            </div>
           </div>
         </>
       )}

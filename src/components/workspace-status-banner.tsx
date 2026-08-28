@@ -70,20 +70,28 @@ export function WorkspaceStatusBanner({
     <div
       role="status"
       aria-live="polite"
-      className="page-enter mb-6 flex flex-col gap-3 rounded-card border border-border-subtle bg-bg-subtle/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+      className="page-enter mb-6 flex flex-col gap-3 rounded-card border border-warning-border/40 bg-warning-bg/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0">
-        <p className="text-body font-medium text-text-primary">
-          {failed
-            ? "We couldn't finish preparing your workspace."
-            : "Your workspace is being prepared."}
+        <p className="text-body font-medium text-text-primary flex items-center gap-2">
+          {failed ? (
+            <>
+              <span className="h-2 w-2 rounded-pill bg-danger" aria-hidden="true" />
+              Workspace setup could not be completed
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-pill bg-warning animate-pulse" aria-hidden="true" />
+              Preparing your workspace…
+            </>
+          )}
         </p>
         <p className="mt-1 text-small text-text-secondary">
           {failed
-            ? `NEXUS is ready to use. You can continue now and retry the workspace setup when convenient${
+            ? `Workspace setup could not be completed. You can retry now or explore available features${
                 errorKind ? ` (reason: ${errorKind.replace(/_/g, " ").toLowerCase()})` : ""
               }.`
-            : "You can already explore NEXUS while we finish setting things up. This usually takes less than a second."}
+            : "We are setting up your personal workspace. This usually takes less than a second."}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -98,7 +106,7 @@ export function WorkspaceStatusBanner({
             variant="ghost"
             onClick={() => setDismissed(true)}
           >
-            Continue to NEXUS
+            Explore features
           </Button>
         ) : null}
       </div>

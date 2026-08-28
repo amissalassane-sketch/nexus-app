@@ -64,6 +64,8 @@ export type ShellUser = {
 export type ShellWorkspace = {
   name: string | null;
   role: string | null;
+  status?: "ready" | "preparing" | "failed";
+  errorKind?: string | null;
 };
 
 function planPressure(plan: ShellPlan) {
@@ -102,7 +104,13 @@ export function WorkspaceSidebar({
 }) {
   const pathname = usePathname();
   const pressure = planPressure(plan);
-  const workspaceName = workspace.name ?? "No workspace";
+  const workspaceStatus = workspace.status ?? (workspace.name ? "ready" : "preparing");
+  const workspaceName =
+    workspaceStatus === "failed"
+      ? "Workspace setup needed"
+      : workspaceStatus === "preparing"
+        ? "Preparing workspace…"
+        : workspace.name ?? "Personal Workspace";
   const commandKey = useCommandKeyLabel();
 
   return (

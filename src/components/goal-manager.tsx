@@ -371,16 +371,21 @@ function GoalManagerInner({ userId }: { userId: string }) {
         </div>
       ) : !workspaceId ? (
         <EmptyState
-          title="No active workspace"
-          description="This account is not linked to an active workspace yet, so goals cannot be created."
+          title="Workspace connecting"
+          description="Your personal workspace is being prepared. Goals will appear here once connected."
           icon={<Target size={17} strokeWidth={1.75} />}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
+              Retry connection
+            </Button>
+          }
         />
       ) : goals.length === 0 ? (
         <EmptyState
-          title="Set your first goal"
-          description="Define the key outcomes your projects and tasks are driving toward. NEXUS measures progress and flags goals falling behind."
+          title="No goals set yet"
+          description="Define key outcomes to measure whether your projects and tasks are making real progress. NEXUS monitors progress and alerts you if work falls behind."
           icon={<Target size={17} strokeWidth={1.75} />}
-          action={<CreateButton label="New Goal" onClick={openCreateForm} />}
+          action={<CreateButton label="Set a goal" onClick={openCreateForm} />}
         />
       ) : (
         <ul className="grid gap-4 lg:grid-cols-2">
