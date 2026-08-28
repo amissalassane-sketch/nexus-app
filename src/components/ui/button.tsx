@@ -25,19 +25,19 @@ export type ButtonVariant =
 export type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 const base =
-  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-input font-medium transition-[background-color,color,border-color,transform,box-shadow] duration-[140ms] ease-nexus select-none disabled:pointer-events-none disabled:cursor-not-allowed";
+  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-input font-medium transition-[background-color,color,border-color,transform,box-shadow,opacity] duration-[140ms] ease-nexus select-none disabled:pointer-events-none disabled:cursor-not-allowed active:scale-[0.98] active:translate-y-px will-change-transform gpu-accelerated";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent text-accent-fg hover:bg-accent-hover active:translate-y-px disabled:bg-bg-surface-2 disabled:text-text-quaternary",
+    "bg-accent text-accent-fg hover:bg-accent-hover hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_20px_-4px_rgba(255,255,255,0.12)] active:shadow-none disabled:bg-bg-surface-2 disabled:text-text-quaternary btn-press",
   secondary:
-    "border border-border-default bg-bg-surface/60 text-text-secondary hover:border-border-strong hover:bg-bg-surface hover:text-text-primary active:translate-y-px disabled:opacity-40",
+    "border border-border-default bg-bg-surface/60 text-text-secondary hover:border-border-strong hover:bg-bg-surface hover:text-text-primary disabled:opacity-40 btn-press",
   ghost:
-    "bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary active:translate-y-px disabled:opacity-40",
+    "bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40 btn-press",
   danger:
-    "border border-danger-border bg-transparent text-danger hover:bg-danger-bg active:translate-y-px disabled:opacity-40",
+    "border border-danger-border bg-transparent text-danger hover:bg-danger-bg hover:border-danger-border active:bg-danger-bg disabled:opacity-40 btn-press",
   // 36px hit area on touch screens, 32px where a precise pointer exists.
-  icon: "h-9 w-9 shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover disabled:opacity-40 sm:h-8 sm:w-8",
+  icon: "h-9 w-9 shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] disabled:opacity-40 sm:h-8 sm:w-8 transition-[background-color,color,transform] duration-[120ms] ease-nexus will-change-transform",
 };
 
 // Touch-first: one extra step of height below `sm` so the buttons people
@@ -64,27 +64,50 @@ export function buttonClasses({
 
 function Spinner() {
   return (
-    <svg
-      className="absolute h-3.5 w-3.5 animate-spin"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6.5"
+    <span className="absolute inset-0 flex items-center justify-center">
+      <svg
+        className="h-3.5 w-3.5 animate-spin"
+        viewBox="0 0 16 16"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="6.5"
+          stroke="currentColor"
+          strokeOpacity="0.25"
+          strokeWidth="1.6"
+        />
+        <path
+          d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function SuccessIcon() {
+  return (
+    <span className="absolute inset-0 flex items-center justify-center animate-[badge-in_220ms_var(--ease-nexus)_both]">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
         stroke="currentColor"
-        strokeOpacity="0.25"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="2"
         strokeLinecap="round"
-      />
-    </svg>
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="text-success"
+      >
+        <path d="M3 8l3 3 7-7" />
+      </svg>
+    </span>
   );
 }
 
@@ -93,6 +116,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Shows an inline spinner, keeps the label width and blocks interaction. */
   loading?: boolean;
+  /** Shows success state with check animation */
+  success?: boolean;
+  /** Shows error state with shake */
+  error?: boolean;
 }
 
 export function Button({
@@ -101,23 +128,34 @@ export function Button({
   className,
   type = "button",
   loading = false,
+  success = false,
+  error = false,
   disabled,
   children,
   ...props
 }: ButtonProps) {
+  const isBusy = loading || success;
   return (
     <button
       type={type}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      className={buttonClasses({ variant, size, className })}
+      disabled={disabled || isBusy}
+      aria-busy={isBusy || undefined}
+      data-success={success || undefined}
+      data-error={error || undefined}
+      className={cn(
+        buttonClasses({ variant, size, className }),
+        success && "border-success-border bg-success-bg text-success",
+        error && "feedback-shake border-danger-border bg-danger-bg text-danger",
+        loading && "btn-loading"
+      )}
       {...props}
     >
       {loading ? <Spinner /> : null}
+      {success ? <SuccessIcon /> : null}
       <span
         className={cn(
-          "inline-flex items-center gap-2",
-          loading && "opacity-0"
+          "inline-flex items-center gap-2 transition-opacity duration-150 ease-nexus",
+          (loading || success) && "opacity-0"
         )}
       >
         {children}

@@ -16,11 +16,8 @@ import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS V3 — DROPDOWN
-// 240px (user menu) / 280px (create menu), radius 16px,
-// bg #171717, border 8%, shadow 0 8px 24px rgba(0,0,0,0.48),
-// items 36px radius 10px, active item marked by a 2x14px white bar.
-// Keyboard: Escape closes, arrows move, Tab leaves, click outside closes.
-// No external dependency.
+// Enhanced with enter/exit motion, staggered items, pressed states.
+// GPU-friendly transform + opacity. Respects reduced motion.
 // ============================================================
 
 type DropdownContextValue = {
@@ -52,11 +49,12 @@ export function Dropdown({
   width?: number;
   label: string;
   className?: string;
-  /** Controlled open state. Use with `onOpenChange` to drive the menu externally. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : internalOpen;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,6 +62,7 @@ export function Dropdown({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const openedAt = useRef(0);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setOpen = useCallback(
     (next: boolean) => {
@@ -76,31 +75,68 @@ export function Dropdown({
     [isControlled, onOpenChange]
   );
 
-  const close = useCallback(() => setOpen(false), [setOpen]);
+  const close = useCallback(() => {
+    if (shouldRender && !isClosing) {
+      setIsClosing(true);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = setTimeout(() => {
+        setOpen(false);
+        setShouldRender(false);
+        setIsClosing(false);
+      }, 160);
+    } else {
+      setOpen(false);
+    }
+  }, [setOpen, shouldRender, isClosing]);
+
   const toggle = useCallback(() => {
-    // Guard a double-click on the trigger: a second click within the open
-    // transition would otherwise open and instantly close the menu.
     if (open && Date.now() - openedAt.current < 140) return;
-    setOpen(!open);
-  }, [open, setOpen]);
+    if (open) {
+      close();
+    } else {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setIsClosing(false);
+      setShouldRender(true);
+      setOpen(true);
+    }
+  }, [open, setOpen, close]);
+
+  // Sync controlled open to render state — intentional animation sync
+  useEffect(() => {
+    if (open) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsClosing(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShouldRender(true);
+    } else if (shouldRender && !isClosing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsClosing(true);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+      }, 160);
+    }
+  }, [open, shouldRender, isClosing]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!shouldRender || isClosing) return;
     openedAt.current = Date.now();
-  }, [open]);
+  }, [shouldRender, isClosing]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!shouldRender || isClosing) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+        close();
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        close();
         triggerRef.current?.focus();
       }
     };
@@ -114,15 +150,21 @@ export function Dropdown({
       document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, setOpen]);
+  }, [shouldRender, isClosing, close]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!shouldRender || isClosing) return;
     const first = menuRef.current?.querySelector<HTMLElement>(
       "[data-dropdown-item]:not([aria-disabled='true'])"
     );
     first?.focus();
-  }, [open]);
+  }, [shouldRender, isClosing]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
 
   const onMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
@@ -149,17 +191,17 @@ export function Dropdown({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {trigger({
-        open,
+        open: shouldRender && !isClosing,
         toggle,
         ref: triggerRef,
         ariaProps: {
           "aria-haspopup": "menu",
-          "aria-expanded": open,
+          "aria-expanded": shouldRender && !isClosing,
           "aria-controls": menuId,
         },
       })}
 
-      {open && (
+      {shouldRender && (
         <DropdownContext.Provider value={contextValue}>
           <div
             id={menuId}
@@ -169,8 +211,13 @@ export function Dropdown({
             onKeyDown={onMenuKeyDown}
             style={{ width }}
             className={cn(
-              "absolute top-[calc(100%+6px)] z-[60] max-w-[calc(100vw-24px)] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown animate-scale-in",
-              align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left"
+              "absolute top-[calc(100%+6px)] z-[60] max-w-[calc(100vw-24px)] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown will-change-transform",
+              align === "end"
+                ? "right-0 origin-top-right"
+                : "left-0 origin-top-left",
+              isClosing
+                ? "animate-[scale-out_160ms_var(--ease-nexus)_both]"
+                : "animate-[scale-in_220ms_var(--ease-nexus)_both]"
             )}
           >
             {children}
@@ -182,7 +229,7 @@ export function Dropdown({
 }
 
 const itemClasses =
-  "relative flex h-9 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-[13px] text-text-secondary outline-none transition-colors duration-200 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary active:bg-accent-ghost aria-disabled:cursor-not-allowed aria-disabled:opacity-40 sm:h-8";
+  "relative flex h-9 w-full cursor-pointer select-none items-center gap-2.5 rounded-nav px-2.5 text-left text-[13px] text-text-secondary outline-none transition-[background-color,color,transform] duration-[160ms] ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:bg-accent-ghost focus-visible:text-text-primary active:bg-accent-ghost active:scale-[0.98] aria-disabled:cursor-not-allowed aria-disabled:opacity-40 sm:h-8 will-change-transform";
 
 const activeClasses = "bg-accent-ghost-hover text-text-primary";
 
@@ -220,10 +267,15 @@ export function DropdownItem({
       className={cn(
         itemClasses,
         active && activeClasses,
-        tone === "danger" && "text-danger hover:bg-danger-bg hover:text-danger"
+        tone === "danger" &&
+          "text-danger hover:bg-danger-bg hover:text-danger active:bg-danger-bg"
       )}
     >
-      {icon ? <span className="shrink-0 text-current">{icon}</span> : null}
+      {icon ? (
+        <span className="shrink-0 text-current transition-transform duration-150 ease-nexus group-active:scale-90">
+          {icon}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {trailing ? (
         <span className="ml-auto shrink-0 text-text-tertiary">{trailing}</span>
@@ -248,7 +300,6 @@ export function DropdownLink({
   icon?: ReactNode;
   active?: boolean;
   trailing?: ReactNode;
-  /** Called in addition to closing the menu when the link is activated. */
   onNavigate?: () => void;
 } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   const { close } = useContext(DropdownContext);
@@ -281,7 +332,7 @@ export function DropdownSeparator() {
 
 export function DropdownLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="eyebrow px-2.5 pb-1 pt-2 text-text-quaternary">
+    <div className="eyebrow px-2.5 pb-1 pt-2 text-text-quaternary select-none">
       {children}
     </div>
   );

@@ -3,10 +3,8 @@ import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS — SURFACES
-// Card  : a bounded object (radius 12px, near-black, 6% border).
-// Panel : a titled region of a page — the main structural element.
-// Metric: a dense number with its label.
-// No glass, no gradient, no glow.
+// Enhanced with motion: cards lift subtly, panels enter gracefully,
+// metrics animate value changes. Calm, premium, intentional.
 // ============================================================
 
 export function Card({
@@ -23,9 +21,10 @@ export function Card({
   return (
     <Tag
       className={cn(
-        "rounded-card border border-border-subtle bg-bg-subtle",
+        "rounded-card border border-border-subtle bg-bg-subtle transition-[border-color,background-color,transform,box-shadow] duration-[200ms] ease-nexus will-change-transform",
         interactive &&
-          "transition-[border-color,background-color] duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface",
+          "hover:border-border-default hover:bg-bg-surface hover:-translate-y-[1px] hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-[0.99] cursor-pointer",
+        "animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]",
         className
       )}
     >
@@ -50,7 +49,7 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        "mb-3 flex items-end justify-between gap-3 border-b border-border-subtle pb-2.5",
+        "mb-3 flex items-end justify-between gap-3 border-b border-border-subtle pb-2.5 animate-[intelligence-state-in_240ms_var(--ease-nexus)_both]",
         className
       )}
     >
@@ -69,10 +68,6 @@ export function SectionHeader({
     </div>
   );
 }
-
-// ============================================================
-// PANEL — the main content surface of the application.
-// ============================================================
 
 export function Panel({
   title,
@@ -98,7 +93,7 @@ export function Panel({
   return (
     <Tag
       className={cn(
-        "overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70",
+        "overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 transition-[border-color,transform] duration-[200ms] ease-nexus will-change-transform animate-[intelligence-state-in_300ms_var(--ease-nexus)_both]",
         className
       )}
     >
@@ -128,16 +123,14 @@ export function Panel({
   );
 }
 
-/** Quiet inline link used in panel headers ("View all", "Open tasks"). */
 export function PanelLink({ children }: { children: ReactNode }) {
   return (
-    <span className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary">
+    <span className="text-caption text-text-tertiary transition-[color,transform] duration-150 ease-nexus hover:text-text-primary hover:translate-x-[1px] inline-flex items-center gap-1">
       {children}
     </span>
   );
 }
 
-/** Dense metric: mono value + quiet label, optional delta context. */
 export function Metric({
   label,
   value,
@@ -150,11 +143,13 @@ export function Metric({
   tone?: "default" | "danger" | "warning" | "accent";
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3.5">
-      <span className="eyebrow truncate text-text-quaternary">{label}</span>
+    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3.5 transition-colors duration-200 ease-nexus hover:bg-white/[0.01] group">
+      <span className="eyebrow truncate text-text-quaternary group-hover:text-text-tertiary transition-colors duration-150">
+        {label}
+      </span>
       <span
         className={cn(
-          "font-mono text-[21px] leading-none tabular-nums",
+          "font-mono text-[21px] leading-none tabular-nums transition-[color,transform] duration-[300ms] ease-nexus will-change-transform",
           tone === "danger"
             ? "text-danger"
             : tone === "warning"

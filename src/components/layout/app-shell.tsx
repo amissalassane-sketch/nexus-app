@@ -19,6 +19,7 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { ProfileCompletionPrompt } from "@/components/profile/profile-completion-prompt";
 import { ProfileCompletionModal } from "@/components/profile/profile-completion-modal";
 import { OnboardingProvider, useOnboarding } from "@/components/onboarding/onboarding-provider";
+import { PageTransition } from "@/components/motion/page-transition";
 import { createClient } from "@/lib/supabase/client";
 import {
   WorkspaceSidebar,
@@ -27,13 +28,6 @@ import {
   type ShellUser,
   type ShellWorkspace,
 } from "@/components/layout/workspace-sidebar";
-
-// ============================================================
-// NEXUS — APPLICATION SHELL
-// A professional desktop layout: fixed sidebar (248px) + top bar +
-// scrolling content. Below `lg` the sidebar becomes a drawer and a
-// compact bottom navigation carries the primary destinations.
-// ============================================================
 
 function AppShellInner({
   user,
@@ -55,9 +49,6 @@ function AppShellInner({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Optional profile completion — UI guidance only, never an access gate.
-  // The product renders first; the prompt appears as a subtle card and the
-  // modal can be opened from the card or the account menu.
   const openProfileModal = useCallback(() => setProfileModalOpen(true), []);
   const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
 
@@ -82,11 +73,6 @@ function AppShellInner({
       .filter((entry): entry is string => entry !== null)
       .join(" and ");
 
-  // The drawer is closed by the thing that navigates (`onNavigate` on every
-  // sidebar item), not by an effect watching the pathname — no cascading
-  // render, and the state change stays attached to the user's action. The
-  // drawer plays a short reverse animation before unmounting instead of
-  // vanishing the instant the navigation lands.
   const openNav = useCallback(() => {
     if (navCloseTimer.current) clearTimeout(navCloseTimer.current);
     setNavClosing(false);
@@ -99,7 +85,7 @@ function AppShellInner({
     navCloseTimer.current = setTimeout(() => {
       setNavOpen(false);
       setNavClosing(false);
-    }, 160);
+    }, 200);
   }, [navClosing]);
 
   useEffect(() => {
@@ -144,12 +130,8 @@ function AppShellInner({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Mobile header below lg — safe-area aware, carries the current
-              page title, the drawer trigger and the compact actions. The
-              title replaces the wordmark on phones: the brand lives in the
-              drawer, the header answers "where am I?". */}
           <header
-            className="shrink-0 border-b border-border-subtle bg-bg-base lg:hidden"
+            className="shrink-0 border-b border-border-subtle bg-bg-base transition-[border-color,background-color] duration-200 ease-nexus lg:hidden sticky-nav"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <div className="flex h-14 items-center gap-1.5 px-2 sm:px-3">
@@ -158,13 +140,14 @@ function AppShellInner({
                 onClick={openNav}
                 aria-label="Open navigation"
                 aria-expanded={navOpen}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
               >
                 <Menu size={19} strokeWidth={1.75} aria-hidden="true" />
               </button>
               <p
-                className="min-w-0 flex-1 truncate px-1 text-[14px] font-medium tracking-[-0.01em] text-text-primary"
+                className="min-w-0 flex-1 truncate px-1 text-[14px] font-medium tracking-[-0.01em] text-text-primary transition-opacity duration-200 ease-nexus"
                 aria-live="polite"
+                key={pathname}
               >
                 {breadcrumbFor(pathname).slice(-1)[0] ?? "NEXUS"}
               </p>
@@ -173,7 +156,7 @@ function AppShellInner({
                   type="button"
                   onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
                   aria-label="Search NEXUS"
-                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
                   <svg
                     width="16"
@@ -192,13 +175,13 @@ function AppShellInner({
                 <Link
                   href="/notifications"
                   aria-label={counts.unreadNotifications > 0 ? `Notifications — ${counts.unreadNotifications} unread` : "Notifications"}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
                   <Bell size={16} strokeWidth={1.75} aria-hidden="true" />
                   {counts.unreadNotifications > 0 ? (
                     <span
                       aria-hidden="true"
-                      className="absolute right-2 top-2 h-1.5 w-1.5 rounded-pill bg-lavender"
+                      className="absolute right-2 top-2 h-1.5 w-1.5 rounded-pill bg-lavender animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]"
                     />
                   ) : null}
                 </Link>
@@ -207,7 +190,7 @@ function AppShellInner({
                   onClick={openHelp}
                   aria-label="Help & Guide"
                   data-guide="help-button"
-                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
+                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
                   <LifeBuoy size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
@@ -215,7 +198,7 @@ function AppShellInner({
                   type="button"
                   onClick={openProfileModal}
                   aria-label="Account profile"
-                  className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[12px] font-semibold text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong active:bg-accent-ghost"
+                  className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[12px] font-semibold text-text-primary transition-[border-color,background-color,transform] duration-150 ease-nexus hover:border-border-strong active:bg-accent-ghost active:scale-[0.94] will-change-transform"
                 >
                   {user.name?.trim() ? (
                     user.name.trim().slice(0, 1).toUpperCase()
@@ -237,22 +220,25 @@ function AppShellInner({
             />
           </div>
 
-          <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
-              {!user.profileComplete && !tourActive ? (
-                <ProfileCompletionPrompt
-                  missingSummary={profileMissingSummary || "your identity"}
-                  onOpen={openProfileModal}
-                />
-              ) : null}
-              {children}
-            </div>
+          <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto scroll-smooth">
+            <PageTransition>
+              <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
+                {!user.profileComplete && !tourActive ? (
+                  <div className="animate-[intelligence-state-in_320ms_var(--ease-nexus)_both]">
+                    <ProfileCompletionPrompt
+                      missingSummary={profileMissingSummary || "your identity"}
+                      onOpen={openProfileModal}
+                    />
+                  </div>
+                ) : null}
+                {children}
+              </div>
+            </PageTransition>
           </main>
 
-          {/* Compact bottom navigation — below lg only */}
           <nav
             aria-label="Primary navigation"
-            className="flex shrink-0 items-stretch gap-1 border-t border-border-subtle bg-bg-subtle/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden"
+            className="flex shrink-0 items-stretch gap-1 border-t border-border-subtle bg-bg-subtle/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden mobile-nav"
           >
             {MOBILE_NAV.map((item) => (
               <MobileNavItem
@@ -283,7 +269,7 @@ function AppShellInner({
               type="button"
               onClick={openNav}
               aria-label="More destinations"
-              className="flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-colors duration-150 hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
+              className="flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-[color,transform,background-color] duration-150 ease-nexus hover:text-text-primary active:scale-[0.94] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
             >
               <Menu size={17} strokeWidth={1.75} aria-hidden="true" />
               <span className="text-[10.5px] leading-none">More</span>
@@ -291,8 +277,6 @@ function AppShellInner({
           </nav>
         </div>
 
-        {/* Optional profile completion — reachable from the prompt card
-            and the account menu. Never auto-opens. */}
         <ProfileCompletionModal
           open={profileModalOpen}
           onClose={closeProfileModal}
@@ -300,7 +284,6 @@ function AppShellInner({
           initialUsername={user.username}
         />
 
-        {/* Drawer — the full sidebar below lg */}
         {navOpen ? (
           <div
             className={cn(
@@ -313,8 +296,10 @@ function AppShellInner({
               aria-label="Close navigation"
               onClick={closeNav}
               className={cn(
-                "absolute inset-0 bg-black/70",
-                navClosing ? "animate-fade-out" : "animate-fade-in"
+                "absolute inset-0 bg-black/70 backdrop-blur-[2px] will-change-transform",
+                navClosing
+                  ? "animate-[fade-out_200ms_var(--ease-nexus)_both]"
+                  : "animate-[fade-in_200ms_var(--ease-nexus)_both]"
               )}
             />
             <div
@@ -322,8 +307,10 @@ function AppShellInner({
               aria-modal="true"
               aria-label="Navigation"
               className={cn(
-                "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle",
-                navClosing ? "animate-panel-out" : "animate-panel-in"
+                "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle shadow-overlay will-change-transform",
+                navClosing
+                  ? "animate-[panel-out_200ms_var(--ease-nexus)_both]"
+                  : "animate-[panel-in_320ms_var(--ease-nexus)_both]"
               )}
             >
               <div
@@ -336,13 +323,13 @@ function AppShellInner({
                     type="button"
                     onClick={closeNav}
                     aria-label="Close navigation"
-                    className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+                    className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9]"
                   >
                     <X size={17} strokeWidth={1.75} aria-hidden="true" />
                   </button>
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <WorkspaceSidebar
                   user={user}
                   workspace={workspace}
@@ -359,7 +346,7 @@ function AppShellInner({
                       closeNav();
                       openHelp();
                     }}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
                   >
                     <LifeBuoy size={14} strokeWidth={1.75} />
                     <span>Help & Guide</span>
@@ -367,7 +354,7 @@ function AppShellInner({
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary hover:bg-danger-bg hover:text-danger"
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-danger-bg hover:text-danger active:scale-[0.97]"
                   >
                     <LogOut size={13} strokeWidth={1.75} />
                     <span>Sign out</span>

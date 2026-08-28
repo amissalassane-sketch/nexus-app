@@ -33,6 +33,10 @@ import type {
 import { emitActivation, trackEvent } from "@/lib/onboarding/analytics";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
+import {
+  IntelligenceProcessingStates,
+  VerificationLifecycle,
+} from "@/components/motion/intelligence-states";
 
 // ============================================================
 // NEXUS INTELLIGENCE — INTERACTIVE WORKSPACE CONSOLE
@@ -565,27 +569,32 @@ export function IntelligenceAsk({
         </div>
       ) : null}
 
-      {/* Loading state — honest agent-in-flight indicator. The request
-          is real: intent → read tools → (AI) → plan → response. No fake
-          sub-steps are shown while the server is still working. */}
+      {/* Loading state — meaningful UI states, not fake dots */}
       {loading ? (
-        <div className="mx-3 mb-3 animate-fade-in rounded-input border border-border-subtle bg-bg-surface/50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-small text-text-secondary">
-              <span className="h-2 w-2 rounded-pill bg-lavender animate-ping" />
-              <span>{"L'agent analyse votre workspace réel…"}</span>
+        <div className="mx-3 mb-3 space-y-2.5">
+          <IntelligenceProcessingStates active={loading} />
+          <div className="animate-[intelligence-state-in_280ms_var(--ease-nexus)_both] rounded-input border border-border-subtle bg-bg-surface/50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-small text-text-secondary">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-lavender opacity-40" />
+                  <span className="relative inline-flex h-2 w-2 rounded-pill bg-lavender" />
+                </span>
+                <span className="font-medium">NEXUS is analyzing</span>
+                <span className="text-text-tertiary">— real workspace context</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => abortRef.current?.abort()}
+                className="rounded-input px-2 py-1 text-caption text-text-tertiary transition-colors hover:bg-accent-ghost hover:text-text-primary active:scale-[0.96]"
+              >
+                Cancel
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => abortRef.current?.abort()}
-              className="text-caption text-text-tertiary hover:text-text-primary"
-            >
-              Cancel
-            </button>
-          </div>
-          <div className="mt-3 flex flex-col gap-2">
-            <div className="h-2.5 w-3/4 rounded-pill bg-white/[0.06] animate-pulse" />
-            <div className="h-2.5 w-1/2 rounded-pill bg-white/[0.04] animate-pulse" />
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="h-2.5 w-3/4 rounded-pill bg-white/[0.06] skeleton-shimmer" />
+              <div className="h-2.5 w-1/2 rounded-pill bg-white/[0.04] skeleton-shimmer" style={{ animationDelay: "200ms" }} />
+            </div>
           </div>
         </div>
       ) : currentResponse ? (
@@ -1001,11 +1010,24 @@ export function IntelligenceAsk({
                     ) : null}
                   </dl>
 
+                  {(executingAction || verifyingAction) ? (
+                    <div className="mt-3 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
+                      <VerificationLifecycle
+                        state={
+                          verifyingAction
+                            ? executingAction
+                              ? "executing"
+                              : "verifying"
+                            : "confirm"
+                        }
+                      />
+                    </div>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
                       loading={executingAction || verifyingAction}
                       onClick={() => void handleConfirmAction(confirmingAction)}
-                      className="min-h-[44px] sm:min-h-[36px]"
+                      className="min-h-[44px] sm:min-h-[36px] active:scale-[0.97]"
                     >
                       {verifyingAction ? "Executing & verifying…" : "Confirm and execute"}
                     </Button>
@@ -1013,7 +1035,7 @@ export function IntelligenceAsk({
                       variant="ghost"
                       disabled={executingAction}
                       onClick={() => setConfirmingAction(null)}
-                      className="min-h-[44px] sm:min-h-[36px]"
+                      className="min-h-[44px] sm:min-h-[36px] active:scale-[0.97]"
                     >
                       Cancel
                     </Button>

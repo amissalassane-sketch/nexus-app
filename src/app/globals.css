@@ -127,22 +127,45 @@
   --shadow-overlay: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
   --shadow-auth: 0 20px 50px -20px rgba(0, 0, 0, 0.9);
 
-  /* ---------- Motion ---------- */
+  /* ---------- Motion — NEXUS Motion Language ---------- */
+  /* Core easings: fast, precise, soft, confident */
   --ease-nexus: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-spring-soft: cubic-bezier(0.34, 1.26, 0.64, 1);
 
+  /* Duration scale */
+  --duration-micro: 120ms;
+  --duration-micro-long: 160ms;
+  --duration-small: 200ms;
+  --duration-small-long: 240ms;
+  --duration-medium: 280ms;
+  --duration-medium-long: 340ms;
+  --duration-large: 400ms;
+
+  /* Legacy aliases + new tokens */
   --animate-fade-in: fade-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
   --animate-fade-out: fade-out 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-scale-in: scale-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-scale-out: scale-out 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-toast-in: toast-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-toast-out: toast-out 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-list-in: list-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-panel-in: panel-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-panel-out: panel-out 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop-in: pop-in 210ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop-out: pop-out 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-sheet-in: sheet-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-sheet-out: sheet-out 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-page-in: page-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-task-enter: task-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-task-exit: task-exit 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-signal-enter: signal-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-verification: verification-pulse 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
 
   @keyframes fade-in {
     from {
@@ -268,6 +291,191 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes sheet-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+  }
+
+  @keyframes toast-out {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+
+  @keyframes task-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes task-exit {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      max-height: 64px;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+      max-height: 0;
+    }
+  }
+
+  @keyframes signal-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes signal-resolve {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 0.7;
+      transform: translateY(2px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes verification-pulse {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes check-pop {
+    0% {
+      transform: scale(0.5);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes badge-in {
+    from {
+      opacity: 0;
+      transform: scale(0.85) translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes progress-indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  @keyframes intelligence-thinking {
+    0%,
+    100% {
+      opacity: 0.4;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+  }
+
+  @keyframes intelligence-state-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes mission-progress {
+    from {
+      width: 0;
+    }
+  }
+
+  @keyframes nba-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes nba-exit {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+    }
+  }
+
+  @keyframes press-down {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(0.98);
+    }
+  }
+
+  @keyframes focus-ring-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 }
@@ -2105,5 +2313,715 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   .animate-command-in,
   .command-backdrop {
     animation: none;
+  }
+}
+
+/* ============================================================
+   NEXUS — PRODUCT FEEL MOTION SYSTEM
+   Global motion language, page transitions, navigation, buttons,
+   tasks, intelligence, signals, missions, verification, loading,
+   modals, toasts, mobile, scroll — GPU-friendly, intentional,
+   calm, premium.
+   ============================================================ */
+
+/* ---------- Duration & easing utilities ---------- */
+:root {
+  --motion-micro: 120ms;
+  --motion-small: 200ms;
+  --motion-medium: 280ms;
+  --motion-large: 380ms;
+}
+
+/* ---------- Page transitions ---------- */
+.page-transition {
+  animation: page-enter 380ms var(--ease-nexus) both;
+  will-change: opacity, transform;
+}
+
+.page-transition-exit {
+  animation: fade-out 160ms var(--ease-nexus) both;
+}
+
+@utility motion-page {
+  animation: page-enter 380ms var(--ease-nexus) both;
+}
+
+/* Route change subtle shift — main content */
+#nexus-main {
+  animation: page-enter 420ms var(--ease-nexus) both;
+}
+
+#nexus-main[data-transitioning="true"] {
+  animation: fade-out 120ms var(--ease-nexus) both;
+}
+
+/* ---------- Navigation motion ---------- */
+.nav-item-motion {
+  transition:
+    background-color var(--motion-micro) var(--ease-nexus),
+    border-color var(--motion-micro) var(--ease-nexus),
+    color var(--motion-micro) var(--ease-nexus),
+    transform var(--motion-micro) var(--ease-nexus);
+}
+
+.nav-item-motion:active {
+  transform: scale(0.98);
+}
+
+.nav-indicator {
+  transition:
+    transform var(--motion-small) var(--ease-nexus),
+    opacity var(--motion-micro) var(--ease-nexus);
+  transform-origin: center;
+}
+
+.mobile-nav-item {
+  transition:
+    color var(--motion-micro) var(--ease-nexus),
+    transform var(--motion-micro) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus);
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.96);
+}
+
+.mobile-nav-indicator {
+  transition:
+    opacity var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus);
+}
+
+/* ---------- Button motion ---------- */
+.btn-press {
+  transition:
+    transform var(--motion-micro) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus),
+    border-color var(--motion-micro) var(--ease-nexus),
+    color var(--motion-micro) var(--ease-nexus),
+    box-shadow var(--motion-micro) var(--ease-nexus);
+}
+
+.btn-press:active:not(:disabled) {
+  transform: scale(0.98) translateY(0.5px);
+}
+
+.btn-primary-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 4px 20px -4px rgba(255, 255, 255, 0.12);
+}
+
+.btn-success {
+  animation: badge-in 220ms var(--ease-nexus) both;
+}
+
+.btn-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: progress-indeterminate 1.2s var(--ease-standard) infinite;
+}
+
+/* ---------- Task interactions ---------- */
+.task-row {
+  transition:
+    transform var(--motion-small) var(--ease-nexus),
+    opacity var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus),
+    border-color var(--motion-micro) var(--ease-nexus);
+  will-change: transform, opacity;
+}
+
+.task-row-enter {
+  animation: task-enter 260ms var(--ease-nexus) both;
+}
+
+.task-row-exit {
+  animation: task-exit 200ms var(--ease-nexus) both;
+  overflow: hidden;
+}
+
+.task-row-completing {
+  animation: task-complete 320ms var(--ease-nexus) both;
+}
+
+.task-checkbox {
+  transition:
+    transform var(--motion-micro) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus),
+    border-color var(--motion-micro) var(--ease-nexus),
+    color var(--motion-micro) var(--ease-nexus);
+}
+
+.task-checkbox:active {
+  transform: scale(0.9);
+}
+
+.task-checkbox-checked {
+  animation: check-pop 280ms var(--ease-nexus) both;
+}
+
+.task-content-transition {
+  transition:
+    opacity var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus),
+    color var(--motion-small) var(--ease-nexus);
+}
+
+.task-priority-badge {
+  transition:
+    transform var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-small) var(--ease-nexus),
+    border-color var(--motion-small) var(--ease-nexus),
+    opacity var(--motion-micro) var(--ease-nexus);
+}
+
+.task-status-badge {
+  transition:
+    transform var(--motion-micro) var(--ease-nexus),
+    opacity var(--motion-micro) var(--ease-nexus);
+}
+
+.task-status-badge-enter {
+  animation: badge-in 180ms var(--ease-nexus) both;
+}
+
+/* ---------- Intelligence experience ---------- */
+.intelligence-thinking-dot {
+  animation: intelligence-thinking 1.2s var(--ease-nexus) infinite;
+}
+
+.intelligence-thinking-dot:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.intelligence-thinking-dot:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+.intelligence-state {
+  animation: intelligence-state-in 280ms var(--ease-nexus) both;
+}
+
+.intelligence-state-enter {
+  animation: intelligence-state-in 220ms var(--ease-nexus) both;
+}
+
+.intelligence-processing-bar {
+  position: relative;
+  overflow: hidden;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+}
+
+.intelligence-processing-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(233, 228, 255, 0.6),
+    transparent
+  );
+  animation: progress-indeterminate 1.4s var(--ease-standard) infinite;
+}
+
+.intelligence-response {
+  animation: intelligence-state-in 320ms var(--ease-nexus) both;
+}
+
+.intelligence-action-lifecycle {
+  transition: all var(--motion-small) var(--ease-nexus);
+}
+
+/* ---------- Signal engine motion ---------- */
+.signal-enter {
+  animation: signal-enter 320ms var(--ease-nexus) both;
+}
+
+.signal-resolving {
+  animation: signal-resolve 400ms var(--ease-nexus) both;
+}
+
+.signal-resolved {
+  opacity: 0.7;
+  transform: scale(0.99);
+  transition:
+    opacity var(--motion-medium) var(--ease-nexus),
+    transform var(--motion-medium) var(--ease-nexus),
+    background-color var(--motion-medium) var(--ease-nexus);
+}
+
+.signal-attention {
+  position: relative;
+}
+
+.signal-attention::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 2px;
+  height: 60%;
+  background: currentColor;
+  transform: translateY(-50%) scaleY(0);
+  transform-origin: center;
+  transition: transform var(--motion-small) var(--ease-nexus);
+  border-radius: 9999px;
+}
+
+.signal-attention:hover::before,
+.signal-attention[data-active="true"]::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+.signal-critical-pulse {
+  animation: signal-pulse 2.6s var(--ease-nexus) infinite;
+}
+
+/* ---------- Mission engine ---------- */
+.mission-progress-fill {
+  transition: width 600ms var(--ease-nexus);
+  will-change: width;
+}
+
+.mission-step {
+  transition:
+    opacity var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus);
+}
+
+.mission-step-enter {
+  animation: intelligence-state-in 260ms var(--ease-nexus) both;
+}
+
+.mission-step-completing {
+  animation: signal-resolve 400ms var(--ease-nexus) both;
+}
+
+.mission-step-completed {
+  opacity: 0.6;
+  transition:
+    opacity var(--motion-medium) var(--ease-nexus),
+    transform var(--motion-medium) var(--ease-nexus);
+}
+
+.mission-step-blocked {
+  animation: intelligence-state-in 240ms var(--ease-nexus) both;
+}
+
+.mission-next-action {
+  animation: nba-enter 320ms var(--ease-nexus) both;
+  transition:
+    transform var(--motion-small) var(--ease-nexus),
+    opacity var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus);
+}
+
+.mission-next-action-exit {
+  animation: nba-exit 220ms var(--ease-nexus) both;
+}
+
+.mission-next-action:active {
+  transform: scale(0.98);
+}
+
+/* ---------- Verification experience ---------- */
+.verification-step {
+  position: relative;
+  transition:
+    opacity var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus),
+    color var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-micro) var(--ease-nexus);
+}
+
+.verification-step-enter {
+  animation: intelligence-state-in 200ms var(--ease-nexus) both;
+}
+
+.verification-proposed {
+  opacity: 1;
+}
+
+.verification-confirm {
+  animation: badge-in 200ms var(--ease-nexus) both;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.verification-executing {
+  position: relative;
+  overflow: hidden;
+}
+
+.verification-executing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: progress-indeterminate 1s var(--ease-standard) infinite;
+}
+
+.verification-verifying {
+  animation: verification-pulse 900ms var(--ease-nexus) infinite;
+}
+
+.verification-verified {
+  animation: check-pop 320ms var(--ease-nexus) both;
+  color: var(--color-success);
+}
+
+/* ---------- Loading states ---------- */
+.skeleton-enter {
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.035) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+.contextual-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contextual-loader-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: intelligence-thinking 1s var(--ease-nexus) infinite;
+}
+
+.contextual-loader-dot:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.contextual-loader-dot:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+/* Preserve layout while content updates */
+.layout-preserve {
+  contain: layout;
+}
+
+/* ---------- Modals / Sheets ---------- */
+.modal-backdrop {
+  animation: fade-in 180ms var(--ease-nexus) both;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-backdrop-exit {
+  animation: fade-out 160ms var(--ease-nexus) both;
+}
+
+.modal-panel {
+  animation: scale-in 260ms var(--ease-nexus) both;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.modal-panel-exit {
+  animation: scale-out 180ms var(--ease-nexus) both;
+}
+
+.sheet-panel {
+  animation: sheet-in 320ms var(--ease-nexus) both;
+  will-change: transform, opacity;
+}
+
+.sheet-panel-exit {
+  animation: sheet-out 240ms var(--ease-nexus) both;
+}
+
+.sheet-grip {
+  transition: background-color var(--motion-micro) var(--ease-nexus);
+}
+
+/* ---------- Toasts / Feedback ---------- */
+.toast-enter {
+  animation: toast-in 280ms var(--ease-nexus) both;
+}
+
+.toast-exit {
+  animation: toast-out 200ms var(--ease-nexus) both;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 9999px;
+  animation: toast-progress 3600ms linear both;
+  transform-origin: left;
+}
+
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+
+/* ---------- Mobile motion ---------- */
+@media (max-width: 1023px) {
+  .bottom-sheet {
+    animation: sheet-in 340ms var(--ease-nexus) both;
+    will-change: transform;
+    overscroll-behavior: contain;
+  }
+
+  .bottom-sheet-exit {
+    animation: sheet-out 260ms var(--ease-nexus) both;
+  }
+
+  .mobile-nav {
+    transition: transform var(--motion-medium) var(--ease-nexus);
+  }
+
+  .mobile-task-row:active {
+    transform: scale(0.98);
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .mobile-card:active {
+    transform: scale(0.99);
+  }
+}
+
+/* ---------- Scroll-based motion ---------- */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 400ms var(--ease-nexus),
+    transform 400ms var(--ease-nexus);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sticky-nav {
+  transition:
+    background-color var(--motion-small) var(--ease-nexus),
+    border-color var(--motion-small) var(--ease-nexus),
+    box-shadow var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus);
+}
+
+/* ---------- Focus states ---------- */
+.focus-ring {
+  transition: box-shadow var(--motion-micro) var(--ease-nexus);
+}
+
+.focus-ring:focus-visible {
+  animation: focus-ring-in 160ms var(--ease-nexus) both;
+}
+
+/* ---------- Micro-interactions ---------- */
+.pressable {
+  transition: transform var(--motion-micro) var(--ease-nexus);
+}
+
+.pressable:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.hover-lift {
+  transition:
+    transform var(--motion-small) var(--ease-nexus),
+    box-shadow var(--motion-small) var(--ease-nexus);
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+}
+
+.hover-lift:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- List & card motion ---------- */
+.list-item {
+  transition:
+    background-color var(--motion-micro) var(--ease-nexus),
+    transform var(--motion-micro) var(--ease-nexus),
+    opacity var(--motion-micro) var(--ease-nexus);
+}
+
+.list-item:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.card-hover {
+  transition:
+    border-color var(--motion-small) var(--ease-nexus),
+    background-color var(--motion-small) var(--ease-nexus),
+    transform var(--motion-small) var(--ease-nexus),
+    box-shadow var(--motion-small) var(--ease-nexus);
+}
+
+.card-hover:hover {
+  border-color: var(--color-border-default);
+  transform: translateY(-1px);
+}
+
+.card-hover:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* ---------- Reduced motion refined ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition,
+  .page-transition-exit,
+  .task-row-enter,
+  .task-row-exit,
+  .signal-enter,
+  .signal-resolving,
+  .mission-next-action,
+  .mission-next-action-exit,
+  .verification-step,
+  .modal-panel,
+  .modal-panel-exit,
+  .sheet-panel,
+  .sheet-panel-exit,
+  .toast-enter,
+  .toast-exit,
+  .intelligence-state,
+  .intelligence-response,
+  .scroll-reveal {
+    animation: none !important;
+    transition: opacity 100ms ease !important;
+    transform: none !important;
+  }
+
+  .task-checkbox,
+  .btn-press,
+  .pressable,
+  .hover-lift,
+  .card-hover {
+    transition: background-color 100ms ease, border-color 100ms ease !important;
+    transform: none !important;
+  }
+
+  .mission-progress-fill {
+    transition: none !important;
+  }
+
+  .intelligence-processing-bar::after,
+  .verification-executing::after,
+  .btn-loading::after,
+  .toast-progress {
+    animation: none !important;
+    display: none;
+  }
+}
+
+/* ---------- Performance: GPU-friendly ---------- */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ---------- State change communication ---------- */
+.state-change {
+  position: relative;
+}
+
+.state-change::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-micro) var(--ease-nexus);
+}
+
+.state-change:active::after {
+  opacity: 1;
+}
+
+/* ---------- Success / Error feedback ---------- */
+.feedback-success {
+  animation: badge-in 220ms var(--ease-nexus) both;
+  color: var(--color-success);
+}
+
+.feedback-error {
+  animation: badge-in 220ms var(--ease-nexus) both;
+  color: var(--color-danger);
+}
+
+.feedback-shake {
+  animation: shake 300ms var(--ease-nexus) both;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
   }
 }
