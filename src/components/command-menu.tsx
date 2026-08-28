@@ -17,6 +17,7 @@ import {
   Plus,
   Radar,
   Search,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -94,6 +95,33 @@ const CREATE_COMMANDS: Command[] = [
     icon: <Radar size={15} strokeWidth={1.75} />,
     href: "/app/intelligence",
     keywords: "signals blocked risk attention review intelligence ask",
+  },
+  {
+    id: "ask-focus",
+    category: "Actions",
+    label: "Ask NEXUS: What should I focus on today?",
+    hint: "Intelligence",
+    icon: <Sparkles size={15} strokeWidth={1.75} />,
+    href: "/app/intelligence?q=What%20should%20I%20focus%20on%20today%3F",
+    keywords: "ask nexus focus today priorities intelligence",
+  },
+  {
+    id: "ask-day",
+    category: "Actions",
+    label: "Ask NEXUS: Organise my day",
+    hint: "Plan",
+    icon: <Sparkles size={15} strokeWidth={1.75} />,
+    href: "/app/intelligence?q=Organise%20my%20day",
+    keywords: "ask nexus organise plan schedule day",
+  },
+  {
+    id: "ask-risk",
+    category: "Actions",
+    label: "Ask NEXUS: What's at risk?",
+    hint: "Signals",
+    icon: <Radar size={15} strokeWidth={1.75} />,
+    href: "/app/intelligence?q=What%27s%20at%20risk%3F",
+    keywords: "ask nexus risk overdue blocked attention",
   },
 ];
 
@@ -353,10 +381,11 @@ export function CommandMenu() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const key = event.key.toLowerCase();
+      if ((event.metaKey || event.ctrlKey) && (key === "k" || key === "j")) {
         event.preventDefault();
         if (open) requestClose();
-        else openMenu();
+        else openMenu(key === "j" ? "ask" : "");
       }
     };
     const onOpen = () => openMenu();

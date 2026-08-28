@@ -223,7 +223,7 @@ function AppShellInner({
           <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto scroll-smooth">
             <PageTransition>
               <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
-                {!user.profileComplete && !tourActive ? (
+                {!user.profileComplete && !tourActive && pathname !== "/dashboard" ? (
                   <div className="animate-[intelligence-state-in_320ms_var(--ease-nexus)_both]">
                     <ProfileCompletionPrompt
                       missingSummary={profileMissingSummary || "your identity"}

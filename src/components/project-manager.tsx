@@ -487,21 +487,26 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
-              title="No active workspace"
-              description="This account is not linked to an active workspace yet, so projects cannot be created."
+              title="Workspace connecting"
+              description="Your personal workspace is being prepared. Projects will appear here once connected."
               icon={<FolderKanban size={17} strokeWidth={1.75} />}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
+                  Retry connection
+                </Button>
+              }
             />
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="p-4">
             <EmptyState
               title={
-                projects.length === 0 ? "Create your first project" : "Nothing matches those filters"
+                projects.length === 0 ? "No projects yet" : "No projects match these filters"
               }
               description={
                 projects.length === 0
-                  ? "Give NEXUS something real to organize. Projects group your work, track momentum and let NEXUS detect risks and deadlines."
-                  : "Adjust the search or the status filter to see the rest of the workspace."
+                  ? "Create a project to organize related tasks. NEXUS tracks momentum and detects risks as deadlines approach."
+                  : "Adjust your search keywords or status filter to see other projects."
               }
               icon={<FolderKanban size={17} strokeWidth={1.75} />}
               action={

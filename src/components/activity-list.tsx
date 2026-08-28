@@ -112,12 +112,11 @@ export function ActivityList({
   if (unavailable) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-small text-text-secondary">
-          The workspace activity log could not be read.
+        <p className="text-small font-medium text-text-primary">
+          Activity log temporarily unavailable
         </p>
-        <p className="mt-1 text-caption text-text-tertiary">
-          Activity is written by the database. Once it is reachable, events
-          appear here automatically.
+        <p className="mt-1 text-caption text-text-secondary">
+          Your actions are safely recorded by database triggers; events will reappear here automatically once reconnected.
         </p>
       </div>
     );

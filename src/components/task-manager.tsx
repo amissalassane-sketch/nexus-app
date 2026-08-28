@@ -884,8 +884,13 @@ function TaskManagerInner({ userId }: { userId: string }) {
         ) : !workspaceId ? (
           <div className="p-4">
             <EmptyState
-              title="No active workspace"
-              description="This account is not linked to an active workspace yet."
+              title="Workspace connecting"
+              description="Your personal workspace is being prepared. Tasks will appear here once connected."
+              action={
+                <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
+                  Retry connection
+                </Button>
+              }
             />
           </div>
         ) : filteredTasks.length === 0 ? (
@@ -893,17 +898,17 @@ function TaskManagerInner({ userId }: { userId: string }) {
             <EmptyState
               title={
                 tasks.length === 0
-                  ? "Create your first task"
+                  ? "No tasks yet"
                   : view !== "all"
-                    ? `Nothing in ${VIEWS.find((entry) => entry.id === view)?.label.toLowerCase()}`
-                    : "Nothing matches these filters"
+                    ? `No tasks in ${VIEWS.find((entry) => entry.id === view)?.label.toLowerCase()}`
+                    : "No tasks match these filters"
               }
               description={
                 tasks.length === 0
-                  ? "Turn your projects into actionable steps NEXUS can track, prioritize and monitor."
+                  ? "Create a task to get moving. NEXUS tracks deadlines, priorities and blockers automatically."
                   : view !== "all"
-                    ? "This view is clear. Switch back to All to see the rest of the workspace."
-                    : "Adjust the search or reset the filters to see the rest of the workspace."
+                    ? "This view has no matching tasks. Switch back to All to see everything in your workspace."
+                    : "Try adjusting your search query or reset the filters to see other tasks."
               }
               icon={<CheckSquare size={17} strokeWidth={1.75} />}
               action={

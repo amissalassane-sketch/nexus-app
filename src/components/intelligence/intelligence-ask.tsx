@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   Check,
   ChevronDown,
@@ -598,13 +599,41 @@ export function IntelligenceAsk({
           </div>
         </div>
       ) : currentResponse ? (
-        /* Structured Response Card */
+        /* Structured Response Card — Conversational Command Center */
         <div className="mx-3 mb-3 animate-fade-in rounded-card border border-border-subtle bg-bg-surface p-4 sm:p-5">
+          {/* 6-Stage Progressive Command Center Flow */}
+          <div className="mb-3.5 flex flex-wrap items-center gap-1.5 border-b border-border-subtle/80 pb-2.5 font-mono text-[10.5px]">
+            <span className="flex items-center gap-1 text-lavender font-semibold uppercase tracking-wider">
+              <span className="h-1.5 w-1.5 rounded-pill bg-lavender animate-pulse" aria-hidden="true" />
+              1. UNDERSTAND
+            </span>
+            <span className="text-text-quaternary">→</span>
+            <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
+              2. CONTEXT ({currentResponse.evidence.metrics.length > 0 ? `${currentResponse.evidence.metrics.length} métriques` : "scanné"})
+            </span>
+            <span className="text-text-quaternary">→</span>
+            <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
+              3. RISKS ({currentResponse.items?.filter((i) => i.badge?.tone === "danger" || i.badge?.tone === "warning").length ?? 0})
+            </span>
+            <span className="text-text-quaternary">→</span>
+            <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
+              4. PLAN ({currentResponse.plan?.steps.length ?? 0} étapes)
+            </span>
+            <span className="text-text-quaternary">→</span>
+            <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
+              5. ACTION
+            </span>
+            <span className="text-text-quaternary">→</span>
+            <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
+              6. VERIFY
+            </span>
+          </div>
+
           {/* Header & Source Provenance */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center rounded-[5px] border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-secondary">
-                {currentResponse.intent.toUpperCase()}
+                {currentResponse.plan ? "MISSION · PLAN" : currentResponse.intent.toUpperCase()}
               </span>
               {currentResponse.confidence !== undefined ? (
                 <span
@@ -652,6 +681,41 @@ export function IntelligenceAsk({
               ))}
             </div>
           ) : null}
+
+          {/* Risques et Dépendances Détectés */}
+          {(() => {
+            const riskItems = currentResponse.items?.filter(
+              (i) => i.badge?.tone === "danger" || i.badge?.tone === "warning"
+            ) ?? [];
+            if (riskItems.length === 0) return null;
+            return (
+              <div className="mt-4 rounded-input border border-warning-border/40 bg-warning-bg/15 p-3.5 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={14} strokeWidth={2} className="text-warning shrink-0" aria-hidden="true" />
+                  <p className="eyebrow text-warning font-semibold">
+                    Risques & Dépendances détectés ({riskItems.length})
+                  </p>
+                </div>
+                <ul className="mt-2 space-y-1.5">
+                  {riskItems.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between gap-2 text-small text-text-primary">
+                      <span className="font-medium truncate">{item.title}</span>
+                      {item.badge ? (
+                        <span className={cn(
+                          "rounded-[4px] px-1.5 py-0.5 font-mono text-[10px] uppercase font-semibold leading-none border",
+                          item.badge.tone === "danger"
+                            ? "bg-danger-bg text-danger border-danger-border"
+                            : "bg-warning-bg text-warning border-warning-border"
+                        )}>
+                          {item.badge.label}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* Plan — an explicit, useful plan derived from real reads */}
           {currentResponse.plan && currentResponse.plan.steps.length > 0 ? (

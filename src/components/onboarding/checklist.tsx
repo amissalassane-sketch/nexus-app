@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Check, CircleHelp, Minus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -27,8 +28,13 @@ export function GetStartedChecklist({
   onRestart: () => void;
 }) {
   const locale = browserLocale();
+  const pathname = usePathname();
   const { done, total } = checklistProgress(facts);
-  const [open, setOpen] = useState(!dismissed && done < total && !activated);
+  const onDashboardNew =
+    pathname === "/dashboard" && facts.projectCount === 0 && facts.taskCount === 0;
+  const [open, setOpen] = useState(
+    !dismissed && done < total && !activated && !onDashboardNew
+  );
   const [closing, setClosing] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

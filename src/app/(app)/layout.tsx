@@ -232,6 +232,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     workspaceId,
   });
 
+  const workspaceStatus: "ready" | "preparing" | "failed" = workspaceReady
+    ? "ready"
+    : bootstrap.error
+      ? "failed"
+      : "preparing";
+
   return (
     <AppShell
       userId={user.id}
@@ -244,6 +250,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       workspace={{
         name: (workspace?.data?.name as string | undefined) ?? null,
         role: activeMembership?.role ?? null,
+        status: workspaceStatus,
+        errorKind: bootstrap.error ?? null,
       }}
       counts={counts}
       plan={{

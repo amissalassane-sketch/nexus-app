@@ -336,20 +336,40 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
       ) : null}
 
       <div className="px-4 pb-4 sm:px-5">
-        <h3 className="mt-1 text-h3 font-semibold text-text-primary transition-colors duration-200">{mission.title}</h3>
-        <p className="mt-0.5 text-small text-text-secondary">{mission.objective}</p>
-
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-caption text-text-secondary">
-            <span>Progression</span>
-            <span className="font-mono text-text-primary tabular-nums transition-all duration-500 ease-nexus">{mission.progress}%</span>
+        <div className="flex items-baseline justify-between gap-3">
+          <div>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">Objectif</span>
+            <h3 className="text-h3 font-semibold text-text-primary transition-colors duration-200">{mission.title}</h3>
           </div>
-          <Progress value={mission.progress} tone={mission.status === "blocked" ? "warning" : mission.status === "completed" ? "success" : "white"} className="mt-1.5" />
+          <span className="font-mono text-[11px] tabular-nums text-text-quaternary">
+            {mission.steps.filter((s) => s.status === "completed").length}/{mission.steps.length} étapes
+          </span>
+        </div>
+        <p className="mt-1 text-small text-text-secondary leading-relaxed">{mission.objective}</p>
+
+        <div className="mt-3.5 rounded-input border border-border-subtle bg-bg-surface/40 p-3">
+          <div className="flex items-center justify-between text-caption text-text-secondary">
+            <span className="font-medium">Progression</span>
+            <span className="font-mono text-text-primary tabular-nums font-semibold transition-all duration-500 ease-nexus">{mission.progress}%</span>
+          </div>
+          <Progress value={mission.progress} tone={mission.status === "blocked" ? "warning" : mission.status === "completed" ? "success" : "white"} className="mt-2" />
         </div>
 
         {verificationState ? (
           <div className="mt-3 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
             <VerificationLifecycle state={verificationState} />
+          </div>
+        ) : null}
+
+        {whyReason ? (
+          <div className="mt-3.5 rounded-card border border-warning-border/50 bg-warning-bg/15 p-3.5 animate-[intelligence-state-in_260ms_var(--ease-nexus)_both]">
+            <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wider text-warning">
+              <AlertTriangle size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
+              <span>Pourquoi ça bloque</span>
+            </p>
+            <p className="mt-1 text-small leading-relaxed text-text-primary">
+              {whyReason}
+            </p>
           </div>
         ) : null}
 
@@ -360,32 +380,31 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
               <span className="font-mono text-text-tertiary">#{currentStep.order + 1}</span> {currentStep.title}
             </p>
             {currentStep.description ? <p className="mt-1 text-caption text-text-secondary">{currentStep.description}</p> : null}
-            {whyReason ? (
-              <p className="mt-2 flex items-start gap-1.5 text-caption text-warning animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
-                <AlertTriangle size={13} strokeWidth={1.75} className="mt-px shrink-0" aria-hidden="true" />
-                <span>
-                  <span className="font-medium">Pourquoi ça bloque — </span>
-                  {whyReason}
-                </span>
-              </p>
-            ) : null}
           </div>
         ) : null}
 
         {mission.nextBestAction && mission.status !== "completed" ? (
           <div
             className={cn(
-              "mt-3.5 rounded-input border border-lavender-border/30 bg-bg-surface/60 p-3.5 transition-all duration-300 ease-nexus",
+              "mt-3.5 rounded-card border-2 border-lavender-border/50 bg-bg-surface/90 p-4 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)] transition-all duration-300 ease-nexus",
               nextActionTransitioning
                 ? "animate-[nba-exit_220ms_var(--ease-nexus)_both]"
-                : "animate-[nba-enter_320ms_var(--ease-nexus)_both] hover:border-lavender-border/50"
+                : "animate-[nba-enter_320ms_var(--ease-nexus)_both] hover:border-lavender-border"
             )}
           >
-            <p className="eyebrow text-lavender">Prochaine meilleure action</p>
-            <p className="mt-1 text-[13px] font-medium text-text-primary transition-colors duration-200">{mission.nextBestAction.label}</p>
-            <p className="mt-0.5 text-caption text-text-tertiary">{mission.nextBestAction.reason}</p>
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-pill bg-lavender/10 px-2 py-0.5 eyebrow text-lavender font-semibold tracking-wider">
+                <span className="h-1.5 w-1.5 rounded-pill bg-lavender animate-pulse" aria-hidden="true" />
+                Prochaine meilleure action
+              </span>
+              <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-quaternary">
+                Recommandé
+              </span>
+            </div>
+            <p className="mt-2 text-h3 font-semibold text-text-primary transition-colors duration-200">{mission.nextBestAction.label}</p>
+            <p className="mt-1 text-small text-text-secondary leading-relaxed">{mission.nextBestAction.reason}</p>
 
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
               {mission.nextBestAction.kind === "mutate" || mission.nextBestAction.action ? (
                 <Button
                   loading={executing && pendingAction?.stepId === mission.nextBestAction.stepId}
@@ -395,12 +414,12 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                     setPendingAction(mission.nextBestAction);
                     setVerificationState("proposed");
                   }}
-                  className="min-h-[44px] mission-next-action"
+                  className="min-h-[44px] px-5 text-button font-medium mission-next-action shadow-[0_2px_14px_rgba(255,255,255,0.12)]"
                 >
                   {mission.status === "blocked" ? "Débloquer" : "Continuer"}
                 </Button>
               ) : mission.nextBestAction.href ? (
-                <Button onClick={() => router.push(mission.nextBestAction!.href!)} className="min-h-[44px] mission-next-action">
+                <Button onClick={() => router.push(mission.nextBestAction!.href!)} className="min-h-[44px] px-5 mission-next-action">
                   Ouvrir
                 </Button>
               ) : null}
@@ -408,7 +427,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                 type="button"
                 onClick={() => setWhyOpen((open) => !open)}
                 aria-expanded={whyOpen}
-                className="inline-flex min-h-[44px] items-center gap-1 rounded-input px-2 text-caption font-medium text-text-secondary transition-[color,transform] duration-150 ease-nexus hover:text-text-primary active:text-text-primary active:scale-[0.97]"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-input px-3 text-caption font-medium text-text-secondary transition-[color,background-color,transform] duration-150 ease-nexus hover:text-text-primary hover:bg-accent-ghost active:text-text-primary active:scale-[0.97]"
               >
                 <span>{whyOpen ? "Masquer le contexte" : "Voir pourquoi"}</span>
                 <ChevronDown size={13} strokeWidth={1.75} aria-hidden="true" className={cn("transition-transform duration-200 ease-nexus", whyOpen && "rotate-180")} />
@@ -468,12 +487,18 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         ) : null}
 
         {executedResult ? (
-          <div ref={responseRef} className="mt-2.5 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both] rounded-input border border-success-border bg-success-bg/40 px-3 py-2 text-caption text-success">
-            <span className="flex items-center gap-1.5">
-              <Check size={13} strokeWidth={2.5} className="animate-[check-pop_280ms_var(--ease-nexus)_both]" />
-              {executedResult.message}
-              {executedResult.verified ? " · vérifié côté serveur" : ""}
-            </span>
+          <div ref={responseRef} className="mt-3.5 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both] rounded-card border border-success-border bg-success-bg/30 p-3.5 text-small text-success">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2 font-medium">
+                <Check size={16} strokeWidth={2.5} className="animate-[check-pop_280ms_var(--ease-nexus)_both] text-success" />
+                <span>{executedResult.message}</span>
+              </span>
+              {executedResult.verified ? (
+                <span className="font-mono text-[10px] uppercase tracking-wider text-success/90 border border-success-border/40 rounded px-2 py-0.5 bg-success-bg/20">
+                  ✓ vérifié côté serveur
+                </span>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
