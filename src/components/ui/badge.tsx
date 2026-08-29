@@ -19,7 +19,10 @@ export type BadgeTone =
 
 const tones: Record<BadgeTone, string> = {
   neutral: "border-border-default bg-bg-surface text-text-secondary",
-  quiet: "border-transparent bg-transparent text-text-quaternary",
+  /* DESIGN AUDIT — "quiet" was quaternary on transparent: 3.9:1 on pure
+     black and 3.4:1 on the app surfaces, below AA for 10.5px text.
+     Tertiary keeps it discreet (7.7:1) without adding a chip. */
+  quiet: "border-transparent bg-transparent text-text-tertiary",
   success: "border-success-border bg-success-bg text-success",
   warning: "border-warning-border bg-warning-bg text-warning",
   danger: "border-danger-border bg-danger-bg text-danger",

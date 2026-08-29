@@ -6,17 +6,35 @@ import { HeroField } from "@/components/landing/hero-field";
 
 // ============================================================
 // NEXUS LANDING — HERO
-// The proposition in one line: NEXUS reads the work, not the chat.
-// Black canvas, a subtle relationship field, the mark behind the type.
-// Entrance is one staggered sequence that never blocks reading.
+// DESIGN AUDIT: time-to-value.
+//
+// The proposition is the first thing on the screen and the only
+// thing competing for attention: what NEXUS is, why it matters,
+// and the two actions. The animated field is still here — it is
+// the mark and the atmosphere *behind* the copy, never in front
+// of it, and it is dimmed so the type stays the brightest thing
+// on the page.
+//
+// The quiet mono strip under the buttons answers "how does it
+// work?" in one glance: READ → UNDERSTAND → SURFACE RISK →
+// RECOMMEND → EXECUTE → VERIFY.
 // ============================================================
 
 const delay = (ms: number) =>
   ({ "--landing-hero-delay": `${ms}ms` }) as CSSProperties;
 
+const FLOW = [
+  "Read",
+  "Understand",
+  "Surface risk",
+  "Recommend",
+  "Execute",
+  "Verify",
+];
+
 export function Hero({ notice }: { notice?: ReactNode }) {
   return (
-    <section className="relative isolate overflow-hidden px-5 pb-16 pt-32 sm:px-6 sm:pb-20 sm:pt-40">
+    <section className="relative isolate overflow-hidden px-5 pb-12 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:pt-36">
       <HeroAtmosphere />
       <HeroField />
 
@@ -31,7 +49,7 @@ export function Hero({ notice }: { notice?: ReactNode }) {
         ) : null}
 
         <span
-          className="landing-hero-item inline-flex h-[26px] items-center gap-2 rounded-pill border border-border-default bg-bg-subtle/80 px-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-secondary backdrop-blur-sm"
+          className="landing-hero-item nexus-eyebrow-pill"
           style={delay(0)}
         >
           <span
@@ -42,42 +60,74 @@ export function Hero({ notice }: { notice?: ReactNode }) {
         </span>
 
         <h1
-          className="landing-hero-item mt-7 text-[40px] font-medium leading-[1.03] tracking-[-0.04em] text-text-primary sm:text-[58px] lg:text-[68px]"
+          className="landing-hero-item mt-6 max-w-[18ch] text-[38px] font-medium leading-[1.04] tracking-[-0.04em] text-text-primary sm:mt-7 sm:text-[54px] lg:text-[62px]"
           style={delay(70)}
         >
-          It reads the work.
+          NEXUS reads the work.
           <br />
-          <span className="text-text-tertiary">Not the chat.</span>
+          <span className="text-text-secondary">You decide what matters.</span>
         </h1>
 
         <p
-          className="landing-hero-item mt-7 max-w-[580px] text-body text-text-secondary sm:text-[15.5px] sm:leading-[26px]"
+          className="landing-hero-item nexus-lead mt-6 max-w-[620px] sm:mt-7"
           style={delay(140)}
         >
-          NEXUS analyses the work already happening in your workspace and
-          surfaces what is drifting, what is blocked, what is at risk — and what
-          deserves your attention next.
+          NEXUS continuously reads your workspace, connects deadlines,
+          dependencies, progress and activity, and turns that context into the
+          next decision worth making.
         </p>
 
         <div
-          className="landing-hero-item mt-9 flex flex-wrap items-center justify-center gap-2.5"
+          className="landing-hero-item mt-8 flex w-full flex-col items-stretch gap-2.5 sm:mt-9 sm:w-auto sm:flex-row sm:items-center sm:justify-center"
           style={delay(210)}
         >
-          <ButtonLink href="/signup" size="lg">
-            Get started
+          <ButtonLink href="/signup" size="lg" className="sm:min-w-[190px]">
+            Start with NEXUS
             <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
           </ButtonLink>
-          <ButtonLink href="#product" variant="secondary" size="lg">
-            See it in action
+          <ButtonLink
+            href="/intelligence"
+            variant="secondary"
+            size="lg"
+            className="sm:min-w-[170px]"
+          >
+            See Intelligence
           </ButtonLink>
         </div>
 
         <p
-          className="landing-hero-item mt-5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-quaternary"
+          className="landing-hero-item mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-text-quaternary"
           style={delay(280)}
         >
           Free to start — no card required
         </p>
+
+        {/* How it works, in one line. Numbered so the order is explicit
+            and never depends on the arrows being read. */}
+        <ol
+          className="landing-hero-item mt-10 flex max-w-[760px] flex-wrap items-center justify-center gap-x-2.5 gap-y-2 sm:mt-12"
+          style={delay(340)}
+          aria-label="How NEXUS works"
+        >
+          {FLOW.map((step, index) => (
+            <li key={step} className="flex items-center gap-2.5">
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono text-[10px] tabular-nums text-text-quaternary">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-secondary">
+                  {step}
+                </span>
+              </span>
+              {index < FLOW.length - 1 ? (
+                <span
+                  className="nexus-flow-arrow h-px w-3 bg-border-strong"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

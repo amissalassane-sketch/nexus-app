@@ -45,7 +45,7 @@ export default function HowItWorksPage() {
     <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
       <LandingAtmosphere />
       <LandingNav context="how-it-works" />
-      <main>
+      <main id="main">
         <section className="px-5 pb-14 pt-32 sm:px-6 sm:pb-20 sm:pt-40">
           <LandingReveal>
             <div className="mx-auto max-w-[860px] text-center">

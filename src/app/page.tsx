@@ -19,31 +19,41 @@ import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
 
 // ============================================================
 // NEXUS — PUBLIC LANDING PAGE
+//
 // Composition (composition only — the branding is 100% NEXUS V3):
-//   NAVBAR → HERO → PRODUCT PREVIEW → VALUE → THE NEXUS MODEL →
-//   INTELLIGENCE → HOW IT WORKS → FEATURES → TRUST → PRICING →
+//   NAVBAR → HERO + PRODUCT PREVIEW (one continuous opening) →
+//   PROBLEM → ANSWER → THE NEXUS MODEL → IT READS THE WORK →
+//   FOUR MOVES → FEATURE ARCHITECTURE → TRUST → PRICING →
 //   FAQ → FINAL CTA → FOOTER
+//
+// DESIGN AUDIT: the product preview now sits inside the opening
+// beat, pulled up against the hero, so the visitor sees the real
+// surface within the first screen instead of after a full page of
+// copy. Sections alternate between bare black and a framed band
+// (`.nexus-band`) so the page has depth without decoration.
+//
 // Every section uses real NEXUS data or real product behaviour.
 // ============================================================
 
 export const metadata: Metadata = {
   title: {
-    absolute: "NEXUS — Operational Intelligence for Modern Teams",
+    absolute:
+      "NEXUS — It reads the work, then tells you what matters next",
   },
   description:
-    "NEXUS analyses the work already happening in your workspace and surfaces what is drifting, what is blocked, what is at risk — and what deserves your attention next.",
+    "NEXUS continuously reads your workspace — deadlines, dependencies, progress and activity — and turns that context into the next decision worth making.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "NEXUS",
     url: "/",
-    title: "NEXUS — Operational Intelligence for Modern Teams",
+    title: "NEXUS — It reads the work, then tells you what matters next",
     description:
       "It reads the work, not the chat. NEXUS turns the activity already in your workspace into signals, evidence and a clear next action.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NEXUS — Operational Intelligence for Modern Teams",
+    title: "NEXUS — It reads the work, then tells you what matters next",
     description:
       "It reads the work, not the chat. NEXUS turns workspace activity into signals and a clear next action.",
   },
@@ -66,7 +76,7 @@ export default async function Home({
       <LandingAtmosphere />
       <LandingNav />
 
-      <main>
+      <main id="main">
         <Hero
           notice={
             justConfirmed ? (
@@ -78,12 +88,13 @@ export default async function Home({
           }
         />
 
-        {/* Product preview — the real NEXUS workspace surface */}
+        {/* Product preview — pulled into the opening beat so the real
+            NEXUS surface is visible almost immediately. */}
         <section id="product" className="scroll-mt-20 px-5 sm:px-6">
           <LandingReveal>
             <div className="mx-auto w-full max-w-[1080px]">
               <ProductPreview />
-              <p className="mt-6 text-center eyebrow text-text-tertiary">
+              <p className="nexus-eyebrow mt-6 text-center">
                 The workspace — goals, projects, tasks and activity, connected
               </p>
             </div>

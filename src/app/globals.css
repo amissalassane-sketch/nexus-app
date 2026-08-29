@@ -15,21 +15,45 @@
   --color-bg-surface-2: #151515;
   --color-bg-surface-3: #1c1c1c;
 
+  /* DESIGN AUDIT — depth. A one-step tonal lift used to frame a section
+     instead of letting it float on uniform black. Deliberately tiny: a
+     hairline and a 2% wash, never a decorative background. */
+  --color-bg-veil: rgba(255, 255, 255, 0.02);
+
   /* ---------- Borders — discovered, never announced ---------- */
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-default: rgba(255, 255, 255, 0.08);
   --color-border-strong: rgba(255, 255, 255, 0.14);
   --color-border-focus: rgba(255, 255, 255, 0.22);
 
-  /* ---------- Text ---------- */
+  /* ---------- Text ----------
+     DESIGN AUDIT — CONTRAST PASS.
+     The previous ramp went quiet enough to fall below WCAG AA on the
+     real surfaces (#0f0f0f / #151515 / #1c1c1c). The ramp below keeps
+     the same near-black, desaturated NEXUS identity but lifts every
+     step so *all four* levels clear AA (4.5:1) on every app surface,
+     not just on pure black.
+
+     Measured contrast (text vs. surface):
+                     #000000   #0f0f0f   #151515   #1c1c1c
+       primary        16.3:1    15.0:1    14.7:1    13.7:1
+       secondary       9.7:1     8.9:1     8.4:1     7.9:1
+       tertiary        7.7:1     7.0:1     6.6:1     6.2:1
+       quaternary      5.8:1     5.3:1     5.0:1     4.7:1
+
+     Reading order is unchanged: primary carries the statement,
+     secondary the body, tertiary the supporting line, quaternary the
+     metadata. Metadata is now *discreet but never illegible* — low
+     opacity is no longer used as an aesthetic device. */
   --color-text-primary: #f2f2f2;
-  --color-text-secondary: #9b9b9b;
-  /* Contrast against the darkest app surface (#151515):
-     primary 16.3:1 · secondary 6.6:1 · tertiary 4.8:1 (AA body)
-     quaternary 3.4:1 — reserved for metadata that is never the only
-     carrier of meaning (AA large text / non-text contrast). */
-  --color-text-tertiary: #828282;
-  --color-text-quaternary: #6b6b6b;
+  --color-text-secondary: #b0b0b0;
+  --color-text-tertiary: #9c9c9c;
+  --color-text-quaternary: #868686;
+
+  /* The pre-audit values, kept for the rare element that must stay
+     almost invisible by construction (disabled rows, decorative
+     separators). Never used for readable copy. */
+  --color-text-muted: #6b6b6b;
 
   /* ---------- Accent ---------- */
   --color-accent: #ffffff;
@@ -108,6 +132,44 @@
 
   --text-mono: 11.5px;
   --text-mono--line-height: 16px;
+
+  /* ---------- Typography — intermediate steps (DESIGN AUDIT) ----------
+     The public surfaces jumped straight from h2 (16px) to display
+     (34px), which flattened every section into one weight. These
+     steps restore a readable ladder:
+       EYEBROW 10.5 → H4 13 → H3 14 → LEAD 15.5 → H2 16 → XL 20
+       → H1 22 → DISPLAY-LG 40 → DISPLAY-XL 58
+     ------------------------------------------------------------------ */
+  --text-eyebrow: 10.5px;
+  --text-eyebrow--line-height: 14px;
+  --text-eyebrow--letter-spacing: 0.1em;
+  --text-eyebrow--font-weight: 500;
+
+  --text-h4: 13px;
+  --text-h4--line-height: 18px;
+  --text-h4--letter-spacing: -0.01em;
+  --text-h4--font-weight: 600;
+
+  /* The landing intro paragraph — bigger than body, quieter than h2. */
+  --text-lead: 15.5px;
+  --text-lead--line-height: 26px;
+  --text-lead--letter-spacing: -0.011em;
+  --text-lead--font-weight: 400;
+
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-xl--letter-spacing: -0.02em;
+  --text-xl--font-weight: 600;
+
+  --text-display-lg: 40px;
+  --text-display-lg--line-height: 1.08;
+  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--font-weight: 500;
+
+  --text-display-xl: 58px;
+  --text-display-xl--line-height: 1.03;
+  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-xl--font-weight: 500;
 
   /* ---------- Radius hierarchy — software, not marshmallows ---------- */
   --radius-xs: 4px;
@@ -559,12 +621,16 @@ body::before {
   z-index: -1;
 }
 
-/* Accessibility: focus is always visible, never removed for aesthetics. */
+/* Accessibility: focus is always visible, never removed for aesthetics.
+   DESIGN AUDIT — the ring was raised from 0.34 to 0.6 alpha: at 0.34 the
+   rendered ring only reached 2.6:1 against the page, under the 3:1
+   non-text contrast minimum. At 0.6 it reaches ~7.9:1 on #000 and ~7:1
+   on #1c1c1c. */
 :focus-visible {
   outline: none;
   box-shadow:
     0 0 0 1px var(--color-bg-base),
-    0 0 0 3px rgba(233, 228, 255, 0.34);
+    0 0 0 3px rgba(233, 228, 255, 0.6);
   border-radius: 8px;
 }
 
@@ -952,6 +1018,447 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   .pricing-spotlight::before {
     display: none;
   }
+}
+
+@layer components {
+/* ============================================================
+   LANDING — DESIGN AUDIT SYSTEM
+   Contrast · typographic ladder · depth · shared intelligence
+   primitives · chain motion.
+
+   Everything here is built from the tokens above. No new colours,
+   no gradients-as-decoration, no WebGL, no animation library:
+   opacity and transform only, every animation gated by
+   `prefers-reduced-motion`, and a `@media (scripting: none)`
+   fallback so content is never held back by JS.
+   ============================================================ */
+
+/* ---------- 1. Typographic ladder -------------------------------
+   One place for the public-page type steps so a section cannot
+   drift back into "everything is 16px gray". Each step is a
+   paired font-size + colour so contrast is never an afterthought. */
+
+.nexus-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+/* Eyebrow sitting on a pill: the border carries the chip, the label
+   stays at AA. Never darker than tertiary. */
+.nexus-eyebrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nexus-lead {
+  font-size: 15.5px;
+  line-height: 26px;
+  letter-spacing: -0.011em;
+  color: var(--color-text-secondary);
+}
+
+.nexus-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-quaternary);
+}
+
+/* Metadata that carries meaning (a count, a date, a status) uses the
+   tertiary step instead — still discreet, but never borderline. */
+.nexus-meta-strong {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+/* ---------- 2. Depth --------------------------------------------
+   Sections used to float on uniform black. Three restrained tools,
+   used one at a time: a hairline, a 2% tonal wash, a framing border. */
+
+.nexus-rule {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-border-default) 18%,
+    var(--color-border-default) 82%,
+    transparent
+  );
+}
+
+/* A banded section: hairlines top and bottom + the faintest tonal
+   lift. Reads as "this is one thought", never as a card. */
+.nexus-band {
+  position: relative;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-veil);
+}
+
+/* Two bands side by side read as one framed region, not two boxes with a
+   doubled rule between them. */
+.nexus-band + .nexus-band {
+  border-top-color: transparent;
+}
+
+/* A framed panel: hairline border + 2% wash. The default container
+   for anything that holds content on the public pages. */
+.nexus-panel {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background-color: color-mix(in srgb, var(--color-bg-surface) 45%, transparent);
+}
+
+.nexus-panel-quiet {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-row);
+  background-color: rgba(255, 255, 255, 0.014);
+}
+
+/* ---------- 3. Shared intelligence primitives --------------------
+   Lifted from /intelligence (`Every signal has a reason` /
+   `COMPUTED FROM`) so the landing and the Intelligence page speak
+   one visual language instead of two. */
+
+/* Signal card — colour is never the only carrier of severity: the
+   badge always spells the severity out, and the rail is paired with
+   an icon.
+
+   Severity lives in a custom property, never in `color`, so the body
+   copy inside a signal keeps its own contrast step. */
+.nexus-signal {
+  position: relative;
+  --signal-color: var(--color-border-strong);
+  --signal-tint: color-mix(in srgb, var(--color-bg-surface) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--signal-color) 22%, transparent);
+  border-radius: var(--radius-card);
+  background-color: var(--signal-tint);
+  padding: 18px;
+  overflow: hidden;
+}
+
+.nexus-signal::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--signal-color);
+  opacity: 0.7;
+}
+
+.nexus-signal[data-severity="critical"] {
+  --signal-color: var(--color-danger);
+  --signal-tint: var(--color-danger-bg);
+}
+
+.nexus-signal[data-severity="warning"] {
+  --signal-color: var(--color-warning);
+  --signal-tint: var(--color-warning-bg);
+}
+
+.nexus-signal[data-severity="info"] {
+  --signal-color: var(--color-info);
+  --signal-tint: var(--color-info-bg);
+}
+
+.nexus-signal[data-severity="positive"] {
+  --signal-color: var(--color-success);
+  --signal-tint: var(--color-success-bg);
+}
+
+.nexus-signal-icon {
+  color: var(--signal-color);
+}
+
+/* The label above a value inside evidence rows. */
+.nexus-evidence {
+  display: grid;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.nexus-evidence-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.nexus-evidence-row:last-child {
+  border-bottom: 0;
+}
+
+.nexus-evidence-label {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.nexus-evidence-value {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* COMPUTED FROM — the /intelligence trace, reused verbatim. */
+.nexus-computed {
+  border-left: 1px solid var(--color-border-default);
+}
+
+.nexus-computed-row {
+  position: relative;
+  padding-left: 18px;
+}
+
+.nexus-computed-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 12px;
+  height: 1px;
+  background: var(--color-border-default);
+}
+
+/* ---------- 4. Chain — Four Moves -------------------------------
+   Four steps read as ONE chain, not four cards: a rail, four
+   markers, staggered activation on scroll. Activation is pure CSS
+   (it hangs off `.landing-reveal.is-visible`), so there is no extra
+   observer, no extra JS and no layout work. */
+
+.nexus-chain {
+  position: relative;
+}
+
+.nexus-chain-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7px;
+  height: 1px;
+  background: var(--color-border-subtle);
+}
+
+.nexus-chain-rail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-border-strong);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1100ms var(--ease-nexus);
+  transition-delay: 140ms;
+}
+
+.nexus-chain-marker {
+  position: absolute;
+  /* 3px on the stacked (mobile) flow so the marker lines up with the
+     cap height of the step number; flush on the desktop rail. */
+  top: 3px;
+  left: 0;
+  height: 15px;
+  width: 15px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-base);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 340ms var(--ease-nexus),
+    transform 340ms var(--ease-nexus),
+    border-color 340ms var(--ease-nexus);
+  transition-delay: calc(var(--chain-index, 0) * 190ms + 220ms);
+}
+
+.nexus-chain-step {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 420ms var(--ease-nexus),
+    transform 420ms var(--ease-nexus);
+  transition-delay: calc(var(--chain-index, 0) * 190ms + 120ms);
+}
+
+.landing-reveal.is-visible .nexus-chain-rail::after {
+  transform: scaleX(1);
+}
+
+.landing-reveal.is-visible .nexus-chain-marker,
+.landing-reveal.is-visible .nexus-chain-step {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- 5. Cascade — Goal → Project → Task → Activity ------- */
+
+.nexus-cascade-link {
+  width: 1px;
+  flex: 1 1 auto;
+  min-height: 30px;
+  background: linear-gradient(
+    to bottom,
+    var(--color-border-strong),
+    var(--color-border-subtle)
+  );
+  transform: scaleY(0.35);
+  transform-origin: top center;
+  transition: transform 620ms var(--ease-nexus);
+  transition-delay: calc(var(--cascade-index, 0) * 150ms + 180ms);
+}
+
+.nexus-cascade-step {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 440ms var(--ease-nexus),
+    transform 440ms var(--ease-nexus);
+  transition-delay: calc(var(--cascade-index, 0) * 150ms);
+}
+
+.landing-reveal.is-visible .nexus-cascade-link {
+  transform: scaleY(1);
+}
+
+.landing-reveal.is-visible .nexus-cascade-step {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- 6. Trust constellation ------------------------------ */
+
+.nexus-trust-spine {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-border-default) 12%,
+    var(--color-border-default) 88%,
+    transparent
+  );
+}
+
+.nexus-trust-drop {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(
+    to bottom,
+    var(--color-border-default),
+    transparent
+  );
+}
+
+/* ---------- 7. FAQ ---------------------------------------------- */
+
+.nexus-faq-item {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.nexus-faq-item:first-of-type {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.nexus-faq-answer {
+  animation: nexus-faq-in 220ms var(--ease-nexus) both;
+}
+
+@keyframes nexus-faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A single hairline between two steps in a flow. Always horizontal:
+   both flows wrap instead of stacking, on every breakpoint. */
+.nexus-flow-arrow {
+  display: block;
+  width: 12px;
+  height: 1px;
+  background: var(--color-border-strong);
+}
+
+/* ---------- 8. Mobile -------------------------------------------
+   Horizontal diagrams must become vertical flows, never be squeezed. */
+
+@media (min-width: 1024px) {
+  .nexus-chain-marker {
+    top: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Small screens get a touch more breathing room between the
+     display steps, and no chained rail (it cannot be read as a
+     chain when the steps are stacked). */
+  .nexus-chain-rail {
+    display: none;
+  }
+}
+
+/* ---------- 9. Motion & no-JS gating ---------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-chain-rail::after,
+  .nexus-chain-marker,
+  .nexus-chain-step,
+  .nexus-cascade-link,
+  .nexus-cascade-step,
+  .nexus-faq-answer {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (scripting: none) {
+  .nexus-chain-marker,
+  .nexus-chain-step,
+  .nexus-cascade-step {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .nexus-chain-rail::after {
+    transform: scaleX(1) !important;
+  }
+
+  .nexus-cascade-link {
+    transform: scaleY(1) !important;
+  }
+}
 }
 
 /* ============================================================
