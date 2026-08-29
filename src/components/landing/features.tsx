@@ -12,13 +12,21 @@ import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 
 // ============================================================
-// NEXUS LANDING — FEATURES
-// Real NEXUS capabilities only, each answering "why is this
-// useful to me?". Command K, Intelligence, Workspace, Activity
-// and the plan all exist in the actual application.
+// NEXUS LANDING — FEATURE ARCHITECTURE
+//
+// DESIGN AUDIT: eight identical cards read as "feature soup". The
+// eight items are not the same kind of thing:
+//
+//   THE OPERATING MODEL (6) → what NEXUS IS. Full cards, primary
+//                             weight, the product's data model.
+//   BUILT FOR SPEED (2)     → how NEXUS FEELS. One compact strip,
+//                             secondary weight, two characteristics.
+//
+// Real NEXUS capabilities only — Command K, Intelligence, the plan
+// limits and the workspace model all exist in the application.
 // ============================================================
 
-const FEATURES = [
+const OPERATING_MODEL = [
   {
     icon: LayoutDashboard,
     title: "Workspace",
@@ -49,6 +57,9 @@ const FEATURES = [
     title: "NEXUS Intelligence",
     body: "Reads the workspace, explains the evidence, and names the next action.",
   },
+] as const;
+
+const BUILT_FOR_SPEED = [
   {
     icon: Command,
     title: "Command K",
@@ -69,26 +80,75 @@ export function FeaturesSection() {
           <SectionHeading
             eyebrow="Features"
             title="Built around the work, not around the tool."
-            sub="Every part of NEXUS exists for one reason: to keep the work connected, visible and actionable."
+            sub="Six parts make the model. Two make it fast. Every one of them exists to keep the work connected, visible and actionable."
           />
         </LandingReveal>
 
-        <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:mt-14 lg:grid-cols-3">
-          {FEATURES.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <LandingReveal key={feature.title} delay={(index % 3) * 60}>
-                <article className="h-full rounded-card border border-border-subtle bg-bg-subtle/40 p-5 transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                  </div>
-                  <h3 className="mt-4 text-h3 text-text-primary">{feature.title}</h3>
-                  <p className="mt-1.5 text-small text-text-secondary">{feature.body}</p>
-                </article>
-              </LandingReveal>
-            );
-          })}
-        </div>
+        {/* ---------- The operating model — full weight ---------- */}
+        <LandingReveal delay={80}>
+          <div className="mt-12 lg:mt-14">
+            <div className="flex items-center gap-3">
+              <h3 className="nexus-eyebrow">The operating model</h3>
+              <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+            </div>
+
+            <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {OPERATING_MODEL.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <li
+                    key={feature.title}
+                    className="nexus-panel card-hover h-full p-5"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
+                      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <h4 className="mt-4 text-[15px] font-semibold leading-[22px] tracking-[-0.015em] text-text-primary">
+                      {feature.title}
+                    </h4>
+                    <p className="mt-1.5 text-small text-text-secondary">
+                      {feature.body}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </LandingReveal>
+
+        {/* ---------- Built for speed — secondary weight ---------- */}
+        <LandingReveal delay={140}>
+          <div className="mt-10 lg:mt-12">
+            <div className="flex items-center gap-3">
+              <h3 className="nexus-eyebrow">Built for speed</h3>
+              <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+            </div>
+
+            <ul className="nexus-panel mt-5 grid divide-y divide-border-subtle sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              {BUILT_FOR_SPEED.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <li
+                    key={feature.title}
+                    className="flex items-start gap-3.5 p-5 sm:p-6"
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary">
+                      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-h4 text-text-primary">
+                        {feature.title}
+                      </h4>
+                      <p className="mt-1 text-small text-text-secondary">
+                        {feature.body}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </LandingReveal>
       </div>
     </section>
   );

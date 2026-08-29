@@ -1,43 +1,66 @@
-import { Activity, ArrowRight, Check, CheckSquare, FolderKanban, Target } from "lucide-react";
+import type { CSSProperties } from "react";
+import {
+  Activity,
+  ArrowRight,
+  Check,
+  CheckSquare,
+  FolderKanban,
+  Target,
+} from "lucide-react";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { ButtonLink } from "@/components/ui/button";
 
 // ============================================================
 // NEXUS LANDING — THE NEXUS MODEL
-// The fundamental section: GOAL → PROJECT → TASK → ACTIVITY,
-// drawn as a connected cascade (a vertical chain, not four loose
-// cards) so the visitor sees the relationship between levels.
+//
+// The fundamental section: GOAL → PROJECT → TASK → ACTIVITY.
+//
+// DESIGN AUDIT: the four levels were four cards with metadata set in
+// quaternary at 11.5px — present, but effectively invisible. Each
+// level now carries three clearly separated steps of information:
+//
+//   01 · GOAL              ← eyebrow (the level)
+//   Ship v1                ← the concrete instance (primary, 20px)
+//   Target · Sep 14        ← the metadata, as a chip, never dimmed
+//   Where you're going.    ← what the level means
+//
+// and they are drawn as one cascade: a rail, four markers, links
+// that grow in as the section reveals.
 // ============================================================
 
 const LEVELS = [
   {
     icon: Target,
     name: "Goal",
+    example: "Ship v1",
+    meta: "Target · Sep 14",
     line: "Where you're going.",
-    detail: "Outcomes with real progress — measured, not decorative.",
-    meta: "Ship v1 · 72%",
+    detail: "Outcomes with real progress — measured, never a slider.",
   },
   {
     icon: FolderKanban,
     name: "Project",
+    example: "Onboarding",
+    meta: "8 tasks · 2 blocked",
     line: "What you're moving forward.",
     detail: "Work grouped around a goal. Progress counts real tasks.",
-    meta: "4 of 9 done",
   },
   {
     icon: CheckSquare,
     name: "Task",
+    example: "Review signup flow",
+    meta: "Due in 2 days",
     line: "What you do next.",
     detail: "Priorities, due dates and a focus list — nothing decorative.",
-    meta: "Next: onboarding",
   },
   {
     icon: Activity,
     name: "Activity",
+    example: "Last completion",
+    meta: "42 minutes ago",
     line: "What actually happened.",
     detail: "Every change recorded. Who, what and when — always traceable.",
-    meta: "09:41 · done",
   },
 ] as const;
 
@@ -67,9 +90,17 @@ export function ModelSection() {
 
           <ul className="mt-7 flex flex-col gap-3">
             {WHY_REAL.map((point) => (
-              <li key={point} className="flex items-start gap-2.5 text-small text-text-secondary">
+              <li
+                key={point}
+                className="flex items-start gap-2.5 text-small text-text-secondary"
+              >
                 <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong bg-bg-surface">
-                  <Check size={10} strokeWidth={2.5} className="text-text-primary" aria-hidden="true" />
+                  <Check
+                    size={10}
+                    strokeWidth={2.5}
+                    className="text-text-primary"
+                    aria-hidden="true"
+                  />
                 </span>
                 <span>{point}</span>
               </li>
@@ -85,49 +116,78 @@ export function ModelSection() {
         </LandingReveal>
 
         <LandingReveal delay={90}>
-          <div className="rounded-card border border-border-subtle bg-bg-subtle/60 p-5 sm:p-6">
-            <p className="eyebrow text-text-tertiary">
-              Goal → Project → Task → Activity
-            </p>
+          <div className="nexus-panel p-5 sm:p-7">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="nexus-eyebrow">
+                Goal → Project → Task → Activity
+              </p>
+              <span className="nexus-meta-strong">One connected chain</span>
+            </div>
 
-            <div className="mt-4">
+            <ol className="mt-6">
               {LEVELS.map((level, index) => {
                 const Icon = level.icon;
+                const isLast = index === LEVELS.length - 1;
                 return (
-                  <div key={level.name} className="flex gap-4">
-                    {/* Connector column: icon, then a vertical link to the next level. */}
+                  <li
+                    key={level.name}
+                    className="nexus-cascade-step flex gap-4"
+                    style={
+                      { "--cascade-index": index } as CSSProperties
+                    }
+                  >
+                    {/* Connector column: the marker, then a link to the
+                        next level. */}
                     <div className="flex w-11 shrink-0 flex-col items-center">
                       <span className="flex h-11 w-11 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
                         <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
                       </span>
-                      {index < LEVELS.length - 1 ? (
+                      {isLast ? null : (
                         <span
-                          className="mt-2 w-px flex-1 bg-border-strong"
+                          className="nexus-cascade-link mt-2"
+                          style={
+                            { "--cascade-index": index } as CSSProperties
+                          }
                           aria-hidden="true"
-                          style={{ minHeight: 28 }}
                         />
-                      ) : null}
+                      )}
                     </div>
 
-                    <div className={index < LEVELS.length - 1 ? "min-w-0 flex-1 pb-7" : "min-w-0 flex-1"}>
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <h3 className="flex items-baseline gap-2 text-h2 text-text-primary">
-                          <span className="eyebrow text-text-quaternary">
+                    <div
+                      className={
+                        isLast ? "min-w-0 flex-1" : "min-w-0 flex-1 pb-7"
+                      }
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+                        <h3 className="flex items-baseline gap-2 text-xl text-text-primary">
+                          <span className="nexus-meta-strong">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           {level.name}
                         </h3>
-                        <span className="font-mono text-mono tabular-nums text-text-tertiary">
+                      </div>
+
+                      <div className="mt-2.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+                        <p className="text-[17px] font-medium leading-[24px] tracking-[-0.015em] text-text-primary">
+                          {level.example}
+                        </p>
+                        {/* Metadata as a chip: readable, never lost. */}
+                        <span className="inline-flex h-[22px] shrink-0 items-center rounded-pill border border-border-default bg-bg-surface px-2.5 font-mono text-[11px] leading-none tracking-[0.01em] text-text-secondary">
                           {level.meta}
                         </span>
                       </div>
-                      <p className="mt-1 text-body-medium text-text-primary">{level.line}</p>
-                      <p className="mt-0.5 text-small text-text-secondary">{level.detail}</p>
+
+                      <p className="mt-2 text-small font-medium text-text-secondary">
+                        {level.line}
+                      </p>
+                      <p className="mt-0.5 text-small text-text-tertiary">
+                        {level.detail}
+                      </p>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </div>
         </LandingReveal>
       </div>

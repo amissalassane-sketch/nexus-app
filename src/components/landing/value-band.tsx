@@ -1,33 +1,59 @@
 import { LandingReveal } from "@/components/landing/landing-reveal";
 
 // ============================================================
-// NEXUS LANDING — VALUE BAND
-// The problem → answer beat between the product preview and the
-// model. Editorial, quiet, typographic: no cards, no icons.
+// NEXUS LANDING — PROBLEM → ANSWER
+//
+// DESIGN AUDIT: the two beats used to carry the same visual weight,
+// so the page never resolved. They are now deliberately unequal:
+//
+//   THE PROBLEM  ·  quiet, tertiary, one line smaller
+//        ↓
+//   THE ANSWER   ·  primary, one step larger, more air around it
+//
+// The connector is a rule with a marker, not an emoji arrow: it
+// states the relationship (this resolves into that) instead of
+// decorating it.
 // ============================================================
 
 export function ValueBand() {
   return (
     <section className="px-5 py-20 sm:px-6 sm:py-28" aria-label="Why NEXUS">
       <LandingReveal>
-        <div className="mx-auto flex max-w-[720px] flex-col items-center text-center">
-          <span className="eyebrow text-text-tertiary">The problem</span>
-          <p className="mt-5 max-w-[640px] text-[22px] leading-[1.3] tracking-[-0.02em] text-text-primary sm:text-[28px] sm:leading-[1.28]">
-            The status of your work is spread across tools —{" "}
-            <span className="text-text-tertiary">
-              so nobody sees the risk until it is late.
-            </span>
+        <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
+          {/* ---------- The problem ---------- */}
+          <span className="nexus-eyebrow">The problem</span>
+          <p className="mt-5 max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
+            The status of your work is spread across everything you already
+            manage — so nobody sees the risk until it is late.
           </p>
 
-          <span className="my-10 inline-flex h-px w-8 bg-border-strong" aria-hidden="true" />
+          {/* ---------- The connector ---------- */}
+          <div
+            className="mt-10 flex flex-col items-center sm:mt-12"
+            aria-hidden="true"
+          >
+            <span className="h-6 w-px bg-gradient-to-b from-border-subtle to-border-strong" />
+            <span className="h-1.5 w-1.5 rounded-pill bg-lavender/70" />
+            <span className="h-6 w-px bg-gradient-to-b from-border-strong to-border-subtle" />
+          </div>
 
-          <span className="eyebrow text-text-tertiary">The answer</span>
-          <p className="mt-5 max-w-[640px] text-[22px] leading-[1.3] tracking-[-0.02em] text-text-primary sm:text-[28px] sm:leading-[1.28]">
-            NEXUS reads it continuously —{" "}
-            <span className="text-text-tertiary">
-              and tells you what to do about it.
+          {/* ---------- The answer ---------- */}
+          <div className="mt-12 flex flex-col items-center sm:mt-16">
+            <span className="nexus-eyebrow-pill">
+              <span
+                className="h-1.5 w-1.5 rounded-pill bg-lavender/70"
+                aria-hidden="true"
+              />
+              The answer
             </span>
-          </p>
+            <p className="mt-6 max-w-[16ch] text-[34px] font-medium leading-[1.06] tracking-[-0.038em] text-text-primary sm:mt-7 sm:max-w-[18ch] sm:text-[48px]">
+              NEXUS reads it continuously.
+            </p>
+            <p className="nexus-lead mt-6 max-w-[520px]">
+              Every deadline, dependency, completion and stall — connected,
+              ranked, and turned into the one decision worth making next.
+            </p>
+          </div>
         </div>
       </LandingReveal>
     </section>

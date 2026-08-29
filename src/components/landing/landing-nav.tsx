@@ -64,6 +64,15 @@ export function LandingNav({
           : "border-b border-transparent bg-transparent"
       )}
     >
+      {/* DESIGN AUDIT — a keyboard/screen-reader visitor must be able to
+          jump past the nav straight into the page. Visible on focus only. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[60] focus:inline-flex focus:h-9 focus:items-center focus:rounded-input focus:border focus:border-border-strong focus:bg-bg-surface focus:px-3 focus:text-button focus:text-text-primary"
+      >
+        Skip to content
+      </a>
+
       <div className="mx-auto flex h-14 w-full max-w-[1120px] items-center justify-between gap-3 px-5 sm:px-6">
         <Link
           href="/"
@@ -116,7 +125,7 @@ export function LandingNav({
             aria-expanded={open}
             aria-controls="landing-mobile-menu"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="flex h-9 w-9 items-center justify-center rounded-pill text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
+            className="flex h-11 w-11 items-center justify-center rounded-pill text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:h-9 sm:w-9"
           >
             {open ? <X size={18} strokeWidth={1.75} /> : <Menu size={18} strokeWidth={1.75} />}
           </button>

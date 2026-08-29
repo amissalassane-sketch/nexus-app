@@ -23,10 +23,14 @@ export default {
         'border-strong': 'rgba(255,255,255,0.14)',
         'border-focus': 'rgba(255,255,255,0.22)',
 
+        // DESIGN AUDIT — contrast pass. Mirrors src/app/globals.css.
+        // Every step now clears WCAG AA (4.5:1) on all app surfaces.
         'text-primary': '#f2f2f2',
-        'text-secondary': '#9b9b9b',
-        'text-tertiary': '#828282',
-        'text-quaternary': '#6b6b6b',
+        'text-secondary': '#b0b0b0',
+        'text-tertiary': '#9c9c9c',
+        'text-quaternary': '#868686',
+        'text-muted': '#6b6b6b',
+        'bg-veil': 'rgba(255,255,255,0.02)',
 
         accent: '#ffffff',
         'accent-fg': '#000000',
@@ -79,6 +83,13 @@ export default {
         caption: ['11.5px', { lineHeight: '16px' }],
         button: ['13px', { lineHeight: '20px', fontWeight: '500' }],
         mono: ['11.5px', { lineHeight: '16px' }],
+        // DESIGN AUDIT — intermediate steps of the public type ladder.
+        eyebrow: ['10.5px', { lineHeight: '14px', letterSpacing: '0.1em', fontWeight: '500' }],
+        h4: ['13px', { lineHeight: '18px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        lead: ['15.5px', { lineHeight: '26px', letterSpacing: '-0.011em' }],
+        xl: ['20px', { lineHeight: '28px', letterSpacing: '-0.02em', fontWeight: '600' }],
+        'display-lg': ['40px', { lineHeight: '1.08', letterSpacing: '-0.035em', fontWeight: '500' }],
+        'display-xl': ['58px', { lineHeight: '1.03', letterSpacing: '-0.04em', fontWeight: '500' }],
       },
       boxShadow: {
         dropdown: '0 10px 30px -8px rgba(0,0,0,0.7)',

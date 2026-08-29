@@ -23,7 +23,7 @@ export default function PricingPage() {
     <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
       <LandingAtmosphere />
       <LandingNav context="pricing" />
-      <main className="pt-12">
+      <main id="main" className="pt-12">
         <PricingSection />
         <FaqSection />
         <FinalCtaSection />

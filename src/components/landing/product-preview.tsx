@@ -77,7 +77,7 @@ function NavGroup({
   return (
     <div>
       {label ? (
-        <p className="px-2 pb-1 pt-3 font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+        <p className="px-2 pb-1 pt-3 font-mono text-[9px] uppercase tracking-[0.12em] text-text-tertiary">
           {label}
         </p>
       ) : null}
@@ -98,7 +98,7 @@ function NavGroup({
             />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             {item.count !== null ? (
-              <span className="font-mono text-[9.5px] tabular-nums text-text-quaternary">
+              <span className="font-mono text-[9.5px] tabular-nums text-text-tertiary">
                 {item.count}
               </span>
             ) : null}
@@ -120,7 +120,7 @@ export function ProductPreview() {
             <span className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
             <span className="h-2.5 w-2.5 rounded-full bg-white/[0.08]" />
           </div>
-          <span className="mx-auto inline-flex h-6 min-w-0 items-center rounded-pill border border-border-subtle bg-bg-surface px-3 font-mono text-[10.5px] text-text-tertiary">
+          <span className="mx-auto inline-flex h-6 min-w-0 items-center rounded-pill border border-border-subtle bg-bg-surface px-3 font-mono text-[10.5px] text-text-secondary">
             nexus.app/dashboard
           </span>
           <span className="w-10 shrink-0" />
@@ -138,13 +138,13 @@ export function ProductPreview() {
                 <span className="block truncate text-[11px] font-medium text-text-primary">
                   Studio
                 </span>
-                <span className="block font-mono text-[9px] uppercase tracking-[0.1em] text-text-quaternary">
+                <span className="block font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
                   owner
                 </span>
               </span>
             </div>
 
-            <div className="mt-1.5 flex h-7 items-center gap-2 rounded-nav border border-border-subtle px-2 text-[10.5px] text-text-quaternary">
+            <div className="mt-1.5 flex h-7 items-center gap-2 rounded-nav border border-border-subtle px-2 text-[10.5px] text-text-tertiary">
               <span className="flex-1">Search NEXUS…</span>
               <span className="font-mono text-[9px]">⌘K</span>
             </div>
@@ -157,7 +157,7 @@ export function ProductPreview() {
 
             <div className="mt-auto border-t border-border-subtle pt-2.5">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-tertiary">
                   Plan
                 </span>
                 <span className="font-mono text-[9.5px] text-text-secondary">FREE</span>
@@ -175,7 +175,7 @@ export function ProductPreview() {
               </span>
               <span className="ml-auto inline-flex items-center gap-1.5 rounded-pill border border-border-subtle px-1.5 py-0.5">
                 <span className="h-1 w-1 rounded-pill bg-success" />
-                <span className="font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-tertiary">
+                <span className="font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-secondary">
                   Observing
                 </span>
               </span>
@@ -186,7 +186,7 @@ export function ProductPreview() {
               {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-tertiary">
                     Tuesday, August 19
                   </p>
                   <p className="mt-1.5 truncate text-[15px] font-semibold tracking-[-0.025em] text-text-primary">
@@ -203,7 +203,7 @@ export function ProductPreview() {
               <div className="mt-3.5 rounded-card border border-border-subtle bg-bg-subtle/70 p-3.5">
                 <div className="flex items-center gap-2">
                   <CalendarClock size={11} strokeWidth={1.75} className="text-danger" />
-                  <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-quaternary">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-tertiary">
                     Next action
                   </span>
                 </div>
@@ -242,7 +242,7 @@ export function ProductPreview() {
                       <p className="mt-1 truncate text-[11px] font-medium text-text-primary">
                         {signal.title}
                       </p>
-                      <p className="truncate text-[10px] text-text-tertiary">
+                      <p className="truncate text-[10.5px] text-text-secondary">
                         {signal.body}
                       </p>
                     </div>
@@ -260,7 +260,7 @@ export function ProductPreview() {
                   { label: "Completed", value: "68%", tone: "" },
                 ].map((metric) => (
                   <div key={metric.label} className="flex flex-col gap-1.5 px-2.5 py-2.5">
-                    <span className="truncate font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-quaternary">
+                    <span className="truncate font-mono text-[8.5px] uppercase tracking-[0.1em] text-text-tertiary">
                       {metric.label}
                     </span>
                     <span

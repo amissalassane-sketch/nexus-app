@@ -13,19 +13,19 @@ export function FinalCtaSection() {
     <section className="px-5 py-24 sm:px-6 sm:py-32">
       <LandingReveal>
         <div className="mx-auto w-full max-w-[1120px]">
-          <div className="relative overflow-hidden rounded-[16px] border border-border-subtle bg-bg-subtle/60 px-6 py-16 text-center sm:px-12 sm:py-24">
+          <div className="nexus-panel relative overflow-hidden rounded-[16px] px-6 py-16 text-center sm:px-12 sm:py-24">
             <span
               className="absolute left-1/2 top-0 h-px w-24 -translate-x-1/2 bg-lavender/40"
               aria-hidden="true"
             />
 
-            <span className="eyebrow text-text-tertiary">
+            <span className="nexus-eyebrow-pill">
               Start
             </span>
             <h2 className="mx-auto mt-4 max-w-[18ch] text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-text-primary sm:text-[44px]">
               Bring your work into focus.
             </h2>
-            <p className="mx-auto mt-4 max-w-[440px] text-body text-text-secondary sm:text-[15px] sm:leading-[24px]">
+            <p className="nexus-lead mx-auto mt-5 max-w-[440px]">
               One workspace. One chain from goal to activity. One next action,
               always.
             </p>

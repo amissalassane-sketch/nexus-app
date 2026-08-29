@@ -55,7 +55,7 @@ export function LandingFooter({
           <p className="mt-3 text-small text-text-secondary">
             It reads the work, not the chat.
           </p>
-          <p className="eyebrow mt-4 text-text-quaternary">
+          <p className="nexus-eyebrow mt-4">
             Operational intelligence
           </p>
         </div>
@@ -63,7 +63,7 @@ export function LandingFooter({
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
-              <h2 className="eyebrow text-text-tertiary">
+              <h2 className="nexus-eyebrow">
                 {column.title}
               </h2>
               <ul className="mt-3 flex flex-col gap-2">
@@ -84,12 +84,8 @@ export function LandingFooter({
       </div>
 
       <div className="mx-auto mt-14 flex w-full max-w-[1120px] flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <span className="eyebrow text-text-quaternary">
-          © 2026 NEXUS
-        </span>
-        <span className="text-caption text-text-quaternary">
-          Built with Next.js · Supabase · Postgres
-        </span>
+        <span className="nexus-eyebrow">© 2026 NEXUS</span>
+        <span className="nexus-meta">Built with Next.js · Supabase · Postgres</span>
       </div>
     </footer>
   );

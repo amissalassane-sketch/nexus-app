@@ -30,9 +30,11 @@ export function HeroField() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
-      {/* The locked NEXUS mark, very large and very quiet, behind the type */}
+      {/* The locked NEXUS mark, very large and very quiet, behind the type.
+          DESIGN AUDIT: brand atmosphere, not the subject of the hero — the
+          copy above is the brightest thing on the screen. */}
       <div
-        className="absolute left-1/2 top-[44%] h-[440px] w-[440px] -translate-x-1/2 -translate-y-1/2 opacity-[0.035] sm:h-[560px] sm:w-[560px]"
+        className="absolute left-1/2 top-[52%] h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03] sm:h-[540px] sm:w-[540px]"
         style={{
           maskImage: "url('/logo/nexus.png')",
           WebkitMaskImage: "url('/logo/nexus.png')",
@@ -50,8 +52,11 @@ export function HeroField() {
       <div className="absolute inset-x-0 top-[22%] h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
       <div className="absolute inset-x-0 top-[68%] h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
 
-      {/* The 3D constellation itself */}
-      <div className="absolute inset-0 [mask-image:radial-gradient(circle_at_50%_45%,transparent_16%,black_66%)]">
+      {/* The 3D constellation itself.
+          DESIGN AUDIT: dimmed and pushed further out of the centre so it
+          reads as depth behind the proposition instead of competing with
+          it. Still the same field — quieter, not removed. */}
+      <div className="absolute inset-0 opacity-[0.55] [mask-image:radial-gradient(circle_at_50%_42%,transparent_26%,black_72%)]">
         <HeroSignalField className="h-full w-full" />
       </div>
 
