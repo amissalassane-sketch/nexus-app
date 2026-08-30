@@ -36,13 +36,13 @@ import { getActiveMembership } from "@/lib/workspace";
 // ============================================================
 
 export const metadata = {
-  title: "Overview — NEXUS",
+  title: "Overview. NEXUS",
 };
 
 const formatDate = (value: string | null | undefined) => {
-  if (!value) return "—";
+  if (!value) return "–";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "–";
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "2-digit",
@@ -196,8 +196,8 @@ export default async function DashboardPage() {
           needsAttention.length === 1 ? "signal needs" : "signals need"
         } a decision.`
       : context.openTasks > 0
-        ? "Nothing is at risk. Here is what is moving."
-        : "No open tasks right now. Create one to get moving.";
+        ? "Nothing is at risk right now."
+        : "No open tasks yet.";
 
   const onboardingStepsDone =
     1 +
@@ -286,12 +286,12 @@ export default async function DashboardPage() {
       {showWorkspaceWarning ? (
         <section className="overflow-hidden rounded-card border border-warning-border/40 bg-warning-bg/15 p-6 sm:p-8 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
           <div className="max-w-[620px]">
-            <p className="eyebrow text-warning">Workspace setup pending</p>
+            <p className="eyebrow text-warning">Workspace not found</p>
             <h2 className="mt-2 text-h2 font-semibold text-text-primary">
-              Connecting to your workspace
+              No active workspace yet
             </h2>
             <p className="mt-2 text-body text-text-secondary">
-              We couldn&apos;t verify an active workspace for your session yet. Please retry the connection or review your workspace settings.
+              Your session is not connected to a workspace. Retry the connection, or check your workspace settings.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <ButtonLink href="/dashboard" size="md">
@@ -310,14 +310,14 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-pill bg-lavender animate-pulse" aria-hidden="true" />
                 <p className="eyebrow text-lavender">
-                  Your workspace is ready · LET NEXUS UNDERSTAND YOU ({onboardingStepsDone}/5)
+                  Your workspace is ready · Setup ({onboardingStepsDone}/5)
                 </p>
               </div>
               <h2 className="mt-2.5 text-[22px] font-semibold leading-[28px] tracking-[-0.025em] text-text-primary">
                 Welcome to NEXUS.
               </h2>
               <p className="mt-2 text-body text-text-secondary">
-                NEXUS doesn&apos;t just store tasks — it understands your work, detects what is at risk, and orchestrates what to do next. Complete these steps to activate intelligence:
+                NEXUS reads your projects and tasks to detect risk and suggest what to do next. Complete these steps:
               </p>
 
               {/* 5-step progressive model */}
@@ -405,7 +405,7 @@ export default async function DashboardPage() {
                     href="/settings?tab=profile"
                     size="lg"
                   >
-                    Setup your profile
+                    Set up your profile
                   </ButtonLink>
                 ) : context.projects === 0 ? (
                   <ButtonLink
@@ -438,7 +438,7 @@ export default async function DashboardPage() {
                   href="/app/intelligence"
                   className="group inline-flex items-center gap-1.5 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary px-1 py-1.5"
                 >
-                  Explore NEXUS Intelligence
+                  Open Intelligence
                   <ArrowRight
                     size={13}
                     strokeWidth={1.75}
@@ -523,7 +523,7 @@ export default async function DashboardPage() {
                     {health.headline}
                   </h2>
                   <p className="mt-1 text-small text-text-secondary">
-                    {attentionLine} {context.blockedTasks > 0 ? `${context.blockedTasks} tasks are currently stalled by dependencies.` : "No blockers detected in your active projects."}
+                    {attentionLine} {context.blockedTasks > 0 ? `${context.blockedTasks} tasks are blocked.` : "No blocked tasks."}
                   </p>
                 </div>
               </div>
@@ -558,7 +558,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="min-w-0">
                   <span className="block truncate text-caption text-text-quaternary">
-                    Active Momentum
+                    Projects
                   </span>
                   <span className="mt-0.5 block truncate font-mono text-body-medium font-medium text-text-primary">
                     {context.projects > 0 ? `${context.projects} active` : "None"}
@@ -566,7 +566,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="min-w-0">
                   <span className="block truncate text-caption text-text-quaternary">
-                    Throughput
+                    Completed
                   </span>
                   <span className="mt-0.5 block truncate font-mono text-body-medium font-medium text-text-primary">
                     {context.completionRate}%
@@ -681,10 +681,10 @@ export default async function DashboardPage() {
                     <span className="eyebrow text-lavender">TELL NEXUS WHAT MATTERS</span>
                   </div>
                   <h3 className="mt-1 text-h3 font-semibold text-text-primary">
-                    Direct your workspace with natural intention
+                    Tell NEXUS what you want done
                   </h3>
                   <p className="mt-0.5 text-small text-text-secondary">
-                    State an objective. NEXUS understands the context, detects risks, recommends a plan, and acts with your confirmation.
+                    State an objective. NEXUS reads the context, shows the risks and proposes a plan. It acts only with your confirmation.
                   </p>
                 </div>
                 <ButtonLink
@@ -751,8 +751,8 @@ export default async function DashboardPage() {
               {/* Context Pillars: Projects & Goals */}
               <div className="space-y-5">
                 <Panel
-                  title="Projects context"
-                  description="Active initiatives tracked by NEXUS"
+                  title="Recent projects"
+                  description="Where open work lives"
                   bodyClassName="p-0"
                   actions={
                     <Link
@@ -825,8 +825,8 @@ export default async function DashboardPage() {
                 </Panel>
 
                 <Panel
-                  title="Goals alignment"
-                  description="Target outcomes measuring real progress"
+                  title="Recent goals"
+                  description="Outcomes with real progress"
                   bodyClassName="p-0"
                   actions={
                     <Link
@@ -841,7 +841,7 @@ export default async function DashboardPage() {
                     <div className="p-4">
                       <EmptyState
                         title="Set your first goal"
-                        description="Define key outcomes to measure whether your work is making progress."
+                        description="A goal gives NEXUS an outcome to measure progress against."
                         icon={<Target size={17} strokeWidth={1.75} />}
                         action={
                           <Link

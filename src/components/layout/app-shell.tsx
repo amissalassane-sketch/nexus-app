@@ -174,7 +174,7 @@ function AppShellInner({
                 </button>
                 <Link
                   href="/notifications"
-                  aria-label={counts.unreadNotifications > 0 ? `Notifications — ${counts.unreadNotifications} unread` : "Notifications"}
+                    aria-label={counts.unreadNotifications > 0 ? `Notifications, ${counts.unreadNotifications} unread` : "Notifications"}
                   className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
                   <Bell size={16} strokeWidth={1.75} aria-hidden="true" />

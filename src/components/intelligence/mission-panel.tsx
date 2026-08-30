@@ -192,7 +192,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
       } catch {
         clearTimeout(verificationTimer1);
         setVerificationState("failed");
-        setError("Erreur réseau pendant l'exécution — l'action n'a pas été appliquée.");
+        setError("Erreur réseau pendant l'exécution. L'action n'a pas été appliquée.");
         setTimeout(() => setVerificationState(null), 1200);
       } finally {
         setExecuting(false);
@@ -440,7 +440,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           <div className="mt-3.5 rounded-input border border-success-border bg-success-bg/40 px-3 py-2.5 text-small text-success animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
             <span className="flex items-center gap-1.5">
               <Check size={14} strokeWidth={2.5} className="animate-[check-pop_320ms_var(--ease-nexus)_both]" />
-              Mission terminée — toutes les étapes sont vérifiées.
+              Mission terminée. Toutes les étapes sont vérifiées.
             </span>
           </div>
         ) : null}
@@ -457,7 +457,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
             {pendingAction.action.risk === "high" ? (
               <p className="mt-1.5 flex items-start gap-1.5 text-caption text-danger animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
                 <AlertTriangle size={13} strokeWidth={1.75} className="mt-px shrink-0" aria-hidden="true" />
-                Action destructive — exécutée côté serveur puis vérifiée.
+                Action destructive. Exécutée côté serveur puis vérifiée.
               </p>
             ) : null}
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -629,7 +629,7 @@ function MissionWhy({ mission }: { mission: IntelligenceMission }) {
           <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">Ce qui bloque</p>
           <ul className="mt-1 flex flex-col gap-0.5">
             {context.blockerLabels.map((label) => (
-              <li key={label} className="text-caption text-text-secondary animate-[list-in_200ms_var(--ease-nexus)_both]">— {label}</li>
+              <li key={label} className="text-caption text-text-secondary animate-[list-in_200ms_var(--ease-nexus)_both]">• {label}</li>
             ))}
           </ul>
         </div>

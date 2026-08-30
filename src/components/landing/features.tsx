@@ -30,7 +30,7 @@ const OPERATING_MODEL = [
   {
     icon: LayoutDashboard,
     title: "Workspace",
-    body: "One surface for everything operational — no tabs, no context switching.",
+    body: "One surface for everything operational. No tabs, no context switching.",
   },
   {
     icon: Target,
@@ -45,7 +45,7 @@ const OPERATING_MODEL = [
   {
     icon: CheckSquare,
     title: "Tasks",
-    body: "Priorities, due dates and a focus list — captured in seconds.",
+    body: "Priorities, due dates and a focus list, captured in seconds.",
   },
   {
     icon: Activity,
@@ -68,7 +68,7 @@ const BUILT_FOR_SPEED = [
   {
     icon: Sparkles,
     title: "Free to start",
-    body: "One workspace, two projects, one hundred tasks — no card required.",
+    body: "One workspace, two projects, one hundred tasks. No card required.",
   },
 ] as const;
 
@@ -80,7 +80,7 @@ export function FeaturesSection() {
           <SectionHeading
             eyebrow="Features"
             title="Built around the work, not around the tool."
-            sub="Six parts make the model. Two make it fast. Every one of them exists to keep the work connected, visible and actionable."
+            sub="Six parts make the model. Two make it fast. All of it keeps the work connected and turns it into the next action."
           />
         </LandingReveal>
 

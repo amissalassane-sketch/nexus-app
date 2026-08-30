@@ -16,7 +16,7 @@ export function PageSkeleton({
   return (
     <div className="space-y-6" aria-busy="true">
       <p className="sr-only" role="status">
-        Loading workspace — structure appears immediately, details resolve progressively
+        Loading workspace: structure appears immediately, details resolve progressively
       </p>
 
       <div className="space-y-3 border-b border-border-subtle pb-6 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">

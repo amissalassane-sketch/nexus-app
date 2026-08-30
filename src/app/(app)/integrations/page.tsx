@@ -25,7 +25,7 @@ import { ButtonLink } from "@/components/ui/button";
 // ============================================================
 
 export const metadata = {
-  title: "Integrations — NEXUS",
+  title: "Integrations. NEXUS",
   description:
     "Connect the tools your work already lives in so NEXUS can read them.",
 };
@@ -174,8 +174,8 @@ export default async function IntegrationsPage() {
 
       <Alert tone="info" title="No integration provider is configured yet">
         This deployment has no OAuth provider connected, so nothing can be
-        authorised from here. The catalogue below shows what NEXUS will read once
-        a provider is configured — no connection is simulated.
+        authorised from here. The catalogue below shows what NEXUS will read
+        once a provider is configured. No connection is simulated.
       </Alert>
 
       <div className="grid gap-5">
@@ -232,8 +232,8 @@ export default async function IntegrationsPage() {
         description="What NEXUS already reads without any integration"
       >
         <p className="max-w-[62ch] text-small text-text-secondary">
-          Everything you create inside NEXUS — projects, tasks, goals and the
-          workspace activity log — is already analysed. Signals on this workspace
+          Everything you create inside NEXUS is already analysed: projects,
+          tasks, goals and the workspace activity log. Signals on this workspace
           do not depend on any external tool.
         </p>
         <div className="mt-4">

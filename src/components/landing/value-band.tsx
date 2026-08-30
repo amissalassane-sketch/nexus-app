@@ -24,7 +24,7 @@ export function ValueBand() {
           <span className="nexus-eyebrow">The problem</span>
           <p className="mt-5 max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
             The status of your work is spread across everything you already
-            manage — so nobody sees the risk until it is late.
+            manage. Nobody sees the risk until it is late.
           </p>
 
           {/* ---------- The connector ---------- */}
@@ -50,8 +50,8 @@ export function ValueBand() {
               NEXUS reads it continuously.
             </p>
             <p className="nexus-lead mt-6 max-w-[520px]">
-              Every deadline, dependency, completion and stall — connected,
-              ranked, and turned into the one decision worth making next.
+              NEXUS connects every deadline and dependency, ranks the result,
+              and turns the picture into the one decision worth making next.
             </p>
           </div>
         </div>

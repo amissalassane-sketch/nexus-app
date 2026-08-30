@@ -20,17 +20,17 @@ const FAQ_ITEMS = [
   {
     question: "Who owns my data?",
     answer:
-      "You do. NEXUS runs on your own Supabase Postgres database: every workspace is isolated with row-level security, and plan limits are enforced server-side. Fonts are self-hosted and there are no third-party trackers.",
+      "You do. NEXUS runs on your own Supabase Postgres database, with row-level security per workspace and plan limits enforced server-side. Fonts are self-hosted. No third-party trackers.",
   },
   {
     question: "Can I use NEXUS without AI?",
     answer:
-      "Yes. Signals come from a deterministic engine that reads your real tasks, projects, goals and activity. Optional model enrichment only rephrases a signal — when it is unconfigured, timed out or unavailable, NEXUS falls back to the deterministic result and says so.",
+      "Yes. Signals come from a deterministic engine that reads your real tasks, projects, goals and activity. Optional model enrichment only rephrases a signal. When it is unconfigured, timed out or unavailable, NEXUS falls back to the deterministic result and says so.",
   },
   {
     question: "How does NEXUS Intelligence work?",
     answer:
-      "It reads the workspace and flags overdue work, blocked tasks, projects without a next action and goals at risk, tracks weekly momentum, and computes a single next best action. Every signal names the evidence it was computed from — nothing is invented.",
+      "It reads the workspace and flags overdue work, blocked tasks, projects without a next action and goals at risk. It tracks weekly momentum and computes a single next best action. Every signal names the evidence it was computed from. Nothing is invented.",
   },
   {
     question: "What does Cmd + K do?",
@@ -40,7 +40,7 @@ const FAQ_ITEMS = [
   {
     question: "Is NEXUS really free?",
     answer:
-      "Yes — $0 forever, with one workspace, two projects, one hundred active tasks, three goals and one member. No card required. Pro and Business raise those limits and add advanced analytics, collaboration and granular permissions.",
+      "Yes. $0 forever, with one workspace, two projects, one hundred active tasks, three goals and one member. No card required. Pro and Business raise those limits and add advanced analytics, collaboration and granular permissions.",
   },
 ] as const;
 

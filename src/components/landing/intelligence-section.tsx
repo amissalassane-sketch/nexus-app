@@ -83,12 +83,12 @@ export function IntelligenceSection() {
             eyebrow="Nexus Intelligence"
             title={
               <>
-                It reads the work.
+                It reads the work,
                 <br />
-                Not the chat.
+                not the chat.
               </>
             }
-            sub="Your workspace already contains the signals. NEXUS connects them — no prompts, no setup, nothing to re-type."
+            sub="Your workspace already contains the signals. NEXUS connects them: no prompts, no setup, nothing to re-type."
           />
 
           <ul className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
@@ -111,8 +111,8 @@ export function IntelligenceSection() {
           </ul>
 
           <p className="nexus-lead mt-8 max-w-[460px]">
-            Everything NEXUS surfaces is computed from your real workspace data
-            — never invented, never a guess. Every signal explains its own
+            Everything NEXUS surfaces is computed from your real workspace
+            data. Never invented, never a guess. Every signal explains its own
             reason.
           </p>
         </LandingReveal>

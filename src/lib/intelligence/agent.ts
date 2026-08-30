@@ -166,7 +166,7 @@ export function validateModelToolCalls(
         args,
         status: "skipped",
         summary:
-          "Outil de mutation/navigation proposé par le modèle — non exécuté par l'agent (le serveur décide seul)",
+          "Outil de mutation/navigation proposé par le modèle. Non exécuté par l'agent (le serveur décide seul)",
         count: 0,
       });
       continue;
@@ -306,7 +306,7 @@ function buildAgentResult(
   }
   if (options.usedFallback) {
     steps.push({
-      label: "Provider IA non configuré ou indisponible — moteur déterministe NEXUS utilisé",
+      label: "Provider IA non configuré ou indisponible : moteur déterministe NEXUS utilisé",
       state: "thinking",
     });
   }
@@ -447,7 +447,7 @@ function repeatActionResponse(
       id: `act-repeat-${Date.now()}`,
       type: lastAction.type as IntelligenceAction["type"],
       label: labelByType[lastAction.type] ?? "Répéter l'action",
-      description: "Même action que précédemment — exécutée côté serveur après confirmation et vérifiée.",
+      description: "Même action que précédemment. Exécutée côté serveur après confirmation et vérifiée.",
       confirmationRequired: true,
       risk: riskForAction(lastAction.type),
       payload: payload as IntelligenceAction["payload"],

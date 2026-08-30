@@ -23,7 +23,7 @@ const TRUST_POINTS = [
     icon: Layers,
     title: "Connected by design",
     proof: "One data model",
-    body: "Goals, projects, tasks and activity live in one model — nothing is a silo.",
+    body: "Goals, projects, tasks and activity live in one model. Nothing is a silo.",
   },
   {
     icon: Lock,

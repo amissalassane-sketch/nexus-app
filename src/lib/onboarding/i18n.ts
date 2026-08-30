@@ -4,26 +4,26 @@ export type Locale = "en" | "fr";
 
 const EN = {
   "welcome.kicker": "Welcome to NEXUS",
-  "welcome.title": "Your workspace for turning ideas into organized, intelligent execution.",
-  "welcome.body": "Let’s get you productive. I’ll guide you through the essentials.",
+  "welcome.title": "Set up your workspace.",
+  "welcome.body": "Add a project and a first task, and NEXUS starts reading your work.",
   "welcome.start": "Get started",
-  "welcome.explore": "Explore on my own",
+  "welcome.explore": "Skip the guide",
   "guide.kicker": "NEXUS Guide",
   "guide.skip": "Skip for now",
   "guide.continue": "Continue",
   "guide.fallback": "That control isn’t on this screen. Continue when you’re ready.",
-  "guide.actionHint": "This step finishes when the work exists — not when you click next.",
+  "guide.actionHint": "This step finishes when the work exists, not when you click next.",
   "guide.welcome.title": "Welcome to NEXUS.",
   "guide.welcome.body":
-    "Let’s get your workspace ready. I’ll guide you through the essentials.",
+    "A few real steps: a project, a task, and one question to NEXUS.",
   "guide.welcome.action": "Get started",
-  "guide.navigate_projects.title": "First, let’s create your first project.",
+  "guide.navigate_projects.title": "First, create your first project.",
   "guide.navigate_projects.body":
     "Projects are where you organize a major piece of work. Open Projects in the sidebar.",
   "guide.navigate_projects.action": "Open Projects",
   "guide.create_project.title": "You’re in Projects.",
   "guide.create_project.body":
-    "Create your first project. Give it a name and save it — NEXUS waits for the real project.",
+    "Create your first project. Give it a name and save it. NEXUS can only read projects that exist.",
   "guide.create_project.action": "New project",
   "guide.navigate_tasks.title": "Your first project is ready.",
   "guide.navigate_tasks.body":
@@ -33,16 +33,16 @@ const EN = {
   "guide.create_task.body":
     "Tasks turn projects into executable work. Add a real task to continue.",
   "guide.create_task.action": "New task",
-  "guide.navigate_intelligence.title": "Meet the intelligence layer.",
+  "guide.navigate_intelligence.title": "Next, the intelligence layer.",
   "guide.navigate_intelligence.body":
-    "NEXUS Intelligence helps you understand your work and turn context into action. Open Intelligence.",
+    "NEXUS Intelligence reads your workspace and answers questions about it. Open Intelligence.",
   "guide.navigate_intelligence.action": "Open Intelligence",
   "guide.interact_intelligence.title": "Ask NEXUS about your workspace.",
   "guide.interact_intelligence.body":
-    "Try something like “What should I work on first?” Opening the page is not enough — send the question.",
+    "Try “What should I work on first?” Sending the question is what counts.",
   "guide.interact_intelligence.action": "Ask NEXUS",
   "activated.title": "You’re ready.",
-  "activated.body": "You’ve completed the essentials of NEXUS. Explore your workspace freely.",
+  "activated.body": "You’ve completed the essentials. The workspace is yours.",
   "checklist.title": "Get started",
   "checklist.progress": "Workspace progress",
   "checklist.project": "Create your first project",
@@ -57,7 +57,7 @@ const EN = {
   "tip.goals.title": "Goals",
   "tip.goals.body": "Goals help you keep your work aligned with outcomes.",
   "tip.intelligence.title": "Intelligence",
-  "tip.intelligence.body": "Intelligence connects your context and helps you act on it.",
+  "tip.intelligence.body": "Intelligence reads your workspace and points to what needs attention.",
   "tip.settings.title": "Settings",
   "tip.settings.body": "Manage your workspace and preferences here.",
   "tip.gotIt": "Got it",
@@ -72,30 +72,29 @@ const EN = {
 
 const FR: Record<keyof typeof EN, string> = {
   "welcome.kicker": "Bienvenue dans NEXUS",
-  "welcome.title":
-    "Votre espace pour transformer des idées en exécution organisée et intelligente.",
+  "welcome.title": "Configurez votre espace.",
   "welcome.body":
-    "Mettons-vous en condition de produire. Je vous guide sur l’essentiel.",
+    "Ajoutez un projet et une première tâche, et NEXUS commence à lire votre travail.",
   "welcome.start": "Commencer",
-  "welcome.explore": "Explorer seul",
+  "welcome.explore": "Passer le guide",
   "guide.kicker": "Guide NEXUS",
   "guide.skip": "Passer pour l’instant",
   "guide.continue": "Continuer",
   "guide.fallback":
     "Cet élément n’est pas sur cet écran. Continuez quand vous êtes prêt.",
   "guide.actionHint":
-    "Cette étape se termine lorsque le travail existe — pas au clic suivant.",
+    "Cette étape se termine lorsque le travail existe, pas au clic suivant.",
   "guide.welcome.title": "Bienvenue dans NEXUS.",
   "guide.welcome.body":
-    "Préparez votre espace. Je vous accompagne sur l’essentiel.",
+    "Quelques étapes réelles : un projet, une tâche, une question à NEXUS.",
   "guide.welcome.action": "Commencer",
-  "guide.navigate_projects.title": "Créons d’abord votre premier projet.",
+  "guide.navigate_projects.title": "D’abord, créez votre premier projet.",
   "guide.navigate_projects.body":
     "Les projets organisent un ensemble de travail. Ouvrez Projets dans la barre latérale.",
   "guide.navigate_projects.action": "Ouvrir Projets",
   "guide.create_project.title": "Vous êtes dans Projets.",
   "guide.create_project.body":
-    "Créez votre premier projet. Donnez-lui un nom et enregistrez-le — NEXUS attend le vrai projet.",
+    "Créez votre premier projet. Donnez-lui un nom et enregistrez-le. NEXUS ne lit que les projets qui existent.",
   "guide.create_project.action": "Nouveau projet",
   "guide.navigate_tasks.title": "Votre premier projet est prêt.",
   "guide.navigate_tasks.body":
@@ -107,15 +106,15 @@ const FR: Record<keyof typeof EN, string> = {
   "guide.create_task.action": "Nouvelle tâche",
   "guide.navigate_intelligence.title": "La couche Intelligence.",
   "guide.navigate_intelligence.body":
-    "NEXUS Intelligence vous aide à comprendre le travail et à passer à l’action. Ouvrez Intelligence.",
+    "NEXUS Intelligence lit votre espace et répond à vos questions. Ouvrez Intelligence.",
   "guide.navigate_intelligence.action": "Ouvrir Intelligence",
   "guide.interact_intelligence.title": "Interrogez NEXUS sur votre espace.",
   "guide.interact_intelligence.body":
-    "Essayez « Sur quoi dois-je travailler d’abord ? » Ouvrir la page ne suffit pas — envoyez la question.",
+    "Essayez « Sur quoi dois-je travailler d’abord ? ». Envoyer la question, c’est ce qui compte.",
   "guide.interact_intelligence.action": "Demander à NEXUS",
   "activated.title": "Vous êtes prêt.",
   "activated.body":
-    "Vous avez couvert l’essentiel de NEXUS. Explorez librement votre espace.",
+    "L’essentiel est en place. L’espace vous appartient.",
   "checklist.title": "Pour commencer",
   "checklist.progress": "Avancement de l’espace",
   "checklist.project": "Créer votre premier projet",
@@ -131,7 +130,7 @@ const FR: Record<keyof typeof EN, string> = {
   "tip.goals.body": "Les objectifs alignent le travail sur les résultats.",
   "tip.intelligence.title": "Intelligence",
   "tip.intelligence.body":
-    "Intelligence relie votre contexte et vous aide à agir.",
+    "Intelligence lit votre espace et signale ce qui mérite attention.",
   "tip.settings.title": "Réglages",
   "tip.settings.body": "Gérez ici l’espace et vos préférences.",
   "tip.gotIt": "Compris",

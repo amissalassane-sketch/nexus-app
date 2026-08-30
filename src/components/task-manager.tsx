@@ -722,7 +722,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
             isOverdue ? "text-danger" : "text-text-tertiary"
           )}
         >
-          {formatDate(task.due_at) ?? "—"}
+          {formatDate(task.due_at) ?? "–"}
         </span>
 
         <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-150 sm:ease-nexus sm:focus-within:opacity-100 sm:group-hover:opacity-100">
@@ -900,7 +900,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                 tasks.length === 0
                   ? "No tasks yet"
                   : view !== "all"
-                    ? `No tasks in ${VIEWS.find((entry) => entry.id === view)?.label.toLowerCase()}`
+                    ? `Nothing in ${VIEWS.find((entry) => entry.id === view)?.label}`
                     : "No tasks match these filters"
               }
               description={
@@ -908,7 +908,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                   ? "Create a task to get moving. NEXUS tracks deadlines, priorities and blockers automatically."
                   : view !== "all"
                     ? "This view has no matching tasks. Switch back to All to see everything in your workspace."
-                    : "Try adjusting your search query or reset the filters to see other tasks."
+                    : "Adjust your search or reset the filters to see the other tasks."
               }
               icon={<CheckSquare size={17} strokeWidth={1.75} />}
               action={
@@ -950,7 +950,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                             setQuickTitle("");
                           }
                         }}
-                        placeholder="Task title — Enter to create, Esc to cancel"
+                        placeholder="Task title. Enter to create, Esc to cancel"
                         className="h-9 min-w-0 flex-1 rounded-input border border-border-focus bg-bg-surface px-3 text-body text-text-primary outline-none placeholder:text-text-quaternary"
                         aria-label="New task title"
                       />

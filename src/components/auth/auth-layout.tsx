@@ -33,7 +33,7 @@ export function AuthLayout({
         <div className="mb-8 flex flex-col items-center text-center">
           <Link
             href="/"
-            aria-label="NEXUS — home"
+            aria-label="NEXUS home"
             className="group mb-6 inline-flex rounded-input outline-none"
           >
             <NexusLogo

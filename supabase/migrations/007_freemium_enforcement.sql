@@ -129,7 +129,7 @@ begin
     from public.projects
     where workspace_id = NEW.workspace_id;
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: projects (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: projects (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
   return NEW;
@@ -165,7 +165,7 @@ begin
     where workspace_id = NEW.workspace_id
       and status not in ('done', 'cancelled');
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: active_tasks (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: active_tasks (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
   return NEW;
@@ -196,7 +196,7 @@ begin
     from public.goals
     where workspace_id = NEW.workspace_id;
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: goals (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: goals (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
   return NEW;
@@ -227,7 +227,7 @@ begin
     from public.workspace_members
     where workspace_id = NEW.workspace_id;
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: members (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: members (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
   return NEW;

@@ -99,7 +99,7 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-text-quaternary"
           style={delay(280)}
         >
-          Free to start — no card required
+          Free to start. No card required
         </p>
 
         {/* How it works, in one line. Numbered so the order is explicit

@@ -235,7 +235,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
   delete_task: {
     name: "delete_task",
     description:
-      "Propose deleting a task. Destructive — always requires explicit human confirmation.",
+      "Propose deleting a task. Destructive. Always requires explicit human confirmation.",
     permission: "mutate",
     risk: "high",
     actionType: "delete_task",
@@ -276,7 +276,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
   delete_project: {
     name: "delete_project",
     description:
-      "Propose deleting a project and all its tasks. Destructive — always requires explicit human confirmation.",
+      "Propose deleting a project and all its tasks. Destructive. Always requires explicit human confirmation.",
     permission: "mutate",
     risk: "high",
     actionType: "delete_project",
@@ -315,7 +315,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
   },
   delete_goal: {
     name: "delete_goal",
-    description: "Propose deleting a goal. Destructive — requires explicit confirmation.",
+    description: "Propose deleting a goal. Destructive. Requires explicit confirmation.",
     permission: "mutate",
     risk: "high",
     actionType: "delete_goal",
@@ -590,7 +590,7 @@ export function executeReadTool(
       const health = workspaceHealth(snapshot);
       const nba = nextBestAction(snapshot);
       return done(
-        `${snapshot.projects.length} projets, ${openTasks.length} tâches ouvertes (${context.totals.overdueTasks} en retard, ${context.totals.blockedTasks} bloquées), ${snapshot.goals.length} objectifs — santé ${health.score}/100 (${health.band})`,
+        `${snapshot.projects.length} projets, ${openTasks.length} tâches ouvertes (${context.totals.overdueTasks} en retard, ${context.totals.blockedTasks} bloquées), ${snapshot.goals.length} objectifs, santé ${health.score}/100 (${health.band})`,
         snapshot.projects.length + openTasks.length + snapshot.goals.length,
         {
           workspaceId: ctx.workspaceId,
@@ -898,7 +898,7 @@ export function runReadTools(
         name: selection.name,
         args: selection.args,
         status: "skipped",
-        summary: "Outil de mutation/navigation — jamais exécuté par l'agent",
+        summary: "Outil de mutation/navigation, jamais exécuté par l'agent",
         count: 0,
       });
       continue;

@@ -123,7 +123,7 @@ function summary(context: WorkspaceContext, signalCount: number): string {
   if (context.overdueTasks > 0) parts.push(`${context.overdueTasks} overdue`);
   if (context.dueThisWeek > 0) parts.push(`${context.dueThisWeek} due this week`);
 
-  const detail = parts.length > 0 ? ` — ${parts.join(", ")}.` : ".";
+  const detail = parts.length > 0 ? `: ${parts.join(", ")}.` : ".";
 
   return `NEXUS read ${context.tasks} ${
     context.tasks === 1 ? "task" : "tasks"

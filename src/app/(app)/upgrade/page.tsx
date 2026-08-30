@@ -59,7 +59,7 @@ export default async function UpgradePage() {
           <p className="mx-auto mt-2 max-w-[480px] text-small text-text-secondary">
             Your current plan is{" "}
             <span className="font-mono text-text-primary">{currentPlan}</span>. Increase
-            capacity when this workspace outgrows it — nothing you already created is
+            capacity when this workspace outgrows it. Nothing you already created is
             ever removed.
           </p>
         </div>
@@ -192,8 +192,8 @@ export default async function UpgradePage() {
 
         <p className="mt-8 text-center text-caption text-text-tertiary">
           Plan limits are enforced server-side by Supabase (RLS, triggers and RPC), never
-          by the interface alone. No payment provider is connected yet — no transaction is
-          ever simulated.
+          by the interface alone. No payment provider is connected yet, so no transaction
+          is ever simulated.
         </p>
 
         <div className="mt-6 text-center">

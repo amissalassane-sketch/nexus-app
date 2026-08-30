@@ -101,7 +101,7 @@ export function SignalDetail({
         ref={panelRef}
         role="dialog"
         aria-modal="false"
-        aria-label={`Signal — ${insight.title}`}
+        aria-label={`Signal: ${insight.title}`}
         className="fixed inset-y-0 right-0 z-40 flex w-[min(420px,100vw)] flex-col border-l border-border-default bg-bg-subtle animate-panel-in lg:sticky lg:top-0 lg:z-0 lg:h-[calc(100dvh-140px)] lg:w-auto lg:rounded-card lg:border lg:border-border-subtle"
       >
         <header
@@ -257,7 +257,7 @@ function recommendation(insight: Insight): string {
     case "opportunity":
       return "A small setup step here gives NEXUS the context it needs to detect risk in this area.";
     case "momentum":
-      return "Nothing to fix — use this as the baseline when planning the next week.";
+      return "Nothing to fix. Use this as the baseline for next week's planning.";
     default:
       return insight.reason;
   }

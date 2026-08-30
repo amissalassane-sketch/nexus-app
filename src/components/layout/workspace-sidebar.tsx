@@ -119,7 +119,7 @@ export function WorkspaceSidebar({
       <div className="hidden h-14 shrink-0 items-center px-4 lg:flex">
         <Link
           href="/dashboard"
-          aria-label="NEXUS — Overview"
+          aria-label="NEXUS Overview"
           className="group inline-flex items-center rounded-nav outline-none"
         >
           <NexusWordmark

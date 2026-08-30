@@ -86,8 +86,8 @@ export function buildPlan(input: PlannerInput): IntelligencePlan | undefined {
           ? `1. Éliminer la dette de retard (${plural(overdue.length, "tâche")})`
           : `1. Clear overdue debt (${plural(overdue.length, "task")})`,
         description: fr
-          ? `Commencer par “${overdue[0].title}” — la tâche la plus ancienne en retard.`
-          : `Start with “${overdue[0].title}” — the oldest overdue task.`,
+          ? `Commencer par “${overdue[0].title}”, la tâche la plus ancienne en retard.`
+          : `Start with “${overdue[0].title}”, the oldest overdue task.`,
         href: "/tasks?filter=overdue",
       });
     }
@@ -132,8 +132,8 @@ export function buildPlan(input: PlannerInput): IntelligencePlan | undefined {
           ? "Aucune pression d'échéance détectée"
           : "No deadline pressure detected",
         description: fr
-          ? "Créneau idéal pour le travail stratégique de fond ou pour démarrer un nouveau projet."
-          : "A good window for strategic deep work or starting a new project.",
+          ? "Un bon moment pour le travail de fond ou pour démarrer un nouveau projet."
+          : "A good window for the work that has been waiting, or for starting something new.",
         href: "/projects?create=1",
       });
     }
@@ -157,7 +157,7 @@ export function buildPlan(input: PlannerInput): IntelligencePlan | undefined {
     const slots = ["09:00", "11:00", "14:00", "16:00"];
     const steps: IntelligencePlanStep[] = top.map((task, index) => ({
       id: `focus-${task.id}`,
-      title: `${slots[index] ?? ""} — ${task.title}`.trim(),
+      title: `${slots[index] ?? ""} · ${task.title}`.trim(),
       description: [
         task.priority ? `${task.priority}` : "",
         task.due_at

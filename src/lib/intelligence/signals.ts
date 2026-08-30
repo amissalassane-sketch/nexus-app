@@ -588,7 +588,7 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         severity,
         "PRIORITY_CONFLICT:workspace",
         "Trop de travail urgent en même temps",
-        "Le workspace contient simultanément beaucoup d'engagements urgents. INTELLIGENCE signale le conflit sans décider à votre place ce qui doit être sacrifié.",
+        `Le workspace compte ${urgentTasks.length} tâche${urgentTasks.length > 1 ? "s" : ""} urgente${urgentTasks.length > 1 ? "s" : ""} et ${dueTodayCount} échéance${dueTodayCount > 1 ? "s" : ""} pour aujourd'hui. À vous de choisir ce qui passe en premier.`,
         conflictFactors.map((factor) => ({ label: factor.label, value: factor.value })),
         { type: "workspace", id: "workspace", label: "Workspace" },
         Math.max(urgentTasks.length, dueTodayCount),

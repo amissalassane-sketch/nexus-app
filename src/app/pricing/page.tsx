@@ -9,12 +9,12 @@ import { FinalCtaSection } from "@/components/landing/final-cta";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Choose the NEXUS plan that matches your workspace. Start free and upgrade when your team needs more operational context.",
+    "Choose the NEXUS plan that matches your workspace. Start free and upgrade when the limits no longer fit your work.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     url: "/pricing",
     title: "NEXUS Pricing",
-    description: "Clear plans for operational intelligence, from one workspace to an entire team.",
+    description: "Clear plans for operational intelligence, for one person or a whole team.",
   },
 };
 

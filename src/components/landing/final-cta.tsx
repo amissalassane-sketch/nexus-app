@@ -26,8 +26,7 @@ export function FinalCtaSection() {
               Bring your work into focus.
             </h2>
             <p className="nexus-lead mx-auto mt-5 max-w-[440px]">
-              One workspace. One chain from goal to activity. One next action,
-              always.
+              One workspace. One connected chain. One next action, always.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

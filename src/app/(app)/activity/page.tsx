@@ -13,7 +13,7 @@ import { ActivityList, type ActivityRow } from "@/components/activity-list";
 // ============================================================
 
 export const metadata = {
-  title: "Activity — NEXUS",
+  title: "Activity. NEXUS",
   description: "Everything that changed in your NEXUS workspace.",
 };
 

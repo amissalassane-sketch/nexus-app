@@ -569,7 +569,7 @@ export function CommandMenu() {
               setQuery(event.target.value);
               setActiveIndex(0);
             }}
-            placeholder="Search NEXUS — pages, projects, tasks, actions…"
+            placeholder="Search NEXUS: pages, projects, tasks, actions…"
             aria-label="Search NEXUS"
             role="combobox"
             aria-expanded="true"

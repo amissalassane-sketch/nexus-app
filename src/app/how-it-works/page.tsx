@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "How NEXUS Works",
   description:
-    "See how NEXUS connects workspace context, detects operational signals and recommends a reviewable next action.",
+    "NEXUS connects workspace context, detects operational signals and recommends a reviewable next action.",
   alternates: { canonical: "/how-it-works" },
   openGraph: {
     url: "/how-it-works",
@@ -59,7 +59,7 @@ export default function HowItWorksPage() {
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <ButtonLink href="/signup" size="lg">Get started</ButtonLink>
                 <ButtonLink href="/intelligence" variant="secondary" size="lg">
-                  Explore Intelligence <ArrowRight size={14} aria-hidden="true" />
+                  See Intelligence <ArrowRight size={14} aria-hidden="true" />
                 </ButtonLink>
               </div>
             </div>

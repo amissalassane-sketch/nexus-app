@@ -40,7 +40,7 @@ const ENTITY_LABEL: Record<string, string> = {
 
 function entityLabelFor(signal: StoredSignalRow): string {
   const kind = ENTITY_LABEL[signal.entityType ?? ""] ?? "Élément";
-  return signal.entityLabel ? `${kind} — ${signal.entityLabel}` : kind;
+  return signal.entityLabel ? `${kind}: ${signal.entityLabel}` : kind;
 }
 
 interface SignalsResponse {
@@ -211,8 +211,8 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3.5 sm:px-5">
         <div className="flex items-center gap-2">
           <ShieldAlert size={15} strokeWidth={1.75} className="text-lavender transition-transform duration-200 ease-nexus" aria-hidden="true" />
-          <p className="eyebrow text-text-secondary">Needs your attention</p>
-          {criticalCount > 0 ? <Badge tone="danger" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">{criticalCount} critique</Badge> : null}
+          <p className="eyebrow text-text-secondary">Votre attention</p>
+          {criticalCount > 0 ? <Badge tone="danger" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">{criticalCount} critique{criticalCount === 1 ? "" : "s"}</Badge> : null}
         </div>
         <div className="flex items-center gap-1.5">
           {loading ? (
@@ -364,7 +364,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                     <p className="text-small font-medium text-text-primary">Confirmer « {confirming.action.label} » dans le workspace ?</p>
                     <VerificationLifecycle state={verificationState ?? "confirm"} className="shrink-0 scale-90" />
                   </div>
-                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Action destructive — elle sera exécutée côté serveur puis vérifiée.</p> : null}
+                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Action destructive. Elle sera exécutée côté serveur puis vérifiée.</p> : null}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <Button loading={executing} onClick={() => void executeAction(signal, confirming.action)} className="min-h-[44px]">
                       {executing ? "Exécution & vérification…" : "Confirmer et exécuter"}
@@ -389,7 +389,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
           );
         })}
 
-        {hiddenCount > 0 ? <p className="px-1 pt-1 text-caption text-text-quaternary animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">+ {hiddenCount} autre{hiddenCount === 1 ? "" : "s"} signal{hiddenCount === 1 ? "" : "x"} dans la liste complète</p> : null}
+        {hiddenCount > 0 ? <p className="px-1 pt-1 text-caption text-text-quaternary animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">+ {hiddenCount} autre{hiddenCount === 1 ? "" : "s"} signal{hiddenCount === 1 ? "" : "x"} moins prioritaire{hiddenCount === 1 ? "" : "s"}</p> : null}
       </div>
     </section>
   );

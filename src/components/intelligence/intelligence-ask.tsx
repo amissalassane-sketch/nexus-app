@@ -426,7 +426,7 @@ export function IntelligenceAsk({
             }}
             rows={1}
             enterKeyHint="send"
-            placeholder="Ask NEXUS — “Quels projets nécessitent mon attention ?”, “Plan my week”…"
+            placeholder="Ask NEXUS. Try “Quels projets nécessitent mon attention ?” or “Plan my week”"
             aria-label="Ask a question about this workspace"
             className="min-h-[44px] w-full resize-none overflow-y-auto rounded-input border border-border-default bg-bg-surface py-2.5 pl-9 pr-10 text-body text-[14px] text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)] disabled:opacity-60"
           />
@@ -551,7 +551,7 @@ export function IntelligenceAsk({
           <div className="flex items-center gap-2">
             <ShieldAlert size={14} strokeWidth={1.75} className="text-lavender" aria-hidden="true" />
             <p className="text-caption font-medium text-text-primary">
-              {proactive.length} thing{proactive.length === 1 ? "" : "s"} need your attention
+              {proactive.length} point{proactive.length === 1 ? "" : "s"} nécessitent votre attention
             </p>
           </div>
           <ul className="mt-2 flex flex-col gap-1">
@@ -562,7 +562,7 @@ export function IntelligenceAsk({
                   href={insight.href}
                   className="shrink-0 text-caption font-medium text-text-tertiary hover:text-text-primary"
                 >
-                  View
+                  Voir
                 </Link>
               </li>
             ))}
@@ -581,15 +581,15 @@ export function IntelligenceAsk({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-lavender opacity-40" />
                   <span className="relative inline-flex h-2 w-2 rounded-pill bg-lavender" />
                 </span>
-                <span className="font-medium">NEXUS is analyzing</span>
-                <span className="text-text-tertiary">— real workspace context</span>
+                <span className="font-medium">NEXUS analyse</span>
+                <span className="text-text-tertiary">votre workspace réel</span>
               </div>
               <button
                 type="button"
                 onClick={() => abortRef.current?.abort()}
                 className="rounded-input px-2 py-1 text-caption text-text-tertiary transition-colors hover:bg-accent-ghost hover:text-text-primary active:scale-[0.96]"
               >
-                Cancel
+                Annuler
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2">
@@ -932,7 +932,7 @@ export function IntelligenceAsk({
                       href={item.href}
                       className="mt-2 sm:mt-0 inline-flex min-h-[36px] items-center gap-1 text-caption font-medium text-text-tertiary hover:text-text-primary transition-colors"
                     >
-                      <span>View</span>
+                      <span>Voir</span>
                       <ArrowRight size={12} strokeWidth={1.75} />
                     </Link>
                   ) : null}
@@ -945,7 +945,7 @@ export function IntelligenceAsk({
           {currentResponse.action ? (
             <div className="mt-4 rounded-card border border-lavender-border/40 bg-lavender/5 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="eyebrow text-lavender">Action Recommendation</span>
+                <span className="eyebrow text-lavender">Action recommandée</span>
                 <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
                   <span
                     className={cn(
@@ -987,7 +987,7 @@ export function IntelligenceAsk({
                         href="/tasks"
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
-                        <span>Open in Tasks</span>
+                        <span>Ouvrir dans Tâches</span>
                         <ArrowRight size={12} />
                       </Link>
                     ) : (
@@ -995,7 +995,7 @@ export function IntelligenceAsk({
                         href="/projects"
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
-                        <span>Open in {executedActionResult.actionType?.includes("goal") ? "Goals" : "Projects"}</span>
+                        <span>Ouvrir dans {executedActionResult.actionType?.includes("goal") ? "Objectifs" : "Projets"}</span>
                         <ArrowRight size={12} />
                       </Link>
                     )}

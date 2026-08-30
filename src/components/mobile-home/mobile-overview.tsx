@@ -200,7 +200,7 @@ export function MobileOverview({
 
           {mission.nextBestAction ? (
             <p className="mt-2 text-caption text-text-secondary">
-              <span className="text-lavender">Next — </span>
+              <span className="text-lavender">Next: </span>
               {mission.nextBestAction.label}
             </p>
           ) : null}
@@ -228,7 +228,7 @@ export function MobileOverview({
             <p className="eyebrow text-text-quaternary">Active mission</p>
           </div>
           <p className="mt-1.5 text-small text-text-secondary">
-            No mission in progress. Missions are created from a plan — tell
+            No mission in progress. Missions are created from a plan. Tell
             NEXUS what you need to get done.
           </p>
           <Link
@@ -283,8 +283,8 @@ export function MobileOverview({
             <p className="eyebrow text-text-secondary">Ask NEXUS</p>
           </div>
           <p className="mt-1.5 text-small text-text-secondary">
-            What should I do now? Ask in your own words — answers come from
-            your real workspace, never guesses.
+            What should I do now? Ask in your own words. Answers come from
+            your real workspace, not from guesses.
           </p>
           <Link
             href="/app/intelligence?ask=1"

@@ -298,7 +298,7 @@ export function decomposeMission(
       "Identifier les tâches existantes",
       related.taskIds.length > 0
         ? `${related.taskIds.length} tâche(s) liée(s) identifiée(s) dans le workspace.`
-        : "Aucune tâche existante liée à cet objectif — il faudra la créer.",
+        : "Aucune tâche existante liée à cet objectif. Il faudra la créer.",
       { kind: "linked_tasks_exist" },
       [],
       null,
@@ -336,7 +336,7 @@ export function decomposeMission(
       "Vérifier les échéances",
       request.deadlineLabel
         ? `Échéance cible : ${request.deadlineLabel}. Les tâches liées doivent porter une date.`
-        : "Aucune échéance cible demandée — vérifier les dates des tâches liées.",
+        : "Aucune échéance cible demandée. Vérifier les dates des tâches liées.",
       { kind: "linked_tasks_dated" },
       ["step-1"],
       null,
@@ -354,7 +354,7 @@ export function decomposeMission(
       "Construire le plan",
       openRelated.length > 0
         ? `${openRelated.length} tâche(s) ouverte(s) prête(s) à être exécutée(s).`
-        : "Aucune tâche ouverte à exécuter — le plan ne peut pas démarrer.",
+        : "Aucune tâche ouverte à exécuter. Le plan ne peut pas démarrer.",
       { kind: "plan_ready" },
       ["step-2", "step-3"],
       null,

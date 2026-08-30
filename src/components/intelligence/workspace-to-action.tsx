@@ -11,7 +11,7 @@ import { SectionHeading } from "@/components/landing/section-heading";
 const STEPS = [
   {
     label: "Your workspace",
-    body: "Tasks, projects, goals and activity — already there, already yours.",
+    body: "Tasks, projects, goals and activity. Already there, already yours.",
   },
   {
     label: "NEXUS analyzes",
@@ -19,11 +19,11 @@ const STEPS = [
   },
   {
     label: "Signals",
-    body: "Overdue, blocked, at risk, drifting, moving — each one named.",
+    body: "Overdue, blocked, at risk, drifting, moving, each one named.",
   },
   {
     label: "Priority",
-    body: "Everything open is ranked against everything else that is open.",
+    body: "Everything open is ranked against everything else.",
   },
   {
     label: "Next best action",
