@@ -322,7 +322,7 @@ begin
     from public.workspace_members
     where workspace_id = NEW.workspace_id;
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: members (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: members (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
   return NEW;

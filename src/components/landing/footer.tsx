@@ -49,7 +49,7 @@ export function LandingFooter({
     <footer className="border-t border-border-subtle px-5 pb-10 pt-14 sm:px-6">
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 md:flex-row md:items-start md:justify-between">
         <div className="max-w-[280px]">
-          <Link href="/" aria-label="NEXUS — home" className="inline-flex rounded-nav">
+          <Link href="/" aria-label="NEXUS home" className="inline-flex rounded-nav">
             <NexusWordmark size={28} />
           </Link>
           <p className="mt-3 text-small text-text-secondary">

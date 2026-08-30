@@ -76,7 +76,7 @@ export function LandingNav({
       <div className="mx-auto flex h-14 w-full max-w-[1120px] items-center justify-between gap-3 px-5 sm:px-6">
         <Link
           href="/"
-          aria-label="NEXUS — home"
+          aria-label="NEXUS home"
           className="flex items-center rounded-nav transition-opacity duration-150 ease-nexus hover:opacity-80"
         >
           <NexusWordmark size={28} priority />

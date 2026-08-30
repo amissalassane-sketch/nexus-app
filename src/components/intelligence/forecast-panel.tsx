@@ -97,7 +97,7 @@ export function ForecastPanel({ forecasts }: { forecasts: ProjectForecast[] }) {
               <span className="min-w-[96px] font-mono text-mono tabular-nums text-text-secondary">
                 {forecast.projectedCompletion
                   ? `→ ${dateFormatter.format(new Date(forecast.projectedCompletion))}`
-                  : "→ —"}
+                  : "→ –"}
               </span>
             </div>
 

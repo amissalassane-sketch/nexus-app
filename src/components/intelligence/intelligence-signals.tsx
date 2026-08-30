@@ -44,7 +44,7 @@ const SIGNALS: {
     state: "Info",
     tone: "info",
     title: "No next action",
-    body: "An active project with nothing open against it — the work has quietly stopped.",
+    body: "An active project with nothing open against it. The work has quietly stopped.",
   },
   {
     icon: TrendingUp,
@@ -70,7 +70,7 @@ export function IntelligenceSignals() {
           <SectionHeading
             eyebrow="What it surfaces"
             title="Six signals, one reading of the workspace."
-            sub="Not another list of tasks. A short, ranked read of what is actually happening — and what is quietly going wrong."
+            sub="A short, ranked read of what is actually happening, and what is quietly going wrong."
           />
         </LandingReveal>
 

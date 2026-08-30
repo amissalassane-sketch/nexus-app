@@ -87,7 +87,7 @@ export function Topbar({
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
-        aria-label="Search NEXUS — Command palette"
+        aria-label="Search NEXUS, command palette"
         className="hidden h-8 w-[260px] items-center gap-2 rounded-nav border border-border-subtle bg-bg-surface/40 px-2.5 text-left text-[12.5px] text-text-tertiary transition-[border-color,background-color,color,transform] duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface hover:text-text-secondary active:scale-[0.98] md:flex xl:w-[320px] will-change-transform"
       >
         <Search size={14} strokeWidth={1.75} className="shrink-0 transition-transform duration-150 ease-nexus group-hover:scale-105" aria-hidden="true" />
@@ -103,7 +103,7 @@ export function Topbar({
 
         <Link
           href="/notifications"
-          aria-label={unreadCount > 0 ? `Notifications — ${unreadCount} unread` : "Notifications"}
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
           className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
         >
           <Bell size={15} strokeWidth={1.75} aria-hidden="true" className="transition-transform duration-150 ease-nexus" />
@@ -131,7 +131,7 @@ export function Topbar({
               type="button"
               ref={ref}
               onClick={toggle}
-              aria-label={hasName ? `Account — ${user.name}` : "Account — complete profile"}
+              aria-label={hasName ? `Account: ${user.name}` : "Account: complete profile"}
               className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary outline-none transition-[border-color,background-color,transform] duration-150 ease-nexus hover:border-border-strong active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
               {...ariaProps}
             >

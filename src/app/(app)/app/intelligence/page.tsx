@@ -12,9 +12,9 @@ import { Alert, ErrorState } from "@/components/ui/feedback";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = {
-  title: "Intelligence — NEXUS",
+  title: "Intelligence. NEXUS",
   description:
-    "NEXUS continuously analyses your workspace and surfaces what matters next.",
+    "NEXUS reads your workspace and surfaces what matters next. Every signal carries its evidence.",
 };
 
 export default async function IntelligencePage({
@@ -84,7 +84,7 @@ export default async function IntelligencePage({
       <PageHeader
         title="Intelligence"
         count={insights.length}
-        description="NEXUS continuously analyses your workspace and surfaces what matters next. Every signal is derived from your own data and shows the evidence behind it."
+        description="NEXUS reads your workspace and surfaces what matters next. Every signal is derived from your own data and shows the evidence behind it."
         actions={
           critical > 0 ? (
             <span className="inline-flex h-8 items-center gap-2 rounded-input border border-danger-border bg-danger-bg px-2.5 text-caption text-danger">
@@ -92,7 +92,7 @@ export default async function IntelligencePage({
                 aria-hidden="true"
                 className="h-1.5 w-1.5 rounded-pill bg-danger"
               />
-              {critical} critical
+              {critical} critical signal{critical === 1 ? "" : "s"}
             </span>
           ) : null
         }
@@ -100,15 +100,15 @@ export default async function IntelligencePage({
 
       {!workspaceId ? (
         <Alert tone="warning" className="mb-5">
-          No active workspace is linked to this account, so there is nothing for
-          NEXUS to analyse yet.
+          No active workspace is linked to this account. NEXUS has nothing to
+          read until you create one.
         </Alert>
       ) : null}
 
       {error ? (
         <ErrorState
-          title="We couldn't read this workspace"
-          description="Your session may have expired, or the workspace is no longer reachable. Nothing has been changed."
+          title="NEXUS could not read this workspace"
+          description="Your session may have expired, or the workspace is no longer reachable. Nothing was changed."
           action={<ButtonLink href="/app/intelligence">Retry</ButtonLink>}
         />
       ) : (

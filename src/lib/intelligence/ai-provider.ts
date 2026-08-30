@@ -459,7 +459,7 @@ function validateAndNormalizeResponse(
               ? (call.args as Record<string, unknown>)
               : {},
           status: "ok",
-          summary: "Proposé par le modèle — validation et exécution par le serveur",
+          summary: "Proposé par le modèle. Validation et exécution par le serveur",
           count: 0,
         });
       }

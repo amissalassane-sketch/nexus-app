@@ -141,7 +141,7 @@ export interface WorkspaceHealth {
 const BAND_COPY: Record<HealthBand, string> = {
   steady: "The operation is under control. Keep the cadence.",
   watch: "Pressure is building. A few deliberate moves will steady it.",
-  critical: "The operation needs attention today — start with the overdue and blocked work.",
+  critical: "The operation needs attention today. Start with the overdue and blocked work.",
 };
 
 /**
@@ -277,7 +277,7 @@ export function workspaceHealth(snapshot: WorkspaceSnapshot): WorkspaceHealth {
     band,
     headline: measured
       ? BAND_COPY[band]
-      : "There is not enough tracked work to assess yet — add tasks and dates.",
+      : "There is not enough tracked work to assess yet. Add tasks and dates.",
     measured,
     factors,
   };
@@ -342,7 +342,7 @@ export function weeklyBriefing(snapshot: WorkspaceSnapshot): WeeklyBriefing {
 
   const outlook =
     dueThisWeek === 0
-      ? "No deadlines land in the next seven days — good window for the work that has been drifting."
+      ? "No deadlines land in the next seven days. A good window for the work that has been drifting."
       : `${plural(dueThisWeek, "task")} land${dueThisWeek === 1 ? "s" : ""} in the next seven days. Protect that time before accepting anything new.`;
 
   const moves = nextBestAction(snapshot);
@@ -360,10 +360,10 @@ export function weeklyBriefing(snapshot: WorkspaceSnapshot): WeeklyBriefing {
     completedThisWeek === 0
       ? "A quiet week so far"
       : momentumDelta > 0
-        ? `${plural(completedThisWeek, "task")} done — momentum is building`
+        ? `${plural(completedThisWeek, "task")} done, momentum is building`
         : momentumDelta === 0
-          ? `${plural(completedThisWeek, "task")} done — holding steady`
-          : `${plural(completedThisWeek, "task")} done — slower than last week`;
+          ? `${plural(completedThisWeek, "task")} done, holding steady`
+          : `${plural(completedThisWeek, "task")} done, slower than last week`;
 
   const summaryParts: string[] = [];
   if (openedThisWeek > 0) summaryParts.push(`${plural(openedThisWeek, "task")} opened`);
@@ -455,12 +455,12 @@ export function forecastWorkspace(snapshot: WorkspaceSnapshot): ProjectForecast[
 
     if (open.length === 0) {
       status = "on-track";
-      note = "All attached work is complete — ready to close.";
+      note = "All attached work is complete. Ready to close.";
     } else if (velocity <= 0) {
       status = done === 0 ? "unknown" : "stalled";
       note =
         done === 0
-          ? "No completions yet — complete tasks to unlock a projection."
+          ? "No completions yet. Complete tasks to get a projection."
           : "No completions in the last 28 days. The finish date cannot be projected.";
     } else {
       const weeksLeft = open.length / velocity;
@@ -475,7 +475,7 @@ export function forecastWorkspace(snapshot: WorkspaceSnapshot): ProjectForecast[
           note += ` That is ${plural(slipDays, "day")} past the deadline.`;
         } else if (slipDays >= 0) {
           status = "watch";
-          note += " Tight against the deadline — protect the remaining time.";
+          note += " Tight against the deadline. Protect the remaining time.";
         } else {
           status = "on-track";
         }
@@ -694,7 +694,7 @@ function reasonWorkspaceCore(
       query,
       intent: "general",
       headline: "Intelligence is ready.",
-      narrative: "Create a project and a few tasks so NEXUS can start detecting priorities, risks and opportunities.",
+      narrative: "Create a project and a few tasks. NEXUS starts reading the moment real work exists.",
       provider: "nexus-engine",
       evidence: {
         metrics: [
@@ -855,7 +855,7 @@ function reasonWorkspaceCore(
       narrative:
         nextItems.length > 0
           ? `Continuing from the previous plan, the next step is: ${nextItems.join(", ")}.`
-          : "The previous plan has no remaining steps. Ask for a new day or week plan whenever you are ready.",
+          : "The previous plan has no remaining steps. Ask for a new plan for today or this week.",
       provider: "nexus-engine",
       evidence: {
         metrics: [{ label: "Previous turn", value: lastTurn.headline }],
@@ -884,7 +884,7 @@ function reasonWorkspaceCore(
       intentId: mapLegacyIntentToId("action", actionType),
       target: lastTurn.target ?? { type: "task" },
       headline: `Execute proposed action: ${actionType.replace("_", " ")}`,
-      narrative: `This repeats the action proposed in the previous turn, targeting the same verified workspace resource.`,
+      narrative: `This repeats the action from the previous turn, on the same verified target.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [{ label: "Action", value: actionType.replace("_", " ") }],
@@ -931,7 +931,7 @@ function reasonWorkspaceCore(
         intentId: "SEARCH",
         target: classified.target,
         headline: "No matching workspace item",
-        narrative: "No task or project in this workspace matches that reference. The search is scoped to your workspace only.",
+        narrative: "No task or project in this workspace matches that reference.",
         provider: "nexus-engine",
         evidence: { metrics: [{ label: "Scope", value: "Current workspace" }], traceCount: "Search scoped to verified workspace records", sources: ["Workspace Registry"] },
         suggestions: ["Quels projets nécessitent mon attention ?", "Recherche une tâche.", "Recherche un projet."],
@@ -944,7 +944,7 @@ function reasonWorkspaceCore(
       intentId: "SEARCH",
       target: entity,
       headline: `Found: ${entity.label}`,
-      narrative: `This is a real ${entity.type} in your workspace. Open the corresponding view to inspect it.`,
+      narrative: `This is a real ${entity.type} in your workspace. Open the ${entity.type === "task" ? "tasks" : "projects"} view to see it.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [{ label: "Item", value: entity.label }, { label: "Type", value: entity.type }],
@@ -990,7 +990,7 @@ function reasonWorkspaceCore(
       headline: project ? `Why “${project.name}” needs attention` : "Workspace explanation",
       narrative: project && reasons.length > 0
         ? `The evidence is read directly from the workspace: ${reasons.join(", ")}. Progress is ${progress}%.`
-        : "NEXUS cannot find a project-level signal to explain a slowdown — nothing in the verified data currently indicates a risk.",
+        : "NEXUS cannot find a project-level signal to explain a slowdown. Nothing in the verified data indicates a risk.",
       provider: "nexus-engine",
       evidence: {
         metrics: project ? [
@@ -1051,7 +1051,7 @@ function reasonWorkspaceCore(
           : "update_task";
 
     let headline = `Proposed action: ${actionType.replace("_", " ")}`;
-    let narrative = `NEXUS would ${actionType.replace("_", " ")} “${entity.label}” in this workspace. The action is proposed for your confirmation and will be verified before success is reported.`;
+    let narrative = `This will ${actionType.replace("_", " ")} “${entity.label}” in this workspace. It runs only after your confirmation, and NEXUS verifies the result before reporting success.`;
     let payload: Record<string, unknown> = { taskId: entity.id, query: entity.label };
 
     if (classified.intent === "MOVE") {
@@ -1085,7 +1085,7 @@ function reasonWorkspaceCore(
     }
     if (classified.intent === "COMPLETE") {
       headline = `Complete “${entity.label}”?`;
-      narrative = "This marks the real task as done. NEXUS verifies status and completion date after the mutation.";
+      narrative = "This marks the task as done. NEXUS verifies the status and completion date after the update.";
     }
 
     return {
@@ -1158,7 +1158,7 @@ function reasonWorkspaceCore(
       intentId: "DELETE",
       target: { type: entity.type, id: entity.id, label: entity.label },
       headline: `Delete “${entity.label}”?`,
-      narrative: "This is a destructive action. It requires an explicit confirmation and is executed server-side only after the target is re-validated in this workspace.",
+      narrative: "This is a destructive action. It requires your confirmation and only runs after the target is re-checked in this workspace.",
       provider: "nexus-engine",
       evidence: {
         metrics: [{ label: "Action", value: actionType.replace("_", " ") }, { label: "Target", value: entity.label }],
@@ -1220,7 +1220,7 @@ function reasonWorkspaceCore(
       query,
       intent: "action",
       headline: `Recommended action: Create project “${name}”`,
-      narrative: `It is recommended to create a dedicated project for “${name}” so your team can organize tasks, track deadlines and monitor momentum.`,
+      narrative: `This creates a project for “${name}” in your workspace. Tasks and deadlines will be tracked against it.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [
@@ -1364,7 +1364,7 @@ function reasonWorkspaceCore(
       const slot = timeSlots[i];
       daySchedule.push({
         id: `slot-${i}`,
-        title: `${slot} — ${item.task.title}`,
+        title: `${slot} · ${item.task.title}`,
         subtitle: `Reason: ${item.reason} · Project: ${item.task.project_id ? (projectMap.get(item.task.project_id)?.name ?? "General") : "General"}`,
         badge: {
           label: slot,
@@ -1379,7 +1379,7 @@ function reasonWorkspaceCore(
       daySchedule.push({
         id: "slot-empty",
         title: "No urgent tasks scheduled for today",
-        subtitle: "Your queue is clear. Good window for strategic deep work.",
+        subtitle: "Your queue is clear. A good window for the work that has been waiting.",
         badge: { label: "CLEAR", tone: "success" },
         href: "/tasks?create=1",
         reasons: ["No open commitments in workspace"],
@@ -1389,10 +1389,10 @@ function reasonWorkspaceCore(
     return {
       query,
       intent: "planning",
-      headline: "Operational schedule for today",
+      headline: "Your schedule for today",
       narrative: daySchedule.length > 1
-        ? `NEXUS structured your workday based on verified deadlines and dependencies: clear overdue debt first at 09:00, address blockers before noon, and execute scheduled commitments this afternoon.`
-        : `Your workspace has no immediate deadline debt today. A clear window to advance strategic projects or add new deliverables.`,
+        ? `NEXUS ordered the day from your verified deadlines and blockers. The most urgent items come first, at 09:00.`
+        : `No rush in the queue today. The remaining time is open for the work that has been waiting.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [
@@ -1509,8 +1509,8 @@ function reasonWorkspaceCore(
           : `${plural(items.length, "project")} require attention`,
       narrative:
         items.length === 0
-          ? "No projects currently have overdue deadlines, blocked work or stalled momentum. All initiatives are progressing within safe parameters."
-          : `Analysis of ${snapshot.projects.length} workspace projects identified ${items.length} initiatives with critical risks: ${items.map((i) => `“${i.title}” (${i.reasons?.[0]})`).join(", ")}.`,
+          ? "No project has an overdue deadline or blocked work right now."
+          : `Of the ${snapshot.projects.length} projects in your workspace, ${items.length} need attention: ${items.map((i) => `“${i.title}” (${i.reasons?.[0]})`).join(", ")}.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [
@@ -1582,13 +1582,13 @@ function reasonWorkspaceCore(
           : `Top ${items.length} priority ${plural(items.length, "task")}`,
       narrative:
         items.length === 0
-          ? "All tasks are completed or there are no active tasks recorded. Your queue is clean."
-          : `NEXUS triaged open work against real deadlines, overdue status, blocking dependencies and priority weights. Starting with “${items[0]?.title}” eliminates the largest friction point.`,
+          ? "There is no open work to prioritize right now."
+          : `NEXUS ranked the open work by deadline, blockers and priority. Starting with “${items[0]?.title}” clears the most urgent problem first.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [
           { label: "Top task", value: items[0]?.title ?? "None" },
-          { label: "Top task criteria", value: items[0]?.reasons?.[0] ?? "—" },
+          { label: "Top task reason", value: items[0]?.reasons?.[0] ?? "–" },
           { label: "Total open tasks", value: String(open.length) },
         ],
         traceCount: `Triaged ${open.length} active tasks across ${snapshot.projects.length} projects`,
@@ -1654,7 +1654,7 @@ function reasonWorkspaceCore(
       steps.push({
         id: "plan-step-1",
         title: `1. Clear deadline debt (${plural(overdue.length, "task")})`,
-        subtitle: `Start immediately with “${overdue[0].title}” to stop project slip`,
+        subtitle: `Start with “${overdue[0].title}” first. It is the oldest overdue task.`,
         badge: { label: "IMMEDIATE", tone: "danger" },
         href: "/tasks?filter=overdue",
         reasons: [`${overdue.length} tasks are past their due date`],
@@ -1684,7 +1684,7 @@ function reasonWorkspaceCore(
       steps.push({
         id: "plan-step-4",
         title: `4. Execute scheduled milestones (${plural(dueThisWeek.length, "task")})`,
-        subtitle: "Work allocated across the remaining days of the week",
+        subtitle: "Due in the remaining days of the week",
         badge: { label: "THIS WEEK", tone: "neutral" },
         href: "/tasks",
         reasons: ["Scheduled within the next 7 days"],
@@ -1695,7 +1695,7 @@ function reasonWorkspaceCore(
       steps.push({
         id: "plan-step-clear",
         title: "No scheduled deadline pressure",
-        subtitle: "A clear cadence to focus on strategic long-term goals or start a new project",
+        subtitle: "No overdue work, no blockers, no tight deadlines. A good moment to advance the big goals or start something new",
         badge: { label: "CLEAR", tone: "success" },
         href: "/projects?create=1",
         reasons: ["No overdue tasks, blockers or tight deadlines"],
@@ -1705,12 +1705,12 @@ function reasonWorkspaceCore(
     return {
       query,
       intent: "planning",
-      headline: "Recommended operating plan for this week",
-      narrative: `NEXUS organized your workflow into a prioritized cadence: eliminate overdue debt first, secure today's commitments, remove blockers, then advance weekly milestones.`,
+      headline: "Your plan for this week",
+      narrative: `NEXUS ordered the week by urgency: overdue work first, then today's deadlines, blockers, and what is due this week.`,
       provider: "nexus-engine",
       evidence: {
         metrics: [
-          { label: "1. Urgent today", value: overdue.length > 0 ? `Resolve ${plural(overdue.length, "overdue task")} first` : "No overdue work — queue is clean" },
+          { label: "1. Urgent today", value: overdue.length > 0 ? `Resolve ${plural(overdue.length, "overdue task")} first` : "No overdue work. The queue is clean." },
           { label: "2. Blockers", value: blocked.length > 0 ? `Unblock ${blocked[0].title}` : "No active blockers" },
           { label: "3. Due this week", value: `${plural(dueThisWeek.length, "task")} scheduled` },
         ],
@@ -1860,7 +1860,7 @@ function reasonWorkspaceCore(
           : `${plural(blockedProjects.length, "project")} have blocked work`,
       narrative:
         blockedProjects.length === 0
-          ? "No active task is marked blocked in any project. Work is flowing smoothly."
+          ? "No open task is marked blocked in any project."
           : `Blockers detected in ${blockedProjects.length} projects: ${blockedProjects.map((bp) => `“${bp.project.name}” (${bp.blocked.length} blocked)`).join(", ")}.`,
       provider: "nexus-engine",
       evidence: {
@@ -2114,7 +2114,7 @@ function projectAnswer(
 
   return {
     kind: "project",
-    title: `“${project.name}” — ${project.status ?? "planning"}`,
+    title: `“${project.name}” (${project.status ?? "planning"})`,
     lines: [
       { label: "Progress", value: `${Math.round(project.progress ?? 0)}%` },
       { label: "Open tasks", value: String(projectOpen.length) },
@@ -2138,3 +2138,4 @@ function projectAnswer(
     suggestions: SUGGESTIONS.project,
   };
 }
+

@@ -38,22 +38,22 @@ import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
 export const metadata: Metadata = {
   title: {
     absolute:
-      "NEXUS — It reads the work, then tells you what matters next",
+      "NEXUS. It reads the work, then tells you what matters next",
   },
   description:
-    "NEXUS continuously reads your workspace — deadlines, dependencies, progress and activity — and turns that context into the next decision worth making.",
+    "NEXUS continuously reads your workspace: deadlines, dependencies, progress and activity. It turns that context into the next decision worth making.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "NEXUS",
     url: "/",
-    title: "NEXUS — It reads the work, then tells you what matters next",
+    title: "NEXUS. It reads the work, then tells you what matters next",
     description:
       "It reads the work, not the chat. NEXUS turns the activity already in your workspace into signals, evidence and a clear next action.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NEXUS — It reads the work, then tells you what matters next",
+    title: "NEXUS. It reads the work, then tells you what matters next",
     description:
       "It reads the work, not the chat. NEXUS turns workspace activity into signals and a clear next action.",
   },
@@ -95,7 +95,7 @@ export default async function Home({
             <div className="mx-auto w-full max-w-[1080px]">
               <ProductPreview />
               <p className="nexus-eyebrow mt-6 text-center">
-                The workspace — goals, projects, tasks and activity, connected
+                The workspace: goals, projects, tasks and activity, connected
               </p>
             </div>
           </LandingReveal>

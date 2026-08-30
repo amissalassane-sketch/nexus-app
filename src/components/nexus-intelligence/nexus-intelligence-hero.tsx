@@ -32,9 +32,9 @@ export interface NexusIntelligenceHeroProps {
 }
 
 const FOOTNOTES = [
-  { label: "Reads the work already in your workspace" },
+  { label: "Reads the work you already have" },
   { label: "Explains every signal it surfaces" },
-  { label: "Free to start — no card required" },
+  { label: "Free to start. No card required" },
 ] as const;
 
 export function NexusIntelligenceHero({
@@ -94,15 +94,16 @@ export function NexusIntelligenceHero({
             className="nexus-intelligence-item mt-6 text-[19px] font-medium leading-[1.3] tracking-[-0.02em] text-text-primary sm:text-[22px]"
             style={delay(220)}
           >
-            Your operations, understood.
+            Your workspace, read end to end.
           </p>
 
           <p
             className="nexus-intelligence-item mt-5 max-w-[470px] text-balance text-body text-text-secondary sm:text-[15px] sm:leading-[25px]"
             style={delay(300)}
           >
-            NEXUS Intelligence understands your workflows, connects your data
-            and helps your team execute with greater clarity.
+            NEXUS Intelligence reads your tasks, projects, goals and activity,
+            connects the relationships between them and names the one thing
+            worth doing next.
           </p>
 
           <div

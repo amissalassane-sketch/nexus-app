@@ -29,10 +29,10 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
       >
         <p className="eyebrow text-text-quaternary">Next action</p>
         <p className="mt-2.5 text-h2 text-text-primary font-semibold">
-          Aucune action urgente requise
+          Aucune action requise pour le moment
         </p>
         <p className="mt-1.5 max-w-[52ch] text-small text-text-secondary leading-relaxed">
-          Votre espace de travail est fluide. Ajoutez un projet ou une tâche pour que NEXUS commence à surveiller les échéances, les dépendances et le momentum.
+          Aucune tâche ouverte en ce moment. Créez-en une, et NEXUS commence à surveiller les échéances et les dépendances.
         </p>
       </section>
     );
@@ -84,7 +84,7 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
       {insight.evidence.length > 0 ? (
         <div className="mt-4">
           <span className="font-mono text-[10px] uppercase tracking-wider text-text-quaternary">
-            Preuves & Données du workspace
+            Preuves du workspace
           </span>
           <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
             {insight.evidence.map((item) => (

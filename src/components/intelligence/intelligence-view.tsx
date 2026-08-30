@@ -171,7 +171,7 @@ export function IntelligenceView({
               visible.length === 0 && insights.length > 0 ? (
                 <EmptyState
                   title="Every signal is cleared"
-                  description="You have dismissed or snoozed everything NEXUS surfaced in this session. Signals are recomputed from your workspace on the next visit."
+                  description="You have dismissed or snoozed everything NEXUS surfaced this session. Signals are recomputed from your workspace on the next visit."
                   action={
                     <button
                       type="button"
@@ -184,8 +184,8 @@ export function IntelligenceView({
                 />
               ) : insights.length === 0 ? (
                 <EmptyState
-                  title="Intelligence is ready for your workspace"
-                  description="NEXUS watches deadlines, blocked work, drifting projects and goal progress. Create projects and tasks so NEXUS can analyze risks, spot bottlenecks and recommend priorities."
+                  title="Intelligence is ready"
+                  description="NEXUS reads deadlines, blocked work, project momentum and goal progress. Create a project and a task, and it starts flagging what needs you."
                   action={
                     <div className="flex items-center gap-2">
                       <Link href="/projects?create=1" className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-150 ease-nexus hover:bg-accent-hover active:scale-[0.97]">
@@ -236,7 +236,7 @@ export function IntelligenceView({
           ) : (
             <div className="sticky top-0 rounded-card border border-dashed border-border-subtle bg-bg-subtle/40 px-5 py-6 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
               <p className="eyebrow text-text-quaternary">Signal detail</p>
-              <p className="mt-2.5 text-small text-text-secondary">Select a signal to see the evidence behind it, the work it affects and the recommended next step.</p>
+              <p className="mt-2.5 text-small text-text-secondary">Select a signal to see its evidence, the work it affects and the recommended next step.</p>
               <ContextSummary context={context} />
             </div>
           )}

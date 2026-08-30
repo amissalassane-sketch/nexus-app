@@ -62,7 +62,7 @@ const pricingPlans: PlanPresentationRow[] = [
       "Operators running several projects at once, who need the full signal set and room to grow.",
     badge: "Most Popular",
     featured: true,
-    delta: "5× the workspaces, 10× the tasks, 20 goals — plus advanced analytics.",
+    delta: "5× the workspaces, 10× the tasks and 20 goals, plus advanced analytics.",
     cta: {
       label: "Start Pro",
       href: "/upgrade",
@@ -238,7 +238,7 @@ function PricingCard({
               href={plan.cta.href}
               variant={plan.cta.variant}
               size="lg"
-              aria-label={`${plan.cta.label} — ${plan.name} plan`}
+              aria-label={`${plan.cta.label} for the ${plan.name} plan`}
               className={cn(
                 "w-full",
                 plan.featured
@@ -326,7 +326,7 @@ export function PricingSection() {
           >
             <p className="nexus-lead">
               Start free, upgrade when the workspace outgrows the limits. Every
-              limit below is enforced server-side — the same numbers the
+              limit below is enforced server-side, the same numbers the
               database checks.
             </p>
           </LandingReveal>

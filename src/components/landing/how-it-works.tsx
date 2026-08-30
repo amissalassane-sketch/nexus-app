@@ -24,12 +24,12 @@ const STEPS = [
   {
     number: "02",
     title: "Understand",
-    body: "Deadlines, dependencies, progress and momentum, connected.",
+    body: "It connects deadlines and dependencies, and reads progress and momentum from the data.",
   },
   {
     number: "03",
     title: "Decide",
-    body: "Risk is surfaced, ranked, and reduced to one next action.",
+    body: "Risk is surfaced, ranked and reduced to one next action.",
   },
   {
     number: "04",
@@ -54,8 +54,8 @@ export function HowItWorksSection() {
         <LandingReveal>
           <SectionHeading
             eyebrow="How it works"
-            title="Four moves. Then it runs itself."
-            sub="NEXUS is a system, not a dashboard to babysit. One chain from the work you already have to the decision you have to make."
+            title="Four moves. Then it keeps watching."
+            sub="NEXUS is a system, not a dashboard to babysit. It takes the work you already have and turns it into the decision you have to make."
           />
         </LandingReveal>
 

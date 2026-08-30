@@ -586,7 +586,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                           "hidden w-14 text-right font-mono text-mono tabular-nums text-text-tertiary sm:block"
                         )}
                       >
-                        {formatDate(project.due_date) ?? "—"}
+                        {formatDate(project.due_date) ?? "–"}
                       </span>
                       <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-150 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
                         <Button

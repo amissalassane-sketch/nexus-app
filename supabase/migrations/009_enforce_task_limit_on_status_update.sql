@@ -35,7 +35,7 @@ begin
       and id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid);
 
   if v_count >= v_limit then
-    raise exception 'PLAN_LIMIT_EXCEEDED: active_tasks (% / %). Upgrade to unlock more.', v_count, v_limit
+    raise exception 'PLAN_LIMIT_EXCEEDED: active_tasks (% / %). Upgrade to add more.', v_count, v_limit
       using errcode = 'P0001';
   end if;
 

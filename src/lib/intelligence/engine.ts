@@ -643,7 +643,7 @@ export function nextBestAction(snapshot: WorkspaceSnapshot): Insight | null {
       kind: "opportunity",
       severity: "info",
       title: `Next: “${next.title}”`,
-      reason: "Nothing is overdue or blocked — this is the next open task.",
+      reason: "Nothing is overdue or blocked. This is the next open task.",
       evidence: [
         { label: "Open tasks", value: String(activeTasks.length) },
         { label: "Overdue", value: "0" },

@@ -377,7 +377,7 @@ export function UserSettingsPanel({
         <Card className="p-6">
           <h2 className="text-h2 text-text-primary">Profile</h2>
           <p className="mt-1 text-small text-text-secondary">
-            Your NEXUS identity. Everything here is optional — your email is
+            Your NEXUS identity. Everything here is optional. Your email is
             your login, and none of these fields ever gate access to NEXUS.
           </p>
 
@@ -441,7 +441,7 @@ export function UserSettingsPanel({
               <Field
                 label="Username"
                 htmlFor="settings-username"
-                hint="Your NEXUS identity — not your login. 3-32 characters."
+                hint="Your NEXUS identity, not your login. 3-32 characters."
               >
                 <Input
                   id="settings-username"
@@ -457,7 +457,7 @@ export function UserSettingsPanel({
               <Field
                 label="Profile photo"
                 htmlFor="settings-avatar"
-                hint="Optional — a link to an image you host."
+                hint="Optional. A link to an image you host."
               >
                 <Input
                   id="settings-avatar"
@@ -567,8 +567,9 @@ export function UserSettingsPanel({
             <h2 className="text-h2 text-text-primary">What NEXUS reads</h2>
             <p className="mt-1 max-w-[60ch] text-small text-text-secondary">
               NEXUS derives every signal from the work already stored in this
-              workspace. It runs on your data, in your session — nothing is sent
-              to an external model provider.
+              workspace. The built-in engine reasons in your session. If an
+              external model is enabled for NEXUS Intelligence, it only ever
+              sees the read-only context listed below.
             </p>
 
             <ul className="mt-5 flex flex-col divide-y divide-border-subtle border-y border-border-subtle">
@@ -600,7 +601,7 @@ export function UserSettingsPanel({
             <h2 className="text-h2 text-text-primary">Signal thresholds</h2>
             <p className="mt-1 max-w-[60ch] text-small text-text-secondary">
               The rules NEXUS applies when deciding what is worth surfacing.
-              These are deterministic — the same workspace always produces the
+              They are deterministic: the same workspace always produces the
               same signals.
             </p>
 

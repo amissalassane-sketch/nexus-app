@@ -36,7 +36,7 @@ const LEVELS = [
     example: "Ship v1",
     meta: "Target · Sep 14",
     line: "Where you're going.",
-    detail: "Outcomes with real progress — measured, never a slider.",
+    detail: "Outcomes with real progress, not a slider.",
   },
   {
     icon: FolderKanban,
@@ -52,7 +52,7 @@ const LEVELS = [
     example: "Review signup flow",
     meta: "Due in 2 days",
     line: "What you do next.",
-    detail: "Priorities, due dates and a focus list — nothing decorative.",
+    detail: "Priorities, due dates and a focus list. Nothing decorative.",
   },
   {
     icon: Activity,
@@ -60,7 +60,7 @@ const LEVELS = [
     example: "Last completion",
     meta: "42 minutes ago",
     line: "What actually happened.",
-    detail: "Every change recorded. Who, what and when — always traceable.",
+    detail: "Every change recorded: who, what and when, always traceable.",
   },
 ] as const;
 
@@ -80,12 +80,12 @@ export function ModelSection() {
             eyebrow="The NEXUS model"
             title={
               <>
-                Not a todo list.
+                An operating layer
                 <br />
-                An operating layer.
+                for your work.
               </>
             }
-            sub="A todo list stores tasks. NEXUS reads the relationships between them: a goal sets the direction, a project moves it forward, a task is the next concrete step, and activity records what actually happened — which is exactly what makes risk detectable."
+            sub="A todo list stores tasks. NEXUS reads the relationships between them. A goal sets the direction, a project moves it forward, a task is the next concrete step, and activity records what happened, which is exactly what makes risk detectable."
           />
 
           <ul className="mt-7 flex flex-col gap-3">

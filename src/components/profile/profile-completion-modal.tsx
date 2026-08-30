@@ -89,7 +89,7 @@ function ProfileCompletionForm({
       return;
     }
     if (!handle) {
-      setError("Add a username — it is your NEXUS identity, not your login.");
+      setError("Add a username. It is your NEXUS identity, not your login.");
       return;
     }
     if (!isValidUsername(handle)) {
@@ -174,9 +174,9 @@ function ProfileCompletionForm({
           <UserRound size={14} strokeWidth={1.75} className="shrink-0 text-text-tertiary" aria-hidden="true" />
           <p className="min-w-0 flex-1 truncate text-caption text-text-secondary">
             {completeness.complete
-              ? "Profile complete — ready to go."
+              ? "Profile complete. Ready to go."
               : `${completeness.filled} of ${completeness.total} completed${
-                  missingLabel(completeness.missing) ? ` — missing ${missingLabel(completeness.missing).toLowerCase()}` : ""
+                  missingLabel(completeness.missing) ? `. Missing ${missingLabel(completeness.missing).toLowerCase()}` : ""
                 }`}
           </p>
         </div>
@@ -196,7 +196,7 @@ function ProfileCompletionForm({
         <Field
           label="Username"
           htmlFor="profile-completion-username"
-          hint="Your NEXUS identity — it is not your login. 3–32 letters, numbers, dots, underscores or dashes."
+          hint="Your NEXUS identity, not your login. 3–32 letters, numbers, dots, underscores or dashes."
           action={<span className="text-caption text-text-quaternary">required</span>}
         >
           <div className="flex items-center overflow-hidden rounded-input border border-border-default bg-bg-surface transition-colors duration-150 ease-nexus focus-within:border-border-focus focus-within:shadow-[0_0_0_3px_rgba(233,228,255,0.14)]">
@@ -221,7 +221,7 @@ function ProfileCompletionForm({
         <Field
           label="Profile photo"
           htmlFor="profile-completion-avatar"
-          hint="Optional — a link to an image you host. You can also leave this empty and NEXUS will use your initial."
+          hint="Optional. A link to an image you host. Leave it empty and NEXUS uses your initial."
         >
           <div className="relative">
             <ImagePlus

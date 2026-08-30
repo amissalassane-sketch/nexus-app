@@ -102,7 +102,7 @@ function PanelHeader() {
   return (
     <p className="eyebrow flex items-center gap-1.5 text-text-quaternary">
       <Crosshair size={12} strokeWidth={1.75} aria-hidden="true" />
-      Focus list — what NEXUS would do first
+      Focus list: what NEXUS would do first
     </p>
   );
 }

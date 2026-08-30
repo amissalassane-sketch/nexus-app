@@ -86,7 +86,7 @@ export default async function BillingPage() {
                 </p>
               ) : (
                 <p className="mt-1 text-small text-text-secondary">
-                  Default plan — no subscription record yet.
+                  Default plan. No subscription record yet.
                 </p>
               )}
             </div>

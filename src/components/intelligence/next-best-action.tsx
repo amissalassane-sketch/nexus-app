@@ -53,8 +53,8 @@ export function NextBestAction() {
             eyebrow="The point of it"
             title={
               <>
-                Not just what is late.{" "}
-                <span className="nexus-intel-accent">What matters next.</span>
+                It surfaces what matters next,{" "}
+                <span className="nexus-intel-accent">not just what is late.</span>
               </>
             }
             sub="Everything open is ranked against everything else. One action comes out on top, with the reasoning attached."
@@ -155,7 +155,7 @@ export function NextBestAction() {
           </div>
 
           <p className="mt-4 text-center eyebrow text-text-quaternary">
-            Example signals — your workspace produces its own
+            Example signals. Your workspace produces its own.
           </p>
         </LandingReveal>
       </div>

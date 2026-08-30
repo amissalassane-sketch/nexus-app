@@ -3,7 +3,7 @@ import { NexusLogo } from "@/components/nexus-logo";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = {
-  title: "Page not found — NEXUS",
+  title: "Page not found. NEXUS",
   robots: { index: false, follow: false },
 };
 

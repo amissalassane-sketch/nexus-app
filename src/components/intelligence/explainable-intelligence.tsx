@@ -112,8 +112,8 @@ export function ExplainableIntelligence() {
             </div>
 
             <p className="mt-6 border-t border-border-subtle pt-4 text-small text-text-tertiary">
-              Read from your own tasks, projects and goals. No external model
-              call, no hidden scoring, no data leaving the workspace.
+              Read from your own tasks, projects and goals. No hidden scoring,
+              no invented facts.
             </p>
           </div>
         </LandingReveal>

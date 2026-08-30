@@ -12,10 +12,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nexus.app";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "NEXUS — Operational Intelligence",
+    name: "NEXUS. Operational Intelligence",
     short_name: "NEXUS",
     description:
-      "NEXUS analyses the work already happening in your workspace and surfaces what is drifting, what is blocked, what is at risk — and what deserves your attention next.",
+      "NEXUS analyses the work already happening in your workspace and surfaces what is drifting, what is blocked, what is at risk, and what deserves your attention next.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",

@@ -26,12 +26,12 @@ export function IntelligenceClosing() {
           </span>
 
           <h2 className="mt-5 max-w-[18ch] text-[32px] font-medium leading-[1.06] tracking-[-0.035em] text-text-primary sm:text-[46px]">
-            Your workspace already knows what needs attention.
+            Your workspace already shows what needs attention.
           </h2>
 
           <p className="mt-5 max-w-[440px] text-body text-text-secondary sm:text-[15px] sm:leading-[24px]">
-            NEXUS helps you see it — every signal traced back to the work that
-            produced it.
+            NEXUS helps you see it. Every signal is traced back to the work
+            that produced it.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -45,7 +45,7 @@ export function IntelligenceClosing() {
           </div>
 
           <p className="mt-5 eyebrow text-text-quaternary">
-            Free to start — no card required
+            Free to start. No card required
           </p>
         </div>
       </LandingReveal>

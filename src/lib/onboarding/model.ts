@@ -103,7 +103,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "create_project",
     title: "You’re in Projects.",
     description:
-      "Create your first project. Give it a name and save it — NEXUS waits for the real project.",
+      "Create your first project. Give it a name and save it. NEXUS starts working the moment it exists.",
     actionLabel: "New project",
     target: "[data-guide='new-project']",
     href: "/projects?create=1",
