@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
@@ -5,13 +8,13 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 // ============================================================
 // NEXUS LANDING — FAQ
 //
-// Native <details>/<summary>: accessible, keyboard-friendly, works
-// without JavaScript.
+// Native <details>/<summary>: keyboard-friendly, works without
+// JavaScript. On top of that, the list keeps a single question
+// open at a time — opening one closes the previous one.
 //
-// DESIGN AUDIT: the questions were the same size as the answers, so
-// the list had no structure to scan. Each row is now numbered and
-// set one step above its answer; the separator is a hairline, and
-// opening is a 220ms rise (disabled under reduced motion).
+// Readability: questions sit one step above their answers, each
+// row is numbered, and answers stay visible at text-small/secondary
+// (7.9:1 on the dark surfaces) — never a secret to dig for.
 //
 // Every answer is factual and tied to code in this repository.
 // ============================================================
@@ -45,6 +48,8 @@ const FAQ_ITEMS = [
 ] as const;
 
 export function FaqSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
   return (
     <section id="faq" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto w-full max-w-[800px]">
@@ -55,8 +60,21 @@ export function FaqSection() {
         <LandingReveal delay={90}>
           <div className="mt-12">
             {FAQ_ITEMS.map((item, index) => (
-              <details key={item.question} className="nexus-faq-item group">
-                <summary className="flex cursor-pointer list-none items-start gap-4 py-5 transition-colors duration-150 ease-nexus hover:text-text-primary [&::-webkit-details-marker]:hidden">
+              <details
+                key={item.question}
+                className="nexus-faq-item group"
+                open={openIndex === index}
+              >
+                <summary
+                  onClick={(event) => {
+                    // Controlled accordion: the component owns the open
+                    // state, so only one answer is open at a time and the
+                    // DOM never drifts from the state.
+                    event.preventDefault();
+                    setOpenIndex((current) => (current === index ? null : index));
+                  }}
+                  className="flex cursor-pointer list-none items-start gap-4 py-5 transition-colors duration-150 ease-nexus hover:text-text-primary [&::-webkit-details-marker]:hidden"
+                >
                   <span className="nexus-meta-strong mt-[3px] shrink-0 tabular-nums">
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -78,6 +96,11 @@ export function FaqSection() {
               </details>
             ))}
           </div>
+
+          <p className="nexus-meta mt-8 text-center">
+            Anything else? The same answers live in the workspace, next to the
+            feature they describe.
+          </p>
         </LandingReveal>
       </div>
     </section>

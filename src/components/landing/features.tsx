@@ -14,17 +14,23 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 // ============================================================
 // NEXUS LANDING — FEATURE ARCHITECTURE
 //
-// DESIGN AUDIT: eight identical cards read as "feature soup". The
-// eight items are not the same kind of thing:
+// The eight items are NOT the same kind of thing, so they are not
+// presented as eight identical cards:
 //
-//   THE OPERATING MODEL (6) → what NEXUS IS. Full cards, primary
-//                             weight, the product's data model.
-//   BUILT FOR SPEED (2)     → how NEXUS FEELS. One compact strip,
-//                             secondary weight, two characteristics.
+//   CORE MODEL (6)          → what NEXUS IS. Full cards, primary
+//                             weight, the product's data model —
+//                             the chain the intelligence reads.
+//   PRODUCT EXPERIENCE (2)  → how NEXUS FEELS. One compact strip,
+//                             secondary weight: Command K and
+//                             Free to start are product attributes,
+//                             not model concepts.
 //
-// Real NEXUS capabilities only — Command K, Intelligence, the plan
-// limits and the workspace model all exist in the application.
+// The model chain (Goal → Project → Task → Activity → Intelligence)
+// is drawn once above the cards so the mental model is stated before
+// any feature is read. Real NEXUS capabilities only.
 // ============================================================
+
+const MODEL_FLOW = ["Goal", "Project", "Task", "Activity", "Intelligence"] as const;
 
 const OPERATING_MODEL = [
   {
@@ -59,7 +65,7 @@ const OPERATING_MODEL = [
   },
 ] as const;
 
-const BUILT_FOR_SPEED = [
+const PRODUCT_EXPERIENCE = [
   {
     icon: Command,
     title: "Command K",
@@ -84,25 +90,55 @@ export function FeaturesSection() {
           />
         </LandingReveal>
 
-        {/* ---------- The operating model — full weight ---------- */}
+        {/* ---------- Core model — full weight ---------- */}
         <LandingReveal delay={80}>
           <div className="mt-12 lg:mt-14">
             <div className="flex items-center gap-3">
-              <h3 className="nexus-eyebrow">The operating model</h3>
+              <h3 className="nexus-eyebrow">Core model</h3>
               <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+              <span className="nexus-meta">What NEXUS reads</span>
             </div>
 
+            {/* The model chain, stated once — horizontal, wraps on the
+                smallest screens so it never overflows. */}
+            <ol
+              className="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 lg:justify-start"
+              aria-label="The NEXUS model: goal, project, task, activity, intelligence"
+            >
+              {MODEL_FLOW.map((level, index) => (
+                <li key={level} className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-lavender/70" aria-hidden="true" />
+                    <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-secondary">
+                      {level}
+                    </span>
+                  </span>
+                  {index < MODEL_FLOW.length - 1 ? (
+                    <span
+                      className="h-px w-4 bg-gradient-to-r from-border-strong to-border-subtle"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {OPERATING_MODEL.map((feature) => {
+              {OPERATING_MODEL.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
                   <li
                     key={feature.title}
                     className="nexus-panel card-hover h-full p-5"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                    </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
+                        <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                      </span>
+                      <span className="nexus-meta mt-0.5">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </div>
                     <h4 className="mt-4 text-[15px] font-semibold leading-[22px] tracking-[-0.015em] text-text-primary">
                       {feature.title}
                     </h4>
@@ -116,16 +152,17 @@ export function FeaturesSection() {
           </div>
         </LandingReveal>
 
-        {/* ---------- Built for speed — secondary weight ---------- */}
+        {/* ---------- Product experience — secondary weight ---------- */}
         <LandingReveal delay={140}>
           <div className="mt-10 lg:mt-12">
             <div className="flex items-center gap-3">
-              <h3 className="nexus-eyebrow">Built for speed</h3>
+              <h3 className="nexus-eyebrow">Product experience</h3>
               <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+              <span className="nexus-meta">How it feels</span>
             </div>
 
             <ul className="nexus-panel mt-5 grid divide-y divide-border-subtle sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-              {BUILT_FOR_SPEED.map((feature) => {
+              {PRODUCT_EXPERIENCE.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
                   <li
@@ -136,9 +173,14 @@ export function FeaturesSection() {
                       <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
-                      <h4 className="text-h4 text-text-primary">
-                        {feature.title}
-                      </h4>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h4 className="text-h4 text-text-primary">
+                          {feature.title}
+                        </h4>
+                        <span className="nexus-meta">
+                          {String(index + 7).padStart(2, "0")}
+                        </span>
+                      </div>
                       <p className="mt-1 text-small text-text-secondary">
                         {feature.body}
                       </p>

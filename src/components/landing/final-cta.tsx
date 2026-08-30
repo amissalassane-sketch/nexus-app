@@ -4,8 +4,9 @@ import { ButtonLink } from "@/components/ui/button";
 
 // ============================================================
 // NEXUS LANDING — FINAL CTA
-// The last push: a clear reason to start, inside a quiet panel
-// that stays strictly inside the NEXUS visual language.
+// The last push: the work is already there, NEXUS starts reading
+// it immediately. Inside a quiet panel that stays strictly inside
+// the NEXUS visual language.
 // ============================================================
 
 export function FinalCtaSection() {
@@ -22,11 +23,12 @@ export function FinalCtaSection() {
             <span className="nexus-eyebrow-pill">
               Start
             </span>
-            <h2 className="mx-auto mt-4 max-w-[18ch] text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-text-primary sm:text-[44px]">
-              Bring your work into focus.
+            <h2 className="mx-auto mt-4 max-w-[20ch] text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-text-primary sm:text-[44px]">
+              Stop managing the work. Understand it.
             </h2>
             <p className="nexus-lead mx-auto mt-5 max-w-[440px]">
-              One workspace. One connected chain. One next action, always.
+              Free to start, no card required. Your workspace already has
+              what NEXUS needs.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -34,8 +36,8 @@ export function FinalCtaSection() {
                 Get started
                 <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
               </ButtonLink>
-              <ButtonLink href="/login" variant="secondary" size="lg">
-                Sign in
+              <ButtonLink href="/intelligence" variant="secondary" size="lg">
+                See it in action
               </ButtonLink>
             </div>
           </div>

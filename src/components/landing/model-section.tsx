@@ -85,7 +85,7 @@ export function ModelSection() {
                 for your work.
               </>
             }
-            sub="A todo list stores tasks. NEXUS reads the relationships between them. A goal sets the direction, a project moves it forward, a task is the next concrete step, and activity records what happened, which is exactly what makes risk detectable."
+            sub="A todo list keeps tasks. NEXUS keeps the relationships between them: a goal sets the direction, a project moves it, a task is the next concrete step, and activity records what actually happened — which is exactly what makes risk detectable."
           />
 
           <ul className="mt-7 flex flex-col gap-3">
@@ -109,7 +109,7 @@ export function ModelSection() {
 
           <div className="mt-8">
             <ButtonLink href="/signup" variant="secondary" size="md">
-              Start with NEXUS
+              Get started
               <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
             </ButtonLink>
           </div>
