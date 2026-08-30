@@ -141,12 +141,17 @@ export default async function DashboardPage() {
 
   // Active mission for the phone surface — best effort: the stored
   // state is read once, bounded, and a failure degrades to "no mission"
-  // rather than holding the overview open.
+  // rather than holding the overview open. The controller is aborted on
+  // timeout so a slow read is actually cancelled, not just abandoned.
+  const missionReadController = new AbortController();
   const missionPromise: Promise<IntelligenceMission[]> = workspaceId
     ? withTimeout(
-        Promise.resolve(readActiveMissions(supabase, workspaceId, user.id)),
+        Promise.resolve(
+          readActiveMissions(supabase, workspaceId, user.id, missionReadController.signal)
+        ),
         4_000,
-        "MISSION_READ_TIMEOUT"
+        "MISSION_READ_TIMEOUT",
+        missionReadController
       ).catch(() => [] as IntelligenceMission[])
     : Promise.resolve([]);
 

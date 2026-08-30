@@ -791,9 +791,15 @@ export async function readMission(
 export async function readActiveMissions(
   db: MissionDbClient,
   workspaceId: string,
-  userId: string
+  userId: string,
+  /**
+   * Optional cancellation signal. Pass this through when the caller bounds
+   * this read with a timeout (see withTimeout() in auth-flow.ts), so the
+   * timeout actually stops the request instead of leaving it running.
+   */
+  signal?: AbortSignal
 ): Promise<IntelligenceMission[]> {
-  const { data, error } = await db
+  let query = db
     .from("intelligence_missions")
     .select("*")
     .eq("workspace_id", workspaceId)
@@ -801,6 +807,10 @@ export async function readActiveMissions(
     .in("status", ["active", "blocked"])
     .order("updated_at", { ascending: false })
     .limit(MISSION_MAX_ACTIVE);
+  if (signal) {
+    query = query.abortSignal(signal);
+  }
+  const { data, error } = await query;
   if (error || !data) return [];
   return (data as Record<string, unknown>[]).map((row) => normalizeMissionRow(row));
 }
