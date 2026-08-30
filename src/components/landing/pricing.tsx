@@ -1,4 +1,7 @@
+"use client";
+
 import type { CSSProperties } from "react";
+import { useState } from "react";
 import { Check, Minus } from "lucide-react";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SpotlightBorder } from "@/components/landing/spotlight-border";
@@ -9,26 +12,38 @@ import { cn } from "@/lib/cn";
 // ============================================================
 // NEXUS LANDING — PRICING
 //
-// Three plans, one badge, per-plan CTAs — unchanged.
-//
-// DESIGN AUDIT: the cards listed eight near-identical bullet points,
-// so no visitor could tell the plans apart. Each card now answers
-// three questions in order:
+// Three plans, one badge, per-plan CTAs. Each card answers three
+// questions in order:
 //
 //   WHO IS IT FOR?   → the audience line under the price
 //   WHAT CHANGES?    → the entitlements, read from plan-limits.ts
 //   WHY UPGRADE?     → the delta line at the foot of the card
 //
-// Entitlements are imported from src/lib/plan-limits.ts — the single
-// source of truth the database enforces — so the marketing surface
-// can never drift away from what the product actually allows.
+// BILLING — monthly / annual. The monthly prices are the ones the
+// product already quoted (Free $0, Pro $19, Business $49 per user
+// / month). Annual is derived from a single declared discount:
+// 25% off the monthly rate, billed yearly. Nothing else is
+// invented — the same numbers stay visible in both states and the
+// annual saving is always shown next to the rate it comes from.
 // ============================================================
+
+/** The only discount NEXUS declares. Annual price = monthly × (1 − 0.25). */
+const ANNUAL_SAVINGS_RATE = 0.25;
+
+type BillingPeriod = "monthly" | "annual";
+
+const money = (value: number) =>
+  Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+
+const annualRate = (monthly: number) => monthly * (1 - ANNUAL_SAVINGS_RATE);
+const annualSavings = (monthly: number) =>
+  monthly * 12 * ANNUAL_SAVINGS_RATE;
 
 interface PlanPresentationRow {
   key: PlanName;
   name: string;
-  price: string;
-  billing: string;
+  /** Monthly price per user, as quoted by the product. 0 = free. */
+  price: number;
   audience: string;
   badge: string | null;
   featured: boolean;
@@ -40,8 +55,7 @@ const pricingPlans: PlanPresentationRow[] = [
   {
     key: "FREE",
     name: "Free",
-    price: "0",
-    billing: "Forever",
+    price: 0,
     audience:
       "One person getting their workspace under control. Everything NEXUS reads, nothing to pay for.",
     badge: null,
@@ -56,13 +70,13 @@ const pricingPlans: PlanPresentationRow[] = [
   {
     key: "PRO",
     name: "Pro",
-    price: "19",
-    billing: "per user / month",
+    price: 19,
     audience:
       "Operators running several projects at once, who need the full signal set and room to grow.",
     badge: "Most Popular",
     featured: true,
-    delta: "5× the workspaces, 10× the tasks and 20 goals, plus advanced analytics.",
+    delta:
+      "5× the workspaces, 10× the tasks and 20 goals, plus advanced analytics.",
     cta: {
       label: "Start Pro",
       href: "/upgrade",
@@ -72,8 +86,7 @@ const pricingPlans: PlanPresentationRow[] = [
   {
     key: "TEAM",
     name: "Business",
-    price: "49",
-    billing: "per user / month",
+    price: 49,
     audience:
       "Teams that want NEXUS to become the shared operational layer for everyone.",
     badge: "For Teams",
@@ -158,6 +171,89 @@ const COMPARISON: ComparisonRow[] = [
   },
 ];
 
+/** The numbers shown under the price, for a given billing period. */
+function priceCopy(plan: PlanPresentationRow, billing: BillingPeriod) {
+  if (plan.price === 0) {
+    return {
+      amount: "0",
+      rate: "Forever",
+      note: "No card required",
+    };
+  }
+
+  if (billing === "annual") {
+    return {
+      amount: money(annualRate(plan.price)),
+      rate: "per user / month",
+      note: `billed annually · Save ${money(annualSavings(plan.price))} / year`,
+    };
+  }
+
+  return {
+    amount: money(plan.price),
+    rate: "per user / month",
+    note: "billed monthly",
+  };
+}
+
+function BillingToggle({
+  value,
+  onChange,
+}: {
+  value: BillingPeriod;
+  onChange: (next: BillingPeriod) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col items-start gap-2 lg:items-end">
+      <legend className="sr-only">Billing period</legend>
+      <div className="flex h-12 items-center rounded-pill border border-border-default bg-bg-surface/60 p-1 sm:h-11">
+        <label className="relative flex-1 cursor-pointer sm:flex-none">
+          <input
+            type="radio"
+            name="nexus-billing-period"
+            value="monthly"
+            checked={value === "monthly"}
+            onChange={() => onChange("monthly")}
+            className="peer sr-only"
+          />
+          <span className="flex h-10 items-center justify-center rounded-pill px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary transition-colors duration-150 ease-nexus peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:ring-2 peer-focus-visible:ring-lavender/60 sm:h-9">
+            Monthly
+          </span>
+        </label>
+
+        <label className="relative flex-1 cursor-pointer sm:flex-none">
+          <input
+            type="radio"
+            name="nexus-billing-period"
+            value="annual"
+            checked={value === "annual"}
+            onChange={() => onChange("annual")}
+            className="peer sr-only"
+          />
+          <span className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary transition-colors duration-150 ease-nexus peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:ring-2 peer-focus-visible:ring-lavender/60 sm:h-9">
+            Annual
+            <span
+              className={cn(
+                "rounded-[4px] px-1.5 py-0.5 font-mono text-[9.5px] leading-none tracking-[0.04em] transition-colors duration-150 ease-nexus",
+                value === "annual"
+                  ? "bg-black/10 text-accent-fg"
+                  : "bg-lavender-subtle text-lavender"
+              )}
+            >
+              Save 25%
+            </span>
+          </span>
+        </label>
+      </div>
+      <p className="nexus-meta hidden lg:block">
+        {value === "annual"
+          ? "One yearly payment, same features."
+          : "Switch to annual and keep 25%."}
+      </p>
+    </fieldset>
+  );
+}
+
 function stageDelay(milliseconds: number) {
   return {
     "--pricing-stage-delay": `${milliseconds}ms`,
@@ -166,13 +262,17 @@ function stageDelay(milliseconds: number) {
 
 function PricingCard({
   plan,
+  billing,
   revealDelay,
 }: {
   plan: PlanPresentationRow;
+  billing: BillingPeriod;
   revealDelay: number;
 }) {
   const isBusiness = plan.key === "TEAM";
+  const isFree = plan.price === 0;
   const entitlements = entitlementsFor(plan.key);
+  const price = priceCopy(plan, billing);
 
   return (
     <LandingReveal
@@ -182,7 +282,7 @@ function PricingCard({
     >
       <SpotlightBorder>
         <article
-          aria-label={`${plan.name} plan, $${plan.price} ${plan.billing}`}
+          aria-label={`${plan.name} plan, ${price.amount} ${price.rate}`}
           className={cn(
             "pricing-card relative flex h-full min-h-[560px] flex-col rounded-pricing border p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-7",
             plan.featured
@@ -213,15 +313,24 @@ function PricingCard({
             style={stageDelay(100)}
           >
             <div className="flex items-start text-text-primary">
-              <span className="mt-1.5 font-mono text-[20px] font-normal leading-none text-text-secondary sm:text-[22px]">
-                $
-              </span>
-              <span className="font-mono text-[44px] font-normal leading-[0.9] tracking-[-0.055em] tabular-nums sm:text-[48px]">
-                {plan.price}
+              {!isFree ? (
+                <span className="mt-1.5 font-mono text-[20px] font-normal leading-none text-text-secondary sm:text-[22px]">
+                  $
+                </span>
+              ) : null}
+              <span
+                key={`${plan.key}-${billing}`}
+                className="pricing-price-swap font-mono text-[44px] font-normal leading-[0.9] tracking-[-0.055em] tabular-nums sm:text-[48px]"
+              >
+                {price.amount}
               </span>
             </div>
             <p className="nexus-meta-strong mt-3 uppercase tracking-[0.08em]">
-              {plan.billing}
+              {price.rate}
+            </p>
+            {/* One line, always — the note swaps in place, never below. */}
+            <p className="mt-1.5 h-4 font-mono text-[10.5px] leading-4 text-text-tertiary">
+              {price.note}
             </p>
           </div>
 
@@ -251,9 +360,15 @@ function PricingCard({
           </div>
 
           {/* WHAT CHANGES? */}
-          <div className="pricing-card-stage mt-7 flex flex-1 flex-col" style={stageDelay(400)}>
+          <div
+            className="pricing-card-stage mt-7 flex flex-1 flex-col"
+            style={stageDelay(400)}
+          >
             <p className="nexus-eyebrow">What you get</p>
-            <ul className="mt-1 flex flex-1 flex-col" aria-label={`${plan.name} plan entitlements`}>
+            <ul
+              className="mt-1 flex flex-1 flex-col"
+              aria-label={`${plan.name} plan entitlements`}
+            >
               {entitlements.map((feature) => (
                 <li
                   key={feature}
@@ -290,6 +405,8 @@ function PricingCard({
 }
 
 export function PricingSection() {
+  const [billing, setBilling] = useState<BillingPeriod>("monthly");
+
   return (
     <section
       id="pricing"
@@ -319,17 +436,27 @@ export function PricingSection() {
             </LandingReveal>
           </div>
 
-          <LandingReveal
-            delay={200}
-            amount={0.25}
-            className="pricing-reveal max-w-[420px] lg:text-right"
-          >
-            <p className="nexus-lead">
-              Start free, upgrade when the workspace outgrows the limits. Every
-              limit below is enforced server-side, the same numbers the
-              database checks.
-            </p>
-          </LandingReveal>
+          <div className="flex w-full max-w-[420px] flex-col gap-5 lg:items-end">
+            <LandingReveal
+              delay={200}
+              amount={0.25}
+              className="pricing-reveal lg:text-right"
+            >
+              <p className="nexus-lead">
+                Start free, upgrade when the workspace outgrows the limits.
+                Every limit below is enforced server-side, the same numbers
+                the database checks.
+              </p>
+            </LandingReveal>
+
+            <LandingReveal
+              delay={260}
+              amount={0.25}
+              className="pricing-reveal w-full lg:w-auto"
+            >
+              <BillingToggle value={billing} onChange={setBilling} />
+            </LandingReveal>
+          </div>
         </div>
 
         <div className="mx-auto grid max-w-[1080px] grid-cols-1 gap-6 pt-3 md:grid-cols-2 lg:grid-cols-3">
@@ -337,6 +464,7 @@ export function PricingSection() {
             <PricingCard
               key={plan.name}
               plan={plan}
+              billing={billing}
               revealDelay={index * 100}
             />
           ))}
@@ -423,7 +551,10 @@ export function PricingSection() {
                                   aria-hidden="true"
                                 />
                                 <span className="sr-only">Not included</span>
-                                <span aria-hidden="true" className="nexus-meta">
+                                <span
+                                  aria-hidden="true"
+                                  className="nexus-meta"
+                                >
                                   No
                                 </span>
                               </span>
@@ -466,8 +597,9 @@ export function PricingSection() {
 
         <LandingReveal delay={200} amount={0.25} className="pricing-reveal">
           <p className="nexus-meta mx-auto mt-8 max-w-[560px] text-center">
-            Free requires no card. Paid plans are per user, per month; plan
-            changes are managed from workspace billing.
+            Free requires no card. Paid plans are per user; annual billing is
+            one yearly payment at 25% off. Plan changes are managed from
+            workspace billing.
           </p>
         </LandingReveal>
       </div>

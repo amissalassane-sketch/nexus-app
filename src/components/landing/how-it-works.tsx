@@ -5,31 +5,33 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 // ============================================================
 // NEXUS LANDING — FOUR MOVES
 //
-// DESIGN AUDIT: four independent cards read as four features. The
-// four moves are a CHAIN, so they are drawn as one: a rail, four
-// markers, and activation that travels left to right as the section
-// reveals. Below `lg` the chain becomes a vertical flow with its own
-// connector — it is never squeezed into a row.
+// Four independent cards would read as four features. The four
+// moves are a CHAIN, so they are drawn as one: a rail, four
+// markers, and activation that travels left to right as the
+// section reveals. The rail closes on a still-lit dot — the
+// system keeps reading after the fourth move.
 //
-// Activation is pure CSS (it hangs off `.landing-reveal.is-visible`),
-// so there is no extra observer and nothing to hydrate.
+// Below `lg` the chain becomes a vertical flow with its own
+// connector — it is never squeezed into a row. Activation is
+// pure CSS (it hangs off `.landing-reveal.is-visible`), so there
+// is no extra observer and nothing to hydrate.
 // ============================================================
 
 const STEPS = [
   {
     number: "01",
     title: "Read",
-    body: "Every goal, project, task and activity event in the workspace.",
+    body: "Every goal, project, task and activity event already in the workspace.",
   },
   {
     number: "02",
     title: "Understand",
-    body: "It connects deadlines and dependencies, and reads progress and momentum from the data.",
+    body: "Deadlines and dependencies connect. Progress and momentum come from the data.",
   },
   {
     number: "03",
     title: "Decide",
-    body: "Risk is surfaced, ranked and reduced to one next action.",
+    body: "Risk is ranked and reduced to one next action.",
   },
   {
     number: "04",
@@ -55,7 +57,7 @@ export function HowItWorksSection() {
           <SectionHeading
             eyebrow="How it works"
             title="Four moves. Then it keeps watching."
-            sub="NEXUS is a system, not a dashboard to babysit. It takes the work you already have and turns it into the decision you have to make."
+            sub="A system, not a dashboard to babysit: it takes the work you already have and turns it into the decision you have to make."
           />
         </LandingReveal>
 
@@ -86,7 +88,7 @@ export function HowItWorksSection() {
 
                   <span className="nexus-chain-marker" aria-hidden="true" />
 
-                  <div className="nexus-chain-step">
+                  <div className="nexus-chain-step nexus-panel-quiet p-4">
                     <span className="font-mono text-[15px] tabular-nums tracking-[-0.02em] text-text-secondary">
                       {step.number}
                     </span>
@@ -100,6 +102,14 @@ export function HowItWorksSection() {
                 </li>
               ))}
             </ol>
+
+            {/* The chain stays live after the last move. */}
+            <p className="nexus-chain-endcap mt-9 flex items-center justify-center gap-2 lg:mt-10">
+              <span className="h-1 w-1 rounded-full bg-lavender/80" aria-hidden="true" />
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-tertiary">
+                And keeps reading from here
+              </span>
+            </p>
           </div>
         </LandingReveal>
 
@@ -108,7 +118,7 @@ export function HowItWorksSection() {
             on the arrows. */}
         <LandingReveal delay={140}>
           <ol
-            className="mt-14 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 lg:mt-16"
+            className="mt-10 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2"
             aria-label="The NEXUS loop"
           >
             {LOOP.map((step, index) => (

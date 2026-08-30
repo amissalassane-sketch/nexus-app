@@ -3,8 +3,8 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 // ============================================================
 // NEXUS LANDING — PROBLEM → ANSWER
 //
-// DESIGN AUDIT: the two beats used to carry the same visual weight,
-// so the page never resolved. They are now deliberately unequal:
+// Two deliberately unequal beats, so the page resolves instead
+// of hovering:
 //
 //   THE PROBLEM  ·  quiet, tertiary, one line smaller
 //        ↓
@@ -12,7 +12,8 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 //
 // The connector is a rule with a marker, not an emoji arrow: it
 // states the relationship (this resolves into that) instead of
-// decorating it.
+// decorating it. The answer carries the story — the work is
+// already there, NEXUS keeps up with it.
 // ============================================================
 
 export function ValueBand() {
@@ -23,8 +24,9 @@ export function ValueBand() {
           {/* ---------- The problem ---------- */}
           <span className="nexus-eyebrow">The problem</span>
           <p className="mt-5 max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
-            The status of your work is spread across everything you already
-            manage. Nobody sees the risk until it is late.
+            The status of your work sits in everything you already manage.
+            The signals are there — they are just hard to see until it is
+            late.
           </p>
 
           {/* ---------- The connector ---------- */}
@@ -50,8 +52,9 @@ export function ValueBand() {
               NEXUS reads it continuously.
             </p>
             <p className="nexus-lead mt-6 max-w-[520px]">
-              NEXUS connects every deadline and dependency, ranks the result,
-              and turns the picture into the one decision worth making next.
+              Your work changes constantly. NEXUS keeps up — it sees what is
+              drifting, blocked or getting risky, and tells you what deserves
+              attention now.
             </p>
           </div>
         </div>

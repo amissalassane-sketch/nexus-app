@@ -10,16 +10,16 @@ import {
 } from "lucide-react";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 
 // ============================================================
 // NEXUS LANDING — IT READS THE WORK. NOT THE CHAT.
 //
-// DESIGN AUDIT: this was already the strongest section, so it is
-// reinforced rather than replaced. It now *shows* the intelligence
-// instead of only describing it, and it borrows the /intelligence
-// page's own vocabulary — severity badge, evidence rows, COMPUTED
-// FROM trace — so both surfaces speak one language.
+// The strongest section of the page, reinforced so it belongs to
+// the same visual system as /intelligence: the six signal types
+// carry the exact severity badges the Intelligence page uses, and
+// the panel on the right reuses its vocabulary — severity rail,
+// NEXT BEST ACTION, WHY NEXUS RECOMMENDS THIS, COMPUTED FROM.
 //
 //   CRITICAL / WARNING signal → NEXT BEST ACTION → WHY → COMPUTED FROM
 //
@@ -27,38 +27,56 @@ import { Badge } from "@/components/ui/badge";
 // Nothing here is invented.
 // ============================================================
 
-const SIGNALS = [
+const SIGNALS: {
+  icon: typeof Clock;
+  state: string;
+  tone: BadgeTone;
+  title: string;
+  body: string;
+}[] = [
   {
     icon: Clock,
+    state: "Critical",
+    tone: "danger",
     title: "Overdue work",
     body: "Deadlines pass, NEXUS notices.",
   },
   {
     icon: Ban,
+    state: "Warning",
+    tone: "warning",
     title: "Blocked tasks",
     body: "Anything stuck that stalls the rest.",
   },
   {
     icon: FolderOpen,
+    state: "Info",
+    tone: "info",
     title: "No next action",
     body: "Projects with nothing moving them forward.",
   },
   {
     icon: Target,
+    state: "Warning",
+    tone: "warning",
     title: "Goals at risk",
-    body: "Low progress close to the deadline.",
+    body: "Progress too low for the time left.",
   },
   {
     icon: TrendingUp,
+    state: "Positive",
+    tone: "success",
     title: "Momentum",
     body: "What actually got done this week.",
   },
   {
     icon: Zap,
+    state: "Priority",
+    tone: "lavender",
     title: "Next best action",
-    body: "The single thing to do right now.",
+    body: "The one thing to do right now.",
   },
-] as const;
+];
 
 const WHY = [
   "3 related tasks are blocked behind it.",
@@ -91,20 +109,25 @@ export function IntelligenceSection() {
             sub="Your workspace already contains the signals. NEXUS connects them: no prompts, no setup, nothing to re-type."
           />
 
-          <ul className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          {/* Six signals — the same reading the Intelligence page gives. */}
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
             {SIGNALS.map((signal) => {
               const Icon = signal.icon;
               return (
-                <li key={signal.title} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-tertiary">
-                    <Icon size={13} strokeWidth={1.75} aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="text-h4 text-text-primary">{signal.title}</p>
-                    <p className="mt-0.5 text-small text-text-secondary">
-                      {signal.body}
-                    </p>
+                <li
+                  key={signal.title}
+                  className="nexus-panel p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
+                      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <Badge tone={signal.tone}>{signal.state}</Badge>
                   </div>
+                  <p className="mt-3.5 text-h2 text-text-primary">{signal.title}</p>
+                  <p className="mt-1 text-small text-text-secondary">
+                    {signal.body}
+                  </p>
                 </li>
               );
             })}
@@ -230,7 +253,9 @@ export function IntelligenceSection() {
                 </h3>
 
                 <div className="mt-4 border-l border-border-default pl-4">
-                  <p className="nexus-eyebrow">Why</p>
+                  <p className="nexus-eyebrow">
+                    Why NEXUS recommends this
+                  </p>
                   <ul className="mt-2 flex flex-col gap-1.5">
                     {WHY.map((reason) => (
                       <li key={reason} className="flex items-start gap-2">

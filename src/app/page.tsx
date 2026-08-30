@@ -41,7 +41,7 @@ export const metadata: Metadata = {
       "NEXUS. It reads the work, then tells you what matters next",
   },
   description:
-    "NEXUS continuously reads your workspace: deadlines, dependencies, progress and activity. It turns that context into the next decision worth making.",
+    "NEXUS reads the work already in your workspace and surfaces what is drifting, blocked or at risk — and what to do next. Free to start, no card required.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -95,7 +95,8 @@ export default async function Home({
             <div className="mx-auto w-full max-w-[1080px]">
               <ProductPreview />
               <p className="nexus-eyebrow mt-6 text-center">
-                The workspace: goals, projects, tasks and activity, connected
+                The workspace: goals, projects, tasks and activity, connected.
+                NEXUS reads it continuously.
               </p>
             </div>
           </LandingReveal>

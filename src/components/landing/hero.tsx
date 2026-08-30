@@ -3,21 +3,22 @@ import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { HeroAtmosphere } from "@/components/landing/hero-atmosphere";
 import { HeroField } from "@/components/landing/hero-field";
+import { HeroHeadline } from "@/components/landing/hero-headline";
 
 // ============================================================
 // NEXUS LANDING — HERO
-// DESIGN AUDIT: time-to-value.
 //
-// The proposition is the first thing on the screen and the only
-// thing competing for attention: what NEXUS is, why it matters,
-// and the two actions. The animated field is still here — it is
-// the mark and the atmosphere *behind* the copy, never in front
-// of it, and it is dimmed so the type stays the brightest thing
-// on the page.
+// Time-to-value is the job here. The visitor learns in one
+// breath:
+//   what NEXUS is   → "It reads the work." (+ rotating facet line)
+//   what it does    → drift, blocks, risk, what deserves attention
+//   what to do next → Get started · See it in action
 //
-// The quiet mono strip under the buttons answers "how does it
-// work?" in one glance: READ → UNDERSTAND → SURFACE RISK →
-// RECOMMEND → EXECUTE → VERIFY.
+// The animated field is the mark and the atmosphere *behind* the
+// copy — never in front of it, and dimmed so the type stays the
+// brightest thing on the page. The mono strip under the buttons
+// answers "how does it work?" in one glance: READ → UNDERSTAND →
+// SURFACE RISK → RECOMMEND → EXECUTE → VERIFY.
 // ============================================================
 
 const delay = (ms: number) =>
@@ -63,18 +64,24 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item mt-6 max-w-[18ch] text-[38px] font-medium leading-[1.04] tracking-[-0.04em] text-text-primary sm:mt-7 sm:text-[54px] lg:text-[62px]"
           style={delay(70)}
         >
-          NEXUS reads the work.
-          <br />
-          <span className="text-text-secondary">You decide what matters.</span>
+          {/* Screen readers hear the stable proposition once. */}
+          <span className="sr-only">
+            NEXUS reads the work. Not the chat.
+          </span>
+          <span aria-hidden="true">
+            It reads the work.
+            <br />
+            <HeroHeadline />
+          </span>
         </h1>
 
         <p
-          className="landing-hero-item nexus-lead mt-6 max-w-[620px] sm:mt-7"
+          className="landing-hero-item nexus-lead mt-6 max-w-[640px] sm:mt-7"
           style={delay(140)}
         >
-          NEXUS continuously reads your workspace, connects deadlines,
-          dependencies, progress and activity, and turns that context into the
-          next decision worth making.
+          NEXUS reads the work already in your workspace — goals, projects,
+          tasks and activity — and keeps what is drifting, blocked or getting
+          risky visible, so you always know what deserves your attention now.
         </p>
 
         <div
@@ -82,16 +89,16 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           style={delay(210)}
         >
           <ButtonLink href="/signup" size="lg" className="sm:min-w-[190px]">
-            Start with NEXUS
+            Get started
             <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
           </ButtonLink>
           <ButtonLink
             href="/intelligence"
             variant="secondary"
             size="lg"
-            className="sm:min-w-[170px]"
+            className="sm:min-w-[190px]"
           >
-            See Intelligence
+            See it in action
           </ButtonLink>
         </div>
 
@@ -99,7 +106,7 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-text-quaternary"
           style={delay(280)}
         >
-          Free to start. No card required
+          Free to start · No card required
         </p>
 
         {/* How it works, in one line. Numbered so the order is explicit

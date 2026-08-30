@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { NexusWordmark } from "@/components/nexus-logo";
@@ -14,10 +14,15 @@ import { cn } from "@/lib/cn";
 // primary action ("Get started") stays visible on every breakpoint.
 //
 // One navbar for both public surfaces:
-//   context="landing"      → on / , section links stay anchors
+//   context="landing"      → on / , section links stay anchors and a
+//                            quiet indicator follows the section in
+//                            view
 //   context="intelligence" → on /intelligence, the same links point
 //                            back to the landing sections and the
 //                            Intelligence item is marked as current.
+//
+// Keyboard: skip link, native tab order, Escape closes the mobile
+// menu and returns focus to its trigger.
 // ============================================================
 
 type LandingNavContext = "landing" | "intelligence" | "how-it-works" | "pricing";
@@ -29,6 +34,8 @@ const NAV_LINKS = [
   { id: "pricing", route: "/pricing", label: "Pricing" },
 ] as const;
 
+const SECTION_IDS = ["product", "how-it-works", "intelligence", "pricing"] as const;
+
 export function LandingNav({
   context = "landing",
 }: {
@@ -36,6 +43,8 @@ export function LandingNav({
 } = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -52,8 +61,52 @@ export function LandingNav({
     };
   }, [open]);
 
+  // Escape closes the menu and puts focus back on the trigger.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  // Section indicator on the landing page only: a single listener-free
+  // IntersectionObserver rather than a scroll handler.
+  useEffect(() => {
+    if (context !== "landing") return;
+
+    const sections = SECTION_IDS.map((id) =>
+      document.getElementById(id)
+    ).filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+            return;
+          }
+        }
+      },
+      // A narrow horizontal band just above the middle of the viewport.
+      { rootMargin: "-38% 0px -56% 0px", threshold: 0 }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [context]);
+
   const isCurrent = (link: (typeof NAV_LINKS)[number]) =>
     context !== "landing" && link.id === context;
+
+  const isActive = (link: (typeof NAV_LINKS)[number]) =>
+    context === "landing" ? activeSection === link.id : isCurrent(link);
 
   return (
     <header
@@ -82,12 +135,16 @@ export function LandingNav({
           <NexusWordmark size={28} priority />
         </Link>
 
-        <nav aria-label="Landing sections" className="hidden items-center gap-1 md:flex">
+        <nav
+          aria-label="Landing sections"
+          className="hidden items-center gap-1 md:flex"
+        >
           {NAV_LINKS.map((link) => {
             const current = isCurrent(link);
+            const active = isActive(link);
             const className = cn(
-              "rounded-pill px-3.5 py-2 text-button transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary",
-              current
+              "landing-nav-link relative rounded-pill px-3.5 py-2 text-button transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary",
+              current || active
                 ? "bg-accent-ghost text-text-primary"
                 : "text-text-secondary"
             );
@@ -96,7 +153,8 @@ export function LandingNav({
               <Link
                 key={link.id}
                 href={link.route}
-                aria-current={current ? "page" : undefined}
+                aria-current={current ? "page" : active ? "true" : undefined}
+                data-active={active || undefined}
                 className={className}
               >
                 {link.label}
@@ -120,6 +178,7 @@ export function LandingNav({
             Get started
           </ButtonLink>
           <button
+            ref={menuTriggerRef}
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
@@ -143,9 +202,12 @@ export function LandingNav({
           >
             {NAV_LINKS.map((link) => {
               const current = isCurrent(link);
+              const active = isActive(link);
               const className = cn(
                 "flex h-12 items-center rounded-input px-3 text-body transition-colors duration-150 ease-nexus hover:bg-accent-ghost",
-                current ? "bg-accent-ghost text-text-primary" : "text-text-primary"
+                current || active
+                  ? "bg-accent-ghost text-text-primary"
+                  : "text-text-primary"
               );
 
               return (
@@ -153,7 +215,7 @@ export function LandingNav({
                   key={link.id}
                   href={link.route}
                   onClick={() => setOpen(false)}
-                  aria-current={current ? "page" : undefined}
+                  aria-current={current ? "page" : active ? "true" : undefined}
                   className={className}
                 >
                   {link.label}

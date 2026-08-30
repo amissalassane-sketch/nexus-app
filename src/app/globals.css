@@ -912,6 +912,92 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
 }
 
 /* ============================================================
+   LANDING — HERO TYPED HEADLINE
+   The line is written, erased and rewritten by the client, with a
+   soft caret at the end. The slot reserves the line-box and the
+   layers animate inside it, so nothing below the headline ever
+   shifts. Reduced motion removes all movement: the first facet
+   stays fully written with a static caret.
+   ============================================================ */
+
+.hero-line {
+  position: relative;
+  display: block;
+}
+
+/* Invisible slot: the longest variant reserves the line-box. */
+.hero-line-slot {
+  display: block;
+  visibility: hidden;
+}
+
+.hero-line-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+
+/* The caret — one quiet lavender bar at the end of the line. */
+.hero-caret {
+  display: inline-block;
+  width: 2.5px;
+  height: 0.84em;
+  margin-left: 0.07em;
+  vertical-align: -0.06em;
+  border-radius: 1px;
+  background: var(--color-lavender);
+  box-shadow: 0 0 10px rgba(233, 228, 255, 0.3);
+}
+
+/* Solid while writing or erasing, gentle blink at rest. */
+.hero-caret-active {
+  animation: none;
+}
+
+.hero-caret-blink {
+  animation: hero-caret-blink 1.15s var(--ease-nexus) infinite;
+}
+
+@keyframes hero-caret-blink {
+  0%,
+  46% {
+    opacity: 1;
+  }
+  54%,
+  96% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line-layer {
+    opacity: 1;
+    transform: none;
+  }
+
+  .hero-caret,
+  .hero-caret-blink {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@media (scripting: none) {
+  .hero-line-layer {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-caret-blink {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================================
    LANDING — PRICING
    The pricing reveal extends the shared landing motion with a slightly
    longer, more editorial rise. Card spotlights are paint-only masked rings:
@@ -977,6 +1063,22 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   transition-property: background-color, color, border-color, box-shadow, transform;
 }
 
+/* Billing swap — the number changes in place (same box, short fade). */
+.pricing-price-swap {
+  animation: pricing-price-in 240ms var(--ease-nexus) both;
+}
+
+@keyframes pricing-price-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .pricing-primary-cta:hover {
   box-shadow: 0 0 20px rgba(233, 228, 255, 0.11);
 }
@@ -996,7 +1098,8 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
 @media (prefers-reduced-motion: reduce) {
   .pricing-reveal,
   .pricing-card,
-  .pricing-card-stage {
+  .pricing-card-stage,
+  .pricing-price-swap {
     opacity: 1;
     transform: none;
     animation: none;
@@ -1317,6 +1420,17 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   transform: none;
 }
 
+/* Endcap — the rail's final dot lights up after the last step. */
+.nexus-chain-endcap {
+  opacity: 0;
+  transition: opacity 420ms var(--ease-nexus);
+  transition-delay: calc(var(--chain-count, 4) * 190ms + 620ms);
+}
+
+.landing-reveal.is-visible .nexus-chain-endcap {
+  opacity: 1;
+}
+
 /* ---------- 5. Cascade — Goal → Project → Task → Activity ------- */
 
 .nexus-cascade-link {
@@ -1375,6 +1489,18 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   );
 }
 
+/* The node where each pillar meets the spine. */
+.nexus-trust-node {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  box-shadow:
+    0 0 0 2px var(--color-bg-base),
+    0 0 10px rgba(233, 228, 255, 0.22);
+}
+
 /* ---------- 7. FAQ ---------------------------------------------- */
 
 .nexus-faq-item {
@@ -1409,6 +1535,34 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   background: var(--color-border-strong);
 }
 
+/* ---------- 7b. Navbar active indicator -------------------------
+   The hairline under the current item is the only decoration the
+   landing nav gets — it asserts where you are, nothing more. */
+
+.landing-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 3px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-lavender) 30%,
+    var(--color-lavender) 70%,
+    transparent
+  );
+  opacity: 0;
+  transform: scaleX(0.55);
+  transition: opacity 220ms var(--ease-nexus), transform 220ms var(--ease-nexus);
+}
+
+.landing-nav-link[data-active="true"]::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
 /* ---------- 8. Mobile -------------------------------------------
    Horizontal diagrams must become vertical flows, never be squeezed. */
 
@@ -1433,9 +1587,11 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   .nexus-chain-rail::after,
   .nexus-chain-marker,
   .nexus-chain-step,
+  .nexus-chain-endcap,
   .nexus-cascade-link,
   .nexus-cascade-step,
-  .nexus-faq-answer {
+  .nexus-faq-answer,
+  .landing-nav-link::after {
     opacity: 1 !important;
     transform: none !important;
     animation: none !important;
@@ -1446,6 +1602,7 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
 @media (scripting: none) {
   .nexus-chain-marker,
   .nexus-chain-step,
+  .nexus-chain-endcap,
   .nexus-cascade-step {
     opacity: 1 !important;
     transform: none !important;
