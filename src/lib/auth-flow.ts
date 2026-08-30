@@ -115,13 +115,36 @@ export type BootstrapResult = {
  */
 const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 10_000;
 
+/**
+ * Races `promise` against a bounded timer.
+ *
+ * CRITICAL: this alone does NOT stop the underlying work — a `setTimeout`
+ * has no way to reach into a network call. If the caller has an
+ * `AbortController` wired into the actual request (via Supabase's
+ * `.abortSignal()`), pass it as `controller`: on timeout this function
+ * calls `controller.abort()`, which propagates down to the real `fetch()`
+ * and lets Postgres/PostgREST release the connection immediately instead
+ * of finishing an orphaned request nobody is waiting for anymore.
+ *
+ * Every call site that wraps a real Supabase query MUST supply a
+ * controller whose signal was attached to that query with
+ * `.abortSignal(controller.signal)`. A `withTimeout()` call without a
+ * controller only bounds how long THIS function waits — it does nothing
+ * to bound the resource the promise represents.
+ */
 export function withTimeout<T>(
   promise: PromiseLike<T>,
   ms: number,
-  label: string
+  label: string,
+  controller?: AbortController
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
+      // Real cancellation: stop the in-flight request instead of just
+      // giving up on waiting for it. Safe to call even if the request
+      // already settled (abort() on a finished/aborted controller is a
+      // documented no-op).
+      controller?.abort();
       reject(new Error(`${label}: timed out after ${ms}ms`));
     }, ms);
     // Don't keep the event loop alive just for the timer.
@@ -175,12 +198,19 @@ export async function ensurePersonalWorkspaceServer(
     | undefined;
 
   try {
+    // Real cancellation: the signal is attached to the actual RPC request
+    // below, and withTimeout() aborts it the moment the bound is hit —
+    // the Postgres/PostgREST connection is released instead of finishing
+    // an orphaned call nobody is waiting for.
+    const controller = new AbortController();
     // `supabase.rpc()` returns a thenable; normalize to a real Promise so
     // the bounded timeout race below is well-typed and always settled.
     // supabase-js returns a thenable (PostgrestFilterBuilder); normalize
     // it to a real Promise<rpc result> for the bounded timeout race.
     const rpcPromise = Promise.resolve(
-      supabase.rpc("get_or_create_personal_workspace") as unknown as Promise<{
+      supabase
+        .rpc("get_or_create_personal_workspace")
+        .abortSignal(controller.signal) as unknown as Promise<{
         data:
           | BootstrapMembership
           | BootstrapMembership[]
@@ -192,7 +222,8 @@ export async function ensurePersonalWorkspaceServer(
     rpc = await withTimeout(
       rpcPromise,
       WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
-      "WORKSPACE_BOOTSTRAP_TIMEOUT"
+      "WORKSPACE_BOOTSTRAP_TIMEOUT",
+      controller
     );
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
@@ -259,24 +290,34 @@ export async function ensureProfileServer(
   userId: string
 ): Promise<void> {
   try {
+    const readController = new AbortController();
     const { data: existing } = await withTimeout(
       Promise.resolve(
         supabase
           .from("profiles")
           .select("id")
           .eq("id", userId)
+          .abortSignal(readController.signal)
           .maybeSingle()
       ) as Promise<{ data: { id?: string } | null; error: unknown }>,
       PROFILE_REPAIR_TIMEOUT_MS,
-      "PROFILE_REPAIR_TIMEOUT"
+      "PROFILE_REPAIR_TIMEOUT",
+      readController
     );
 
     if (existing?.id) return;
 
+    const insertController = new AbortController();
     await withTimeout(
-      Promise.resolve(supabase.from("profiles").insert({ id: userId })) as Promise<unknown>,
+      Promise.resolve(
+        supabase
+          .from("profiles")
+          .insert({ id: userId })
+          .abortSignal(insertController.signal)
+      ) as Promise<unknown>,
       PROFILE_REPAIR_TIMEOUT_MS,
-      "PROFILE_REPAIR_TIMEOUT"
+      "PROFILE_REPAIR_TIMEOUT",
+      insertController
     );
   } catch {
     // Orphan repair must never break an otherwise valid session.

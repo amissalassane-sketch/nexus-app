@@ -29,16 +29,27 @@ export type ActiveMembershipResult = {
 
 export async function getActiveMembership(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  /**
+   * Optional cancellation signal. Callers that bound this call with a
+   * timeout (see `withTimeout()` in auth-flow.ts) MUST pass the signal
+   * from the same AbortController they hand to withTimeout(), so a
+   * timeout actually stops this request instead of leaving it running
+   * against Postgres/PostgREST after the caller has moved on.
+   */
+  signal?: AbortSignal
 ): Promise<ActiveMembershipResult> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("workspace_members")
     .select("workspace_id, role")
     .eq("user_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (signal) {
+    query = query.abortSignal(signal);
+  }
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     return { membership: null, error: error.message };

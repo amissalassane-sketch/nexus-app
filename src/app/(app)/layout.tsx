@@ -40,16 +40,6 @@ import { DEFAULT_PLAN, PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
 // guidance (the optional completion prompt). It never blocks rendering.
 // ============================================================
 
-const emptyProfile: ProfileSummary = {
-  displayName: null,
-  username: null,
-  jobTitle: null,
-  avatarUrl: null,
-  bio: null,
-  profileComplete: false,
-  profileMissing: ["name", "username"],
-};
-
 /** Bounded settle window for a transient first-load race (e.g. the signup
  *  transaction's advisory lock still being committed while the first /app
  *  request boots the RPC). One extra bounded attempt — not a loop. */
@@ -68,10 +58,17 @@ async function boundedMembershipRead(
   userId: string
 ) {
   try {
+    // Real cancellation: the controller's signal is attached to the
+    // actual PostgREST request inside getActiveMembership(), so a
+    // timeout here aborts the in-flight request instead of leaving it
+    // running against Postgres after this function has already returned
+    // a degraded result to the caller.
+    const controller = new AbortController();
     return await withTimeout(
-      Promise.resolve(getActiveMembership(supabase, userId)),
+      Promise.resolve(getActiveMembership(supabase, userId, controller.signal)),
       MEMBERSHIP_READ_TIMEOUT_MS,
-      "MEMBERSHIP_READ_TIMEOUT"
+      "MEMBERSHIP_READ_TIMEOUT",
+      controller
     );
   } catch (cause) {
     logBootstrapEvent("MEMBERSHIP_READ_FAILED", {
@@ -131,18 +128,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   // Step 4: profile summary — drives the shell UI, never access.
-  let profile: ProfileSummary;
-  try {
-    profile = await withTimeout(
-      Promise.resolve(getProfileSummary()),
-      MEMBERSHIP_READ_TIMEOUT_MS,
-      "PROFILE_READ_TIMEOUT"
-    );
-  } catch {
-    // A profile read failure degrades to fallback identity; the product
-    // must still render.
-    profile = emptyProfile;
-  }
+  // getProfileSummary() is self-bounded (real AbortController-based
+  // timeout inside src/lib/auth.ts) and already degrades to a fallback
+  // identity on its own, so it is not wrapped in a second, non-cancelling
+  // withTimeout() here — that would only re-introduce an orphaned-request
+  // race on top of a call that already protects itself correctly.
+  const profile: ProfileSummary = await getProfileSummary();
 
   // Step 5: workspace context. Only the RLS-verified membership is used:
   // every workspace-scoped read below is subject to the same RLS, so a
@@ -161,6 +152,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // complete in time we render the shell with empty counts / default plan
   // rather than holding the page open. The workspace context itself was
   // already verified above; these reads only decorate the shell.
+  //
+  // One shared controller for all six queries: they are bounded by the
+  // same SHELL_DATA_TIMEOUT_MS window, so a single timeout firing must
+  // abort every one of them at once instead of leaving the slow ones
+  // running against Postgres after the caller has already moved on.
+  const shellDataController = new AbortController();
   const shellData = await withTimeout(
     Promise.all([
       workspaceId
@@ -170,21 +167,25 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 .from("tasks")
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", workspaceId)
-                .in("status", ["todo", "in_progress", "in_review", "blocked"]),
+                .in("status", ["todo", "in_progress", "in_review", "blocked"])
+                .abortSignal(shellDataController.signal),
               supabase
                 .from("projects")
                 .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspaceId),
+                .eq("workspace_id", workspaceId)
+                .abortSignal(shellDataController.signal),
               supabase
                 .from("goals")
                 .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspaceId),
+                .eq("workspace_id", workspaceId)
+                .abortSignal(shellDataController.signal),
               supabase
                 .from("notifications")
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", workspaceId)
                 .eq("user_id", user.id)
-                .is("read_at", null),
+                .is("read_at", null)
+                .abortSignal(shellDataController.signal),
             ]);
 
             return {
@@ -200,6 +201,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .from("workspaces")
             .select("name")
             .eq("id", workspaceId)
+            .abortSignal(shellDataController.signal)
             .maybeSingle()
         : Promise.resolve({ data: null }),
       workspaceId
@@ -208,11 +210,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .select("plan")
             .eq("workspace_id", workspaceId)
             .eq("status", "active")
+            .abortSignal(shellDataController.signal)
             .maybeSingle()
         : Promise.resolve({ data: null }),
     ]),
     SHELL_DATA_TIMEOUT_MS,
-    "SHELL_DATA_TIMEOUT"
+    "SHELL_DATA_TIMEOUT",
+    shellDataController
   ).catch((cause) => {
     logBootstrapEvent("SHELL_DATA_DEGRADED", {
       userId: user.id,
