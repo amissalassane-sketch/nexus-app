@@ -31,7 +31,7 @@ export default function NotFound() {
   return (
     <main className="flex min-h-dvh flex-col bg-bg-base text-text-primary">
       {/* System bar — the shell, not a nav. */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-5 sm:px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-4 sm:px-6">
         <Link
           href="/"
           aria-label="NEXUS home"
@@ -114,7 +114,7 @@ export default function NotFound() {
       </div>
 
       {/* Quiet sign-off. */}
-      <footer className="shrink-0 border-t border-border-subtle px-5 py-4 sm:px-6">
+      <footer className="shrink-0 border-t border-border-subtle px-4 py-4 sm:px-6">
         <p className="text-center text-caption text-text-quaternary">
           NEXUS reads the work — even when there is none here.
         </p>

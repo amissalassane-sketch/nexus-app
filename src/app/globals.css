@@ -171,6 +171,64 @@
   --text-display-xl--letter-spacing: -0.04em;
   --text-display-xl--font-weight: 500;
 
+  /* ---------- Layout — responsive grid & container -----------------
+     The grid is declared per breakpoint rather than derived from one
+     fluid rule, because what changes is the COLUMN COUNT, not just
+     the container width. That is what keeps a card roughly the same
+     physical size on a phone and on a laptop instead of stretching it.
+
+       Breakpoint   Container  Columns  Margin  Gutter  Column
+       mobile         360px       4      16px    16px     70px
+       tablet         768px       8      16px    16px     82px
+       desktop       1148px      12      16px    16px     81px
+
+     Breakpoints follow device classes, not round CSS numbers:
+     480 (mobile landscape) · 768 (tablet) · 834 (tablet landscape) ·
+     1024 (laptop) · 1440 (desktop).
+
+     `sm` / `md` / `lg` / `xl` keep their usual values. Remapping `lg`
+     from 1024 to 834 — the literal reading of the tablet-landscape
+     stop — would switch the 248px workspace sidebar on at 834px and
+     leave 586px of content beside it.
+
+     The whole scale is redeclared, defaults included. Declaring only
+     the new stops makes Tailwind emit them ahead of the built-in
+     scale, so `tablet:` (834px) lands before `md:` (768px) in the
+     stylesheet and a smaller breakpoint would win at 900px. Naming
+     every stop puts them in one sorted run. */
+  --breakpoint-xs: 480px; /* mobile landscape */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px; /* tablet portrait */
+  --breakpoint-tablet: 834px; /* tablet landscape */
+  --breakpoint-lg: 1024px; /* laptop */
+  --breakpoint-xl: 1280px;
+  --breakpoint-wide: 1440px; /* desktop */
+  --breakpoint-2xl: 1536px;
+
+  /* One page container for the whole product. Three different values
+     (1080 / 1120 / 1180) were in use, which made the landing page and
+     the application disagree about where the content edge sits. */
+  --container-page: 1148px;
+
+  /* Page margins: 16pt on phones (both the iOS HIG and the Android
+     baseline), widening to 24 on tablet and 32 on desktop. */
+  --page-margin: 16px;
+  --page-margin-md: 24px;
+  --page-margin-lg: 32px;
+
+  /* Gutter — 16px at every breakpoint. */
+  --grid-gutter: 16px;
+
+  /* Native chrome the web shell has to sit inside.
+       iOS     status 54 · nav bar 44 · tab bar 56 · home indicator 34
+       Android status 24 · app bar 56 · bottom nav 56 · system nav 48
+     The platform-specific parts (status bar, home indicator, system
+     nav) come from env(safe-area-inset-*); these two are the bars the
+     app draws itself, so they take the larger Android value and stay
+     comfortable on iOS. */
+  --chrome-nav-bar: 56px;
+  --chrome-tab-bar: 56px;
+
   /* ---------- Radius hierarchy — software, not marshmallows ---------- */
   --radius-xs: 4px;
   --radius-input: 8px;
@@ -3703,5 +3761,61 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   40%,
   80% {
     transform: translateX(3px);
+  }
+}
+
+/* ---------- iOS focus zoom -------------------------------------
+   iOS Safari scales the entire viewport when a form control's
+   computed font-size is below 16px — and it does not zoom back out
+   when the field is dismissed. The page stays zoomed, the header
+   and bottom navigation are pushed off-screen, and the user is
+   left scrolled into a corner of the app.
+
+   The two usual "fixes" are both wrong here:
+     • maximum-scale=1 / user-scalable=no stops the zoom but also
+       disables pinch-zoom for everyone (an accessibility failure).
+     • shipping 16px inputs everywhere destroys the 13.5px density
+       the application screens are designed around.
+
+   So the guard is scoped to touch widths only: every control the
+   user can type into renders at 16px on phones and tablets, and the
+   desktop density is untouched.
+
+   Written unlayered on purpose. Tailwind v4 emits utilities inside
+   `@layer utilities`; unlayered rules win the cascade over layered
+   ones regardless of specificity, so this beats `.text-body` /
+   `.text-small` on the control without needing `!important`.
+
+   Scoped to text-entry controls only. `input[type="range"]` is a 4px
+   progress slider — setting a 36px min-height on it would turn the
+   slider into a slab. Radios are visually-hidden `peer` elements
+   whose 1px box must stay 1px. */
+
+@media (max-width: 767.98px) {
+  input:not(
+      [type="range"],
+      [type="radio"],
+      [type="checkbox"],
+      [type="color"],
+      [type="file"],
+      [type="submit"],
+      [type="button"],
+      [type="reset"],
+      [type="image"]
+    ),
+  textarea,
+  select {
+    font-size: 16px;
+    line-height: 24px;
+    /* 16px glyphs clip their descenders inside the 32px compact
+       variants, so those grow to 36px on touch. Still short of the
+       44px target, but these are secondary filter controls in a dense
+       toolbar, not primary actions. */
+    min-height: 36px;
+  }
+
+  /* Keep the native/appearance-none caret clear of the larger text. */
+  select {
+    padding-right: 2rem;
   }
 }

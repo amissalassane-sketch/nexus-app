@@ -93,8 +93,8 @@ const COMPUTED_FROM = [
 
 export function IntelligenceSection() {
   return (
-    <section id="intelligence" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-28">
-      <div className="mx-auto grid w-full max-w-[1120px] items-center gap-12 lg:grid-cols-2 lg:gap-16">
+    <section id="intelligence" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto grid w-full max-w-page items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <LandingReveal>
           <SectionHeading
             align="left"

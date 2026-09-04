@@ -18,7 +18,7 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 
 export function ValueBand() {
   return (
-    <section className="px-5 py-20 sm:px-6 sm:py-28" aria-label="Why NEXUS">
+    <section className="px-4 py-20 sm:px-6 sm:py-28" aria-label="Why NEXUS">
       <LandingReveal>
         <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
           {/* ---------- The problem ---------- */}

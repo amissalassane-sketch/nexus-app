@@ -46,7 +46,7 @@ export default function HowItWorksPage() {
       <LandingAtmosphere />
       <LandingNav context="how-it-works" />
       <main id="main">
-        <section className="px-5 pb-14 pt-32 sm:px-6 sm:pb-20 sm:pt-40">
+        <section className="px-4 pb-14 pt-32 sm:px-6 sm:pb-20 sm:pt-40">
           <LandingReveal>
             <div className="mx-auto max-w-[860px] text-center">
               <p className="eyebrow text-lavender">Workspace → context → action</p>
@@ -66,8 +66,8 @@ export default function HowItWorksPage() {
           </LandingReveal>
         </section>
 
-        <section aria-label="NEXUS operating model" className="px-5 pb-12 sm:px-6 sm:pb-20">
-          <div className="mx-auto grid max-w-[1120px] gap-px overflow-hidden rounded-panel border border-border-subtle bg-border-subtle md:grid-cols-3">
+        <section aria-label="NEXUS operating model" className="px-4 pb-12 sm:px-6 sm:pb-20">
+          <div className="mx-auto grid max-w-page gap-px overflow-hidden rounded-panel border border-border-subtle bg-border-subtle md:grid-cols-3">
             {stages.map((stage, index) => (
               <article key={stage.label} className="bg-bg-subtle p-6 sm:p-8">
                 <div className="flex items-center justify-between">

@@ -90,9 +90,9 @@ export default async function Home({
 
         {/* Product preview — pulled into the opening beat so the real
             NEXUS surface is visible almost immediately. */}
-        <section id="product" className="scroll-mt-20 px-5 sm:px-6">
+        <section id="product" className="scroll-mt-20 px-4 sm:px-6">
           <LandingReveal>
-            <div className="mx-auto w-full max-w-[1080px]">
+            <div className="mx-auto w-full max-w-page">
               <ProductPreview />
               <p className="nexus-eyebrow mt-6 text-center">
                 The workspace: goals, projects, tasks and activity, connected.

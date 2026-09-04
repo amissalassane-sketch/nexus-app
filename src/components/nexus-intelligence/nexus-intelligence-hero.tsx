@@ -58,7 +58,7 @@ export function NexusIntelligenceHero({
       <div className="nexus-intelligence-scrim" aria-hidden="true" />
 
       {/* ---- Layer 2: the copy ---- */}
-      <div className="relative z-10 mx-auto w-full max-w-[1180px] flex-1 px-5 sm:px-6">
+      <div className="relative z-10 mx-auto w-full max-w-page flex-1 px-4 sm:px-6">
         <div className="flex min-h-[62svh] flex-col items-center justify-center text-center lg:min-h-[68svh] lg:items-start lg:text-left">
           {notice ? (
             <div
@@ -126,7 +126,7 @@ export function NexusIntelligenceHero({
         className="nexus-intelligence-item relative z-10 border-t border-border-subtle"
         style={delay(520)}
       >
-        <ul className="mx-auto flex w-full max-w-[1180px] flex-col gap-1.5 px-5 py-4 sm:flex-row sm:gap-8 sm:px-6 sm:py-5">
+        <ul className="mx-auto flex w-full max-w-page flex-col gap-1.5 px-4 py-4 sm:flex-row sm:gap-8 sm:px-6 sm:py-5">
           {FOOTNOTES.map((item) => (
             <li
               key={item.label}

@@ -81,10 +81,10 @@ function Pillar({
 export function TrustSection() {
   return (
     <section
-      className="nexus-band scroll-mt-20 px-5 py-20 sm:px-6 sm:py-28"
+      className="nexus-band scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28"
       aria-label="Why trust NEXUS"
     >
-      <div className="mx-auto w-full max-w-[1120px]">
+      <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="Why NEXUS"

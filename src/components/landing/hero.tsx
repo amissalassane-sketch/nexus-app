@@ -35,11 +35,11 @@ const FLOW = [
 
 export function Hero({ notice }: { notice?: ReactNode }) {
   return (
-    <section className="relative isolate overflow-hidden px-5 pb-12 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:pt-36">
+    <section className="relative isolate overflow-hidden px-4 pb-12 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:pt-36">
       <HeroAtmosphere />
       <HeroField />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1120px] flex-col items-center text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-page flex-col items-center text-center">
         {notice ? (
           <div
             className="landing-hero-item mb-8 w-full max-w-[460px] text-left"

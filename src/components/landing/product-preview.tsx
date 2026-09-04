@@ -385,7 +385,11 @@ export function ProductPreview() {
               </div>
 
               {/* Metrics */}
-              <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-5 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+              {/* Five metrics: 3+2 on a phone leaves a dangling divider
+                  and an empty cell. Two-up with the odd last one
+                  spanning the row keeps every row complete at every
+                  width; from `sm` it is the real five-across row. */}
+              <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-5 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1 [&>*:last-child]:border-r-0">
                 {[
                   { label: "Open", value: "12" },
                   { label: "Overdue", value: "2", tone: "text-danger" },

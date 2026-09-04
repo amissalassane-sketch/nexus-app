@@ -33,8 +33,8 @@ const GUARANTEES = [
 
 export function ExplainableIntelligence() {
   return (
-    <section id="explainable" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-32">
-      <div className="mx-auto grid w-full max-w-[1120px] items-center gap-14 lg:grid-cols-2 lg:gap-20">
+    <section id="explainable" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+      <div className="mx-auto grid w-full max-w-page items-center gap-14 lg:grid-cols-2 lg:gap-20">
         <LandingReveal>
           <SectionHeading
             align="left"

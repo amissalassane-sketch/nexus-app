@@ -51,8 +51,8 @@ const LOOP = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-28">
-      <div className="mx-auto w-full max-w-[1120px]">
+    <section id="how-it-works" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="How it works"

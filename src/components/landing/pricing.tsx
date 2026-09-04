@@ -413,7 +413,7 @@ export function PricingSection() {
       aria-labelledby="pricing-title"
       className="nexus-band relative w-full scroll-mt-20 py-16 sm:py-20 lg:py-24"
     >
-      <div className="mx-auto max-w-[1120px] px-5 sm:px-6">
+      <div className="mx-auto max-w-page px-4 sm:px-6">
         <div className="mb-12 flex flex-col gap-8 lg:mb-14 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <LandingReveal amount={0.25} className="pricing-reveal w-fit">
@@ -459,7 +459,7 @@ export function PricingSection() {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-[1080px] grid-cols-1 gap-6 pt-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-page grid-cols-1 gap-6 pt-3 md:grid-cols-2 lg:grid-cols-3">
           {pricingPlans.map((plan, index) => (
             <PricingCard
               key={plan.name}
@@ -477,7 +477,7 @@ export function PricingSection() {
           <div className="mt-12">
             <p className="nexus-eyebrow">Compare the plans</p>
 
-            <div className="mt-4 hidden overflow-hidden rounded-card border border-border-subtle sm:block">
+            <div className="mt-4 hidden overflow-hidden rounded-card border border-border-subtle tablet:block">
               <table className="w-full border-collapse text-left">
                 <caption className="sr-only">
                   NEXUS plan limits compared
@@ -569,7 +569,7 @@ export function PricingSection() {
             </div>
 
             {/* Mobile: one block per plan — no sideways scrolling. */}
-            <ul className="mt-4 grid gap-3 sm:hidden">
+            <ul className="mt-4 grid gap-3 tablet:hidden">
               {pricingPlans.map((plan) => (
                 <li key={plan.name} className="nexus-panel p-4">
                   <p className="text-h4 text-text-primary">{plan.name}</p>
