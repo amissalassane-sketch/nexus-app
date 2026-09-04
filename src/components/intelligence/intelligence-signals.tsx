@@ -64,8 +64,8 @@ const SIGNALS: {
 
 export function IntelligenceSignals() {
   return (
-    <section id="signals" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-32">
-      <div className="mx-auto w-full max-w-[1120px]">
+    <section id="signals" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+      <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="What it surfaces"

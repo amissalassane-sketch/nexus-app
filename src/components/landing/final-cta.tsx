@@ -11,9 +11,9 @@ import { ButtonLink } from "@/components/ui/button";
 
 export function FinalCtaSection() {
   return (
-    <section className="px-5 py-24 sm:px-6 sm:py-32">
+    <section className="px-4 py-24 sm:px-6 sm:py-32">
       <LandingReveal>
-        <div className="mx-auto w-full max-w-[1120px]">
+        <div className="mx-auto w-full max-w-page">
           <div className="nexus-panel relative overflow-hidden rounded-[16px] px-6 py-16 text-center sm:px-12 sm:py-24">
             <span
               className="absolute left-1/2 top-0 h-px w-24 -translate-x-1/2 bg-lavender/40"

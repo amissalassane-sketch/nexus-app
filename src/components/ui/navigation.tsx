@@ -123,7 +123,12 @@ export function MobileNavItem({
       aria-current={active ? "page" : undefined}
       {...rest}
       className={cn(
-        "relative flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 outline-none transition-[color,transform,background-color] duration-[160ms] ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border active:scale-[0.94]",
+        // 56px: the bottom-nav height from the platform comparatif
+        // (iOS tab bar 56 / Android bottom nav 56). The platform-specific
+        // parts below it — iOS home indicator 34pt, Android system nav
+        // 48px — come from env(safe-area-inset-bottom) on the bar
+        // container, never from the bar itself.
+        "relative flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 outline-none transition-[color,transform,background-color] duration-[160ms] ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border active:scale-[0.94]",
         active
           ? "font-medium text-text-primary"
           : "text-text-tertiary hover:text-text-secondary active:text-text-primary",

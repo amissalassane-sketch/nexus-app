@@ -46,8 +46,8 @@ const EXAMPLE_SIGNALS = [
 
 export function NextBestAction() {
   return (
-    <section id="in-action" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-32">
-      <div className="mx-auto w-full max-w-[1120px]">
+    <section id="in-action" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+      <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="The point of it"
@@ -65,7 +65,7 @@ export function NextBestAction() {
           <div className="nexus-intel-glass relative mt-14 rounded-card">
             <div className="nexus-intel-scan" aria-hidden="true" />
 
-            <div className="relative flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
+            <div className="relative flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5">
               <div className="flex items-center gap-2.5">
                 <NexusLogo size={15} />
                 <span className="eyebrow text-text-secondary">

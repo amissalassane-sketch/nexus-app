@@ -222,7 +222,7 @@ function AppShellInner({
 
           <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto scroll-smooth">
             <PageTransition>
-              <div className="mx-auto w-full max-w-[1180px] px-4 pb-24 pt-6 sm:px-7 sm:pb-10 sm:pt-8">
+              <div className="mx-auto w-full max-w-page px-4 pb-24 pt-6 sm:px-6 sm:pb-10 sm:pt-8">
                 {!user.profileComplete && !tourActive && pathname !== "/dashboard" ? (
                   <div className="animate-[intelligence-state-in_320ms_var(--ease-nexus)_both]">
                     <ProfileCompletionPrompt
@@ -269,7 +269,7 @@ function AppShellInner({
               type="button"
               onClick={openNav}
               aria-label="More destinations"
-              className="flex min-h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-[color,transform,background-color] duration-150 ease-nexus hover:text-text-primary active:scale-[0.94] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+              className="flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-[color,transform,background-color] duration-150 ease-nexus hover:text-text-primary active:scale-[0.94] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
             >
               <Menu size={17} strokeWidth={1.75} aria-hidden="true" />
               <span className="text-[10.5px] leading-none">More</span>

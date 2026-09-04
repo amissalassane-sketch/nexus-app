@@ -16,8 +16,8 @@ import { CONTEXT_NODES } from "@/components/intelligence/context/config";
 
 export function WhatIntelligenceSees() {
   return (
-    <section id="context" className="scroll-mt-20 px-5 py-24 sm:px-6 sm:py-32">
-      <div className="mx-auto w-full max-w-[1120px]">
+    <section id="context" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+      <div className="mx-auto w-full max-w-page">
         <div className="flex flex-col items-center text-center">
           <LandingReveal>
             <span className="eyebrow inline-flex h-[22px] items-center rounded-pill border border-border-subtle bg-bg-subtle px-2.5 text-text-tertiary">

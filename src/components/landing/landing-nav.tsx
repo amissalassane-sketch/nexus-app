@@ -126,7 +126,7 @@ export function LandingNav({
         Skip to content
       </a>
 
-      <div className="mx-auto flex h-14 w-full max-w-[1120px] items-center justify-between gap-3 px-5 sm:px-6">
+      <div className="mx-auto flex h-14 w-full max-w-page items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
           aria-label="NEXUS home"
@@ -198,7 +198,7 @@ export function LandingNav({
         >
           <nav
             aria-label="Landing sections"
-            className="mx-auto flex w-full max-w-[1120px] flex-col px-5 pb-5 pt-2"
+            className="mx-auto flex w-full max-w-page flex-col px-4 pb-5 pt-2"
           >
             {NAV_LINKS.map((link) => {
               const current = isCurrent(link);

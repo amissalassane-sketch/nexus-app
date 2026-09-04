@@ -344,10 +344,15 @@ check(
 );
 
 const pricingMobile = read("components/landing/pricing.tsx");
+// Four plan columns need tablet-landscape width, not the 640px `sm`
+// stop — between 640 and 833 the table was ~148px per column, so the
+// switch moved to `tablet` (834px) and stacked blocks now cover every
+// phone *and* tablet-portrait width.
 check(
-  "pricing: the comparison table is replaced by stacked blocks below sm",
-  pricingMobile.includes("hidden overflow-hidden rounded-card border border-border-subtle sm:block") &&
-    pricingMobile.includes("sm:hidden")
+  "pricing: the comparison table is replaced by stacked blocks below tablet",
+  pricingMobile.includes(
+    "hidden overflow-hidden rounded-card border border-border-subtle tablet:block"
+  ) && pricingMobile.includes("tablet:hidden")
 );
 check(
   "pricing: the table has a caption and scoped headers",

@@ -762,7 +762,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
       />
 
       {/* Workspace state — real counts, not decoration */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-4 [&>*]:border-b [&>*]:border-r [&>*]:border-border-subtle">
+      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 xs:grid-cols-4 [&>*]:border-b [&>*]:border-r [&>*]:border-border-subtle">
         <Metric label="Open" value={activeTaskCount} />
         <Metric label="Due today" value={dueToday} />
         <Metric

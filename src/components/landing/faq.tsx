@@ -51,7 +51,7 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-24">
+    <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto w-full max-w-[800px]">
         <LandingReveal>
           <SectionHeading eyebrow="FAQ" title="Questions, answered plainly." />

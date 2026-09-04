@@ -72,8 +72,8 @@ const WHY_REAL = [
 
 export function ModelSection() {
   return (
-    <section id="model" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-28">
-      <div className="mx-auto grid w-full max-w-[1120px] items-start gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+    <section id="model" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto grid w-full max-w-page items-start gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
         <LandingReveal className="lg:sticky lg:top-24">
           <SectionHeading
             align="left"

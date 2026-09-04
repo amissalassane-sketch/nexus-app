@@ -80,8 +80,8 @@ const PRODUCT_EXPERIENCE = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="scroll-mt-20 px-5 py-20 sm:px-6 sm:py-28">
-      <div className="mx-auto w-full max-w-[1120px]">
+    <section id="features" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="Features"

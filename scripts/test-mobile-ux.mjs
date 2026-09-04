@@ -12,7 +12,7 @@
  * Exit: 0 = all invariants hold, 1 = at least one check failed.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -210,6 +210,7 @@ console.log("Metric rows — no three-up grid on phones");
 // ------------------------------------------------------------------
 // A three-column metric grid gives ~64px of content width at 320px,
 // which truncates labels like "Avg. progress" into a meaningless stub.
+const RESPONSIVE = /(\bxs|\bsm|\bmd|\btablet|\blg|\bxl|\bwide):grid-cols/;
 for (const file of [
   "components/task-manager.tsx",
   "components/project-manager.tsx",
@@ -217,11 +218,84 @@ for (const file of [
 ]) {
   const text = read(file);
   const grids = text.match(/grid grid-cols-[0-9]+[^"]*"/g) ?? [];
-  const squeezed = grids.filter((g) => /grid-cols-[3-9]/.test(g) && !/sm:grid-cols/.test(g));
+  const squeezed = grids.filter(
+    (g) => /grid-cols-[3-9]/.test(g) && !RESPONSIVE.test(g)
+  );
   check(
     `${file}: no bare grid-cols-3+ metric row`,
     squeezed.length === 0,
     squeezed.join(" | ") || "phones must fall back to two columns"
+  );
+}
+
+// ------------------------------------------------------------------
+console.log("Layout system — grid, container, chrome");
+// ------------------------------------------------------------------
+// The design system the product is built against:
+//   container 1148 / 768 / 360 · columns 12 / 8 / 4 · gutter 16
+//   breakpoints 480 · 768 · 834 · 1024 · 1440
+//   iOS  status 54 · nav 44 · tab 56 · home indicator 34 · margin 16
+//   Android status 24 · app bar 56 · bottom nav 56 · system nav 48
+const theme = read("app/globals.css");
+for (const [token, value, why] of [
+  ["--container-page", "1148px", "single page container"],
+  ["--breakpoint-xs", "480px", "mobile landscape"],
+  ["--breakpoint-md", "768px", "tablet portrait"],
+  ["--breakpoint-tablet", "834px", "tablet landscape"],
+  ["--breakpoint-lg", "1024px", "laptop"],
+  ["--breakpoint-wide", "1440px", "desktop"],
+  ["--page-margin", "16px", "iOS/Android 16pt page margin"],
+  ["--grid-gutter", "16px", "16px gutter at every breakpoint"],
+  ["--chrome-tab-bar", "56px", "bottom nav (iOS 56 / Android 56)"],
+  ["--chrome-nav-bar", "56px", "app bar (Android 56)"],
+]) {
+  check(
+    `globals.css: ${token} = ${value} (${why})`,
+    new RegExp(`${token.replace(/-/g, "\\-")}:\\s*${value}\\s*;`).test(theme)
+  );
+}
+
+// Breakpoint ORDER is load-bearing: Tailwind emits only the stops that
+// are actually used, and if the custom stops are declared alone they
+// land ahead of the built-in scale — `tablet:` (834px) would then be
+// overridden by the smaller `md:` (768px) at 900px. Declaring the whole
+// scale in one block keeps them in a single sorted run.
+const order = [...theme.matchAll(/--breakpoint-([a-z0-9]+):\s*(\d+)px;/g)].map(
+  (m) => [m[1], Number(m[2])]
+);
+const values = order.map(([, v]) => v);
+check(
+  "globals.css: breakpoint scale is declared in ascending order",
+  values.length >= 8 && values.every((v, i) => i === 0 || values[i - 1] < v),
+  order.map(([n, v]) => `${n}:${v}`).join(" ")
+);
+check(
+  "globals.css: every breakpoint stop is redeclared (no default gap)",
+  ["xs", "sm", "md", "tablet", "lg", "xl", "wide", "2xl"].every((n) =>
+    order.some(([name]) => name === n)
+  ),
+  "a missing stop is emitted outside the sorted run"
+);
+
+// The single container: three widths (1080 / 1120 / 1180) used to be in
+// play, so the landing page and the product disagreed about the edge.
+for (const dir of ["components/landing", "components/layout", "app"]) {
+  const stale = [];
+  const walk = (rel) => {
+    for (const entry of readdirSync(src(rel), { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walk(child);
+      else if (/\.tsx?$/.test(entry.name)) {
+        const t = read(child);
+        if (/max-w-\[(1080|1120|1180|1148)px\]/.test(t)) stale.push(child);
+      }
+    }
+  };
+  walk(dir);
+  check(
+    `${dir}: no hard-coded page container width`,
+    stale.length === 0,
+    stale.join(", ") || "use max-w-page"
   );
 }
 

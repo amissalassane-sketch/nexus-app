@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 
 export function IntelligenceClosing() {
   return (
-    <section className="relative isolate overflow-hidden px-5 py-28 sm:px-6 sm:py-36">
+    <section className="relative isolate overflow-hidden px-4 py-28 sm:px-6 sm:py-36">
       {/* The mark, one last time — quiet, static, behind everything. */}
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[440px] w-[440px] -translate-x-1/2 -translate-y-1/2 opacity-[0.45]"
