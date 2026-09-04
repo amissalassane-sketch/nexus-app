@@ -173,6 +173,59 @@ has("app/globals.css", "-webkit-text-size-adjust", "iOS text-inflation guard");
 has("app/globals.css", "overflow-x: hidden", "no accidental horizontal page scroll");
 
 // ------------------------------------------------------------------
+console.log("Forms — iOS focus zoom");
+// ------------------------------------------------------------------
+// iOS Safari scales the whole viewport when a form control's computed
+// font-size is under 16px, and does not zoom back out. The viewport
+// keeps user scaling (no maximum-scale), so the controls must be
+// ≥16px on touch widths instead.
+const css = read("app/globals.css");
+const zoomGuard = css.slice(css.indexOf("iOS focus zoom"));
+check(
+  "globals.css: iOS focus-zoom guard present",
+  zoomGuard.includes("font-size: 16px"),
+  "text-entry controls must render at 16px on touch widths"
+);
+check(
+  "globals.css: focus-zoom guard is width-scoped",
+  /@media \(max-width: 767\.98px\)/.test(zoomGuard),
+  "desktop keeps the 13.5px density"
+);
+check(
+  "globals.css: range/radio/checkbox excluded from the guard",
+  zoomGuard.includes('[type="range"]') &&
+    zoomGuard.includes('[type="radio"]') &&
+    zoomGuard.includes('[type="checkbox"]'),
+  "a 4px slider must not inherit a 36px min-height"
+);
+check(
+  "layout: viewport never disables user scaling",
+  !read("app/layout.tsx").includes("maximumScale") &&
+    !read("app/layout.tsx").includes("userScalable"),
+  "pinch-zoom is accessibility, not a bug to suppress"
+);
+
+// ------------------------------------------------------------------
+console.log("Metric rows — no three-up grid on phones");
+// ------------------------------------------------------------------
+// A three-column metric grid gives ~64px of content width at 320px,
+// which truncates labels like "Avg. progress" into a meaningless stub.
+for (const file of [
+  "components/task-manager.tsx",
+  "components/project-manager.tsx",
+  "components/goal-manager.tsx",
+]) {
+  const text = read(file);
+  const grids = text.match(/grid grid-cols-[0-9]+[^"]*"/g) ?? [];
+  const squeezed = grids.filter((g) => /grid-cols-[3-9]/.test(g) && !/sm:grid-cols/.test(g));
+  check(
+    `${file}: no bare grid-cols-3+ metric row`,
+    squeezed.length === 0,
+    squeezed.join(" | ") || "phones must fall back to two columns"
+  );
+}
+
+// ------------------------------------------------------------------
 console.log("PWA preparation (no service worker)");
 // ------------------------------------------------------------------
 check(

@@ -3705,3 +3705,59 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
     transform: translateX(3px);
   }
 }
+
+/* ---------- iOS focus zoom -------------------------------------
+   iOS Safari scales the entire viewport when a form control's
+   computed font-size is below 16px — and it does not zoom back out
+   when the field is dismissed. The page stays zoomed, the header
+   and bottom navigation are pushed off-screen, and the user is
+   left scrolled into a corner of the app.
+
+   The two usual "fixes" are both wrong here:
+     • maximum-scale=1 / user-scalable=no stops the zoom but also
+       disables pinch-zoom for everyone (an accessibility failure).
+     • shipping 16px inputs everywhere destroys the 13.5px density
+       the application screens are designed around.
+
+   So the guard is scoped to touch widths only: every control the
+   user can type into renders at 16px on phones and tablets, and the
+   desktop density is untouched.
+
+   Written unlayered on purpose. Tailwind v4 emits utilities inside
+   `@layer utilities`; unlayered rules win the cascade over layered
+   ones regardless of specificity, so this beats `.text-body` /
+   `.text-small` on the control without needing `!important`.
+
+   Scoped to text-entry controls only. `input[type="range"]` is a 4px
+   progress slider — setting a 36px min-height on it would turn the
+   slider into a slab. Radios are visually-hidden `peer` elements
+   whose 1px box must stay 1px. */
+
+@media (max-width: 767.98px) {
+  input:not(
+      [type="range"],
+      [type="radio"],
+      [type="checkbox"],
+      [type="color"],
+      [type="file"],
+      [type="submit"],
+      [type="button"],
+      [type="reset"],
+      [type="image"]
+    ),
+  textarea,
+  select {
+    font-size: 16px;
+    line-height: 24px;
+    /* 16px glyphs clip their descenders inside the 32px compact
+       variants, so those grow to 36px on touch. Still short of the
+       44px target, but these are secondary filter controls in a dense
+       toolbar, not primary actions. */
+    min-height: 36px;
+  }
+
+  /* Keep the native/appearance-none caret clear of the larger text. */
+  select {
+    padding-right: 2rem;
+  }
+}

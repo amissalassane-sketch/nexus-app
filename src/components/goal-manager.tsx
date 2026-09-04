@@ -350,7 +350,10 @@ function GoalManagerInner({ userId }: { userId: string }) {
         actions={<CreateButton label="New Goal" onClick={openCreateForm} />}
       />
 
-      <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+      {/* Two columns on phones, three from `sm` up — see the same
+          note in project-manager: three-up at 320px truncates
+          "Avg. progress" into an unreadable stub. */}
+      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-3 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
         <Metric label="In progress" value={goals.length - completedCount} />
         <Metric label="Completed" value={completedCount} />
         <Metric label="Avg. progress" value={`${averageProgress}%`} />

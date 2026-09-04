@@ -414,7 +414,12 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         }
       />
 
-      <div className="grid grid-cols-3 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
+      {/* Two columns on phones, three from `sm` up. At 320px a
+          three-up grid gives each cell ~64px of content width after
+          padding, which truncates "Avg. progress" to "Avg. pro…" —
+          a label that no longer says anything. Matches the
+          task manager metric row. */}
+      <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-3 [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0">
         <Metric label="Active" value={activeCount} />
         <Metric label="Completed" value={completedCount} />
         <Metric label="Avg. progress" value={`${averageProgress}%`} />
