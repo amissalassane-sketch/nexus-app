@@ -443,7 +443,7 @@ export function IntelligenceAsk({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 relative z-50">
           <button
             type="button"
             data-guide="intelligence-send"

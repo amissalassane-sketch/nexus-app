@@ -103,7 +103,7 @@ export function IntelligenceView({
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div className="animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
         {workspaceId ? <MissionPanel workspaceId={workspaceId} /> : null}
       </div>
@@ -114,7 +114,7 @@ export function IntelligenceView({
         <IntelligenceAsk snapshot={snapshot} autoFocus={autoFocusAsk} initialQuery={initialAskQuery} />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="animate-[intelligence-state-in_300ms_var(--ease-nexus)_180ms_both]">
           <WorkspaceHealthPanel health={health} />
         </div>
@@ -134,9 +134,9 @@ export function IntelligenceView({
         <IntelligenceCanvas context={context} signalCount={visible.length} criticalCount={counts.critical ?? 0} />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
-          <div role="tablist" aria-label="Filter signals by severity" className="mb-3 flex flex-wrap items-center gap-1">
+          <div role="tablist" aria-label="Filter signals by severity" className="mb-4 flex flex-wrap items-center gap-1">
             {FILTERS.map((entry) => {
               const count = counts[entry.id] ?? 0;
               const disabled = entry.id !== "all" && count === 0;

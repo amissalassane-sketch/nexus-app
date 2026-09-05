@@ -174,7 +174,7 @@ function AppShellInner({
                 </button>
                 <Link
                   href="/notifications"
-                    aria-label={counts.unreadNotifications > 0 ? `Notifications, ${counts.unreadNotifications} unread` : "Notifications"}
+                  aria-label={counts.unreadNotifications > 0 ? `Notifications, ${counts.unreadNotifications} unread` : "Notifications"}
                   className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
                   <Bell size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -185,27 +185,6 @@ function AppShellInner({
                     />
                   ) : null}
                 </Link>
-                <button
-                  type="button"
-                  onClick={openHelp}
-                  aria-label="Help & Guide"
-                  data-guide="help-button"
-                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
-                >
-                  <LifeBuoy size={16} strokeWidth={1.75} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={openProfileModal}
-                  aria-label="Account profile"
-                  className="ml-0.5 flex h-9 w-9 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[12px] font-semibold text-text-primary transition-[border-color,background-color,transform] duration-150 ease-nexus hover:border-border-strong active:bg-accent-ghost active:scale-[0.94] will-change-transform"
-                >
-                  {user.name?.trim() ? (
-                    user.name.trim().slice(0, 1).toUpperCase()
-                  ) : (
-                    <UserRound size={14} strokeWidth={1.75} aria-hidden="true" />
-                  )}
-                </button>
               </div>
             </div>
           </header>
@@ -339,24 +318,41 @@ function AppShellInner({
                 />
               </div>
               <div className="shrink-0 border-t border-border-subtle bg-bg-surface/30 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeNav();
+                      openProfileModal();
+                    }}
+                    className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
+                  >
+                    <span className="flex h-6 w-6 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[9px] font-semibold text-text-primary">
+                      {user.name?.trim() ? user.name.trim().slice(0, 1).toUpperCase() : <UserRound size={10} strokeWidth={2} aria-hidden="true" />}
+                    </span>
+                    <span>Account Profile</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       closeNav();
                       openHelp();
                     }}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
+                    className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
                   >
-                    <LifeBuoy size={14} strokeWidth={1.75} />
+                    <span className="flex h-6 w-6 items-center justify-center text-text-tertiary">
+                      <LifeBuoy size={14} strokeWidth={1.75} />
+                    </span>
                     <span>Help & Guide</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-nav px-2 text-caption text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-danger-bg hover:text-danger active:scale-[0.97]"
+                    className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-danger-bg hover:text-danger active:scale-[0.97]"
                   >
-                    <LogOut size={13} strokeWidth={1.75} />
+                    <span className="flex h-6 w-6 items-center justify-center">
+                      <LogOut size={13} strokeWidth={1.75} />
+                    </span>
                     <span>Sign out</span>
                   </button>
                 </div>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { CountBadge } from "./badge";
 
 // ============================================================
 // NEXUS — PAGE HEADER
@@ -27,7 +28,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 pb-5 sm:flex-row sm:items-start sm:justify-between",
+        "flex flex-col gap-3 pb-6 sm:flex-row sm:items-start sm:justify-between",
         className
       )}
     >
@@ -38,9 +39,7 @@ export function PageHeader({
         <div className="flex items-center gap-2.5">
           <h1 className="text-h1 text-text-primary">{title}</h1>
           {count !== undefined ? (
-            <span className="font-mono text-mono tabular-nums text-text-quaternary">
-              {count}
-            </span>
+            <CountBadge value={count} label={`${count} items`} />
           ) : null}
         </div>
         {description ? (

@@ -289,7 +289,7 @@ export function MobileOverview({
           <Link
             href="/app/intelligence?ask=1"
             data-guide="mobile-ask-cta"
-            className="mt-2.5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-input border border-lavender-border/50 bg-lavender/10 px-4 text-button font-medium text-lavender transition-colors hover:bg-lavender/20 active:bg-lavender/20"
+            className="mt-2.5 relative z-50 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-input border border-lavender-border/50 bg-lavender/10 px-4 text-button font-medium text-lavender transition-colors hover:bg-lavender/20 active:bg-lavender/20"
           >
             Ask NEXUS
             <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
