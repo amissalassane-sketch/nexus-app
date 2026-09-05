@@ -99,7 +99,7 @@ export default async function IntelligencePage({
       />
 
       {!workspaceId ? (
-        <Alert tone="warning" className="mb-5">
+        <Alert tone="warning" className="mb-6">
           No active workspace is linked to this account. NEXUS has nothing to
           read until you create one.
         </Alert>

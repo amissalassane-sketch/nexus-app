@@ -38,7 +38,7 @@ export function ProfileCompletionPrompt({
     <div
       role="region"
       aria-label="Complete your profile"
-      className="mb-5 flex flex-col gap-3 rounded-card border border-border-subtle bg-bg-subtle/70 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+      className="mb-6 flex flex-col gap-3 rounded-card border border-border-subtle bg-bg-subtle/70 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex min-w-0 items-start gap-3">
         <span

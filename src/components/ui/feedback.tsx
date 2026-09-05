@@ -178,10 +178,17 @@ export function Alert({
   className?: string;
 }) {
   const tones = {
-    danger: "border-danger-border bg-danger-bg text-danger",
-    success: "border-success-border bg-success-bg text-success",
-    warning: "border-warning-border bg-warning-bg text-warning",
-    info: "border-info-border bg-info-bg text-info",
+    danger: "border-danger-border bg-danger-bg text-text-primary",
+    success: "border-success-border bg-success-bg text-text-primary",
+    warning: "border-warning-border bg-warning-bg text-text-primary",
+    info: "border-info-border bg-info-bg text-text-primary",
+  } as const;
+
+  const titleTones = {
+    danger: "text-danger",
+    success: "text-success",
+    warning: "text-warning",
+    info: "text-info",
   } as const;
 
   return (
@@ -194,8 +201,8 @@ export function Alert({
       )}
     >
       <div className="min-w-0 flex-1">
-        {title ? <p className="font-medium">{title}</p> : null}
-        <div className={cn(title && "mt-0.5 opacity-90")}>{children}</div>
+        {title ? <p className={cn("font-medium", titleTones[tone])}>{title}</p> : null}
+        <div className={cn("text-text-secondary", title && "mt-0.5")}>{children}</div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
