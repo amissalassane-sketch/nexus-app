@@ -16,6 +16,7 @@ import { FinalCtaSection } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/footer";
 import { LaunchExperience } from "@/components/landing/launch-experience";
 import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
+import { NexusGrid } from "@/components/ui/nexus-grid";
 
 // ============================================================
 // NEXUS — PUBLIC LANDING PAGE
@@ -73,6 +74,10 @@ export default async function Home({
   return (
     <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
       <LaunchExperience />
+      {/* BACKGROUND — the living dot matrix with its hidden N.
+          Fixed decorative layer at z-index -1 inside the isolated
+          landing root: always behind the content, never interactive. */}
+      <NexusGrid />
       <LandingAtmosphere />
       <LandingNav />
 
