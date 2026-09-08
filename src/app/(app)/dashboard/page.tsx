@@ -1,8 +1,12 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Ban,
+  CalendarClock,
   CheckSquare,
   FolderKanban,
+  ListChecks,
+  ListTodo,
   Sparkles,
   Target,
 } from "lucide-react";
@@ -17,11 +21,17 @@ import { FocusPanel, InsightRow } from "@/components/intelligence-panel";
 import {
   computeInsights,
   describeWorkspace,
+  isActiveTask,
   nextBestAction,
   type WorkspaceSnapshot,
 } from "@/lib/intelligence/engine";
-import { workspaceHealth } from "@/lib/intelligence/advanced";
+import { workspaceHealth, weeklyBriefing, forecastWorkspace, rankPriorities } from "@/lib/intelligence/advanced";
 import { ActivityList, type ActivityRow } from "@/components/activity-list";
+import { KpiGrid } from "@/components/dashboard/kpi-grid";
+import { BriefingPanel } from "@/components/dashboard/briefing-panel";
+import { PriorityQueuePanel } from "@/components/dashboard/priority-queue";
+import { ActiveProjectsPanel } from "@/components/dashboard/active-projects";
+import { UpcomingPanel, type UpcomingItem } from "@/components/dashboard/upcoming-panel";
 import { MobileOverview } from "@/components/mobile-home/mobile-overview";
 import { readActiveMissions } from "@/lib/intelligence/mission";
 import type { IntelligenceMission } from "@/lib/intelligence/types";
@@ -112,15 +122,6 @@ export default async function DashboardPage() {
       })()
     : Promise.resolve(emptySnapshot);
 
-  const recentProjectsPromise = workspaceId
-    ? supabase
-        .from("projects")
-        .select("id, name, status, progress, due_date, created_at")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false })
-        .limit(4)
-    : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null });
-
   const recentGoalsPromise = workspaceId
     ? supabase
         .from("goals")
@@ -157,13 +158,11 @@ export default async function DashboardPage() {
 
   const [
     snapshot,
-    recentProjectsResult,
     recentGoalsResult,
     recentActivitiesResult,
     missions,
   ] = await Promise.all([
     snapshotPromise,
-    recentProjectsPromise,
     recentGoalsPromise,
     recentActivitiesPromise,
     missionPromise,
@@ -174,11 +173,21 @@ export default async function DashboardPage() {
   const insights = computeInsights(snapshot);
   const focus = nextBestAction(snapshot);
   const health = workspaceHealth(snapshot);
+  // Dashboard 2.0 reads — all derived from the same snapshot, no new
+  // queries and no parallel logic: the engine already computes them.
+  const briefing = weeklyBriefing(snapshot);
+  const forecasts = forecastWorkspace(snapshot);
+  const priorities = rankPriorities(snapshot, 5);
+  const completedTasks = snapshot.tasks.filter(
+    (task) => task.status === "done"
+  ).length;
+  const activeGoals = snapshot.goals.filter(
+    (goal) => goal.status !== "completed" && goal.status !== "archived"
+  ).length;
   const needsAttention = insights
     .filter((insight) => insight.severity !== "positive")
     .slice(0, 4);
 
-  const recentProjects = recentProjectsResult.data ?? [];
   const recentGoals = recentGoalsResult.data ?? [];
   const recentActivities = (recentActivitiesResult.data ?? []) as ActivityRow[];
   const activitiesUnavailable = Boolean(recentActivitiesResult.error);
@@ -210,6 +219,44 @@ export default async function DashboardPage() {
     (context.projects > 0 ? 1 : 0) +
     (context.tasks > 0 ? 1 : 0);
 
+  // Current operating period, rendered from the server clock.
+  const nowDate = new Date();
+  const weekStart = new Date(nowDate);
+  weekStart.setDate(nowDate.getDate() - ((nowDate.getDay() + 6) % 7));
+  const periodLabel = `WEEK OF ${new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(weekStart).toUpperCase()}`;
+
+  // UPCOMING — open tasks whose real due date lands inside 7 days,
+  // read from the same snapshot (no extra query, no invented dates).
+  const projectNameById = new Map(
+    snapshot.projects.map((project) => [project.id, project.name])
+  );
+  const upcoming: UpcomingItem[] = snapshot.tasks
+    .filter((task) => {
+      if (!isActiveTask(task) || !task.due_at) return false;
+      const due = new Date(task.due_at).getTime();
+      if (Number.isNaN(due)) return false;
+      return (
+        due >= nowDate.getTime() && due <= nowDate.getTime() + 7 * 86_400_000
+      );
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.due_at as string).getTime() -
+        new Date(b.due_at as string).getTime()
+    )
+    .slice(0, 5)
+    .map((task) => ({
+      id: task.id,
+      title: task.title,
+      dueAt: task.due_at as string,
+      projectName: task.project_id
+        ? projectNameById.get(task.project_id) ?? null
+        : null,
+    }));
+
   return (
     <div className="page-enter space-y-6" data-guide="dashboard">
       {/* OPERATIONAL SITUATION HEADER */}
@@ -224,6 +271,8 @@ export default async function DashboardPage() {
             <span>{workspaceName ?? "PERSONAL WORKSPACE"}</span>
             <span>·</span>
             <span className="text-success font-medium">LIVE READ</span>
+            <span>·</span>
+            <span>{periodLabel}</span>
           </div>
 
           <h1 className="mt-2 text-[26px] font-semibold leading-[32px] tracking-[-0.03em] text-text-primary sm:text-[30px]">
@@ -478,6 +527,59 @@ export default async function DashboardPage() {
           />
 
           <div className="hidden space-y-6 lg:block">
+            {/* KPI GRID — every number is a real Supabase count, and each
+                card deep-links into the filtered view of that data. */}
+            <KpiGrid
+              items={[
+                {
+                  label: "Open tasks",
+                  value: context.openTasks,
+                  icon: ListTodo,
+                  href: "/tasks",
+                  hint: "in progress",
+                },
+                {
+                  label: "Completed",
+                  value: completedTasks,
+                  icon: ListChecks,
+                  href: "/tasks",
+                  tone: "success",
+                  hint: `${context.completionRate}% rate`,
+                },
+                {
+                  label: "Overdue",
+                  value: context.overdueTasks,
+                  icon: CalendarClock,
+                  href: "/tasks?filter=overdue",
+                  tone: context.overdueTasks > 0 ? "danger" : "default",
+                  hint: "past deadline",
+                },
+                {
+                  label: "Blocked",
+                  value: context.blockedTasks,
+                  icon: Ban,
+                  href: "/tasks?filter=blocked",
+                  tone: context.blockedTasks > 0 ? "warning" : "default",
+                  hint: "waiting",
+                },
+                {
+                  label: "Active projects",
+                  value: context.activeProjects,
+                  icon: FolderKanban,
+                  href: "/projects",
+                  hint: "in flight",
+                },
+                {
+                  label: "Active goals",
+                  value: activeGoals,
+                  icon: Target,
+                  href: "/goals",
+                  tone: "accent",
+                  hint: "tracked",
+                },
+              ]}
+            />
+
             {/* LAYER 1 — SITUATION (Operational Diagnostic & Context Brief) */}
             <section
               aria-label="Workspace situation"
@@ -631,12 +733,32 @@ export default async function DashboardPage() {
               </section>
             ) : null}
 
+            {/* INTELLIGENCE — the decision centre of the workspace.
+                Everything below this marker is produced by the NEXUS
+                engine from real data: next best action, signals,
+                briefing, priority queue. */}
+            <div className="flex items-center gap-3 pt-1">
+              <span className="flex shrink-0 items-center gap-2">
+                <span
+                  className="h-1.5 w-1.5 rounded-pill bg-lavender animate-pulse"
+                  aria-hidden="true"
+                />
+                <span className="eyebrow text-lavender">
+                  NEXUS INTELLIGENCE · DECISION CENTRE
+                </span>
+              </span>
+              <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+            </div>
+
             {/* LAYER 3 & 4 — DECISION & EXECUTION (Single Dominant Next Best Action) */}
             <FocusPanel insight={focus} />
 
-            {/* LAYER 2 — INTERPRETATION & WHAT MATTERS (Needs attention signals) */}
-            <Panel
-              title="Needs attention"
+            {/* LAYER 2 — INTERPRETATION & WHAT MATTERS (Needs attention signals)
+                paired with the weekly briefing column. */}
+            <div className="grid gap-5 lg:grid-cols-3">
+              <div className="min-w-0 lg:col-span-2">
+                <Panel
+                  title="Needs your attention"
               description="Derived from deadlines, blocked work and project momentum"
               bodyClassName="p-0"
               actions={
@@ -673,6 +795,12 @@ export default async function DashboardPage() {
                 </ul>
               )}
             </Panel>
+              </div>
+
+              <div className="space-y-5">
+                <BriefingPanel briefing={briefing} />
+              </div>
+            </div>
 
             {/* LAYER 6 — GIVE NEXUS AN OBJECTIVE (Intention Command Strip) */}
             <section
@@ -728,6 +856,10 @@ export default async function DashboardPage() {
               </div>
             </section>
 
+            {/* ACTIVE PROJECTS — health table computed by the
+                forecast engine (real velocity, real projections). */}
+            <ActiveProjectsPanel forecasts={forecasts} />
+
             {/* LAYER 5 & CONTEXT PILLARS (What Changed + Active Context) */}
             <div className="grid gap-5 lg:grid-cols-3">
               {/* Activity / Delta Column */}
@@ -753,81 +885,11 @@ export default async function DashboardPage() {
                 </Panel>
               </div>
 
-              {/* Context Pillars: Projects & Goals */}
+              {/* Context Pillars: Priorities, Upcoming & Goals */}
               <div className="space-y-5">
-                <Panel
-                  title="Recent projects"
-                  description="Where open work lives"
-                  bodyClassName="p-0"
-                  actions={
-                    <Link
-                      href="/projects"
-                      className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary"
-                    >
-                      View all
-                    </Link>
-                  }
-                >
-                  {recentProjects.length === 0 ? (
-                    <div className="p-4">
-                      <EmptyState
-                        title="No projects yet"
-                        description="Projects provide context so NEXUS can detect deadlines and blocked work."
-                        icon={<FolderKanban size={17} strokeWidth={1.75} />}
-                        action={
-                          <Link
-                            href="/projects?create=1"
-                            className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
-                          >
-                            Create a project
-                          </Link>
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <ul>
-                      {recentProjects.map((project) => {
-                        const progress = Math.min(
-                          100,
-                          Math.max(0, Number(project.progress ?? 0))
-                        );
-                        return (
-                          <li key={project.id as string}>
-                            <Link
-                              href="/projects"
-                              className="flex items-center gap-3 border-b border-border-subtle px-4 py-3 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]"
-                            >
-                              <span
-                                aria-hidden="true"
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
-                              >
-                                <FolderKanban size={13} strokeWidth={1.75} />
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="flex items-center gap-2">
-                                  <span className="min-w-0 truncate text-body-medium text-text-primary">
-                                    {project.name as string}
-                                  </span>
-                                  <span className="eyebrow shrink-0 text-text-quaternary">
-                                    {project.status as string}
-                                  </span>
-                                </span>
-                                <Progress
-                                  value={progress}
-                                  label={`${project.name as string} progress`}
-                                  className="mt-1.5 max-w-sm"
-                                />
-                              </span>
-                              <span className="shrink-0 text-right font-mono text-mono tabular-nums text-text-secondary">
-                                {progress}%
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </Panel>
+                <PriorityQueuePanel items={priorities} />
+
+                <UpcomingPanel items={upcoming} />
 
                 <Panel
                   title="Recent goals"
