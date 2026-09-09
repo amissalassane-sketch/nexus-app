@@ -2,7 +2,6 @@ import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { HeroAtmosphere } from "@/components/landing/hero-atmosphere";
-import { HeroField } from "@/components/landing/hero-field";
 import { HeroHeadline } from "@/components/landing/hero-headline";
 
 // ============================================================
@@ -37,7 +36,15 @@ export function Hero({ notice }: { notice?: ReactNode }) {
   return (
     <section className="relative isolate overflow-hidden px-4 pb-12 pt-28 sm:px-6 sm:pb-16 sm:pt-32 lg:pt-36">
       <HeroAtmosphere />
-      <HeroField />
+
+      {/* The NEXUS mark is no longer drawn here — it lives hidden in
+          the grid background, revealed only by its pulses. */}
+
+      {/* Bottom fade into the page */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-bg-base"
+      />
 
       <div className="relative z-10 mx-auto flex w-full max-w-page flex-col items-center text-center">
         {notice ? (

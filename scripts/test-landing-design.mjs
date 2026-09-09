@@ -24,7 +24,7 @@
  * Exit: 0 = all invariants hold, 1 = at least one check failed.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -377,16 +377,21 @@ console.log("Performance — no heavy dependency was added");
 // ------------------------------------------------------------------
 const pkg = JSON.parse(readRoot("package.json"));
 const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-for (const banned of [
-  "framer-motion",
-  "gsap",
-  "lottie-react",
-  "aos",
-  "animejs",
-  "motion",
-]) {
+for (const banned of ["gsap", "lottie-react", "aos", "animejs", "motion"]) {
   check(`package.json: ${banned} was not added`, !deps[banned]);
 }
+// framer-motion is allowed for the 21st.dev sign-in flow at /login, but it
+// must never leak into the public landing pages.
+check(
+  "landing: no framer-motion import in landing components",
+  !readdirSync(src("components/landing")).some((file) =>
+    read(`components/landing/${file}`).includes("framer-motion")
+  )
+);
+check(
+  "login: the sign-in WebGL canvas stays lazy-loaded (ssr: false)",
+  read("components/ui/sign-in-flow-1.tsx").includes("ssr: false")
+);
 check(
   "landing: the hero field is still lazy-loaded (ssr: false)",
   read("components/landing/hero-field.tsx").includes("ssr: false")

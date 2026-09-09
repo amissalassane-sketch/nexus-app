@@ -28,6 +28,7 @@ import {
   type ShellUser,
   type ShellWorkspace,
 } from "@/components/layout/workspace-sidebar";
+import { NexusSpatialField } from "@/components/spatial/nexus-spatial-field";
 
 function AppShellInner({
   user,
@@ -106,7 +107,11 @@ function AppShellInner({
 
   return (
     <ToastProvider>
-      <div className="flex h-dvh overflow-hidden bg-bg-base">
+      <div className="relative flex h-dvh overflow-hidden bg-bg-base">
+        {/* LAYER 0 — the spatial field. Fixed, behind everything, and
+            pointer-events-none: it never intercepts clicks, scrolling,
+            selection or dialogs. */}
+        <NexusSpatialField />
         <CommandMenu />
         <KeyboardShortcuts />
 
@@ -119,7 +124,7 @@ function AppShellInner({
 
         <aside
           aria-label="Workspace navigation"
-          className="hidden w-[248px] shrink-0 border-r border-border-subtle bg-bg-subtle/60 lg:block"
+          className="relative hidden w-[248px] shrink-0 border-r border-border-subtle bg-bg-subtle/60 lg:block"
         >
           <WorkspaceSidebar
             user={user}
@@ -129,7 +134,7 @@ function AppShellInner({
           />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
           <header
             className="shrink-0 border-b border-border-subtle bg-bg-base transition-[border-color,background-color] duration-200 ease-nexus lg:hidden sticky-nav"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
