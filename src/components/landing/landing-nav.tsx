@@ -25,7 +25,12 @@ import { cn } from "@/lib/cn";
 // menu and returns focus to its trigger.
 // ============================================================
 
-type LandingNavContext = "landing" | "intelligence" | "how-it-works" | "pricing";
+type LandingNavContext =
+  | "landing"
+  | "intelligence"
+  | "how-it-works"
+  | "pricing"
+  | "legal";
 
 const NAV_LINKS = [
   { id: "product", route: "/#product", label: "Product" },

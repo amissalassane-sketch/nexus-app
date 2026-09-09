@@ -32,6 +32,16 @@ export async function updateSession(request: NextRequest) {
       pathname === "/intelligence" ||
       pathname === "/pricing" ||
       pathname === "/how-it-works" ||
+      pathname === "/legal" ||
+      pathname === "/terms" ||
+      pathname === "/privacy" ||
+      pathname === "/cookies" ||
+      pathname === "/acceptable-use" ||
+      pathname.startsWith("/legal/") ||
+      pathname.startsWith("/terms/") ||
+      pathname.startsWith("/privacy/") ||
+      pathname.startsWith("/cookies/") ||
+      pathname.startsWith("/acceptable-use/") ||
       pathname.startsWith("/login") ||
       pathname.startsWith("/signup") ||
       pathname.startsWith("/forgot-password") ||
@@ -96,7 +106,7 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
-  // Public routes (marketing + auth surfaces)
+  // Public routes (marketing + auth surfaces + legal)
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/intelligence" ||
@@ -105,6 +115,16 @@ export async function updateSession(request: NextRequest) {
     pathname === "/pricing/" ||
     pathname === "/how-it-works" ||
     pathname === "/how-it-works/" ||
+    pathname === "/legal" ||
+    pathname === "/legal/" ||
+    pathname === "/terms" ||
+    pathname === "/terms/" ||
+    pathname === "/privacy" ||
+    pathname === "/privacy/" ||
+    pathname === "/cookies" ||
+    pathname === "/cookies/" ||
+    pathname === "/acceptable-use" ||
+    pathname === "/acceptable-use/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||

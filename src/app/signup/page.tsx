@@ -266,25 +266,21 @@ export default function SignupPage() {
             {loading ? "Creating account…" : "Create account"}
           </motion.button>
 
-          <p className="mt-2 text-center text-xs text-white/30">
+          <p className="mt-2 text-center text-xs text-white/40">
             By creating an account, you agree to our{" "}
-            <a
+            <Link
               href="/terms"
-              className="underline text-white/40 hover:text-white/60 transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
+              className="underline text-white/50 hover:text-white/70 transition-colors"
             >
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a
+            <Link
               href="/privacy"
-              className="underline text-white/40 hover:text-white/60 transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
+              className="underline text-white/50 hover:text-white/70 transition-colors"
             >
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </form>
