@@ -3,10 +3,9 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Alert } from "@/components/ui/feedback";
-import { ButtonLink } from "@/components/ui/button";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -17,6 +16,9 @@ const RESEND_COOLDOWN_SECONDS = 60;
  * must open the link we sent before they can sign in. They never have to
  * restart sign-up from here: they can resend the email (rate-limited) or go
  * back and use a different address.
+ *
+ * VISUAL: Uses the shared NEXUS auth visual system — animated dot-matrix
+ * background, cinematic transitions, dark translucent form controls.
  */
 export function CheckEmailPageClient({
   initialEmail = "",
@@ -29,8 +31,8 @@ export function CheckEmailPageClient({
       fallback={
         <AuthLayout title="Check your inbox" description="">
           <div className="flex flex-col gap-3" aria-hidden="true">
-            <div className="skeleton h-11 rounded-input" />
-            <div className="skeleton h-11 rounded-input" />
+            <div className="skeleton h-11 rounded-full" />
+            <div className="skeleton h-11 rounded-full" />
           </div>
           <p className="sr-only" role="status">
             Loading
@@ -45,8 +47,6 @@ export function CheckEmailPageClient({
 
 function CheckEmailInner({ initialEmail }: { initialEmail: string }) {
   const params = useSearchParams();
-  // Prefer the server-read value so the initial HTML carries the address;
-  // fall back to the live search params for client-side navigations.
   const email = (initialEmail || params.get("email"))?.trim() ?? "";
   const { error: configError } = readSupabaseConfig();
 
@@ -140,57 +140,66 @@ function CheckEmailInner({ initialEmail }: { initialEmail: string }) {
           Wrong address?{" "}
           <Link
             href="/signup"
-            className="text-text-primary underline decoration-border-strong underline-offset-4"
+            className="underline text-white/50 hover:text-white/70 transition-colors"
           >
             Create another account
           </Link>
         </>
       }
     >
-      {configError ? (
-        <Alert tone="danger" className="mb-4">
-          {configError}
-        </Alert>
-      ) : null}
+      <div className="space-y-5">
+        {configError ? (
+          <p className="text-sm text-red-400/90 text-center" role="alert">
+            {configError}
+          </p>
+        ) : null}
 
-      {email ? (
-        <p className="mb-6 text-center text-small text-text-secondary">
-          We sent a NEXUS verification link to{" "}
-          <span className="text-text-primary">{email}</span>. Open it to verify
-          your address and continue.
-        </p>
-      ) : null}
+        {email ? (
+          <p className="text-center text-sm text-white/50">
+            We sent a NEXUS verification link to{" "}
+            <span className="text-white font-medium">{email}</span>. Open it to
+            verify your address and continue.
+          </p>
+        ) : null}
 
-      <div className="flex flex-col gap-3">
-        <ButtonLink href="/login" size="lg" className="w-full">
-          Back to sign in
-        </ButtonLink>
-      </div>
-
-      <form onSubmit={handleResend} className="mt-6">
-        <button
-          type="submit"
-          disabled={cooldown > 0 || loading || Boolean(configError)}
-          className="mx-auto block text-center text-small text-text-tertiary underline decoration-border-strong underline-offset-4 transition-colors hover:text-text-secondary disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          {cooldown > 0
-            ? `Resend available in ${cooldown}s`
-            : loading
-              ? "Sending verification email…"
-              : "Didn't receive it? Resend verification email"}
-        </button>
-      </form>
+          <Link
+            href="/login"
+            className="block w-full rounded-full bg-white text-black font-medium py-3 text-center hover:bg-white/90 transition-colors"
+          >
+            Back to sign in
+          </Link>
+        </motion.div>
 
-      {error ? (
-        <div className="mt-4">
-          <Alert tone="danger">{error}</Alert>
-        </div>
-      ) : null}
-      {message ? (
-        <div className="mt-4">
-          <Alert tone="success">{message}</Alert>
-        </div>
-      ) : null}
+        <form onSubmit={handleResend} className="mt-2">
+          <button
+            type="submit"
+            disabled={cooldown > 0 || loading || Boolean(configError)}
+            className="mx-auto block text-center text-sm text-white/40 underline underline-offset-4 decoration-white/20 transition-colors hover:text-white/60 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+          >
+            {cooldown > 0
+              ? `Resend available in ${cooldown}s`
+              : loading
+                ? "Sending verification email…"
+                : "Didn't receive it? Resend verification email"}
+          </button>
+        </form>
+
+        {error ? (
+          <p className="text-sm text-red-400/90 text-center" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="text-sm text-emerald-400/80 text-center" role="status">
+            {message}
+          </p>
+        ) : null}
+      </div>
     </AuthLayout>
   );
 }

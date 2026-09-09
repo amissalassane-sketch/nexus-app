@@ -34,13 +34,17 @@ import { cn } from "@/lib/utils";
 //   * Success -> /app, the canonical NEXUS post-auth destination
 //     (which redirects to /dashboard), same as every other
 //     authentication entry point in the codebase.
+//
+// Uses the shared NexusAuthBackground for the animated dot-matrix
+// canvas environment — the same visual layer that wraps every
+// other auth page in the product.
 // ============================================================
 
-// The R3F Canvas must never render on the server.
-const CanvasRevealEffect = dynamic(
+// Shared background — SSR-safe dynamic import.
+const NexusAuthBackground = dynamic(
   () =>
-    import("@/components/ui/canvas-reveal-effect").then(
-      (mod) => mod.CanvasRevealEffect
+    import("@/components/ui/nexus-auth-background").then(
+      (mod) => mod.NexusAuthBackground
     ),
   { ssr: false }
 );
@@ -412,40 +416,15 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
       )}
     >
       <div className="absolute inset-0 z-0">
-        {/* Initial canvas (forward animation) */}
+        {/* Animated dot-matrix environment — same component as every auth page */}
         {initialCanvasVisible && (
-          <div className="absolute inset-0">
-            <CanvasRevealEffect
-              animationSpeed={3}
-              containerClassName="bg-black"
-              colors={[
-                [255, 255, 255],
-                [255, 255, 255],
-              ]}
-              dotSize={6}
-              reverse={false}
-            />
-          </div>
+          <NexusAuthBackground variant="forward" animationSpeed={3} />
         )}
 
-        {/* Reverse canvas (appears when the OTP is verified) */}
+        {/* Reverse sweep when OTP is verified */}
         {reverseCanvasVisible && (
-          <div className="absolute inset-0">
-            <CanvasRevealEffect
-              animationSpeed={4}
-              containerClassName="bg-black"
-              colors={[
-                [255, 255, 255],
-                [255, 255, 255],
-              ]}
-              dotSize={6}
-              reverse={true}
-            />
-          </div>
+          <NexusAuthBackground variant="reverse" animationSpeed={4} />
         )}
-
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,1)_0%,_transparent_100%)]" />
-        <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black to-transparent" />
       </div>
 
       {/* Content Layer */}

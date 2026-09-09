@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 import { useReducedMotion } from "@/components/onboarding/spotlight";
 import { cn } from "@/lib/cn";
 
+/**
+ * In-app welcome overlay — the first thing a new user sees after
+ * authentication, before they reach the dashboard.
+ *
+ * VISUAL: Matches the NEXUS auth visual system — dark translucent
+ * surfaces, subtle borders, cinematic motion, premium typography.
+ * The animated dot-matrix from the auth pages continues underneath
+ * this overlay through the dashboard's own background.
+ */
 export function WelcomeScreen({
   onStart,
   onExplore,
@@ -29,53 +39,72 @@ export function WelcomeScreen({
     if (pending || closing) return;
     setPending("start");
     setClosing(true);
-    closeTimer.current = setTimeout(onStart, 160);
+    closeTimer.current = setTimeout(onStart, 200);
   };
 
   const handleExplore = () => {
     if (pending || closing) return;
     setPending("explore");
     setClosing(true);
-    closeTimer.current = setTimeout(onExplore, 160);
+    closeTimer.current = setTimeout(onExplore, 200);
   };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center">
-      <div
-        className={cn(
-          "absolute inset-0 bg-black/45",
-          !reduced && (closing ? "animate-fade-out" : "animate-fade-in")
-        )}
+      {/* Backdrop — cinematic dark overlay with subtle blur */}
+      <motion.div
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         aria-hidden="true"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: closing ? 0 : 1 }}
+        transition={{ duration: reduced ? 0 : 0.3 }}
       />
-      <div
+
+      {/* Welcome card — dark translucent surface */}
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="nexus-welcome-title"
+        initial={reduced ? {} : { opacity: 0, y: 20, scale: 0.97 }}
+        animate={
+          closing
+            ? { opacity: 0, y: -10, scale: 0.98 }
+            : { opacity: 1, y: 0, scale: 1 }
+        }
+        transition={{
+          duration: reduced ? 0 : 0.4,
+          ease: [0.22, 1, 0.36, 1],
+        }}
         className={cn(
-          "relative z-[71] w-[min(420px,100%)] rounded-card border border-border-default bg-bg-surface p-6 shadow-dropdown",
-          !reduced && (closing ? "animate-scale-out" : "animate-scale-in"),
+          "relative z-[71] w-[min(420px,100%)] rounded-2xl border border-white/[0.08] bg-[#0a0a0a]/95 backdrop-blur-md p-6 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)]",
           closing && "pointer-events-none"
         )}
       >
-        <p className="eyebrow text-text-quaternary">
+        {/* Eyebrow — quiet mono label */}
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-white/30">
           {t("welcome.kicker", locale)}
         </p>
+
         <h2
           id="nexus-welcome-title"
-          className="mt-3 text-[22px] font-semibold tracking-[-0.025em] text-text-primary"
+          className="mt-3 text-[22px] font-bold tracking-[-0.025em] text-white"
         >
           {t("welcome.title", locale)}
         </h2>
-        <p className="mt-2.5 text-body text-text-secondary">
+
+        <p className="mt-2.5 text-[13.5px] leading-[21px] text-white/50">
           {t("welcome.body", locale)}
         </p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <button
+
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+          <motion.button
             type="button"
             disabled={pending !== null}
             onClick={handleStart}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-140 hover:bg-accent-hover disabled:opacity-60"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-medium text-black transition-colors duration-200 hover:bg-white/90 disabled:opacity-60"
           >
             {pending === "start" ? (
               <svg
@@ -101,17 +130,21 @@ export function WelcomeScreen({
               </svg>
             ) : null}
             <span>{t("welcome.start", locale)}</span>
-          </button>
-          <button
+          </motion.button>
+
+          <motion.button
             type="button"
             disabled={pending !== null}
             onClick={handleExplore}
-            className="inline-flex h-10 flex-1 items-center justify-center rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-140 hover:text-text-primary disabled:opacity-50"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-4 text-[13px] font-medium text-white/60 transition-colors duration-200 hover:bg-white/[0.06] hover:text-white/80 disabled:opacity-50"
           >
             {t("welcome.explore", locale)}
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

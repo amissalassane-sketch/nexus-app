@@ -3,35 +3,26 @@
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Field, Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Alert } from "@/components/ui/feedback";
-import { Button } from "@/components/ui/button";
-import { Divider } from "@/components/ui/divider";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
- * Sign in.
+ * Sign in (email + password variant).
  *
- * Optimised for EXISTING USERS. The credentials are posted to
- * /api/auth/signin, which authenticates against Supabase and writes the SSR
- * cookies server-side. This page therefore has a single failure surface, and
- * every outcome is displayed to the user.
+ * Optimised for EXISTING USERS. Posts to /api/auth/signin.
  *
- * Login never creates accounts and never asks onboarding questions. Where the
- * session lands after sign-in is decided server-side — always the product
- * (access first, profile later).
+ * NOTE: This component is not currently used — the /login page renders
+ * the OTP-based sign-in flow (sign-in-flow-1.tsx). Kept here for
+ * completeness and future use.
  *
- * The ?error= param (set when a failed OAuth exchange bounces back to
- * /login) arrives as `initialError`, read from the request by the server
- * page: the signed-in error state and the browser's password-manager hints
- * (autocomplete semantics) are present in the initial HTML. Client-side
- * navigations fall back to the live search params.
+ * VISUAL: Uses the shared NEXUS auth visual system — animated dot-matrix
+ * background, cinematic transitions, dark translucent form controls.
  */
 export function LoginPageClient({ initialError = "" }: { initialError?: string }) {
   return (
@@ -39,8 +30,8 @@ export function LoginPageClient({ initialError = "" }: { initialError?: string }
       fallback={
         <AuthLayout title="Welcome back" description="">
           <div className="flex flex-col gap-3" aria-hidden="true">
-            <div className="skeleton h-11 rounded-input" />
-            <div className="skeleton h-11 rounded-input" />
+            <div className="skeleton h-11 rounded-full" />
+            <div className="skeleton h-11 rounded-full" />
           </div>
           <p className="sr-only" role="status">
             Loading
@@ -65,17 +56,12 @@ function LoginForm({ initialError }: { initialError: string }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  // Prefer the server-read value so the initial HTML carries the error;
-  // fall back to the live search params for client-side navigations.
   const [error, setError] = useState(initialError || (searchParams.get("error") ?? ""));
   const [needsVerification, setNeedsVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const submitting = useRef(false);
   const resendSubmitting = useRef(false);
-  // Guards the OAuth click the same way `submitting` guards the credentials
-  // form: a ref flips synchronously, so two rapid clicks cannot fire two
-  // provider redirects before the button re-renders as disabled.
   const googleSubmitting = useRef(false);
   const cooldownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -190,8 +176,6 @@ function LoginForm({ initialError }: { initialError: string }) {
         googleSubmitting.current = false;
         setGoogleLoading(false);
       }
-      // On success the browser navigates away to Google, then back to
-      // /auth/callback — keep the spinner and the guard for the whole trip.
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -270,117 +254,151 @@ function LoginForm({ initialError }: { initialError: string }) {
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+            className="underline text-white/50 hover:text-white/70 transition-colors"
           >
             Create one
           </Link>
         </>
       }
     >
-      {showConfigError ? (
-        <Alert tone="danger" className="mb-4">
-          {showConfigError}
-        </Alert>
-      ) : null}
-
-      <Button
-        type="button"
-        variant="secondary"
-        size="lg"
-        className="w-full"
-        onClick={handleGoogleLogin}
-        loading={googleLoading}
-        disabled={Boolean(showConfigError)}
-      >
-        <GoogleGlyph />
-        Continue with Google
-      </Button>
-
-      <Divider label="or" />
-
-      <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
-        <Field label="Email" htmlFor="login-email">
-          <Input
-            id="login-email"
-            name="email"
-            size="lg"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@company.com"
-            autoComplete="username"
-            disabled={loading}
-            aria-invalid={error ? true : undefined}
-            required
-          />
-        </Field>
-
-        <Field
-          label="Password"
-          htmlFor="login-password"
-          action={
-            <Link
-              href="/forgot-password"
-              className="text-caption text-text-tertiary transition-colors hover:text-text-secondary"
-            >
-              Forgot password?
-            </Link>
-          }
-        >
-          <PasswordInput
-            id="login-password"
-            name="password"
-            size="lg"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Your password"
-            autoComplete="current-password"
-            disabled={loading}
-            aria-invalid={error ? true : undefined}
-            required
-          />
-        </Field>
-
-        {error ? <Alert tone="danger">{error}</Alert> : null}
-
-        <Button
-          type="submit"
-          size="lg"
-          loading={loading}
-          disabled={Boolean(showConfigError)}
-          className="mt-1 w-full"
-        >
-          Log in
-        </Button>
-      </form>
-
-      {needsVerification ? (
-        <div className="mt-6 border-t border-border-subtle pt-6">
-          <p className="mb-3 text-center text-small text-text-secondary">
-            Didn&apos;t receive the verification email?
+      <div className="space-y-4">
+        {showConfigError ? (
+          <p className="text-sm text-red-400/90 text-center" role="alert">
+            {showConfigError}
           </p>
-          <form onSubmit={handleResendVerification} noValidate className="flex flex-col gap-4">
-            {verificationMessage ? (
-              <Alert tone="success">{verificationMessage}</Alert>
-            ) : null}
+        ) : null}
 
-            <Button
-              type="submit"
-              size="lg"
-              variant="secondary"
-              loading={resendLoading}
-              disabled={Boolean(showConfigError) || resendCooldown > 0}
-              className="w-full"
-            >
-              {resendCooldown > 0
-                ? `Resend available in ${resendCooldown}s`
-                : resendLoading
-                  ? "Sending verification email…"
-                  : "Resend verification email"}
-            </Button>
-          </form>
+        {/* Google — translucent pill */}
+        <motion.button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={googleLoading || Boolean(showConfigError)}
+          aria-busy={googleLoading}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ duration: 0.2 }}
+          className="backdrop-blur-[2px] w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed text-white border border-white/10 rounded-full py-3 px-4 transition-colors"
+        >
+          {googleLoading ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <GoogleGlyph />
+          )}
+          <span>Continue with Google</span>
+        </motion.button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4">
+          <div className="h-px bg-white/10 flex-1" />
+          <span className="text-white/40 text-sm">or</span>
+          <div className="h-px bg-white/10 flex-1" />
         </div>
-      ) : null}
+
+        {/* Form */}
+        <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
+          <div className="space-y-1.5">
+            <label htmlFor="login-email" className="text-caption font-medium text-white/50">
+              Email
+            </label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              autoComplete="username"
+              disabled={loading}
+              required
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="login-password" className="text-caption font-medium text-white/50">
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-caption text-white/30 transition-colors hover:text-white/50"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Your password"
+              autoComplete="current-password"
+              disabled={loading}
+              required
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+            />
+          </div>
+
+          {error ? (
+            <p className="text-sm text-red-400/90 text-center" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <motion.button
+            type="submit"
+            disabled={loading || Boolean(showConfigError)}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ duration: 0.2 }}
+            className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {loading ? "Signing in…" : "Log in"}
+          </motion.button>
+        </form>
+
+        {needsVerification ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="pt-4 border-t border-white/[0.06]"
+          >
+            <p className="mb-3 text-center text-sm text-white/40">
+              Didn&apos;t receive the verification email?
+            </p>
+            <form onSubmit={handleResendVerification} noValidate>
+              {verificationMessage ? (
+                <p className="mb-3 text-sm text-emerald-400/80 text-center" role="status">
+                  {verificationMessage}
+                </p>
+              ) : null}
+
+              <motion.button
+                type="submit"
+                disabled={resendLoading || Boolean(showConfigError) || resendCooldown > 0}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2 }}
+                className="w-full rounded-full bg-white/[0.05] backdrop-blur-[2px] text-white/70 border border-white/10 font-medium py-3 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {resendLoading ? (
+                  <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                ) : null}
+                {resendCooldown > 0
+                  ? `Resend available in ${resendCooldown}s`
+                  : resendLoading
+                    ? "Sending verification email…"
+                    : "Resend verification email"}
+              </motion.button>
+            </form>
+          </motion.div>
+        ) : null}
+      </div>
     </AuthLayout>
   );
 }
