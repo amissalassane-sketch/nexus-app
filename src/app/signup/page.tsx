@@ -3,17 +3,13 @@
 import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { motion } from "framer-motion";
+import { Check, Loader2 } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
 import { cn } from "@/lib/cn";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Field, Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Alert } from "@/components/ui/feedback";
-import { Button } from "@/components/ui/button";
-import { Divider } from "@/components/ui/divider";
 
 /**
  * Create an account.
@@ -25,6 +21,9 @@ import { Divider } from "@/components/ui/divider";
  *
  * Posts to /api/auth/signup, which handles both Supabase outcomes:
  * a session (email confirmation disabled) or a pending confirmation.
+ *
+ * VISUAL: Uses the shared NEXUS auth visual system — animated dot-matrix
+ * background, cinematic transitions, dark translucent form controls.
  */
 export default function SignupPage() {
   const router = useRouter();
@@ -39,9 +38,6 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const submitting = useRef(false);
   const passwordMeetsMinimum = password.length >= 6;
-  // Guards the OAuth click the same way `submitting` guards the credentials
-  // form: a ref flips synchronously, so two rapid clicks cannot fire two
-  // provider redirects before the button re-renders as disabled.
   const googleSubmitting = useRef(false);
 
   const handleSignup = useCallback(
@@ -136,8 +132,6 @@ export default function SignupPage() {
         googleSubmitting.current = false;
         setGoogleLoading(false);
       }
-      // On success the browser navigates away to Google, then back to
-      // /auth/callback — keep the spinner and the guard for the whole trip.
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -160,110 +154,141 @@ export default function SignupPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+            className="underline text-white/50 hover:text-white/70 transition-colors"
           >
             Sign in
           </Link>
         </>
       }
     >
-      {showConfigError ? (
-        <Alert tone="danger" className="mb-4">
-          {showConfigError}
-        </Alert>
-      ) : null}
-
-      <Button
-        type="button"
-        variant="secondary"
-        size="lg"
-        className="w-full"
-        onClick={handleGoogleSignup}
-        loading={googleLoading}
-        disabled={Boolean(showConfigError)}
-      >
-        <GoogleGlyph />
-        Continue with Google
-      </Button>
-
-      <Divider label="or" />
-
-      <form onSubmit={handleSignup} noValidate className="flex flex-col gap-4">
-        <Field label="Work email" htmlFor="signup-email">
-          <Input
-            id="signup-email"
-            name="email"
-            size="lg"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@company.com"
-            autoComplete="email"
-            disabled={loading}
-            aria-invalid={error ? true : undefined}
-            required
-          />
-        </Field>
-
-        <Field label="Password" htmlFor="signup-password">
-          <PasswordInput
-            id="signup-password"
-            name="password"
-            size="lg"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Create a password"
-            autoComplete="new-password"
-            disabled={loading}
-            aria-invalid={error ? true : undefined}
-            required
-          />
-          <p
-            className={cn(
-              "flex items-center gap-1.5 text-caption text-text-tertiary",
-              passwordMeetsMinimum ? "text-success" : undefined
-            )}
-            aria-live="polite"
-          >
-            <Check size={12} strokeWidth={2.25} aria-hidden="true" />
-            At least 6 characters
+      <div className="space-y-4">
+        {showConfigError ? (
+          <p className="text-sm text-red-400/90 text-center" role="alert">
+            {showConfigError}
           </p>
-        </Field>
+        ) : null}
 
-        {error ? <Alert tone="danger">{error}</Alert> : null}
-
-        <Button
-          type="submit"
-          size="lg"
-          loading={loading}
-          disabled={Boolean(showConfigError)}
-          className="mt-1 w-full"
+        {/* Google — translucent pill, matching sign-in page */}
+        <motion.button
+          type="button"
+          onClick={handleGoogleSignup}
+          disabled={googleLoading || Boolean(showConfigError)}
+          aria-busy={googleLoading}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ duration: 0.2 }}
+          className="backdrop-blur-[2px] w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed text-white border border-white/10 rounded-full py-3 px-4 transition-colors"
         >
-          Create account
-        </Button>
+          {googleLoading ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <GoogleGlyph />
+          )}
+          <span>Continue with Google</span>
+        </motion.button>
 
-        <p className="mt-4 text-center text-caption text-text-quaternary">
-          By creating an account, you agree to our{" "}
-          <a
-            href="/terms"
-            className="underline decoration-border-subtle underline-offset-4 transition-colors hover:text-text-secondary"
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* Divider */}
+        <div className="flex items-center gap-4">
+          <div className="h-px bg-white/10 flex-1" />
+          <span className="text-white/40 text-sm">or</span>
+          <div className="h-px bg-white/10 flex-1" />
+        </div>
+
+        {/* Form — dark translucent controls */}
+        <form onSubmit={handleSignup} noValidate className="flex flex-col gap-4">
+          <div className="space-y-1.5">
+            <label htmlFor="signup-email" className="text-caption font-medium text-white/50">
+              Work email
+            </label>
+            <input
+              id="signup-email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              autoComplete="email"
+              disabled={loading}
+              aria-invalid={error ? true : undefined}
+              required
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="signup-password" className="text-caption font-medium text-white/50">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="signup-password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Create a password"
+                autoComplete="new-password"
+                disabled={loading}
+                aria-invalid={error ? true : undefined}
+                required
+                className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 pr-12 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+              />
+            </div>
+            <p
+              className={cn(
+                "flex items-center gap-1.5 text-caption text-white/30",
+                passwordMeetsMinimum ? "text-emerald-400/70" : undefined
+              )}
+              aria-live="polite"
+            >
+              <Check size={12} strokeWidth={2.25} aria-hidden="true" />
+              At least 6 characters
+            </p>
+          </div>
+
+          {error ? (
+            <p className="text-sm text-red-400/90 text-center" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <motion.button
+            type="submit"
+            disabled={loading || Boolean(showConfigError)}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ duration: 0.2 }}
+            className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            Terms of Service
-          </a>{" "}
-          and{" "}
-          <a
-            href="/privacy"
-            className="underline decoration-border-subtle underline-offset-4 transition-colors hover:text-text-secondary"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Privacy Policy
-          </a>
-          .
-        </p>
-      </form>
+            {loading ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {loading ? "Creating account…" : "Create account"}
+          </motion.button>
+
+          <p className="mt-2 text-center text-xs text-white/30">
+            By creating an account, you agree to our{" "}
+            <a
+              href="/terms"
+              className="underline text-white/40 hover:text-white/60 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="/privacy"
+              className="underline text-white/40 hover:text-white/60 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Privacy Policy
+            </a>
+            .
+          </p>
+        </form>
+      </div>
     </AuthLayout>
   );
 }

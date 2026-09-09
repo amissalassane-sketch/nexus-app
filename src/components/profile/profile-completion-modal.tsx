@@ -2,33 +2,23 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserRound, ImagePlus } from "lucide-react";
+import { motion } from "framer-motion";
+import { UserRound, ImagePlus, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/input";
-import { Alert } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
 import { computeProfileCompleteness, isValidUsername, missingLabel } from "@/lib/profile-state";
 
-// ============================================================
-// NEXUS — PROFILE COMPLETION MODAL (OPTIONAL)
-// The lightweight first-time experience for finishing identity:
-// full name, username and an optional photo (plus job title / bio).
-//
-// Rules that make this safe to show:
-//   - never blocks the dashboard; "Not now" is a first-class path;
-//   - at least name AND username are collected here, which is exactly
-//     what flips profile_complete (see lib/profile-state);
-//   - photo / job title / bio are optional and can be added later in
-//     Settings → Profile;
-//   - the server (/api/profile) is the source of truth for validation
-//     and persistence; no raw Supabase message ever reaches the UI.
-// ============================================================
-
 /**
- * The form is mounted only while the modal is open, so its state is
- * initialized fresh from the props every time the user opens it — no
- * effect needed to re-prefill.
+ * Profile completion modal — optional first-time identity setup.
+ *
+ * Rules:
+ *   - never blocks the dashboard; "Not now" is a first-class path;
+ *   - at least name AND username are collected here;
+ *   - photo / job title / bio are optional;
+ *   - the server (/api/profile) is the source of truth.
+ *
+ * VISUAL: Matches the NEXUS dark translucent aesthetic — consistent
+ * with the auth visual system and the rest of the product.
  */
 export function ProfileCompletionModal({
   open,
@@ -151,28 +141,45 @@ function ProfileCompletionForm({
 
   return (
     <Modal
-      // The form only mounts while the modal is open (see the wrapper),
-      // so this is always true here.
       open
       onClose={onClose}
       title="Complete your profile"
       description="Add your name and username so your NEXUS workspace can recognise you. You can always change these later in Settings."
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          <motion.button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ duration: 0.15 }}
+            className="inline-flex h-9 items-center rounded-full px-3.5 text-[13px] font-medium text-white/50 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:text-white/70 transition-colors disabled:opacity-40"
+          >
             Not now
-          </Button>
-          <Button type="submit" form="profile-completion-form" loading={saving} className="flex-1 sm:flex-none">
-            Save profile
-          </Button>
+          </motion.button>
+          <motion.button
+            type="submit"
+            form="profile-completion-form"
+            disabled={saving}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ duration: 0.15 }}
+            className="inline-flex h-9 flex-1 sm:flex-none items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-medium text-black hover:bg-white/90 transition-colors disabled:opacity-60"
+          >
+            {saving ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {saving ? "Saving…" : "Save profile"}
+          </motion.button>
         </>
       }
     >
       <form id="profile-completion-form" onSubmit={handleSave} className="flex flex-col gap-4">
-        {/* Progress indicator — helpful only, never a gate. */}
-        <div className="flex items-center gap-2.5 rounded-input border border-border-subtle bg-bg-subtle/60 px-3 py-2">
-          <UserRound size={14} strokeWidth={1.75} className="shrink-0 text-text-tertiary" aria-hidden="true" />
-          <p className="min-w-0 flex-1 truncate text-caption text-text-secondary">
+        {/* Progress indicator */}
+        <div className="flex items-center gap-2.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+          <UserRound size={14} strokeWidth={1.75} className="shrink-0 text-white/30" aria-hidden="true" />
+          <p className="min-w-0 flex-1 truncate text-[11.5px] text-white/40">
             {completeness.complete
               ? "Profile complete. Ready to go."
               : `${completeness.filled} of ${completeness.total} completed${
@@ -181,8 +188,14 @@ function ProfileCompletionForm({
           </p>
         </div>
 
-        <Field label="Full name" htmlFor="profile-completion-name" action={<span className="text-caption text-text-quaternary">required</span>}>
-          <Input
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="profile-completion-name" className="text-[11.5px] font-medium text-white/50">
+              Full name
+            </label>
+            <span className="text-[11.5px] text-white/25">required</span>
+          </div>
+          <input
             id="profile-completion-name"
             name="displayName"
             value={displayName}
@@ -190,17 +203,22 @@ function ProfileCompletionForm({
             placeholder="Your name"
             autoComplete="name"
             required
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
           />
-        </Field>
+        </div>
 
-        <Field
-          label="Username"
-          htmlFor="profile-completion-username"
-          hint="Your NEXUS identity, not your login. 3–32 letters, numbers, dots, underscores or dashes."
-          action={<span className="text-caption text-text-quaternary">required</span>}
-        >
-          <div className="flex items-center overflow-hidden rounded-input border border-border-default bg-bg-surface transition-colors duration-150 ease-nexus focus-within:border-border-focus focus-within:shadow-[0_0_0_3px_rgba(233,228,255,0.14)]">
-            <span className="pl-3 font-mono text-mono text-text-quaternary" aria-hidden="true">
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="profile-completion-username" className="text-[11.5px] font-medium text-white/50">
+              Username
+            </label>
+            <span className="text-[11.5px] text-white/25">required</span>
+          </div>
+          <p className="text-[11.5px] text-white/30">
+            Your NEXUS identity, not your login. 3–32 letters, numbers, dots, underscores or dashes.
+          </p>
+          <div className="flex items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-[1px] transition-all duration-200 focus-within:border-white/30 focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.06)]">
+            <span className="pl-4 font-mono text-[11.5px] text-white/25" aria-hidden="true">
               @
             </span>
             <input
@@ -213,55 +231,69 @@ function ProfileCompletionForm({
               spellCheck={false}
               autoCapitalize="none"
               required
-              className="h-10 w-full min-w-0 flex-1 bg-transparent px-2 text-body text-text-primary placeholder:text-text-quaternary focus:outline-none"
+              className="h-[42px] w-full min-w-0 flex-1 bg-transparent px-2 text-[13.5px] text-white placeholder:text-white/25 focus:outline-none"
             />
           </div>
-        </Field>
+        </div>
 
-        <Field
-          label="Profile photo"
-          htmlFor="profile-completion-avatar"
-          hint="Optional. A link to an image you host. Leave it empty and NEXUS uses your initial."
-        >
+        <div className="space-y-1.5">
+          <label htmlFor="profile-completion-avatar" className="text-[11.5px] font-medium text-white/50">
+            Profile photo <span className="text-white/25">· Optional</span>
+          </label>
+          <p className="text-[11.5px] text-white/30">
+            A link to an image you host. Leave it empty and NEXUS uses your initial.
+          </p>
           <div className="relative">
             <ImagePlus
               size={14}
               strokeWidth={1.75}
               aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
             />
-            <Input
+            <input
               id="profile-completion-avatar"
               value={avatarUrl}
               onChange={(event) => setAvatarUrl(event.target.value)}
               placeholder="https://…"
               autoComplete="off"
-              className="pl-9"
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 pl-9 pr-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
             />
           </div>
-        </Field>
+        </div>
 
-        <Field label="Job title" htmlFor="profile-completion-job" hint="Optional">
-          <Input
+        <div className="space-y-1.5">
+          <label htmlFor="profile-completion-job" className="text-[11.5px] font-medium text-white/50">
+            Job title <span className="text-white/25">· Optional</span>
+          </label>
+          <input
             id="profile-completion-job"
             value={jobTitle}
             onChange={(event) => setJobTitle(event.target.value)}
             placeholder="e.g. Product lead"
             autoComplete="off"
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
           />
-        </Field>
+        </div>
 
-        <Field label="Bio" htmlFor="profile-completion-bio" hint={`Optional · ${bio.length}/500`}>
-          <Textarea
+        <div className="space-y-1.5">
+          <label htmlFor="profile-completion-bio" className="text-[11.5px] font-medium text-white/50">
+            Bio <span className="text-white/25">· Optional · {bio.length}/500</span>
+          </label>
+          <textarea
             id="profile-completion-bio"
             value={bio}
             onChange={(event) => setBio(event.target.value.slice(0, 500))}
             rows={3}
             placeholder="A short line about what you work on"
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-2xl py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25 resize-none"
           />
-        </Field>
+        </div>
 
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+        {error ? (
+          <p className="text-sm text-red-400/90 text-center" role="alert">
+            {error}
+          </p>
+        ) : null}
       </form>
     </Modal>
   );

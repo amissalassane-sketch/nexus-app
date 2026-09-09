@@ -3,11 +3,10 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Field, Input } from "@/components/ui/input";
-import { Button, ButtonLink } from "@/components/ui/button";
-import { Alert } from "@/components/ui/feedback";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -47,13 +46,10 @@ const REASON_COPY: Record<Reason, { title: string; description: string }> = {
 };
 
 /**
- * Branded state for a verification link that could not be used
- * (expired, already used, malformed, or missing).
+ * Branded state for a verification link that could not be used.
  *
- * The ?reason= param arrives as `initialReason`, read from the request by
- * the server page: the exact branded copy for that reason is present in
- * the initial HTML. Client-side navigations fall back to the live search
- * params.
+ * VISUAL: Uses the shared NEXUS auth visual system — animated dot-matrix
+ * background, cinematic transitions, dark translucent form controls.
  */
 export function ConfirmErrorPageClient({ initialReason = "" }: { initialReason?: string }) {
   return (
@@ -61,8 +57,8 @@ export function ConfirmErrorPageClient({ initialReason = "" }: { initialReason?:
       fallback={
         <AuthLayout title="Email verification" description="">
           <div className="flex flex-col gap-3" aria-hidden="true">
-            <div className="skeleton h-11 rounded-input" />
-            <div className="skeleton h-11 rounded-input" />
+            <div className="skeleton h-11 rounded-full" />
+            <div className="skeleton h-11 rounded-full" />
           </div>
           <p className="sr-only" role="status">
             Loading
@@ -77,9 +73,6 @@ export function ConfirmErrorPageClient({ initialReason = "" }: { initialReason?:
 
 function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
   const params = useSearchParams();
-  // Prefer the server-read value so the initial HTML carries the reason's
-  // exact copy; fall back to the live search params for client-side
-  // navigations.
   const rawReason = initialReason || (params.get("reason") ?? "unknown");
   const reason: Reason = Object.prototype.hasOwnProperty.call(REASON_COPY, rawReason)
     ? (rawReason as Reason)
@@ -181,65 +174,95 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
           Already verified?{" "}
           <Link
             href="/login"
-            className="text-text-primary underline decoration-border-strong underline-offset-4 transition-colors hover:decoration-text-primary"
+            className="underline text-white/50 hover:text-white/70 transition-colors"
           >
             Sign in
           </Link>
         </>
       }
     >
-      <div className="flex flex-col gap-3">
-        <h2 className="text-h3 text-text-primary">{copy.title}</h2>
+      <div className="space-y-5">
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="text-lg font-semibold text-white text-center"
+        >
+          {copy.title}
+        </motion.h2>
 
-        <ButtonLink href="/login" size="lg" className="w-full">
-          Return to sign in
-        </ButtonLink>
-        <ButtonLink href="/signup" size="lg" variant="secondary" className="w-full">
-          Create account
-        </ButtonLink>
-      </div>
-
-      <div className="mt-8 border-t border-border-subtle pt-6">
-        <p className="mb-3 text-center text-small text-text-secondary">
-          Didn&apos;t receive the email?
-        </p>
-        <form onSubmit={handleResend} noValidate className="flex flex-col gap-4">
-          <Field label="Email address" htmlFor="confirm-error-email">
-            <Input
-              id="confirm-error-email"
-              name="email"
-              size="lg"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
-              disabled={loading}
-              required
-            />
-          </Field>
-
-          {configError ? (
-            <Alert tone="danger">{configError}</Alert>
-          ) : error ? (
-            <Alert tone="danger">{error}</Alert>
-          ) : null}
-          {message ? <Alert tone="success">{message}</Alert> : null}
-
-          <Button
-            type="submit"
-            size="lg"
-            loading={loading}
-            disabled={Boolean(configError) || cooldown > 0}
-            className="w-full"
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/login"
+            className="block w-full rounded-full bg-white text-black font-medium py-3 text-center hover:bg-white/90 transition-colors"
           >
-            {cooldown > 0
-              ? `Resend available in ${cooldown}s`
-              : loading
-                ? "Sending verification email…"
-                : "Resend verification email"}
-          </Button>
-        </form>
+            Return to sign in
+          </Link>
+          <Link
+            href="/signup"
+            className="block w-full rounded-full bg-white/[0.05] backdrop-blur-[2px] text-white/70 border border-white/10 font-medium py-3 text-center hover:bg-white/10 transition-colors"
+          >
+            Create account
+          </Link>
+        </div>
+
+        <div className="pt-4 border-t border-white/[0.06]">
+          <p className="mb-3 text-center text-sm text-white/40">
+            Didn&apos;t receive the email?
+          </p>
+          <form onSubmit={handleResend} noValidate className="flex flex-col gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="confirm-error-email" className="text-caption font-medium text-white/50">
+                Email address
+              </label>
+              <input
+                id="confirm-error-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@company.com"
+                disabled={loading}
+                required
+                className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+              />
+            </div>
+
+            {configError ? (
+              <p className="text-sm text-red-400/90 text-center" role="alert">
+                {configError}
+              </p>
+            ) : error ? (
+              <p className="text-sm text-red-400/90 text-center" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {message ? (
+              <p className="text-sm text-emerald-400/80 text-center" role="status">
+                {message}
+              </p>
+            ) : null}
+
+            <motion.button
+              type="submit"
+              disabled={loading || Boolean(configError) || cooldown > 0}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              transition={{ duration: 0.2 }}
+              className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              ) : null}
+              {cooldown > 0
+                ? `Resend available in ${cooldown}s`
+                : loading
+                  ? "Sending verification email…"
+                  : "Resend verification email"}
+            </motion.button>
+          </form>
+        </div>
       </div>
     </AuthLayout>
   );
