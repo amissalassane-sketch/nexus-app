@@ -8,7 +8,12 @@ import { NexusWordmark } from "@/components/nexus-logo";
 // back to the landing page instead of resolving to nothing.
 // ============================================================
 
-type LandingFooterContext = "landing" | "intelligence" | "how-it-works" | "pricing";
+type LandingFooterContext =
+  | "landing"
+  | "intelligence"
+  | "how-it-works"
+  | "pricing"
+  | "legal";
 
 const PRODUCT_LINKS = [
   { href: "/#product", label: "Product" },
@@ -29,10 +34,18 @@ const SYSTEM_LINKS = [
   { href: "/pricing", label: "Free plan" },
 ] as const;
 
+const LEGAL_LINKS = [
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/cookies", label: "Cookies" },
+  { href: "/acceptable-use", label: "Acceptable Use" },
+] as const;
+
 const COLUMNS = [
   { title: "Product", links: PRODUCT_LINKS },
   { title: "Account", links: ACCOUNT_LINKS },
   { title: "System", links: SYSTEM_LINKS },
+  { title: "Legal", links: LEGAL_LINKS },
 ] as const;
 
 export function LandingFooter({
@@ -43,7 +56,7 @@ export function LandingFooter({
   // Hash links are relative to the landing page: prefix them when the
   // footer is rendered on a dedicated route.
   const resolve = (href: string) =>
-    context === "intelligence" && href.startsWith("#") ? `/${href}` : href;
+    context !== "landing" && href.startsWith("#") ? `/${href}` : href;
 
   return (
     <footer className="border-t border-border-subtle px-4 pb-10 pt-14 sm:px-6">
@@ -60,7 +73,7 @@ export function LandingFooter({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
               <h2 className="nexus-eyebrow">
