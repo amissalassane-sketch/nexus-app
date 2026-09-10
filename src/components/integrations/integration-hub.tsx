@@ -1,22 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, FileText, GitBranch, MessagesSquare, Search, Webhook, type LucideIcon } from "lucide-react";
-import { INTEGRATION_CATALOG, INTEGRATION_CATEGORIES, type IntegrationCategory, type IntegrationDefinition } from "@/lib/integrations/catalog";
+import { Search } from "lucide-react";
+import { INTEGRATION_CATALOG, INTEGRATION_CATEGORIES, type IntegrationDefinition } from "@/lib/integrations/catalog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
+import { IntegrationIcon } from "@/components/integrations/integration-icon";
 import { cn } from "@/lib/cn";
-
-const ICONS: Record<IntegrationCategory, LucideIcon> = {
-  calendar: CalendarDays,
-  development: GitBranch,
-  communication: MessagesSquare,
-  documents: FileText,
-  automation: Webhook,
-};
 
 type Filter = "all" | "connected" | "available" | "coming-soon";
 
@@ -85,11 +78,10 @@ export function IntegrationHub() {
 }
 
 function IntegrationCard({ integration }: { integration: IntegrationDefinition }) {
-  const Icon = ICONS[integration.category];
   return (
     <article className="group rounded-card border border-border-subtle bg-bg-subtle/70 p-4 transition-[border-color,background-color,transform] duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface hover:-translate-y-px">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary"><Icon size={17} strokeWidth={1.75} aria-hidden="true" /></span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary"><IntegrationIcon id={integration.id} size={17} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div><h2 className="text-h3 text-text-primary">{integration.name}</h2><p className="mt-0.5 text-caption text-text-tertiary">{integration.categoryLabel}</p></div>
