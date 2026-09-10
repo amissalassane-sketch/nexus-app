@@ -1,26 +1,45 @@
-import type { CSSProperties, ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { NexusIntelligenceStage } from "./nexus-intelligence-stage";
+import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 
 // ============================================================
 // NEXUS INTELLIGENCE — HERO
 //
-// The 3D system is the visual identity; the page is still HTML. Two
-// separate layers that never touch:
+// The black hole is the visual identity; the page is still HTML.
+// Two separate layers that never touch:
 //
-//   layer 0  the WebGL scene (or its static fallback)
-//   layer 1  a scrim that guarantees contrast for the type
-//   layer 2  the copy and the two NEXUS actions
+//   layer 0  the raymarched black hole (pure WebGL, pointer-transparent)
+//   layer 1  the copy and the two NEXUS actions
 //
-// The scene is composed so the core sits centre-right on desktop and
-// below the copy on mobile — no important geometry ever lands behind
-// the headline. Everything in layer 0 is `pointer-events: none`, so
-// the canvas cannot intercept a click, a selection or a scroll.
+// Readability comes from the composition, not from a flat overlay:
+// the hole is framed high-right on desktop (the reading half stays
+// clear) and low on mobile (the copy sits on top), with the shader's
+// own scrim darkening only the edge the copy sits on. The footnote
+// rule carries its own bottom wash so it stays legible over the glow.
+//
+// The disc burns lavender — white-hot rim, violet mid, deep indigo
+// edge — instead of the film's amber: same physics, NEXUS palette.
+// Every claim below still maps to src/lib/intelligence/engine.ts.
 // ============================================================
 
 const delay = (ms: number) =>
   ({ "--nxi-delay": `${ms}ms` }) as CSSProperties;
+
+/** True below the `lg` breakpoint, where the layout stacks. */
+function useNarrow(query = "(max-width: 1023px)") {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const sync = () => setNarrow(m.matches);
+    sync();
+    m.addEventListener("change", sync);
+    return () => m.removeEventListener("change", sync);
+  }, [query]);
+  return narrow;
+}
 
 export interface NexusIntelligenceHeroProps {
   /** Optional slot rendered above the lockup (e.g. a confirmation alert). */
@@ -43,23 +62,51 @@ export function NexusIntelligenceHero({
   secondaryCta = { label: "See how it works", href: "#in-action" },
   dense = false,
 }: NexusIntelligenceHeroProps) {
+  const narrow = useNarrow();
+
   return (
     <section
       className={`nexus-intelligence-hero relative isolate flex flex-col overflow-hidden pt-16 ${
         dense ? "min-h-[78svh]" : "min-h-[100svh]"
       }`}
     >
-      {/* ---- Layer 0: the intelligence system ---- */}
-      <div className="nexus-intelligence-stage" aria-hidden="true">
-        <NexusIntelligenceStage className="absolute inset-0" />
+      {/* ---- Layer 0: the black hole ---- */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        aria-hidden="true"
+      >
+        <BlackHoleHeroSection
+          // Desktop: hole high-right, copy reads on the left. Mobile: the
+          // arrangement turns 90° — copy on top under a veil, the hole low
+          // and whole in the bottom third. A wider field on narrow screens
+          // makes up the room the frame lost.
+          focus={narrow ? [0.5, 0.8] : [0.72, 0.46]}
+          scrim={narrow ? "top" : "left"}
+          scrimStrength={0.9}
+          distance={narrow ? 26 : 24}
+          elevation={narrow ? -7 : -5.5}
+          fov={narrow ? 58 : 42}
+          // NEXUS palette, locked in at the usage site: the disc burns
+          // lavender instead of amber. See the component for the film values.
+          hotColor="#F5F2FF"
+          midColor="#9C8CFF"
+          coolColor="#46338C"
+          glow={narrow ? 0.85 : 1}
+          steps={narrow ? 200 : 300}
+          resolution={narrow ? 0.6 : 0.7}
+        />
       </div>
 
-      {/* ---- Layer 1: the scrim ---- */}
-      <div className="nexus-intelligence-scrim" aria-hidden="true" />
+      {/* Bottom fade into the page — and a wash behind the footnote rule
+          so it stays legible over the lower glow on mobile. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-36 bg-gradient-to-b from-transparent to-bg-base"
+      />
 
-      {/* ---- Layer 2: the copy ---- */}
-      <div className="relative z-10 mx-auto w-full max-w-page flex-1 px-4 sm:px-6">
-        <div className="flex min-h-[62svh] flex-col items-center justify-center text-center lg:min-h-[68svh] lg:items-start lg:text-left">
+      {/* ---- Layer 1: the copy ---- */}
+      <div className="relative z-10 mx-auto flex w-full max-w-page flex-1 flex-col px-4 sm:px-6">
+        <div className="flex flex-1 flex-col items-center justify-center py-12 text-center lg:items-start lg:text-left">
           {notice ? (
             <div
               className="nexus-intelligence-item mb-8 w-full max-w-[460px] text-left"
@@ -123,7 +170,7 @@ export function NexusIntelligenceHero({
 
       {/* ---- Footnote rule ---- */}
       <div
-        className="nexus-intelligence-item relative z-10 border-t border-border-subtle"
+        className="nexus-intelligence-item relative z-10 border-t border-border-subtle bg-gradient-to-t from-bg-base via-bg-base/60 to-transparent"
         style={delay(520)}
       >
         <ul className="mx-auto flex w-full max-w-page flex-col gap-1.5 px-4 py-4 sm:flex-row sm:gap-8 sm:px-6 sm:py-5">

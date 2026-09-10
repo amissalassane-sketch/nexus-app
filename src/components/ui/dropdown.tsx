@@ -64,45 +64,59 @@ export function Dropdown({
   const openedAt = useRef(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (isControlled) {
-        onOpenChange?.(next);
-      } else {
-        setInternalOpen(next);
-      }
-    },
-    [isControlled, onOpenChange]
-  );
+  const startClose = useCallback(() => {
+    if (!shouldRender || isClosing) return;
+    setIsClosing(true);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setInternalOpen(false);
+      setShouldRender(false);
+      setIsClosing(false);
+    }, 160);
+  }, [shouldRender, isClosing]);
 
   const close = useCallback(() => {
-    if (shouldRender && !isClosing) {
-      setIsClosing(true);
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      closeTimer.current = setTimeout(() => {
-        setOpen(false);
-        setShouldRender(false);
-        setIsClosing(false);
-      }, 160);
-    } else {
-      setOpen(false);
+    if (isControlled) {
+      // Controlled: notify the parent immediately. The sync effect below
+      // plays the exit animation once `open` flips to false.
+      if (open) onOpenChange?.(false);
+      return;
     }
-  }, [setOpen, shouldRender, isClosing]);
+    startClose();
+  }, [isControlled, open, onOpenChange, startClose]);
 
   const toggle = useCallback(() => {
-    if (open && Date.now() - openedAt.current < 140) return;
-    if (open) {
-      close();
+    if (isControlled) {
+      onOpenChange?.(!open);
+      return;
+    }
+    if (isClosing) {
+      // Reopen: cancel the pending close instead of getting stuck.
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setIsClosing(false);
+      setShouldRender(true);
+      setInternalOpen(true);
+      return;
+    }
+    if (internalOpen) {
+      // Ignore the accidental second toggle right after opening.
+      if (Date.now() - openedAt.current < 140) return;
+      startClose();
     } else {
       if (closeTimer.current) clearTimeout(closeTimer.current);
       setIsClosing(false);
       setShouldRender(true);
-      setOpen(true);
+      setInternalOpen(true);
     }
-  }, [open, setOpen, close]);
+  }, [isControlled, onOpenChange, open, internalOpen, isClosing, startClose]);
 
-  // Sync controlled open to render state — intentional animation sync
+  // Sync CONTROLLED open to render state — intentional animation sync.
+  // Uncontrolled instances drive shouldRender/isClosing directly through
+  // toggle/close above. Running this sync for them would cancel every
+  // close: `open` stays true during the exit animation and the `if (open)`
+  // branch would clear the close timer and reopen the menu.
   useEffect(() => {
+    if (!isControlled) return;
     if (open) {
       if (closeTimer.current) clearTimeout(closeTimer.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -118,7 +132,7 @@ export function Dropdown({
         setIsClosing(false);
       }, 160);
     }
-  }, [open, shouldRender, isClosing]);
+  }, [isControlled, open, shouldRender, isClosing]);
 
   useEffect(() => {
     if (!shouldRender || isClosing) return;
@@ -134,6 +148,13 @@ export function Dropdown({
       }
     };
 
+    const handleFocusIn = (event: FocusEvent) => {
+      // Close when keyboard focus leaves the dropdown (Tab away).
+      if (!containerRef.current?.contains(event.target as Node)) {
+        close();
+      }
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         close();
@@ -143,11 +164,13 @@ export function Dropdown({
 
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("focusin", handleFocusIn);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [shouldRender, isClosing, close]);
