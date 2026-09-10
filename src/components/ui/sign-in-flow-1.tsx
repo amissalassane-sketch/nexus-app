@@ -63,20 +63,44 @@ interface SignInPageProps {
 
 type Step = "email" | "code" | "success";
 
-/** Maps a failed verifyOtp exchange onto an actionable message. */
-function classifyOtpError(
-  message: string | null | undefined
-): { text: string; expired: boolean } {
-  const key = (message ?? "").toLowerCase();
-  if (key.includes("expired") || key.includes("expiration")) {
+/**
+ * Maps a failed verifyOtp exchange onto an actionable message.
+ * Receives the full Supabase error (code + message) so both legacy GoTrue
+ * phrasing and the newer structured codes are covered. Never surfaces raw
+ * GoTrue text to the user.
+ */
+function classifyOtpError(error: {
+  message?: string | null;
+  code?: string | null;
+}): { text: string; expired: boolean } {
+  const key = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+
+  // Expired / no-longer-valid code (supabase: "otp_expired").
+  if (
+    key.includes("otp_expired") ||
+    key.includes("expired") ||
+    key.includes("expiration")
+  ) {
     return { text: "This code has expired. Request a new one.", expired: true };
   }
-  if (key.includes("rate limit") || key.includes("too many")) {
+
+  // Verification rate limit / too many failed attempts. Supabase either
+  // returns 429 ("Too many requests") or invalidates the token after the
+  // attempt budget is exhausted.
+  if (
+    key.includes("otp_verification_rate_limit") ||
+    key.includes("too many requests") ||
+    key.includes("too many attempts") ||
+    key.includes("rate limit")
+  ) {
     return {
-      text: "Too many attempts. Wait a moment and try again.",
+      text: "Too many attempts. Wait a moment and request a new code.",
       expired: false,
     };
   }
+
+  // Invalid / mismatched code (supabase: "otp_invalid", "token has expired
+  // or is invalid").
   return {
     text: "That code is incorrect. Check your email and try again.",
     expired: false,
@@ -99,6 +123,7 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState(initialError);
   const [notice, setNotice] = useState("");
+  const [announcement, setAnnouncement] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendLoading, setResendLoading] = useState(false);
   const [reverseCanvasVisible, setReverseCanvasVisible] = useState(false);
@@ -108,11 +133,14 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
   const googleSubmitting = useRef(false);
   const resendSubmitting = useRef(false);
   const successTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const resendInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const timers = successTimers.current;
+    const interval = resendInterval.current;
     return () => {
       timers.forEach(clearTimeout);
+      if (interval) clearInterval(interval);
     };
   }, []);
 
@@ -146,17 +174,18 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
   }, [step]);
 
   const startResendCooldown = useCallback(() => {
+    if (resendInterval.current) clearInterval(resendInterval.current);
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
-    const interval = setInterval(() => {
+    resendInterval.current = setInterval(() => {
       setResendCooldown((value) => {
         if (value <= 1) {
-          clearInterval(interval);
+          if (resendInterval.current) clearInterval(resendInterval.current);
+          resendInterval.current = null;
           return 0;
         }
         return value - 1;
       });
     }, 1000);
-    successTimers.current.push(interval as unknown as ReturnType<typeof setTimeout>);
   }, []);
 
   // ------------------------------------------------------------------
@@ -170,7 +199,17 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
       }
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: targetEmail,
-        options: { shouldCreateUser: true },
+        options: {
+          // New and existing users share the same path: Supabase creates the
+          // account when it does not exist, and simply sends the code when it
+          // does. The NEXUS OTP screen never needs to branch on this.
+          shouldCreateUser: true,
+          // If the user clicks the fallback link inside the email instead of
+          // typing the code, it must land on the canonical NEXUS exchange
+          // endpoint (which verifies the token_hash server-side and routes
+          // to /app) — never on Supabase's own confirmation page.
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        },
       });
       if (otpError) {
         setError(humanizeAuthError(otpError));
@@ -212,6 +251,9 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
 
         setSubmittedEmail(targetEmail);
         setStep("code");
+        setAnnouncement(
+          `Verification code sent to ${targetEmail}. Enter the 6-digit code to continue.`
+        );
         startResendCooldown();
       } catch (cause) {
         setError(
@@ -241,17 +283,30 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
 
       setVerifying(true);
       setError("");
+      setAnnouncement("Verifying your code…");
 
       try {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
           email: submittedEmail,
           token: digits.join(""),
           type: "email",
         });
 
         if (verifyError) {
-          const { text } = classifyOtpError(verifyError.message);
+          const { text } = classifyOtpError(verifyError);
           setError(text);
+          setCode(["", "", "", "", "", ""]);
+          setAnnouncement(text);
+          setVerifying(false);
+          setTimeout(() => codeInputRefs.current[0]?.focus(), 50);
+          return;
+        }
+
+        // Supabase accepted the code but did not issue a session — surface an
+        // elegant failure instead of redirecting into an unauthenticated loop.
+        if (!data.session) {
+          setError("We couldn't start your session. Please try again.");
+          setAnnouncement("We couldn't start your session. Please try again.");
           setCode(["", "", "", "", "", ""]);
           setVerifying(false);
           setTimeout(() => codeInputRefs.current[0]?.focus(), 50);
@@ -261,6 +316,10 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
         // Verified by Supabase: run the original success choreography
         // (reverse canvas sweep -> success step), then land where every
         // NEXUS auth entry point lands: /app -> /dashboard.
+        if (resendInterval.current) clearInterval(resendInterval.current);
+        resendInterval.current = null;
+        setResendCooldown(0);
+        setAnnouncement("Signed in. Taking you to NEXUS…");
         setReverseCanvasVisible(true);
 
         const hideInitial = setTimeout(() => {
@@ -290,24 +349,37 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
     [verifying, supabase, clientResult.error, submittedEmail, router]
   );
 
+  // Distribute (possibly multi-character) input across the six boxes.
+  // Accepts typing, mobile-keyboard autofill and SMS autofill that drops the
+  // whole code into a single field. Non-digits are stripped; length is capped.
   const handleCodeChange = (index: number, value: string) => {
-    if (value.length <= 1) {
-      const newCode = [...code];
-      newCode[index] = value;
-      setCode(newCode);
+    if (verifying) return;
 
-      // Focus next input if value is entered
-      if (value && index < 5) {
-        codeInputRefs.current[index + 1]?.focus();
-      }
+    const digits = value.replace(/\D/g, "").slice(0, 6 - index);
+    const next = [...code];
 
-      // Check if code is complete
-      if (index === 5 && value) {
-        const isComplete = newCode.every((digit) => digit.length === 1);
-        if (isComplete) {
-          void handleCodeComplete(newCode);
-        }
+    if (digits.length === 0) {
+      next[index] = "";
+    } else {
+      for (let i = 0; i < digits.length; i += 1) {
+        next[index + i] = digits[i];
       }
+    }
+
+    setCode(next);
+
+    if (digits.length === 0) {
+      // Clearing the current box keeps focus where the user already is.
+      codeInputRefs.current[index]?.focus();
+    } else {
+      // After entering/pasting digits, land on the next empty box (or stay
+      // on the last filled one when all six are filled).
+      const nextEmpty = next.findIndex((digit) => digit === "");
+      codeInputRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus();
+    }
+
+    if (next.every((digit) => digit !== "")) {
+      void handleCodeComplete(next);
     }
   };
 
@@ -317,6 +389,26 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
   ) => {
     if (e.key === "Backspace" && !code[index] && index > 0) {
       codeInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Paste a full (or partial) code. Handles the "123456" clipboard case and
+  // formats like "123 456" that some clients add.
+  const handleCodePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (verifying) return;
+    const text = e.clipboardData.getData("text");
+    const digits = text.replace(/\D/g, "").slice(0, 6);
+    if (!digits) return;
+
+    e.preventDefault();
+    const next = Array.from({ length: 6 }, (_, i) => digits[i] ?? "");
+    setCode(next);
+
+    if (next.every((digit) => digit !== "")) {
+      void handleCodeComplete(next);
+    } else {
+      const nextEmpty = next.findIndex((digit) => digit === "");
+      codeInputRefs.current[nextEmpty]?.focus();
     }
   };
 
@@ -334,7 +426,8 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
       if (!sent) return;
 
       setCode(["", "", "", "", "", ""]);
-      setNotice("A new code is on its way.");
+      setNotice("Code sent again.");
+      setAnnouncement(`A new code was sent to ${submittedEmail}.`);
       startResendCooldown();
     } catch (cause) {
       setError(
@@ -349,10 +442,17 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
   }, [resendCooldown, submittedEmail, requestOtp, startResendCooldown]);
 
   const handleBackClick = () => {
+    // Going back never destroys an authenticated session: a session is only
+    // created after verifyOtp succeeds (on the success step, where Back is
+    // not shown). Reset the code UI and stop any pending cooldown.
+    if (resendInterval.current) clearInterval(resendInterval.current);
+    resendInterval.current = null;
+    setResendCooldown(0);
     setStep("email");
     setCode(["", "", "", "", "", ""]);
     setError("");
     setNotice("");
+    setAnnouncement("");
     // Reset animations if going back
     setReverseCanvasVisible(false);
     setInitialCanvasVisible(true);
@@ -429,6 +529,10 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
 
       {/* Content Layer */}
       <div className="relative z-10 flex flex-1 flex-col justify-center items-center px-6">
+        {/* Screen-reader status announcements — errors use role="alert" below. */}
+        <p aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
         <div className="w-full max-w-sm">
           <AnimatePresence mode="wait">
             {step === "email" ? (
@@ -546,11 +650,25 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                   <p className="text-[1.25rem] text-white/50 font-light">
                     Please enter it
                   </p>
+                  {submittedEmail ? (
+                    <p className="text-[0.9rem] text-white/40 font-light">
+                      Code sent to{" "}
+                      <span className="text-white/70">{submittedEmail}</span>
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="w-full">
-                  <div className="relative rounded-full py-4 px-5 border border-white/10 bg-transparent">
-                    <div className="flex items-center justify-center">
+                  <div
+                    className="relative rounded-full py-4 px-5 border border-white/10 bg-transparent"
+                    role="group"
+                    aria-label="Enter the 6-digit verification code"
+                    aria-busy={verifying}
+                  >
+                    <div
+                      className="flex items-center justify-center"
+                      onPaste={handleCodePaste}
+                    >
                       {code.map((digit, i) => (
                         <div key={i} className="flex items-center">
                           <div className="relative">
@@ -561,7 +679,11 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9]*"
-                              maxLength={1}
+                              // maxLength allows a full pasted/autofilled code
+                              // to land in one field; onChange redistributes
+                              // the digits across the six boxes.
+                              maxLength={6}
+                              autoComplete={i === 0 ? "one-time-code" : "off"}
                               aria-label={`Digit ${i + 1} of 6`}
                               value={digit}
                               disabled={verifying}

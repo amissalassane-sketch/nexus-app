@@ -2,20 +2,13 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { CalendarDays, FileText, GitBranch, MessagesSquare, Webhook, ArrowRight, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { NexusLogo } from "@/components/nexus-logo";
+import { IntegrationIcon } from "@/components/integrations/integration-icon";
 import { useReducedMotion } from "@/components/motion/use-reduced-motion";
 import { INTEGRATION_CATALOG } from "@/lib/integrations/catalog";
-
-const ICONS: Record<string, LucideIcon> = {
-  "google-calendar": CalendarDays,
-  github: GitBranch,
-  slack: MessagesSquare,
-  notion: FileText,
-  webhooks: Webhook,
-};
 
 const featured = INTEGRATION_CATALOG.filter((integration) => ["google-calendar", "github", "slack", "notion", "webhooks"].includes(integration.id));
 
@@ -72,8 +65,7 @@ function IconRail({ items, direction, reducedMotion }: { items: typeof featured;
     <div className="overflow-hidden rounded-card border border-border-subtle bg-bg-base/30 py-2.5">
       <motion.div animate={reducedMotion ? undefined : { x: direction === -1 ? ["0%", "-25%"] : ["-25%", "0%"] }} transition={reducedMotion ? undefined : { duration: 24, ease: "linear", repeat: Infinity }} className="flex w-max gap-2.5">
         {items.map((integration, index) => {
-          const Icon = ICONS[integration.id];
-          return <div key={`${integration.id}-${index}`} className="flex min-w-[150px] items-center gap-2 rounded-input border border-border-subtle bg-bg-surface/70 px-3 py-2 text-small text-text-secondary"><Icon size={14} aria-hidden="true" /><span>{integration.name}</span><span className="ml-auto font-mono text-[9px] uppercase tracking-[0.1em] text-text-quaternary">soon</span></div>;
+          return <div key={`${integration.id}-${index}`} className="flex min-w-[150px] items-center gap-2 rounded-input border border-border-subtle bg-bg-surface/70 px-3 py-2 text-small text-text-secondary"><IntegrationIcon id={integration.id} size={14} /><span>{integration.name}</span><span className="ml-auto font-mono text-[9px] uppercase tracking-[0.1em] text-text-quaternary">soon</span></div>;
         })}
       </motion.div>
     </div>
