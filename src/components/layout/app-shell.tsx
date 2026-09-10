@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, LifeBuoy, LogOut, Menu, UserRound, X } from "lucide-react";
+import { LifeBuoy, LogOut, Menu, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { CommandMenu } from "@/components/command-menu";
@@ -29,18 +28,23 @@ import {
   type ShellWorkspace,
 } from "@/components/layout/workspace-sidebar";
 import { NexusSpatialField } from "@/components/spatial/nexus-spatial-field";
+import { NotificationPreview } from "@/components/notification-preview";
 
 function AppShellInner({
   user,
   workspace,
   counts,
   plan,
+  userId,
+  workspaceId,
   children,
 }: {
   user: ShellUser;
   workspace: ShellWorkspace;
   counts: ShellCounts;
   plan: ShellPlan;
+  userId: string;
+  workspaceId: string | null;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -177,19 +181,12 @@ function AppShellInner({
                     <path d="m20 20-3.5-3.5" />
                   </svg>
                 </button>
-                <Link
-                  href="/notifications"
-                  aria-label={counts.unreadNotifications > 0 ? `Notifications, ${counts.unreadNotifications} unread` : "Notifications"}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
-                >
-                  <Bell size={16} strokeWidth={1.75} aria-hidden="true" />
-                  {counts.unreadNotifications > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute right-2 top-2 h-1.5 w-1.5 rounded-pill bg-lavender animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]"
-                    />
-                  ) : null}
-                </Link>
+                <NotificationPreview
+                  userId={userId}
+                  workspaceId={workspaceId}
+                  unreadCount={counts.unreadNotifications}
+                  className="h-10 w-10 text-text-secondary"
+                />
               </div>
             </div>
           </header>
@@ -199,6 +196,8 @@ function AppShellInner({
               user={user}
               workspace={workspace}
               unreadCount={counts.unreadNotifications}
+              userId={userId}
+              workspaceId={workspaceId}
               onOpenProfileModal={openProfileModal}
               onOpenHelp={openHelp}
             />
@@ -376,6 +375,7 @@ export function AppShell({
   counts,
   plan,
   userId,
+  workspaceId,
   children,
 }: {
   user: ShellUser;
@@ -383,6 +383,7 @@ export function AppShell({
   counts: ShellCounts;
   plan: ShellPlan;
   userId: string;
+  workspaceId: string | null;
   children: ReactNode;
 }) {
   return (
@@ -393,7 +394,14 @@ export function AppShell({
       goalCount={counts.goals}
       profileComplete={user.profileComplete}
     >
-      <AppShellInner user={user} workspace={workspace} counts={counts} plan={plan}>
+      <AppShellInner
+        user={user}
+        workspace={workspace}
+        counts={counts}
+        plan={plan}
+        userId={userId}
+        workspaceId={workspaceId}
+      >
         {children}
       </AppShellInner>
     </OnboardingProvider>

@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell,
   ChevronRight,
   CreditCard,
   KeyRound,
@@ -26,17 +24,22 @@ import {
 } from "@/components/ui/dropdown";
 import { breadcrumbFor } from "@/components/layout/nav-config";
 import type { ShellUser, ShellWorkspace } from "@/components/layout/workspace-sidebar";
+import { NotificationPreview } from "@/components/notification-preview";
 
 export function Topbar({
   user,
   workspace,
   unreadCount,
+  userId,
+  workspaceId,
   onOpenProfileModal,
   onOpenHelp,
 }: {
   user: ShellUser;
   workspace: ShellWorkspace;
   unreadCount: number;
+  userId: string;
+  workspaceId: string | null;
   onOpenProfileModal?: () => void;
   onOpenHelp?: () => void;
 }) {
@@ -101,16 +104,11 @@ export function Topbar({
           <span className="eyebrow text-text-tertiary">Observing</span>
         </span>
 
-        <Link
-          href="/notifications"
-          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-          className="relative flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
-        >
-          <Bell size={15} strokeWidth={1.75} aria-hidden="true" className="transition-transform duration-150 ease-nexus" />
-          {unreadCount > 0 ? (
-            <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-lavender animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" />
-          ) : null}
-        </Link>
+        <NotificationPreview
+          userId={userId}
+          workspaceId={workspaceId}
+          unreadCount={unreadCount}
+        />
 
         <button
           type="button"

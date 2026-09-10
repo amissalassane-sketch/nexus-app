@@ -245,6 +245,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AppShell
       userId={user.id}
+      workspaceId={workspaceId}
       user={{
         name: profile.displayName,
         username: profile.username ?? undefined,
