@@ -20,9 +20,10 @@ import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input"
 import { Alert, EmptyState, Skeleton, SkeletonRows } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
+import { PillTabs } from "@/components/ui/tabs";
+import { NexusKanban, STATUS_LABELS, type KanbanTask, type Priority, type TaskStatus } from "@/components/tasks/nexus-kanban";
 
-type TaskStatus = "todo" | "in_progress" | "in_review" | "blocked" | "done" | "cancelled";
-type Priority = "low" | "medium" | "high" | "urgent";
+type Task = KanbanTask;
 
 /** Saved views — the same vocabulary the Intelligence signals use. */
 type TaskView = "all" | "today" | "overdue" | "blocked" | "unscheduled";
@@ -34,17 +35,6 @@ const VIEWS: { id: TaskView; label: string }[] = [
   { id: "blocked", label: "Blocked" },
   { id: "unscheduled", label: "No date" },
 ];
-
-type Task = {
-  id: string;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  priority: Priority;
-  due_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
 
 type TaskForm = {
   title: string;
@@ -61,15 +51,6 @@ const blankTaskForm = (): TaskForm => ({
   status: "todo",
   due_at: "",
 });
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  in_review: "In review",
-  blocked: "Blocked",
-  done: "Done",
-  cancelled: "Cancelled",
-};
 
 const PRIORITY_TONE: Record<Priority, "neutral" | "warning" | "danger"> = {
   low: "neutral",
@@ -111,6 +92,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
     (searchParams.get("filter") as TaskView) ?? "all"
   );
   const [query, setQuery] = useState("");
+  const [boardView, setBoardView] = useState<"list" | "kanban">(
+    searchParams.get("view") === "kanban" ? "kanban" : "list"
+  );
   const [form, setForm] = useState<TaskForm>(blankTaskForm());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
@@ -475,6 +459,45 @@ function TaskManagerInner({ userId }: { userId: string }) {
     syncServerViews();
   };
 
+  const updateTaskStatus = async (task: Task, nextStatus: TaskStatus) => {
+    if (!workspaceId || task.status === nextStatus) return;
+    const previousStatus = task.status;
+    const completedAt = nextStatus === "done" ? new Date().toISOString() : null;
+
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? { ...item, status: nextStatus, completed_at: completedAt }
+          : item
+      )
+    );
+
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({
+        status: nextStatus,
+        completed_at: completedAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId);
+
+    if (updateError) {
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id ? { ...item, status: previousStatus } : item
+        )
+      );
+      if (!(await handleMutationError(updateError.message))) {
+        showToast("danger", `Could not move task: ${humanizeDataError(updateError)}`);
+      }
+      return;
+    }
+
+    showToast("success", `Task moved to ${STATUS_LABELS[nextStatus]}.`);
+    syncServerViews();
+  };
+
   const deleteTask = async (taskId: string) => {
     // Motion: deliberate but fast exit animation before removal
     setExitingTasks((prev) => new Set(prev).add(taskId));
@@ -780,8 +803,24 @@ function TaskManagerInner({ userId }: { userId: string }) {
       {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
+      <PillTabs
+        label="Task layout"
+        value={boardView}
+        onChange={(nextView) => {
+          setBoardView(nextView);
+          const params = new URLSearchParams(searchParams.toString());
+          if (nextView === "kanban") params.set("view", "kanban");
+          else params.delete("view");
+          router.replace(`/tasks${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
+        }}
+        items={[
+          { id: "list", label: "List" },
+          { id: "kanban", label: "Kanban" },
+        ]}
+      />
+
       {/* Saved views — the destinations Intelligence recommendations link to */}
-      <div
+      {boardView === "list" ? <div
         role="tablist"
         aria-label="Task views"
         className="flex flex-wrap items-center gap-1"
@@ -806,9 +845,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
             </button>
           );
         })}
-      </div>
+      </div> : null}
 
-      <Panel
+      {boardView === "list" ? <Panel
         title={VIEWS.find((entry) => entry.id === view)?.label ?? "All"}
         description={`${filteredTasks.length} of ${tasks.length} tasks`}
         bodyClassName="p-0"
@@ -972,7 +1011,15 @@ function TaskManagerInner({ userId }: { userId: string }) {
             );
           })
         )}
-      </Panel>
+      </Panel> : (
+        <NexusKanban
+          tasks={filteredTasks}
+          onStatusChange={(task, status) => void updateTaskStatus(task, status)}
+          onEdit={populateEditForm}
+          onDelete={setConfirmingDelete}
+          onAddTask={openCreateForm}
+        />
+      )}
 
       <Modal
         open={formOpen}
