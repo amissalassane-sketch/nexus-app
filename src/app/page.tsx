@@ -9,6 +9,7 @@ import { ModelSection } from "@/components/landing/model-section";
 import { IntelligenceSection } from "@/components/landing/intelligence-section";
 import { HowItWorksSection } from "@/components/landing/how-it-works";
 import { FeaturesSection } from "@/components/landing/features";
+import { IntegrationsSection } from "@/components/landing/integrations-section";
 import { TrustSection } from "@/components/landing/trust";
 import { PricingSection } from "@/components/landing/pricing";
 import { FaqSection } from "@/components/landing/faq";
@@ -112,6 +113,7 @@ export default async function Home({
         <IntelligenceSection />
         <HowItWorksSection />
         <FeaturesSection />
+        <IntegrationsSection />
         <TrustSection />
         <PricingSection />
         <FaqSection />

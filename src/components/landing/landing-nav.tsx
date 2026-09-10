@@ -36,10 +36,11 @@ const NAV_LINKS = [
   { id: "product", route: "/#product", label: "Product" },
   { id: "how-it-works", route: "/how-it-works", label: "How it works" },
   { id: "intelligence", route: "/intelligence", label: "Intelligence" },
+  { id: "integrations", route: "/#integrations", label: "Integrations" },
   { id: "pricing", route: "/pricing", label: "Pricing" },
 ] as const;
 
-const SECTION_IDS = ["product", "how-it-works", "intelligence", "pricing"] as const;
+const SECTION_IDS = ["product", "how-it-works", "intelligence", "integrations", "pricing"] as const;
 
 export function LandingNav({
   context = "landing",
