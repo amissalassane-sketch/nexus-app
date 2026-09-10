@@ -16,7 +16,7 @@ import { IntelligenceClosing } from "@/components/intelligence/intelligence-clos
 // A plain public marketing route: it never depends on auth or onboarding
 // state. The authenticated Intelligence workspace lives at /app/intelligence.
 // Composition:
-//   NAV → HERO (the intelligence core comes online) → WHAT IT SEES →
+//   NAV → HERO (the lavender black hole, copy left / hole right) → WHAT IT SEES →
 //   WHAT IT SURFACES → NEXT BEST ACTION → EXPLAINABLE →
 //   WORKSPACE TO ACTION → CTA → FOOTER
 //
