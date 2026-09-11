@@ -10,6 +10,7 @@ import {
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 import {
   Spotlight,
+  findGuideTarget,
   useGuideTarget,
   useReducedMotion,
   type SpotlightRect,
@@ -21,11 +22,14 @@ const GAP = 16;
 const EDGE = 12;
 
 function useIsMobile() {
+  // The shell collapses to the bottom tab bar below `lg` (1024px) — the same
+  // threshold the tour must use, or it would draw a desktop-anchored card
+  // against a mobile chrome between 768 and 1023px.
   const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < 768
+    () => typeof window !== "undefined" && window.innerWidth < 1024
   );
   useEffect(() => {
-    const update = () => setIsMobile(window.innerWidth < 768);
+    const update = () => setIsMobile(window.innerWidth < 1024);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -145,14 +149,33 @@ export function GuidedTour({
 
   const go = () => {
     if (pending) return;
-    setPending(true);
     if (isWelcome) {
+      setPending(true);
       onWelcome();
       return;
     }
-    if (step.href) {
-      router.push(step.href);
+    // Navigation steps complete on arrival, so a transient pending state
+    // is safe there. Create/interact steps only complete through a real
+    // product event — locking the card in a spinner would trap the user
+    // if they decide not to create the item, so they never lock.
+    if (canAdvanceWithoutProductEvent(step)) {
+      setPending(true);
+      if (step.href) router.push(step.href);
+      return;
     }
+    if (step.expectedAction === "interact") {
+      const el = step.target ? findGuideTarget(step.target) : null;
+      if (el) {
+        el.scrollIntoView({
+          block: "center",
+          inline: "nearest",
+          behavior: reduced ? "auto" : "smooth",
+        });
+        el.focus({ preventScroll: true });
+        return;
+      }
+    }
+    if (step.href) router.push(step.href);
   };
 
   const mobileStyle = (() => {
@@ -204,7 +227,7 @@ export function GuidedTour({
               disabled={pending}
               aria-busy={pending || undefined}
               onClick={go}
-              className="inline-flex h-9 items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-140 hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-140 hover:bg-accent-hover active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
             >
               {pending ? (
                 <svg
@@ -240,7 +263,7 @@ export function GuidedTour({
             type="button"
             disabled={pending}
             onClick={onSkip}
-            className="inline-flex h-9 items-center rounded-input px-3 text-button text-text-tertiary transition-colors duration-140 hover:text-text-primary disabled:opacity-50"
+            className="inline-flex h-9 items-center rounded-input px-3 text-button text-text-tertiary transition-colors duration-140 hover:text-text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border"
           >
             {t("guide.skip", locale)}
           </button>

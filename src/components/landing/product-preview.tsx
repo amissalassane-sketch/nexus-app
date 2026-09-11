@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import {
   Activity,
   Bell,
@@ -11,6 +14,7 @@ import {
   Target,
   Waves,
 } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
 
@@ -28,19 +32,19 @@ import { Progress } from "@/components/ui/feedback";
 // ============================================================
 
 const NAV_PRIMARY = [
-  { icon: LayoutDashboard, label: "Overview", count: null, active: true },
-  { icon: Radar, label: "Intelligence", count: null, active: false },
+  { icon: LayoutDashboard, label: "Overview", count: null },
+  { icon: Radar, label: "Intelligence", count: null },
 ];
 
 const NAV_WORK = [
-  { icon: FolderKanban, label: "Projects", count: 3, active: false },
-  { icon: CheckSquare, label: "Tasks", count: 12, active: false },
-  { icon: Target, label: "Goals", count: 2, active: false },
+  { icon: FolderKanban, label: "Projects", count: 3 },
+  { icon: CheckSquare, label: "Tasks", count: 12 },
+  { icon: Target, label: "Goals", count: 2 },
 ];
 
 const NAV_WORKSPACE = [
-  { icon: Activity, label: "Activity", count: null, active: false },
-  { icon: Bell, label: "Notifications", count: 1, active: false },
+  { icon: Activity, label: "Activity", count: null },
+  { icon: Bell, label: "Notifications", count: 1 },
 ];
 
 const SIGNALS = [
@@ -79,14 +83,17 @@ const MISSION_DONE = 2;
 function NavGroup({
   label,
   items,
+  activeKey,
+  onSelect,
 }: {
   label?: string;
   items: {
     icon: typeof LayoutDashboard;
     label: string;
     count: number | null;
-    active: boolean;
   }[];
+  activeKey: string | null;
+  onSelect: (key: string) => void;
 }) {
   return (
     <div>
@@ -96,28 +103,35 @@ function NavGroup({
         </p>
       ) : null}
       <div className="flex flex-col gap-0.5">
-        {items.map((item) => (
-          <span
-            key={item.label}
-            className={`flex h-7 items-center gap-2 rounded-nav border px-2 text-[11px] ${
-              item.active
-                ? "border-border-subtle bg-white/[0.09] font-medium text-text-primary"
-                : "border-transparent text-text-secondary"
-            }`}
-          >
-            <item.icon
-              size={12}
-              strokeWidth={1.75}
-              className={item.active ? "text-text-primary" : "text-text-tertiary"}
-            />
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.count !== null ? (
-              <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
-                {item.count}
-              </span>
-            ) : null}
-          </span>
-        ))}
+        {items.map((item) => {
+          const active = activeKey === item.label;
+          return (
+            <button
+              type="button"
+              key={item.label}
+              onClick={() => onSelect(item.label)}
+              aria-pressed={active}
+              className={cn(
+                "flex h-7 items-center gap-2 rounded-nav border px-2 text-left text-[11px] outline-none transition-colors duration-150 ease-nexus",
+                active
+                  ? "border-border-subtle bg-white/[0.09] font-medium text-text-primary"
+                  : "border-transparent text-text-secondary hover:bg-white/[0.04] hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
+              )}
+            >
+              <item.icon
+                size={12}
+                strokeWidth={1.75}
+                className={active ? "text-text-primary" : "text-text-tertiary"}
+              />
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.count !== null ? (
+                <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
+                  {item.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -132,7 +146,7 @@ function Card({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 ${className}`}
+      className={`overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 transition-colors duration-200 ease-nexus hover:border-border-default ${className}`}
     >
       {children}
     </div>
@@ -148,9 +162,22 @@ function CardHeader({ label }: { label: string }) {
 }
 
 export function ProductPreview() {
+  // Visual-only nav state: clicking a sidebar entry moves the active
+  // highlight. The preview stays a product visualisation — no data, no
+  // routes — so the feedback is local and free.
+  const [activeNav, setActiveNav] = useState<string>("Overview");
+
   return (
-    <div className="group/preview relative" aria-hidden="true">
+    <div className="group/preview relative">
       <div className="overflow-hidden rounded-[14px] border border-border-strong bg-bg-surface shadow-[0_32px_80px_-16px_rgba(0,0,0,0.7)] transition-transform duration-500 ease-out-expo sm:rounded-[16px] sm:[transform:perspective(1600px)_rotateX(2.5deg)] sm:group-hover/preview:[transform:perspective(1600px)_rotateX(0deg)_translateY(-4px)]">
+        {/* This surface is illustrative — a labelled product visualisation,
+            not live workspace data. One real control lives inside: the
+            "Open task" action leads into the product. */}
+        <p className="sr-only">
+          Product visualisation: a preview of the NEXUS dashboard. The values
+          shown are illustrative.
+        </p>
+
         {/* Browser chrome */}
         <div className="flex items-center gap-3 border-b border-border-subtle bg-bg-subtle px-4 py-2.5">
           <div className="flex items-center gap-1.5">
@@ -191,9 +218,9 @@ export function ProductPreview() {
             </div>
 
             <div className="mt-2.5">
-              <NavGroup items={NAV_PRIMARY} />
-              <NavGroup label="Work" items={NAV_WORK} />
-              <NavGroup label="Workspace" items={NAV_WORKSPACE} />
+              <NavGroup items={NAV_PRIMARY} activeKey={activeNav} onSelect={setActiveNav} />
+              <NavGroup label="Work" items={NAV_WORK} activeKey={activeNav} onSelect={setActiveNav} />
+              <NavGroup label="Workspace" items={NAV_WORKSPACE} activeKey={activeNav} onSelect={setActiveNav} />
             </div>
 
             <div className="mt-auto border-t border-border-subtle pt-2.5">
@@ -261,9 +288,16 @@ export function ProductPreview() {
                     <p className="mt-0.5 text-[11px] text-text-secondary">
                       Oldest overdue task in the workspace (5 days ago).
                     </p>
-                    <span className="mt-2.5 inline-flex h-6 items-center rounded-input bg-accent px-2.5 text-[10.5px] font-medium text-accent-fg">
+                    {/* Real CTA — the only live control in this visualisation.
+                        The landing uses the existing entry route (/signup);
+                        the proxy redirects already-authenticated visitors to
+                        /app, which lands on /dashboard. */}
+                    <Link
+                      href="/signup"
+                      className="mt-2.5 inline-flex h-6 items-center rounded-input bg-accent px-2.5 text-[10.5px] font-medium text-accent-fg outline-none transition-colors duration-150 ease-nexus hover:bg-accent-hover active:translate-y-px focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
+                    >
                       Open task
-                    </span>
+                    </Link>
                   </div>
 
                   {/* Needs attention */}
@@ -397,7 +431,10 @@ export function ProductPreview() {
                   { label: "This week", value: "4" },
                   { label: "Completed", value: "68%" },
                 ].map((metric) => (
-                  <div key={metric.label} className="flex flex-col gap-1.5 px-2.5 py-2.5">
+                  <div
+                    key={metric.label}
+                    className="flex flex-col gap-1.5 px-2.5 py-2.5 transition-colors duration-200 ease-nexus hover:bg-accent-ghost"
+                  >
                     <span className="truncate font-mono text-[9.5px] uppercase tracking-[0.1em] text-text-tertiary">
                       {metric.label}
                     </span>
