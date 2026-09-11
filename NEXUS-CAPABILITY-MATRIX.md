@@ -298,4 +298,77 @@ Notes:
   - UI presence: REAL — the composer, signals, mission and confirm UX are implemented (see file references above).
   - End-to-end mutation verification: PARTIAL — server mutation layer and tests exist, but end-to-end against a live Supabase instance remains UNVERIFIED until tests or migrations are run against a real DB.
 
+Test run verification (local)
+
+- Commands executed:
+  - npm ci
+  - node --import tsx supabase/tests/onboarding-rls.test.mjs
+  - node --import tsx supabase/tests/migration-logic.test.mjs
+
+- Result summary (local execution on 2026-09-11):
+  - onboarding-rls.test.mjs: 43 passed / 0 failed
+  - migration-logic.test.mjs: 67 passed / 0 failed
+
+- Migrations applied during test runs (examples seen in test harness):
+  - 001_nexus_base_schema.sql
+  - 006_nexus_workspace_bootstrap.sql
+  - 007_freemium_enforcement.sql
+  - 008_sync_plan_limits_and_slug.sql
+  - 009_enforce_task_limit_on_status_update.sql
+  - 010_allow_profile_self_repair.sql
+  - 011_enforce_workspace_limit.sql
+  - 012_enforce_workspace_membership_on_write.sql
+  - 013_modernize_schema.sql
+  - 014_ensure_onboarding_intent.sql
+  - 015_dependencies_and_activity.sql
+  - 016_fix_onboarding_workspace_bootstrap.sql
+  - 017_fix_self_claim_rls_recursion.sql
+  - 018_harden_onboarding_bootstrap.sql
+  - 019_auth_rearchitecture_username.sql
+  - 020_access_first_profiles.sql
+  - 021_workspace_bootstrap_bounded_observability.sql
+  - 022_onboarding_progress.sql
+  - 023_intelligence_memory.sql
+  - 024_intelligence_signals.sql
+  - 025_intelligence_missions.sql
+
+- Implications / next status updates:
+  - Workspace isolation & RLS (P0): VERIFIED by tests (REAL) — cross-workspace reads/writes are blocked in the migration+harness.
+  - Onboarding bootstrap behavior (P0): VERIFIED by tests (REAL) — signup and workspace bootstrap sequences pass.
+  - Plan limits & write guards (P0/P1): VERIFIED by tests (REAL/PARTIAL) — server-side enforcement and per-workspace scoping verified by migration-logic.test.mjs.
+  - Intelligence persistence tables & server write-only constraint: supported by migrations and tests (REAL for schema + server-side enforcement). End-to-end mutation against a live external Supabase instance remains UNVERIFIED until run against a real service.
+
+- Next recommended actions:
+  1. (Optional) Run the intelligence agent tests (intelligence-agent.test.mjs and intelligence-agent-v2.test.mjs) locally to verify deterministic agent behaviors and mutation verification against the in-memory harness (these are unit-style and should pass with the current setup).
+  2. If you want full end-to-end verification, provide safe test service credentials or run migrations against a local Postgres/Supabase instance to test the real Supabase wiring (note: do not share service role keys here).
+  3. Commit the updated NEXUS-CAPABILITY-MATRIX.md to a branch and open a PR summarizing the verification results. (I can create the branch and commit if you confirm.)
+
+Intelligence agent tests (local)
+
+- Commands executed:
+  - node --import tsx supabase/tests/intelligence-agent.test.mjs
+  - node --import tsx supabase/tests/intelligence-agent-v2.test.mjs
+
+- Result summary (local execution on 2026-09-11):
+  - intelligence-agent.test.mjs: 57 passed / 0 failed
+  - intelligence-agent-v2.test.mjs: all tests passed (exit code 0)
+
+- Notable assertions verified by these tests:
+  - Intent classification (FR/EN) and referential follow-ups work and map to structured intentIds.
+  - Deterministic fallback engages on provider timeouts/invalid output and produces structured responses.
+  - Tool registry maps read and mutate tools correctly; mutate tools map to server actions.
+  - Server mutation layer enforces confirmation for high-risk actions, verifies mutations via read-back, and rejects cross-workspace mutations.
+  - Delete operations require confirmDeletion and are enforced/verified.
+  - Mobile UX contracts (44px hit areas, keyboard flows) are enforced for the composer and confirm buttons.
+
+- Implications / next status updates:
+  - Intelligence agent orchestration & mutation verification (in-memory harness): VERIFIED (REAL).
+  - Deterministic fallback & safety guards: VERIFIED (REAL).
+  - End-to-end against a live Supabase instance: still UNVERIFIED for agent-triggered mutations targeting production DB — run against a real Supabase or local Postgres to fully verify.
+
+- Next recommended actions:
+  1. (Optional) Run any remaining intelligence-related tests (memory/signals/missions) for completeness: intelligence-memory.test.mjs, intelligence-signals.test.mjs, intelligence-mission.test.mjs.
+  2. Create a branch and commit NEXUS-CAPABILITY-MATRIX.md with these test results (I can create the branch and commit locally without pushing).
+  3. If full e2e verification is required, run migrations/tests against a real Supabase instance or local Postgres with supplied safe test credentials.
+
 Generated by Copilot CLI runtime in VS Code as the initial matrix template.
