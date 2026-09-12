@@ -3,6 +3,7 @@
 export type AnalyticsEvent =
   | "onboarding_started"
   | "onboarding_skipped"
+  | "onboarding_step_skipped"
   | "onboarding_step_viewed"
   | "onboarding_step_completed"
   | "onboarding_completed"

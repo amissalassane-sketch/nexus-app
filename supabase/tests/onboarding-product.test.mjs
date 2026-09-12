@@ -151,6 +151,45 @@ ok(
   ) === null
 );
 
+console.log("-- stuck escapes (no dead steps) ----------------------");
+ok(
+  "skipping create_project advances to navigate_tasks",
+  nextPendingStep(
+    emptyFacts,
+    ["welcome", "navigate_projects", "create_project"]
+  )?.id === "navigate_tasks"
+);
+ok(
+  "skipping create_task advances to navigate_intelligence",
+  nextPendingStep(
+    emptyFacts,
+    ["welcome", "navigate_projects", "create_project", "navigate_tasks", "create_task"]
+  )?.id === "navigate_intelligence"
+);
+ok(
+  "skipping interact_intelligence finishes the tour",
+  nextPendingStep(
+    { ...emptyFacts, projectCount: 1, taskCount: 1 },
+    ["welcome", "create_project", "create_task", "navigate_intelligence", "interact_intelligence"]
+  ) === null
+);
+ok(
+  "fresh project count unblocks a pending create_project step (no event needed)",
+  nextPendingStep(
+    { ...emptyFacts, projectCount: 1 },
+    ["welcome", "navigate_projects"]
+  )?.id === "navigate_tasks"
+);
+ok(
+  "create_project is satisfied by existing work even mid-welcome flow",
+  isStepSatisfied(
+    GUIDE_STEPS.find((s) => s.id === "create_project"),
+    { ...emptyFacts, projectCount: 1 },
+    [],
+    "/projects"
+  ) === true
+);
+
 console.log("-- persistence ----------------------------------------");
 ok("invalid payload becomes empty", parseOnboarding(null).status === "idle");
 ok(
@@ -242,6 +281,15 @@ ok(
   "every guide step has a copy key",
   GUIDE_STEPS.every((step) => typeof i18n.t(step.titleKey, "en") === "string")
 );
+ok(
+  "skip-step and retry copy exist in both locales",
+  ["guide.skipStep", "guide.retry"].every(
+    (key) =>
+      typeof i18n.t(key, "en") === "string" &&
+      typeof i18n.t(key, "fr") === "string" &&
+      i18n.t(key, "en") !== i18n.t(key, "fr")
+  )
+);
 
 console.log("-- targets --------------------------------------------");
 ok(
@@ -253,6 +301,60 @@ ok(
 ok(
   "create project target is data-guide",
   createProject.target.includes("data-guide='new-project'")
+);
+
+// Source-level wiring checks (no browser test stack by design): the escape
+// hatches and live counts that keep a step from dead-ending must exist in
+// the components, not just in the model.
+const { readFileSync } = await import("node:fs");
+const root = new URL("../..", import.meta.url).pathname;
+const src = (rel) => readFileSync(`${root}src/${rel}`, "utf8");
+const tourSrc = src("components/onboarding/guided-tour.tsx");
+const providerSrc = src("components/onboarding/onboarding-provider.tsx");
+const spotlightSrc = src("components/onboarding/spotlight.tsx");
+const projectSrc = src("components/project-manager.tsx");
+const taskSrc = src("components/task-manager.tsx");
+
+console.log("-- no dead step (wiring) ------------------------------");
+ok(
+  "tour offers per-step skip for create/interact steps",
+  tourSrc.includes("onSkipStep") &&
+    tourSrc.includes("guide.skipStep") &&
+    tourSrc.includes("!canAdvanceWithoutProductEvent(step)")
+);
+ok(
+  "tour unlocks the button if a navigation push stalls",
+  tourSrc.includes("pendingTimer") &&
+    /setTimeout\(\(\) => setPending\(false\), 2500\)/.test(tourSrc)
+);
+ok(
+  "interact step retries instead of being a silent no-op",
+  tourSrc.includes("router.refresh()") && tourSrc.includes("guide.retry")
+);
+ok(
+  "provider merges live counts from the managers",
+  providerSrc.includes('addEventListener("nexus:counts"') &&
+    providerSrc.includes("Math.max(projectCount, liveCounts.projects)") &&
+    providerSrc.includes("Math.max(taskCount, liveCounts.tasks)")
+);
+ok(
+  "provider exposes skipStep on the context",
+  providerSrc.includes("skipStep") &&
+    providerSrc.includes('trackEvent("onboarding_step_skipped"')
+);
+ok(
+  "project manager broadcasts its real count",
+  projectSrc.includes('new CustomEvent("nexus:counts"') &&
+    projectSrc.includes("projects: nextProjects.length")
+);
+ok(
+  "task manager broadcasts its real count",
+  taskSrc.includes('new CustomEvent("nexus:counts"') &&
+    taskSrc.includes("tasks: nextTasks.length")
+);
+ok(
+  "spotlight only yields to a visible modal",
+  spotlightSrc.includes("getBoundingClientRect().width >= 2")
 );
 
 console.log(`\n================ ${passed} passed / ${failed} failed ================`);

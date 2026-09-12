@@ -44,6 +44,9 @@ type OnboardingContextValue = {
   guidanceMode: ReturnType<typeof pickGuidanceLayer>;
   startGuide: () => void;
   skipGuide: () => void;
+  /** Marks one step done so the tour advances — escape hatch when the
+   *  underlying product action cannot be completed. */
+  skipStep: (id: OnboardingStepId) => void;
   completeWelcome: () => void;
   markIntelligence: () => void;
   openHelp: () => void;
@@ -77,6 +80,7 @@ export function useOnboarding(): OnboardingContextValue {
       guidanceMode: "none",
       startGuide: () => {},
       skipGuide: () => {},
+      skipStep: () => {},
       completeWelcome: () => {},
       markIntelligence: () => {},
       openHelp: () => {},
@@ -113,16 +117,44 @@ export function OnboardingProvider({
     task: taskCount > 0,
     goal: goalCount > 0,
   });
+  // The counts passed from the server layout are only as fresh as the last
+  // full page render. After client-side navigation (or in a second tab),
+  // the managers refetch and broadcast real counts via `nexus:counts` —
+  // the guide merges them so a step whose work already exists completes
+  // immediately instead of waiting for an event that will never fire.
+  const [liveCounts, setLiveCounts] = useState({ projects: 0, tasks: 0 });
+  const bumpLive = useCallback(
+    (patch: { projects?: number; tasks?: number }) => {
+      setLiveCounts((prev) => ({
+        projects: Math.max(prev.projects, patch.projects ?? 0),
+        tasks: Math.max(prev.tasks, patch.tasks ?? 0),
+      }));
+    },
+    []
+  );
+
+  useEffect(() => {
+    const onCounts = (event: Event) => {
+      const detail = (event as CustomEvent<{ projects?: number; tasks?: number }>)
+        .detail;
+      if (typeof detail?.projects === "number" || typeof detail?.tasks === "number") {
+        bumpLive(detail);
+      }
+    };
+    window.addEventListener("nexus:counts", onCounts);
+    return () => window.removeEventListener("nexus:counts", onCounts);
+  }, [bumpLive]);
 
   const facts: ProductFacts = useMemo(
     () => ({
-      projectCount,
-      taskCount,
+      projectCount: Math.max(projectCount, liveCounts.projects),
+      taskCount: Math.max(taskCount, liveCounts.tasks),
       goalCount,
       profileComplete,
       intelligenceInteracted: state.intelligenceInteracted,
     }),
     [
+      liveCounts,
       projectCount,
       taskCount,
       goalCount,
@@ -172,6 +204,7 @@ export function OnboardingProvider({
           firstFlags.current.project = true;
           trackEvent("first_project_created");
         }
+        bumpLive({ projects: 1 });
         persist({
           ...state,
           completedSteps: Array.from(
@@ -185,6 +218,7 @@ export function OnboardingProvider({
           firstFlags.current.task = true;
           trackEvent("first_task_created");
         }
+        bumpLive({ tasks: 1 });
         persist({
           ...state,
           completedSteps: Array.from(
@@ -224,7 +258,7 @@ export function OnboardingProvider({
     };
     window.addEventListener("nexus:activation", onActivation);
     return () => window.removeEventListener("nexus:activation", onActivation);
-  }, [persist, projectCount, state, taskCount]);
+  }, [bumpLive, persist, projectCount, state, taskCount]);
 
   const startGuide = useCallback(() => {
     persist({
@@ -245,6 +279,19 @@ export function OnboardingProvider({
     });
     trackEvent("onboarding_skipped");
   }, [persist, state]);
+
+  const skipStep = useCallback(
+    (id: OnboardingStepId) => {
+      persist({
+        ...state,
+        completedSteps: Array.from(
+          new Set([...state.completedSteps, id])
+        ) as OnboardingStepId[],
+      });
+      trackEvent("onboarding_step_skipped", { step: id });
+    },
+    [persist, state]
+  );
 
   const completeWelcome = useCallback(() => {
     const nextSteps = Array.from(
@@ -320,6 +367,7 @@ export function OnboardingProvider({
       guidanceMode,
       startGuide,
       skipGuide,
+      skipStep,
       completeWelcome,
       markIntelligence,
       openHelp: () => setHelpOpen(true),
@@ -332,6 +380,7 @@ export function OnboardingProvider({
       markIntelligence,
       showWelcome,
       skipGuide,
+      skipStep,
       startGuide,
       state,
       tourActive,
@@ -349,6 +398,7 @@ export function OnboardingProvider({
           key={currentStep.id}
           step={currentStep}
           onSkip={skipGuide}
+          onSkipStep={skipStep}
           onWelcome={completeWelcome}
         />
       ) : null}

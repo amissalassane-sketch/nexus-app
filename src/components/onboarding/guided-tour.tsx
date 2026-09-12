@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import {
   canAdvanceWithoutProductEvent,
   type GuideStep,
+  type OnboardingStepId,
 } from "@/lib/onboarding/model";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 import {
@@ -107,30 +108,43 @@ function placeCard(rect: SpotlightRect | null) {
 export function GuidedTour({
   step,
   onSkip,
+  onSkipStep,
   onWelcome,
 }: {
   step: GuideStep;
   onSkip: () => void;
+  /** Marks this single step done so the tour can move on — the escape
+   *  hatch when the product action cannot (or will not) be completed. */
+  onSkipStep: (id: OnboardingStepId) => void;
   onWelcome: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const locale = browserLocale();
   const reduced = useReducedMotion();
   const { rect, missing } = useGuideTarget(step.target, step.id);
   const isWelcome = step.id === "welcome";
   const isMobile = useIsMobile();
   const [pending, setPending] = useState(false);
-  const [prevStepId, setPrevStepId] = useState(step.id);
   const [modalActive, setModalActive] = useState(false);
+  const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (prevStepId !== step.id) {
-    setPrevStepId(step.id);
-    setPending(false);
-  }
+  useEffect(
+    () => () => {
+      if (pendingTimer.current) clearTimeout(pendingTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
+    // Same rule as the spotlight: only a visible dialog yields the card.
     const checkModal = () => {
-      const modal = document.querySelector("[role='dialog'][aria-modal='true']");
+      const dialogs = document.querySelectorAll<HTMLElement>(
+        "[role='dialog'][aria-modal='true']"
+      );
+      const modal = Array.from(dialogs).find(
+        (el) => el.getBoundingClientRect().width >= 2
+      );
       setModalActive(Boolean(modal));
     };
     checkModal();
@@ -160,6 +174,12 @@ export function GuidedTour({
     // if they decide not to create the item, so they never lock.
     if (canAdvanceWithoutProductEvent(step)) {
       setPending(true);
+      // Safety net: if the push does not advance the step (route error,
+      // auth redirect, same-page no-op), unlock the button after a beat
+      // instead of spinning forever. The step's remount (key change)
+      // clears this state on success.
+      if (pendingTimer.current) clearTimeout(pendingTimer.current);
+      pendingTimer.current = setTimeout(() => setPending(false), 2500);
       if (step.href) router.push(step.href);
       return;
     }
@@ -174,6 +194,16 @@ export function GuidedTour({
         el.focus({ preventScroll: true });
         return;
       }
+      // Target missing (page error, no workspace, content not rendered):
+      // never make the primary button a silent no-op. Re-run the page's
+      // server render so a transient failure recovers; otherwise jump to
+      // the step's destination.
+      if (step.href && pathname !== step.href) {
+        router.push(step.href);
+      } else {
+        router.refresh();
+      }
+      return;
     }
     if (step.href) router.push(step.href);
   };
@@ -253,10 +283,22 @@ export function GuidedTour({
                 </svg>
               ) : null}
               <span>
-                {step.actionKey
-                  ? t(step.actionKey, locale)
-                  : t("guide.continue", locale)}
+                {missing && step.expectedAction === "interact"
+                  ? t("guide.retry", locale)
+                  : step.actionKey
+                    ? t(step.actionKey, locale)
+                    : t("guide.continue", locale)}
               </span>
+            </button>
+          ) : null}
+          {!canAdvanceWithoutProductEvent(step) ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onSkipStep(step.id)}
+              className="inline-flex h-9 items-center rounded-input px-3 text-button text-text-tertiary transition-colors duration-140 hover:text-text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border"
+            >
+              {t("guide.skipStep", locale)}
             </button>
           ) : null}
           <button
