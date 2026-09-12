@@ -5,8 +5,9 @@ import { getRequestOrigin } from "@/lib/request-origin";
 import { humanizeAuthError } from "@/lib/auth-errors";
 
 /**
- * Resends the sign-up confirmation email for an address that is already
- * registered but not yet verified. Used from the /check-email "Resend" button.
+ * Resends the sign-up confirmation email (code + fallback link) for an
+ * address that is already registered but not yet verified. Used from the
+ * /verify-email "Resend Code" link.
  *
  * Always returns the same generic success copy so the response never reveals
  * whether the address is registered — the same stance as password recovery.

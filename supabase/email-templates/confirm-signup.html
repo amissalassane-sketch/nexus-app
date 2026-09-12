@@ -97,21 +97,23 @@
             </tr>
             <tr>
               <td style="padding: 0 32px 28px; text-align: center">
-                <a
-                  href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email"
+                <div
                   style="
                     display: inline-block;
-                    background-color: #ffffff;
-                    color: #000000;
-                    font-size: 13px;
-                    font-weight: 500;
-                    line-height: 20px;
-                    text-decoration: none;
-                    border-radius: 8px;
-                    padding: 12px 24px;
+                    background-color: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-radius: 12px;
+                    padding: 16px 28px;
+                    font-size: 30px;
+                    font-weight: 600;
+                    letter-spacing: 0.35em;
+                    text-indent: 0.35em;
+                    line-height: 1;
+                    color: #ffffff;
                   "
-                  >Verify email</a
                 >
+                  {{ .Token }}
+                </div>
               </td>
             </tr>
             <tr>
@@ -124,7 +126,13 @@
                     color: rgba(255, 255, 255, 0.65);
                   "
                 >
-                  This verification link will expire for security reasons.
+                  Enter this code on the NEXUS verification screen. If you prefer, you
+                  can
+                  <a
+                    href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email"
+                    style="color: #ffffff; text-decoration: underline"
+                    >verify with this link instead</a
+                  >. This code expires for security reasons.
                 </p>
               </td>
             </tr>
