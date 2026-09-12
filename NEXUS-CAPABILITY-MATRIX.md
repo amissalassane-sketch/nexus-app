@@ -139,158 +139,24 @@ Suggested quick workflow:
 
 ---
 
-Supabase RLS & Triggers (selected snippets)
+Test verification (2026-09-11)
 
-Source: supabase/migrations/001_nexus_base_schema.sql
+All onboarding, workspace-bootstrap, plan-limit and Intelligence test suites were executed against the current code:
 
--- Membership helper (security definer)
-create or replace function public.is_active_workspace_member(p_workspace_id uuid, p_user_id uuid default auth.uid())
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select exists (
-    select 1 from public.workspace_members
-    where workspace_id = p_workspace_id and user_id = p_user_id and status = 'active'
-  );
-$$;
-revoke all on function public.is_active_workspace_member(uuid, uuid) from public;
-grant execute on function public.is_active_workspace_member(uuid, uuid) to authenticated;
+- `node --import tsx supabase/tests/onboarding-rls.test.mjs` — 43 passed / 0 failed
+- `node --import tsx supabase/tests/migration-logic.test.mjs` — 67 passed / 0 failed
+- `node --import tsx supabase/tests/intelligence-agent.test.mjs` — 57 passed / 0 failed
+- `node --import tsx supabase/tests/intelligence-agent-v2.test.mjs` — all passed
+- `node --import tsx supabase/tests/intelligence-memory.test.mjs` — 115 assertions, 0 failures
+- `node --import tsx supabase/tests/intelligence-signals.test.mjs` — 77 assertions, 0 failures
+- `node --import tsx supabase/tests/intelligence-mission.test.mjs` — 64 assertions, 0 failures
+- `node --import tsx supabase/tests/intelligence-proactive.test.mjs` — 47 assertions, 0 failures
+- `node --import tsx supabase/tests/intelligence-experience.test.mjs` — all passed
 
-create or replace function public.can_manage_workspace(p_workspace_id uuid, p_user_id uuid default auth.uid())
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select exists (
-    select 1 from public.workspace_members
-    where workspace_id = p_workspace_id and user_id = p_user_id
-      and status = 'active' and role in ('owner','admin')
-  );
-$$;
-revoke all on function public.can_manage_workspace(uuid, uuid) from public;
-grant execute on function public.can_manage_workspace(uuid, uuid) to authenticated;
+These are unit/integration tests against in-memory Supabase fakes, not against a live Supabase project. End-to-end mutation against a live external Supabase instance remains UNVERIFIED until run against a real service.
 
--- Row-level security enabled for tenant tables
-alter table public.profiles enable row level security;
-alter table public.workspaces enable row level security;
-alter table public.workspace_members enable row level security;
-alter table public.projects enable row level security;
-alter table public.tasks enable row level security;
-alter table public.goals enable row level security;
-
--- Example policies (workspace-scoped read/insert/update/delete)
-create policy "base_projects_read" on public.projects for select using (public.is_active_workspace_member(workspace_id));
-create policy "base_projects_insert" on public.projects for insert with check (public.is_active_workspace_member(workspace_id));
-create policy "base_projects_update" on public.projects for update using (public.is_active_workspace_member(workspace_id)) with check (public.is_active_workspace_member(workspace_id));
-create policy "base_projects_delete" on public.projects for delete using (public.is_active_workspace_member(workspace_id));
-
-create policy "base_tasks_read" on public.tasks for select using (public.is_active_workspace_member(workspace_id));
-create policy "base_tasks_insert" on public.tasks for insert with check (public.is_active_workspace_member(workspace_id));
-create policy "base_tasks_update" on public.tasks for update using (public.is_active_workspace_member(workspace_id)) with check (public.is_active_workspace_member(workspace_id));
-create policy "base_tasks_delete" on public.tasks for delete using (public.is_active_workspace_member(workspace_id));
-
-create policy "base_goals_read" on public.goals for select using (public.is_active_workspace_member(workspace_id));
-create policy "base_goals_insert" on public.goals for insert with check (public.is_active_workspace_member(workspace_id));
-create policy "base_goals_update" on public.goals for update using (public.is_active_workspace_member(workspace_id)) with check (public.is_active_workspace_member(workspace_id));
-create policy "base_goals_delete" on public.goals for delete using (public.is_active_workspace_member(workspace_id));
-
-Source: supabase/migrations/012_enforce_workspace_membership_on_write.sql
-
--- Assertion function: rejects writes from non-members (unless auth.uid() is null)
-create or replace function public.assert_workspace_member()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_uid uuid;
-begin
-  v_uid := auth.uid();
-
-  -- Server-side contexts (service_role) are not restricted here.
-  if v_uid is null then
-    return NEW;
-  end if;
-
-  if NEW.workspace_id is null then
-    raise exception 'WORKSPACE_ACCESS_DENIED: workspace_id is required'
-      using errcode = '42501';
-  end if;
-
-  if not exists (
-    select 1
-    from public.workspace_members wm
-    where wm.workspace_id = NEW.workspace_id
-      and wm.user_id = v_uid
-      and wm.status = 'active'
-  ) then
-    raise exception 'WORKSPACE_ACCESS_DENIED: caller is not an active member of workspace %', NEW.workspace_id
-      using errcode = '42501';
-  end if;
-
-  -- Moving a row from one workspace to another requires membership on both.
-  if tg_op = 'UPDATE' and OLD.workspace_id is distinct from NEW.workspace_id then
-    if not exists (
-      select 1
-      from public.workspace_members wm
-      where wm.workspace_id = OLD.workspace_id
-        and wm.user_id = v_uid
-        and wm.status = 'active'
-    ) then
-      raise exception 'WORKSPACE_ACCESS_DENIED: caller is not an active member of workspace %', OLD.workspace_id
-        using errcode = '42501';
-    end if;
-  end if;
-
-  return NEW;
-end;
-$$;
-
--- Triggers that enforce the assertion on writes (examples)
-drop trigger if exists trg_assert_workspace_member on public.tasks;
-create trigger trg_assert_workspace_member
-  before insert or update on public.tasks
-  for each row execute function public.assert_workspace_member();
-
-drop trigger if exists trg_assert_workspace_member on public.projects;
-create trigger trg_assert_workspace_member
-  before insert or update on public.projects
-  for each row execute function public.assert_workspace_member();
-
-drop trigger if exists trg_assert_workspace_member on public.goals;
-create trigger trg_assert_workspace_member
-  before insert or update on public.goals
-  for each row execute function public.assert_workspace_member();
-
----
-
-Intelligence schema (selected):
-
-- public.intelligence_memory (supabase/migrations/023_intelligence_memory.sql)
-  - Columns: id, user_id, workspace_id, state jsonb, preferences jsonb, created_at, updated_at
-  - Unique: (user_id, workspace_id)
-  - Index: intelligence_memory_workspace_idx on (workspace_id)
-  - RLS policies: intelligence_memory_read_own / insert_own / update_own / delete_own (user_id = auth.uid() and is_active_workspace_member(workspace_id))
-
-- public.intelligence_signals (supabase/migrations/024_intelligence_signals.sql)
-  - Columns: id, user_id, workspace_id, fingerprint, type, severity, status, title, summary, entity_type, entity_id, entity_label, score, confidence, affected_count, evidence jsonb, score_breakdown jsonb, suggested_actions jsonb, created_at, seen_at, dismissed_at, resolved_at
-  - Unique: (user_id, workspace_id, fingerprint)
-  - Indexes: intelligence_signals_workspace_idx, intelligence_signals_user_workspace_status_idx
-  - RLS policies: intelligence_signals_read_own / insert_own / update_own / delete_own (user_id = auth.uid() and is_active_workspace_member(workspace_id))
-
-- public.intelligence_missions (supabase/migrations/025_intelligence_missions.sql)
-  - Columns: id (text primary key), user_id, workspace_id, title, objective, kind, status, progress, current_step_id, steps jsonb, context jsonb, next_best_action jsonb, last_evaluated_at, created_at, updated_at
-  - Indexes: intelligence_missions_workspace_idx, intelligence_missions_user_status_idx
-  - RLS policies: intelligence_missions_read_own / insert_own / update_own / delete_own (user_id = auth.uid() and is_active_workspace_member(workspace_id))
-
-Notes:
-- All intelligence tables are strictly server-written; client routes should never write them directly — the migrations and tests state the server is the only writer and RLS enforces per-user visibility inside an active workspace.
-- These migrations align with the intelligence code in src/lib/intelligence/{memory.ts, signals.ts, mission.ts}.
-
-## Intelligence (UI & API evidence — re-verified 2026-09-11)
-
-This section previously used REAL/PARTIAL vocabulary and was written without re-running the tests. It has been superseded by the per-capability table above (`## Intelligence`), which uses the mandatory COMPLETE/PARTIAL/MISSING/UNVERIFIED vocabulary and cites exact file/function evidence re-checked against the current code, migrations and a real test run. Summary of what changed vs. the prior version of this section:
-- Confirmed accurate: composer/UI wiring, the 4 API routes, memory/signals/missions persistence via Supabase tables with RLS, read-back verification before reporting mutation success.
-- Corrected: "Tool execution" and "Mutations" were previously both marked PARTIAL with the same caveat ("live DB verification requires Supabase migrations") — migrations 023/024/025 exist and were inspected directly in this pass (RLS policies confirmed for all 3 Intelligence tables: `intelligence_memory`, `intelligence_signals`, `intelligence_missions`). The remaining real gap is not "migrations may not exist" but "no test in this repo runs against a live Supabase instance" — reflected as UNVERIFIED (live DB) rather than PARTIAL (missing migrations).
-- Added: explicit status split for the AI provider — the fallback/error-handling contract is COMPLETE and test-proven, but actual third-party LLM call success is UNVERIFIED (no API key configured in this environment, never exercised against a real OpenAI/Anthropic endpoint in this audit).
-- Test run performed in this pass: all 7 Intelligence suites (`node --import tsx supabase/tests/intelligence-*.test.mjs`) executed 2026-09-11, 546 assertions, 0 failures. These are unit/integration tests against in-memory Supabase fakes (`createFakeDb()` style), not against a live Supabase project.
-
-Generated by Copilot CLI runtime in VS Code as the initial matrix template; Intelligence section re-audited from source in this session.
+Key security evidence confirmed by inspection:
+- `is_active_workspace_member` / `can_manage_workspace` (security-definer helpers) in `supabase/migrations/001_nexus_base_schema.sql`.
+- `assert_workspace_member` trigger in `supabase/migrations/012_enforce_workspace_membership_on_write.sql` enforcing workspace-scoped writes on `tasks`/`projects`/`goals`.
+- RLS scoped reads/inserts/updates/deletes on `projects`, `tasks`, `goals`, `workspaces`, `workspace_members`, `profiles` in `supabase/migrations/001_nexus_base_schema.sql`.
+- Intelligence persistence tables with per-user + active-workspace RLS: `intelligence_memory` (023), `intelligence_signals` (024), `intelligence_missions` (025).
