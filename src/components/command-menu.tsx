@@ -23,6 +23,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
+import { isTypingTarget } from "@/lib/is-typing-target";
 import { ALL_NAV_ENTRIES } from "@/components/layout/nav-config";
 
 // ============================================================
@@ -381,12 +382,23 @@ export function CommandMenu() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey) return; // AltGr (AZERTY/European layouts) surfaces as ctrlKey+altKey — never a real shortcut press
       const key = event.key.toLowerCase();
-      if ((event.metaKey || event.ctrlKey) && (key === "k" || key === "j")) {
+      if (!(event.metaKey || event.ctrlKey) || (key !== "k" && key !== "j")) return;
+
+      if (open) {
+        // The palette's own search input is itself an <input>, so it would
+        // otherwise fail the isTypingTarget check below — but Ctrl+K/Ctrl+J
+        // must still close the palette while someone is typing a query.
         event.preventDefault();
-        if (open) requestClose();
-        else openMenu(key === "j" ? "ask" : "");
+        requestClose();
+        return;
       }
+
+      if (isTypingTarget(event.target)) return; // don't steal focus from a form field elsewhere on the page
+
+      event.preventDefault();
+      openMenu(key === "j" ? "ask" : "");
     };
     const onOpen = () => openMenu();
     const onCreate = () => openMenu("create");
