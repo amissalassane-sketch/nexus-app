@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError } from "@/lib/auth-errors";
@@ -25,6 +25,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState(initialError);
@@ -185,9 +186,10 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Email id"
               autoComplete="email"
+              spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/35"
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35"
             />
           </div>
 
@@ -195,24 +197,41 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
             <label htmlFor="login-password" className="sr-only">
               Password
             </label>
-            <input
-              id="login-password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
-              autoComplete="current-password"
-              disabled={loading}
-              required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/35"
-            />
+            <div className="relative">
+              <input
+                id="login-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                autoComplete="current-password"
+                spellCheck={false}
+                disabled={loading}
+                required
+                className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 pl-4 pr-11 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white/70 disabled:pointer-events-none disabled:opacity-40"
+              >
+                {showPassword ? (
+                  <EyeOff size={15} strokeWidth={1.75} aria-hidden="true" />
+                ) : (
+                  <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
+                )}
+              </button>
+            </div>
             <div className="text-right">
               <Link
                 href="/forgot-password"
                 className="text-caption text-white/40 hover:text-white/60 transition-colors"
               >
-                Forget password?
+                Forgot password?
               </Link>
             </div>
           </div>
