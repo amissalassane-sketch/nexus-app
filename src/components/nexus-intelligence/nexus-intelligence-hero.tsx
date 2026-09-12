@@ -106,7 +106,11 @@ export function NexusIntelligenceHero({
 
       {/* ---- Layer 1: the copy ---- */}
       <div className="relative z-10 mx-auto flex w-full max-w-page flex-1 flex-col px-4 sm:px-6">
-        <div className="flex flex-1 flex-col items-center justify-center py-12 text-center lg:items-start lg:text-left">
+        {/* Mobile: the copy is anchored to the top, under the top scrim, so
+            the text and CTAs never sit on the brightest band of the disc
+            (which is low in the frame). Desktop: vertically centred beside
+            the high-right hole. */}
+        <div className="flex flex-1 flex-col items-center justify-start pt-10 pb-16 text-center lg:items-start lg:justify-center lg:py-12 lg:text-left">
           {notice ? (
             <div
               className="nexus-intelligence-item mb-8 w-full max-w-[460px] text-left"

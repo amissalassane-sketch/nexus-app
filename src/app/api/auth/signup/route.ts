@@ -86,8 +86,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     requiresConfirmation: true,
-    redirectTo: "/check-email",
+    redirectTo: "/verify-email",
     message:
-      "Account created. We sent a verification link to your email. Verify it to continue.",
+      "Account created. We sent a verification code to your email. Enter it to continue.",
   });
 }

@@ -2,6 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { readSupabaseConfig } from "@/lib/supabase/config";
@@ -14,12 +15,12 @@ import { AuthLayout } from "@/components/auth/auth-layout";
  * background, cinematic transitions, dark translucent form controls.
  */
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const { error: configError } = readSupabaseConfig();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const submitting = useRef(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,16 +37,17 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    const targetEmail = email.trim().toLowerCase();
+
     submitting.current = true;
     setLoading(true);
     setError("");
-    setMessage("");
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: targetEmail }),
       });
 
       const payload = (await response.json().catch(() => null)) as {
@@ -55,14 +57,11 @@ export default function ForgotPasswordPage() {
       } | null;
 
       if (!response.ok || !payload?.ok) {
-        setError(payload?.error ?? "Could not send the reset email.");
+        setError(payload?.error ?? "Could not send the code.");
         return;
       }
 
-      setMessage(
-        payload.message ??
-          "If an account exists for this address, a reset link is on its way."
-      );
+      router.push(`/verify-email?email=${encodeURIComponent(targetEmail)}&type=recovery`);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -77,8 +76,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      title="Reset your password"
-      description="Enter the email on your account. If it exists, a reset link is on its way."
+      title="Forget Password?"
+      description="Enter your email address"
       footer={
         <>
           Remembered it?{" "}
@@ -100,8 +99,8 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="forgot-email" className="text-caption font-medium text-white/50">
-              Email address
+            <label htmlFor="forgot-email" className="sr-only">
+              Email
             </label>
             <input
               id="forgot-email"
@@ -109,7 +108,7 @@ export default function ForgotPasswordPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
+              placeholder="Email"
               autoComplete="email"
               disabled={loading}
               required
@@ -120,11 +119,6 @@ export default function ForgotPasswordPage() {
           {error ? (
             <p className="text-sm text-red-400/90 text-center" role="alert">
               {error}
-            </p>
-          ) : null}
-          {message ? (
-            <p className="text-sm text-emerald-400/80 text-center" role="status">
-              {message}
             </p>
           ) : null}
 
@@ -139,7 +133,7 @@ export default function ForgotPasswordPage() {
             {loading ? (
               <Loader2 size={16} className="animate-spin" aria-hidden="true" />
             ) : null}
-            {loading ? "Sending…" : "Send reset link"}
+            {loading ? "Sending…" : "Send"}
           </motion.button>
         </form>
       </div>

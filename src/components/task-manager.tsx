@@ -98,6 +98,20 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [form, setForm] = useState<TaskForm>(blankTaskForm());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  // Deep link (?create=1): open the form even when the manager is already
+  // mounted on this route — the onboarding tour CTA and the checklist both
+  // navigate here in place, where a mount-only initializer would miss it.
+  // Derive-on-prop-change (not an effect) so it never re-opens the form on
+  // unrelated URL edits (e.g. a view change that keeps ?create=1).
+  const [prevCreateParam, setPrevCreateParam] = useState(
+    searchParams.get("create") === "1"
+  );
+  if (searchParams.get("create") === "1" && !prevCreateParam) {
+    setPrevCreateParam(true);
+    setFormOpen(true);
+  } else if (searchParams.get("create") !== "1" && prevCreateParam) {
+    setPrevCreateParam(false);
+  }
   const submitting = useRef(false);
 
   // Quick create ("+ Add task" inline) + inline title editing.

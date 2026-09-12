@@ -173,23 +173,24 @@ assert("anonymous /signup renders", anonymousSignupHtmlCache.length > 0);
 assert("anonymous /forgot-password renders", (await visit("/forgot-password")).status === 200);
 assert("anonymous /check-email renders", (await visit("/check-email")).status === 200);
 
-// Browser-safe autocomplete semantics: signup must be treated as a new
-// password context and login as a current-password context.
+// NEXUS has a single, passwordless auth surface: /login and /signup both
+// render the same OTP component (email -> 6-digit code). Neither page ever
+// asks for a password; `signInWithOtp({ shouldCreateUser: true })` creates
+// the account on first use and simply signs a returning user in, so both
+// routes must expose the same semantic email field and no password field.
 assert(
-  "login uses semantic current-password autocomplete",
+  "login is the shared passwordless entry point (email field, no password)",
   anonymousLoginHtmlCache.includes('name="email"') &&
-    /autoComplete="username"/i.test(anonymousLoginHtmlCache) &&
-    anonymousLoginHtmlCache.includes('name="password"') &&
-    /autoComplete="current-password"/i.test(anonymousLoginHtmlCache),
-  "login form attributes missing"
+    /autoComplete="email"/i.test(anonymousLoginHtmlCache) &&
+    !anonymousLoginHtmlCache.includes('name="password"'),
+  "login form attributes missing or unexpectedly password-based"
 );
 assert(
-  "signup uses semantic new-password autocomplete",
+  "signup renders the exact same passwordless entry point as login",
   anonymousSignupHtmlCache.includes('name="email"') &&
     /autoComplete="email"/i.test(anonymousSignupHtmlCache) &&
-    anonymousSignupHtmlCache.includes('name="password"') &&
-    /autoComplete="new-password"/i.test(anonymousSignupHtmlCache),
-  "signup form attributes missing"
+    !anonymousSignupHtmlCache.includes('name="password"'),
+  "signup form attributes missing or unexpectedly password-based"
 );
 
 const confirmErrorPage = await visit("/auth/confirm-error?reason=expired");
@@ -355,8 +356,12 @@ assert(
   JSON.stringify(healthBody)
 );
 
-// ============ 2. SIGNUP ============
-console.log("\n-- signup ---------------------------------------------");
+// ============ 2. SIGNUP (legacy email+password API) ============
+// The /signup PAGE no longer calls this route — it renders the same
+// passwordless OTP component as /login (see src/app/signup/page.tsx). This
+// endpoint is kept working at the API level only, for accounts created
+// before the passwordless rework and any external caller that still uses it.
+console.log("\n-- signup (legacy password API) ------------------------");
 
 const signupJar = createJar();
 const signup = await visit("/api/auth/signup", {

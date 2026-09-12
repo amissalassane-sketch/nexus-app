@@ -10,12 +10,29 @@ export type SpotlightRect = {
   height: number;
 };
 
+/**
+ * Resolves a guide target the way a user actually sees it: the first match
+ * with a real, visible box. `document.querySelector` alone would happily
+ * return a duplicate that is inside a `display:none` container (for example
+ * the desktop sidebar below `lg`, where the mobile tab bar renders the same
+ * `data-guide` label) — pointing the spotlight at an element that is not on
+ * screen at all.
+ */
+export function findGuideTarget(selector?: string): HTMLElement | null {
+  if (!selector || typeof document === "undefined") return null;
+  const matches = document.querySelectorAll<HTMLElement>(selector);
+  for (const el of Array.from(matches)) {
+    const box = el.getBoundingClientRect();
+    if (box.width >= 2 && box.height >= 2) return el;
+  }
+  return null;
+}
+
 export function measureGuide(selector?: string): SpotlightRect | null {
   if (!selector || typeof document === "undefined") return null;
-  const el = document.querySelector<HTMLElement>(selector);
+  const el = findGuideTarget(selector);
   if (!el) return null;
   const box = el.getBoundingClientRect();
-  if (box.width < 2 && box.height < 2) return null;
   el.scrollIntoView({ block: "nearest", inline: "nearest" });
   return {
     top: box.top,
@@ -136,9 +153,7 @@ export function useGuideTarget(selector?: string, id?: string) {
         Math.abs(a.height - b.height) < 0.5);
 
     const update = () => {
-      const el = selector
-        ? document.querySelector<HTMLElement>(selector)
-        : null;
+      const el = selector ? findGuideTarget(selector) : null;
       if (!el) {
         if (last !== null) {
           last = null;
@@ -153,7 +168,6 @@ export function useGuideTarget(selector?: string, id?: string) {
       }
 
       const box = el.getBoundingClientRect();
-      if (box.width < 2 && box.height < 2) return;
 
       const next = {
         top: box.top,

@@ -291,12 +291,14 @@ export function OnboardingProvider({
 
   const activated = isActivated(facts);
   const checklistVisible =
+    hydrated &&
     !showWelcome &&
     !tourActive &&
     !helpOpen &&
     (!state.dismissedChecklist || !activated);
 
   const tipVisible =
+    hydrated &&
     !showWelcome &&
     !tourActive &&
     !helpOpen &&

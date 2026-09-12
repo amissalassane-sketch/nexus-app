@@ -4,54 +4,51 @@ Supabase's hosted auth emails are configured in the **Supabase Dashboard**,
 not in this repository. These files are the exact HTML bodies you paste into
 the dashboard so NEXUS never shows Supabase's default wording or branding.
 
-## Email OTP (magic-link / 6-digit code) — REQUIRED for /login
-
-The NEXUS sign-in screen is an **email OTP flow**:
+## Auth model (email + password, with code verification)
 
 ```
-email → supabase.auth.signInWithOtp({ shouldCreateUser: true })
-      → Supabase sends a REAL 6-digit code
-      → user types the code
-      → supabase.auth.verifyOtp({ email, token, type: "email" })
-      → session → /app
+Sign in  → /login  → email + password → POST /api/auth/signin  → /app
+Sign up  → /signup → email + password → POST /api/auth/signup
+                        → account needs confirmation
+                        → /verify-email?type=signup (6-digit code)
+                        → supabase.auth.verifyOtp({ type: "signup" }) → /app
+Forgot   → /forgot-password → email → POST /api/auth/forgot-password
+                        → /verify-email?type=recovery (6-digit code)
+                        → supabase.auth.verifyOtp({ type: "recovery" })
+                        → /reset-password → POST /api/auth/update-password → /app
 ```
 
-For the 6-digit code to appear in the email, the **Magic link** template MUST
-use `{{ .Token }}` (not only `{{ .ConfirmationURL }}`):
+Google is the only social sign-in option (no Apple). `/verify-email` is a
+single shared screen used by both the signup and the recovery flow — the
+`type` query param selects which `verifyOtp` call it makes and where it goes
+next.
 
-1. Open Supabase Dashboard → **Authentication → Email Templates**.
-2. **Magic link** → paste `magic-link.html` into the **Message Body**.
-3. **Magic link** subject (keep): `Your login code`.
-4. Save.
+Every code is generated, sent and checked by Supabase — NEXUS never
+generates, stores or compares an OTP itself.
 
-`magic-link.html` shows the `{{ .Token }}` code prominently and also keeps a
-`{{ .ConfirmationURL }}` fallback link. Both paths are handled by NEXUS:
+## Required templates
 
-- typed code   → `verifyOtp` in the browser → session → `/app`
-- clicked link → `/auth/confirm` exchanges `token_hash` server-side → `/app`
+For the 6-digit code to appear in an email, the template MUST use
+`{{ .Token }}` (not only the link). All three templates below include a
+`{{ .Token }}` code block plus a `{{ .ConfirmationURL }}` / token-hash link
+as a fallback, so a person can either type the code or click the link:
+
+1. **Magic link** → paste `magic-link.html`. Subject: `Your login code`.
+   (Kept for any account still using email-OTP sign-in; not reachable from
+   the current `/login` UI, which uses email + password.)
+2. **Confirm signup** → paste `confirm-signup.html`. Subject: `Confirm your email`.
+3. **Reset password** → paste `recovery.html`. Subject: `Reset your password`.
+
+Save after each paste.
 
 ## OTP length / expiration / rate limits
 
-- The code is **6 digits** — Supabase's GoTrue default. The NEXUS screen has
-  six boxes; do not change the token length in the dashboard.
+- The code is **6 digits** — Supabase's GoTrue default. The NEXUS
+  verification screen has six boxes; do not change the token length in the
+  dashboard.
 - OTP expiration and the per-email / per-IP send limits are Supabase's
   built-in rate limiting. NEXUS does not implement its own OTP storage,
   generation or comparison — it only calls the official Supabase APIs.
-
-## Where to paste the other templates
-
-1. **Confirm signup** → paste `confirm-signup.html` into the **Message Body**.
-2. `Confirm signup` subject (keep): `Confirm your email`
-3. **Reset password** → paste `recovery.html` into the **Message Body**.
-4. `Reset password` subject (keep): `Reset your password`
-5. Save.
-
-The confirm/recovery templates use the recommended token-hash flow:
-
-```
-{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
-{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery
-```
 
 ## URL Configuration (must be applied manually)
 
@@ -86,7 +83,7 @@ repository or in any frontend environment variable.
 
 - The app code does **not** fake verification, does **not** generate or store
   OTPs itself, and does **not** use the service role key. Verification goes
-  through `supabase.auth.verifyOtp` (browser for the typed code, server at
-  `/auth/confirm` for the email link).
+  through `supabase.auth.verifyOtp` (browser, for the typed code) or
+  `/auth/confirm` (server, for the fallback link click).
 - The email link / code expires automatically; the app shows a branded NEXUS
   error state instead of a raw Supabase error.

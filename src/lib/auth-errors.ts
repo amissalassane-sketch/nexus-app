@@ -92,6 +92,43 @@ export function validateCredentials(email: unknown, password: unknown): string |
   return null;
 }
 
+/**
+ * Maps a failed verifyOtp exchange onto an actionable message. Shared by
+ * every code-verification screen (signup confirmation, password recovery).
+ * Never surfaces raw GoTrue text to the user.
+ */
+export function classifyOtpError(error: {
+  message?: string | null;
+  code?: string | null;
+}): { text: string; expired: boolean } {
+  const key = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+
+  if (
+    key.includes("otp_expired") ||
+    key.includes("expired") ||
+    key.includes("expiration")
+  ) {
+    return { text: "This code has expired. Request a new one.", expired: true };
+  }
+
+  if (
+    key.includes("otp_verification_rate_limit") ||
+    key.includes("too many requests") ||
+    key.includes("too many attempts") ||
+    key.includes("rate limit")
+  ) {
+    return {
+      text: "Too many attempts. Wait a moment and request a new code.",
+      expired: false,
+    };
+  }
+
+  return {
+    text: "That code is incorrect. Check your email and try again.",
+    expired: false,
+  };
+}
+
 export function validateUsername(username: unknown): string | null {
   if (typeof username !== "string" || username.trim().length === 0) {
     return "Please choose a username.";

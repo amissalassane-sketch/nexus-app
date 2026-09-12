@@ -46,7 +46,7 @@ export async function updateSession(request: NextRequest) {
       pathname.startsWith("/signup") ||
       pathname.startsWith("/forgot-password") ||
       pathname.startsWith("/reset-password") ||
-      pathname.startsWith("/check-email") ||
+      pathname.startsWith("/verify-email") ||
       pathname.startsWith("/auth/") ||
       pathname.startsWith("/api/") ||
       pathname === "/robots.txt" ||
@@ -129,14 +129,14 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password") ||
-    pathname.startsWith("/check-email") ||
+    pathname.startsWith("/verify-email") ||
     pathname.startsWith("/auth/");
 
   const isAuthForm =
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||
-    pathname.startsWith("/check-email");
+    pathname.startsWith("/verify-email");
 
   // Unauthenticated users on private routes → /login
   if (!user && !isPublicRoute) {

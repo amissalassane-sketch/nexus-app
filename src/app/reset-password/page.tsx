@@ -81,8 +81,8 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthLayout
-      title="Choose a new password"
-      description="You arrived from a reset link. Set a new password to continue."
+      title="Create New password"
+      description="Your new password must be different from previously used password"
       footer={
         <>
           Link expired?{" "}
@@ -104,12 +104,9 @@ export default function ResetPasswordPage() {
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div className="space-y-1.5">
-            <div className="flex items-baseline justify-between">
-              <label htmlFor="reset-password" className="text-caption font-medium text-white/50">
-                New password
-              </label>
-              <span className="text-caption text-white/25">At least 6 characters.</span>
-            </div>
+            <label htmlFor="reset-password" className="sr-only">
+              New password
+            </label>
             <input
               id="reset-password"
               name="password"
@@ -125,7 +122,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="reset-confirm" className="text-caption font-medium text-white/50">
+            <label htmlFor="reset-confirm" className="sr-only">
               Confirm password
             </label>
             <input
@@ -134,7 +131,7 @@ export default function ResetPasswordPage() {
               type="password"
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
-              placeholder="Repeat the password"
+              placeholder="Confirm password"
               autoComplete="new-password"
               disabled={loading}
               required
@@ -159,7 +156,7 @@ export default function ResetPasswordPage() {
             {loading ? (
               <Loader2 size={16} className="animate-spin" aria-hidden="true" />
             ) : null}
-            {loading ? "Updating…" : "Update password"}
+            {loading ? "Saving…" : "Save"}
           </motion.button>
         </form>
       </div>
