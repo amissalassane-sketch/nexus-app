@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { isTypingTarget } from "@/lib/is-typing-target";
 import { useCommandKeyLabel } from "@/hooks/use-command-key";
 
 // ============================================================
@@ -26,17 +27,6 @@ const GOTO: Record<string, string> = {
   n: "/notifications",
   s: "/settings",
 };
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName.toLowerCase();
-  return (
-    tag === "input" ||
-    tag === "textarea" ||
-    tag === "select" ||
-    target.isContentEditable
-  );
-}
 
 export function KeyboardShortcuts() {
   const router = useRouter();
