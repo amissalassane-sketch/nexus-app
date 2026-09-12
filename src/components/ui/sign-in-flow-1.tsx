@@ -568,7 +568,7 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                     ) : (
                       <GoogleGlyph />
                     )}
-                    <span>Sign in with Google</span>
+                    <span>Continue with Google</span>
                   </button>
 
                   <div className="flex items-center gap-4">
@@ -583,7 +583,7 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                         type="email"
                         name="email"
                         autoComplete="email"
-                        placeholder="info@gmail.com"
+                        placeholder="you@company.com"
                         aria-label="Email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -594,7 +594,7 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                       <button
                         type="submit"
                         disabled={loading || Boolean(showConfigError)}
-                        aria-label="Send the sign-in code"
+                        aria-label="Send code"
                         className="absolute right-1.5 top-1.5 text-white w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-60 disabled:cursor-not-allowed transition-colors group overflow-hidden"
                       >
                         {loading ? (
@@ -612,6 +612,11 @@ export const SignInPage = ({ className, initialError = "" }: SignInPageProps) =>
                       </button>
                     </div>
                   </form>
+
+                  <p className="text-xs text-white/35">
+                    New or returning — just enter your email. We&apos;ll send a
+                    one-time code, no password to remember.
+                  </p>
                 </div>
 
                 <ErrorLine message={error} />
