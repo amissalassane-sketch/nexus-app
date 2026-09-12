@@ -173,6 +173,10 @@ function TaskManagerInner({ userId }: { userId: string }) {
       return nextTasks;
     });
     setLoading(false);
+    // Ground truth for the onboarding layer — see project-manager.
+    window.dispatchEvent(
+      new CustomEvent("nexus:counts", { detail: { tasks: nextTasks.length } })
+    );
   };
 
   useEffect(() => {

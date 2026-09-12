@@ -53,8 +53,16 @@ export function Spotlight({
   const [modalActive, setModalActive] = useState(false);
 
   useEffect(() => {
+    // Only a *visible* modal dialog counts. A hidden or leftover dialog
+    // (route transition, closing animation, display:none panel) would
+    // otherwise dim the tour card and steal its pointer events.
     const checkModal = () => {
-      const modal = document.querySelector("[role='dialog'][aria-modal='true']");
+      const dialogs = document.querySelectorAll<HTMLElement>(
+        "[role='dialog'][aria-modal='true']"
+      );
+      const modal = Array.from(dialogs).find(
+        (el) => el.getBoundingClientRect().width >= 2
+      );
       setModalActive(Boolean(modal));
     };
     checkModal();

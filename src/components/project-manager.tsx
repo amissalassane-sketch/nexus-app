@@ -156,8 +156,15 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setProjects((data as Project[]) ?? []);
+    const nextProjects = (data as Project[]) ?? [];
+    setProjects(nextProjects);
     setLoading(false);
+    // Tell the onboarding layer the ground truth: the guide's create step
+    // must complete for work that already exists, even though the counts
+    // injected by the server layout are stale after client-side nav.
+    window.dispatchEvent(
+      new CustomEvent("nexus:counts", { detail: { projects: nextProjects.length } })
+    );
     await fetchTaskCounts(activeWorkspaceId);
   };
 

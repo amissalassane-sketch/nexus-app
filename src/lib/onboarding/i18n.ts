@@ -13,6 +13,8 @@ const EN = {
   "guide.continue": "Continue",
   "guide.fallback": "That control isn’t on this screen. Continue when you’re ready.",
   "guide.actionHint": "This step finishes when the work exists, not when you click next.",
+  "guide.skipStep": "Skip this step",
+  "guide.retry": "Retry",
   "guide.welcome.title": "Welcome to NEXUS.",
   "guide.welcome.body":
     "A few real steps: a project, a task, and one question to NEXUS.",
@@ -84,6 +86,8 @@ const FR: Record<keyof typeof EN, string> = {
     "Cet élément n’est pas sur cet écran. Continuez quand vous êtes prêt.",
   "guide.actionHint":
     "Cette étape se termine lorsque le travail existe, pas au clic suivant.",
+  "guide.skipStep": "Passer cette étape",
+  "guide.retry": "Réessayer",
   "guide.welcome.title": "Bienvenue dans NEXUS.",
   "guide.welcome.body":
     "Quelques étapes réelles : un projet, une tâche, une question à NEXUS.",
