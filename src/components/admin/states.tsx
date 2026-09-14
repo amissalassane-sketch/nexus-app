@@ -35,7 +35,8 @@ export function AdminEmptyState({
     | "cloud"
     | "shield"
     | "chart"
-    | "check";
+    | "check"
+    | "alert";
   action?: ReactNode;
   className?: string;
   compact?: boolean;

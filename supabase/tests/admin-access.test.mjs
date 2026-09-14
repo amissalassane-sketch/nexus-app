@@ -35,6 +35,7 @@ const {
   formatRelativeTime,
   formatDateTime,
 } = await import("../../src/lib/admin/format.ts");
+const { readActivity } = await import("../../src/lib/admin/data.ts");
 const { ADMIN_NAV, readyAdminRoutes, ADMIN_HOME } = await import(
   "../../src/lib/admin/nav.ts"
 );
@@ -238,6 +239,87 @@ assert(
 assert(
   "no two entries share a route",
   new Set(allItems.map((item) => item.href)).size === allItems.length
+);
+
+// ============================================================
+console.log("\n-- SECURITY-ADMIN-06: a failed activity read is not an empty feed --");
+// ============================================================
+// "No recent activity" is a statement about the platform. "The read
+// failed" is a statement about our ability to observe it. On a control
+// plane those lead to opposite decisions, so readActivity() keeps them
+// apart. This drives the real exported function with fake clients rather
+// than reimplementing it.
+
+/** Minimal stand-in for the one method readActivity() touches. */
+function fakeClient(response) {
+  return { rpc: () => ({ abortSignal: () => Promise.resolve(response) }) };
+}
+function rejectingClient(message) {
+  return { rpc: () => ({ abortSignal: () => Promise.reject(new Error(message)) }) };
+}
+
+const ENTRY = {
+  id: "a1",
+  source: "auth.users",
+  kind: "account_created",
+  title: "Account created",
+  subject: "owner@nexus.test",
+  occurred_at: "2026-01-01T00:00:00.000Z",
+};
+
+const failure = await readActivity(
+  fakeClient({ data: null, error: { code: "XX000", message: "connection terminated" } })
+);
+eq("an errored RPC is reported as unavailable", failure.state, "unavailable");
+assert(
+  "the failure carries no entries array to mistake for an empty platform",
+  !("entries" in failure),
+  JSON.stringify(failure)
+);
+assert(
+  "the failure keeps the underlying error for the operator",
+  failure.state === "unavailable" &&
+    typeof failure.error.message === "string" &&
+    failure.error.message.length > 0,
+  JSON.stringify(failure)
+);
+
+const rejected = await readActivity(rejectingClient("fetch failed"));
+eq(
+  "a rejecting RPC is unavailable rather than an empty list",
+  rejected.state,
+  "unavailable"
+);
+
+const empty = await readActivity(fakeClient({ data: [], error: null }));
+eq("a successful read with no rows is ok", empty.state, "ok");
+assert(
+  "and it really is empty, so the UI can say so honestly",
+  empty.state === "ok" && empty.entries.length === 0,
+  JSON.stringify(empty)
+);
+
+const populated = await readActivity(fakeClient({ data: [ENTRY], error: null }));
+assert(
+  "a successful read passes its rows through unchanged",
+  populated.state === "ok" &&
+    populated.entries.length === 1 &&
+    populated.entries[0].id === ENTRY.id,
+  JSON.stringify(populated)
+);
+
+const malformed = await readActivity(fakeClient({ data: [{ unexpected: true }], error: null }));
+eq(
+  "an unexpected payload shape is unavailable, not silently flattened to []",
+  malformed.state,
+  "unavailable"
+);
+
+assert(
+  "the two states are mutually exclusive and each carries its own payload",
+  [failure, empty, populated, rejected, malformed].every((r) =>
+    r.state === "ok" ? Array.isArray(r.entries) : Boolean(r.error)
+  )
 );
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

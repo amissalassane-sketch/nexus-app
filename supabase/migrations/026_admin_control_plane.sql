@@ -105,7 +105,7 @@ create index if not exists admin_audit_log_action_idx
 -- A row-level trigger covers UPDATE/DELETE; TRUNCATE is statement-level
 -- and needs its own trigger.
 create or replace function public.admin_audit_reject_mutation()
-returns trigger language plpgsql set search_path = public as $$
+returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
   raise exception using
     errcode = '42501',
@@ -124,7 +124,7 @@ create trigger admin_audit_no_truncate
   for each statement execute function public.admin_audit_reject_mutation();
 
 create or replace function public.admin_audit_set_updated_at()
-returns trigger language plpgsql set search_path = public as $$
+returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
   new.updated_at = now();
   return new;
@@ -186,12 +186,21 @@ end $$;
 -- The single definition of "is this caller a platform admin". Every
 -- admin function below starts with admin_assert_access(), and nothing
 -- else may call these two.
-create or replace function public.platform_admin_is_admin(p_user_id uuid)
-returns boolean language sql stable security definer set search_path = public
+--
+-- HARDENING: this takes NO parameter. It can only ever answer for the
+-- caller identified by the JWT. The earlier signature accepted an
+-- arbitrary uuid, which would have turned the function into an
+-- admin-discovery oracle the moment anyone granted EXECUTE on it — a
+-- caller could have walked the user table asking "is this one an
+-- operator?". EXECUTE is revoked below, but removing the parameter makes
+-- probing impossible by construction rather than by ACL, and the only
+-- caller in this file was already passing auth.uid().
+create or replace function public.platform_admin_is_admin()
+returns boolean language sql stable security definer set search_path = public, pg_temp
 as $$
-  select p_user_id is not null and exists (
+  select auth.uid() is not null and exists (
     select 1 from public.platform_admins
-    where user_id = p_user_id and status = 'active'
+    where user_id = auth.uid() and status = 'active'
   );
 $$;
 
@@ -199,7 +208,7 @@ $$;
  *  Returns is_admin=false rather than raising, so the app can render an
  *  honest "platform access required" screen instead of a 500. */
 create or replace function public.platform_admin_context()
-returns jsonb language plpgsql stable security definer set search_path = public
+returns jsonb language plpgsql stable security definer set search_path = public, pg_temp
 as $$
 declare
   v_uid  uuid := auth.uid();
@@ -223,7 +232,7 @@ $$;
 
 /** Role ladder used by admin_assert_access(). */
 create or replace function public.admin_role_rank(p_role text)
-returns int language sql immutable set search_path = public as $$
+returns int language sql immutable set search_path = public, pg_temp as $$
   select case p_role
     when 'owner'    then 3
     when 'operator' then 2
@@ -238,7 +247,7 @@ $$;
 create or replace function public.admin_assert_access(
   p_required_role text default 'viewer'
 )
-returns void language plpgsql stable security definer set search_path = public
+returns void language plpgsql stable security definer set search_path = public, pg_temp
 as $$
 declare
   v_role text;
@@ -253,6 +262,22 @@ begin
       message = 'NEXUS_ADMIN_FORBIDDEN: platform admin access required';
   end if;
 
+  -- Fail closed on an unknown requirement. admin_role_rank() maps anything
+  -- it does not recognise to 0, so a NULL or misspelled p_required_role
+  -- would rank below every real role and be cleared by any active admin.
+  -- That turns a typo in a caller into an unguarded door, so it is
+  -- rejected here instead.
+  if p_required_role is null or public.admin_role_rank(p_required_role) = 0 then
+    raise exception using
+      errcode = '42501',
+      message = format(
+        'NEXUS_ADMIN_BAD_REQUIREMENT: %s is not a platform admin role',
+        coalesce(p_required_role, '<null>')
+      );
+  end if;
+
+  -- An unrecognised role on the admin row itself ranks 0 and therefore
+  -- fails the comparison against every real requirement.
   if public.admin_role_rank(v_role) < public.admin_role_rank(p_required_role) then
     raise exception using
       errcode = '42501',
@@ -273,7 +298,7 @@ create or replace function public.admin_audit_record(
   p_ip_address  text default null,
   p_user_agent  text default null
 )
-returns uuid language plpgsql security definer set search_path = public
+returns uuid language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
   v_uid   uuid := auth.uid();
@@ -328,7 +353,7 @@ create or replace function public.admin_audit_record_denied(
   p_ip_address text default null,
   p_user_agent text default null
 )
-returns uuid language plpgsql security definer set search_path = public
+returns uuid language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
   v_uid   uuid := auth.uid();
@@ -343,7 +368,7 @@ begin
 
   -- Already an admin? Then nothing was denied; do not write a misleading
   -- row. The caller uses platform_admin_context() to know which case it is.
-  if public.platform_admin_is_admin(v_uid) then
+  if public.platform_admin_is_admin() then
     return null;
   end if;
 
@@ -366,8 +391,11 @@ begin
   values (
     v_uid, v_email, null, 'admin.access.denied', 'denied',
     'platform_admin', v_uid::text,
+    -- Both caller-supplied strings are bounded: this function is callable
+    -- by any authenticated user and the table is append-only, so an
+    -- unbounded column is a way to grow a log nobody can clean up.
     jsonb_build_object(
-      'reason', nullif(p_reason, ''),
+      'reason', left(nullif(p_reason, ''), 120),
       'path', left(nullif(p_path, ''), 200)
     ),
     nullif(p_ip_address, '')::inet,
@@ -382,26 +410,19 @@ $$;
 -- ------------------------------------------------------------
 -- 6. SAFE COUNT HELPER
 -- ------------------------------------------------------------
--- Counts a table only if it exists, otherwise returns NULL (which the UI
--- renders as "Not available"). The control plane must never crash because
--- an optional subsystem's table is absent, and it must never turn an
--- absent table into a zero — zero is a measurement, NULL is an absence.
-create or replace function public.admin_safe_count(p_table text)
-returns bigint language plpgsql stable security definer set search_path = public
-as $$
-declare
-  v_rel regclass;
-  v_n   bigint;
-begin
-  v_rel := to_regclass(p_table);
-  if v_rel is null then
-    return null;
-  end if;
-  -- Safe: the name was resolved to a concrete relation by to_regclass().
-  execute format('select count(*) from %s', v_rel::text) into v_n;
-  return v_n;
-end;
-$$;
+-- NOTE: an earlier revision of this migration had an
+-- admin_safe_count(p_table text) helper here. It has been REMOVED.
+--
+-- It ran a SECURITY DEFINER dynamic COUNT against a caller-supplied
+-- relation name. Its ACL was already locked down (EXECUTE revoked from
+-- PUBLIC, anon, authenticated and service_role), but that made it a
+-- latent footgun rather than a safe one: a single future
+-- `grant execute ... to authenticated` would have turned it into an
+-- arbitrary-table inspector executing as the function owner.
+--
+-- Every count the overview needs is now a plain, static query against a
+-- fully qualified relation. There is no dynamic SQL left in this
+-- migration, so there is nothing to accidentally expose.
 
 -- ------------------------------------------------------------
 -- 7. OVERVIEW — THE ONLY CROSS-TENANT AGGREGATE THE SHELL NEEDS
@@ -418,7 +439,7 @@ $$;
 --   * `users.active_30d` is defined by auth.users.last_sign_in_at, and
 --     the UI states that definition rather than implying "active in product".
 create or replace function public.admin_overview()
-returns jsonb language plpgsql stable security definer set search_path = public
+returns jsonb language plpgsql stable security definer set search_path = public, pg_temp
 as $$
 declare
   v_users_total     bigint;
@@ -449,6 +470,9 @@ declare
   v_act_total       bigint;
   v_act_7d          bigint;
   v_act_actors_30d  bigint;
+  v_int_signals     bigint;
+  v_int_missions    bigint;
+  v_int_memory      bigint;
   v_result          jsonb;
 begin
   perform public.admin_assert_access('viewer');
@@ -549,6 +573,14 @@ begin
   from public.activities
   where created_at >= now() - interval '30 days' and actor_id is not null;
 
+  -- Static counts, fully qualified. These tables are created by
+  -- migrations 023-025, which ship in this repository; if a deployment is
+  -- missing them the function fails loudly and the UI reports the
+  -- platform as unavailable, which is the honest outcome.
+  select count(*) into v_int_signals  from public.intelligence_signals;
+  select count(*) into v_int_missions from public.intelligence_missions;
+  select count(*) into v_int_memory   from public.intelligence_memory;
+
   v_result := jsonb_build_object(
     'generated_at', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
     'users', jsonb_build_object(
@@ -590,9 +622,9 @@ begin
       'tasks_blocked',       v_tasks_blocked,
       'tasks_done',          v_tasks_done,
       'notifications_unread', v_notifications,
-      'intelligence_signals', public.admin_safe_count('public.intelligence_signals'),
-      'intelligence_missions', public.admin_safe_count('public.intelligence_missions'),
-      'intelligence_memory',   public.admin_safe_count('public.intelligence_memory')
+      'intelligence_signals',  v_int_signals,
+      'intelligence_missions', v_int_missions,
+      'intelligence_memory',   v_int_memory
     ),
     'activity', jsonb_build_object(
       'events_total',        v_act_total,
@@ -672,7 +704,7 @@ $$;
 -- source table named in every entry so the UI never has to guess what it
 -- is looking at. `activities` is included when it has rows.
 create or replace function public.admin_recent_activity(p_limit int default 12)
-returns jsonb language plpgsql stable security definer set search_path = public
+returns jsonb language plpgsql stable security definer set search_path = public, pg_temp
 as $$
 declare
   v_limit int := greatest(1, least(coalesce(p_limit, 12), 50));
@@ -753,11 +785,10 @@ begin
     end if;
     target := case when r = 'public' then 'PUBLIC' else quote_ident(r) end;
     foreach fn in array array[
-      'public.platform_admin_is_admin(uuid)',
+      'public.platform_admin_is_admin()',
       'public.platform_admin_context()',
       'public.admin_role_rank(text)',
       'public.admin_assert_access(text)',
-      'public.admin_safe_count(text)',
       'public.admin_overview()',
       'public.admin_recent_activity(int)',
       'public.admin_audit_record(text,text,text,text,jsonb,text,text)',
@@ -780,9 +811,9 @@ grant execute on function public.admin_audit_record(text, text, text, text, json
 grant execute on function public.admin_audit_record_denied(text, text, text, text)
   to authenticated;
 
--- platform_admin_is_admin / admin_assert_access / admin_role_rank /
--- admin_safe_count stay owner-only: they are implementation details of
--- the definer functions above and must not be callable from PostgREST.
+-- platform_admin_is_admin / admin_assert_access / admin_role_rank stay
+-- owner-only: they are implementation details of the definer functions
+-- above and must not be callable from PostgREST.
 
 -- ============================================================
 -- END 026

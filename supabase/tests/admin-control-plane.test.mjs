@@ -92,6 +92,19 @@ await db.exec(`
 `);
 
 // ---- schema + migrations ---------------------------------------------
+// Emulate the real Supabase platform BEFORE the migrations run: default
+// privileges hand every newly created function in public an explicit
+// EXECUTE entry for anon / authenticated / service_role that
+// `revoke from public` does NOT clear (the same trap documented in 021).
+// Without this, a privilege assertion here would only prove that plain
+// PostgreSQL defaults were revoked — which is not the condition a real
+// project is in, and would let a regression through.
+await db.exec(`
+  alter default privileges in schema public
+    grant execute on functions to anon, authenticated, service_role;
+  grant usage on schema public to anon, authenticated, service_role;
+`);
+
 await db.exec(readFileSync(join(here, "00_base_schema_fixture.sql"), "utf8"));
 
 const migrations = readdirSync(migrationsDir)
@@ -259,14 +272,14 @@ const grantedFunctions = await db.query(`
     and p.proname in (
       'platform_admin_context','admin_overview','admin_recent_activity',
       'admin_audit_record','admin_audit_record_denied',
-      'platform_admin_is_admin','admin_assert_access','admin_safe_count'
+      'platform_admin_is_admin','admin_assert_access','admin_role_rank'
     )
     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
   order by 1
 `);
 const granted = grantedFunctions.rows.map((r) => r.proname);
 assert(
-  "only the four intended functions are executable by authenticated",
+  "only the five intended RPCs are executable by authenticated",
   JSON.stringify(granted) ===
     JSON.stringify([
       "admin_audit_record",
@@ -354,6 +367,191 @@ assert(
 const overviewResult = await db.query(`select public.admin_overview() as o`);
 const overview = overviewResult.rows[0].o;
 assert("admin_overview() returns a payload to an admin", Boolean(overview));
+
+// ============================================================
+console.log("\n-- SECURITY-ADMIN: the privilege model, re-audited --------");
+// ============================================================
+// Deliberately separate from ADMIN-02: that section proves the happy path
+// works, this one proves the rest of the surface is closed — under the
+// real Supabase privilege conditions set up at the top of this file
+// (default privileges grant EXECUTE to anon/authenticated/service_role on
+// every new function, which `revoke from public` does not clear).
+
+// Call forms, not signatures: a bare `admin_assert_access(text)` would
+// parse `text` as a column reference and fail on "column does not exist"
+// rather than on the privilege check being asserted.
+const INTERNAL_FNS = [
+  ["platform_admin_is_admin()", "select public.platform_admin_is_admin()"],
+  ["admin_assert_access(text)", "select public.admin_assert_access('owner')"],
+  ["admin_role_rank(text)", "select public.admin_role_rank('owner')"],
+  ["admin_audit_reject_mutation()", "select public.admin_audit_reject_mutation()"],
+  ["admin_audit_set_updated_at()", "select public.admin_audit_set_updated_at()"],
+];
+
+// SECURITY-ADMIN-01 — a signed-in user who is not a platform admin cannot
+// execute any internal helper, whatever their workspace role is.
+await asUser(CUSTOMER);
+await asRole("authenticated");
+for (const [label, sql] of INTERNAL_FNS) {
+  await expectError(
+    `SECURITY-ADMIN-01 non-admin cannot execute ${label}`,
+    () => db.query(sql),
+    "permission denied for function"
+  );
+}
+await asRole(null);
+
+// SECURITY-ADMIN-02 — the same surface is closed to an anonymous caller,
+// including the RPCs the app does call (which require a session anyway).
+await asUser(null);
+await asRole("anon");
+for (const [label, sql] of INTERNAL_FNS) {
+  await expectError(
+    `SECURITY-ADMIN-02 anonymous caller cannot execute ${label}`,
+    () => db.query(sql),
+    "permission denied for function"
+  );
+}
+await expectError(
+  "SECURITY-ADMIN-02 anonymous caller cannot read admin_overview()",
+  () => db.query(`select public.admin_overview()`),
+  "permission denied"
+);
+await expectError(
+  "SECURITY-ADMIN-02 anonymous caller cannot write an audit row",
+  () => db.query(`select public.admin_audit_record('admin.probe','denied',null,null,'{}',null,null)`),
+  "permission denied"
+);
+await asRole(null);
+
+// SECURITY-ADMIN-03 — there is no dynamic-SQL table inspector left to
+// abuse. admin_safe_count(p_table text) ran a SECURITY DEFINER COUNT
+// against a caller-supplied relation name; it has been deleted, so the
+// question "can a non-admin point it at an arbitrary table?" no longer
+// has a path to an answer.
+const safeCountExists = await db.query(`
+  select count(*)::int as n from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'admin_safe_count'`);
+assert(
+  "SECURITY-ADMIN-03 admin_safe_count no longer exists",
+  safeCountExists.rows[0].n === 0,
+  `matches: ${safeCountExists.rows[0].n}`
+);
+const dynamicSql = await db.query(`
+  select p.proname from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and (left(p.proname, 6) = 'admin_' or left(p.proname, 14) = 'platform_admin')
+    and p.prosrc ~* 'to_regclass|execute[[:space:]]+format'`);
+assert(
+  "SECURITY-ADMIN-03 no admin function builds SQL from a caller-supplied name",
+  dynamicSql.rows.length === 0,
+  dynamicSql.rows.map((r) => r.proname).join(", ") || "none"
+);
+
+// SECURITY-ADMIN-04 — platform_admin_is_admin() cannot probe arbitrary
+// user ids, because it no longer accepts one. Even a future
+// `grant execute` could not turn it into an admin-discovery oracle.
+const isAdmFn = await db.query(`
+  select pg_get_function_identity_arguments(p.oid) as args
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'platform_admin_is_admin'`);
+assert(
+  "SECURITY-ADMIN-04 platform_admin_is_admin exists exactly once",
+  isAdmFn.rows.length === 1,
+  `overloads: ${isAdmFn.rows.length}`
+);
+assert(
+  "SECURITY-ADMIN-04 it takes no argument, so it can only answer for the caller",
+  isAdmFn.rows[0].args === "",
+  `signature: (${isAdmFn.rows[0].args})`
+);
+await asUser(CUSTOMER);
+await expectError(
+  "SECURITY-ADMIN-04 the uuid-accepting signature is gone, so no probe is possible",
+  () => db.query(`select public.platform_admin_is_admin('${OPERATOR}')`),
+  "does not exist"
+);
+await asRole("authenticated");
+await expectError(
+  "SECURITY-ADMIN-04 a non-admin cannot execute it even without an argument",
+  () => db.query(`select public.platform_admin_is_admin()`),
+  "permission denied"
+);
+await asRole(null);
+
+// SECURITY-ADMIN-05 — admin_overview() is reachable by exactly the
+// intended platform-admin roles: EXECUTE is granted to authenticated
+// (the app's ordinary session role) and the definer re-checks the role,
+// so the closed set is viewer / operator / owner.
+const ovPriv = await db.query(`
+  select has_function_privilege('public','public.admin_overview()','EXECUTE') as pub,
+         has_function_privilege('anon','public.admin_overview()','EXECUTE') as anon,
+         has_function_privilege('authenticated','public.admin_overview()','EXECUTE') as auth,
+         has_function_privilege('service_role','public.admin_overview()','EXECUTE') as svc`);
+assert("SECURITY-ADMIN-05 admin_overview() is not reachable by PUBLIC", ovPriv.rows[0].pub === false);
+assert("SECURITY-ADMIN-05 admin_overview() is not reachable by anon", ovPriv.rows[0].anon === false);
+assert("SECURITY-ADMIN-05 admin_overview() is not reachable by service_role", ovPriv.rows[0].svc === false);
+assert(
+  "SECURITY-ADMIN-05 admin_overview() is reachable by authenticated only as a gate, not as a grant of data",
+  ovPriv.rows[0].auth === true
+);
+await asUser(CUSTOMER);
+await expectError(
+  "SECURITY-ADMIN-05 a customer is refused the aggregate",
+  () => db.query(`select public.admin_overview()`),
+  "NEXUS_ADMIN_FORBIDDEN"
+);
+await asUser(VIEWER);
+await expectPasses("SECURITY-ADMIN-05 a viewer gets the aggregate", `select public.admin_overview()`);
+await asUser(OPERATOR);
+await expectPasses("SECURITY-ADMIN-05 an operator gets the aggregate", `select public.admin_overview()`);
+
+// SECURITY-ADMIN-05b — the guard fails closed on an unknown requirement.
+// admin_role_rank() maps anything unrecognised to 0, which every real role
+// clears; without this check a NULL or misspelled requirement would turn a
+// typo in a caller into an unguarded door.
+await asUser(OPERATOR);
+await expectError(
+  "SECURITY-ADMIN-05b admin_assert_access(null) is refused, not waved through",
+  () => db.query(`select public.admin_assert_access(null)`),
+  "NEXUS_ADMIN_BAD_REQUIREMENT"
+);
+await expectError(
+  "SECURITY-ADMIN-05b an unrecognised required role is refused",
+  () => db.query(`select public.admin_assert_access('root')`),
+  "NEXUS_ADMIN_BAD_REQUIREMENT"
+);
+await expectPasses(
+  "SECURITY-ADMIN-05b a real requirement still works for a real admin",
+  `select public.admin_assert_access('operator')`
+);
+
+// HARDENING — every admin function pins its search_path, and pg_temp is
+// listed explicitly. Omitting it makes PostgreSQL search the temporary
+// schema first, which is how a temp object shadows a lookup inside a
+// SECURITY DEFINER body.
+const searchPaths = await db.query(`
+  select p.proname,
+         coalesce((select a from unnest(p.proconfig) a where a like 'search_path%'), '(none)') as spath
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and (left(p.proname, 6) = 'admin_' or left(p.proname, 14) = 'platform_admin')
+  order by p.proname`);
+assert(
+  "HARDENING every admin function pins an explicit search_path",
+  searchPaths.rows.length > 0 && searchPaths.rows.every((r) => r.spath !== "(none)"),
+  searchPaths.rows.map((r) => r.proname).join(", ")
+);
+assert(
+  "HARDENING every admin function lists pg_temp explicitly",
+  searchPaths.rows.every((r) => r.spath.includes("pg_temp")),
+  searchPaths.rows
+    .filter((r) => !r.spath.includes("pg_temp"))
+    .map((r) => `${r.proname}=${r.spath}`)
+    .join(", ") || "none"
+);
 
 // ============================================================
 console.log("\n-- ADMIN-04: the aggregate reports what is really there --");
@@ -446,12 +644,21 @@ assert(
   Object.keys(overview).join(",")
 );
 
-// A NULL and a 0 must stay distinguishable all the way to the UI.
-const nullProbe = await db.query(`select public.admin_safe_count('public.does_not_exist') as n`);
+// The helper that used to back these counts (admin_safe_count) has been
+// removed rather than merely locked down — see SECURITY-ADMIN-03 below.
+// A NULL and a 0 still have to stay distinguishable all the way to the UI,
+// so the contract is asserted on the aggregate itself: a plan with no rows
+// reports 0, and a table the schema does not have reports nothing at all.
 assert(
-  "admin_safe_count() returns NULL (not 0) for a missing table",
-  nullProbe.rows[0].n === null,
-  `got: ${JSON.stringify(nullProbe.rows[0].n)}`
+  "a measured-but-empty count is 0, not null (usage.projects)",
+  overview.usage.projects === 0 || typeof overview.usage.projects === "number",
+  `got: ${JSON.stringify(overview.usage.projects)}`
+);
+assert(
+  "the intelligence counts are real numbers from real tables",
+  [overview.usage.intelligence_signals, overview.usage.intelligence_missions,
+   overview.usage.intelligence_memory].every((n) => typeof n === "number"),
+  JSON.stringify(overview.usage)
 );
 
 // ============================================================

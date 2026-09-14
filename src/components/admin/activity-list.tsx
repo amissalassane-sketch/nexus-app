@@ -1,14 +1,25 @@
-import type { AdminActivityEntry } from "@/lib/admin/types";
+import type { AdminActivityEntry, AdminActivityResult } from "@/lib/admin/types";
 import { formatDateTime, formatRelativeTime } from "@/lib/admin/format";
+import { AdminRefreshButton } from "./admin-refresh-button";
+import { AdminIcon } from "./admin-icons";
 import { AdminEmptyState } from "./states";
 
 // ============================================================
 // NEXUS ADMIN — RECENT ACTIVITY
 // ============================================================
-// Every row names the table it came from. On a control plane that is not
-// decoration: "Subscription active" means something different depending
-// on whether it came from workspace_subscriptions or from a payment
-// provider, and the operator needs to be able to tell which.
+// Three outcomes, three renderings. They are deliberately not collapsed
+// into one another:
+//
+//   ok + entries  → the list, with a real count in the panel header
+//   ok + []       → "No recent activity" — a measurement that came back
+//                   empty. The platform genuinely has no history.
+//   unavailable   → "Activity unavailable" + Retry — we could not read
+//                   it. This is NOT an empty platform, and it must never
+//                   look like one.
+//
+// Every row names the table it came from, because "Subscription active"
+// means different things depending on whether it came from
+// workspace_subscriptions or from a payment provider.
 // ============================================================
 
 const KIND_LABEL: Record<string, string> = {
@@ -25,21 +36,33 @@ function labelFor(entry: AdminActivityEntry): string {
   return KIND_LABEL[entry.kind] ?? entry.title ?? "Activity";
 }
 
-export function ActivityList({ entries }: { entries: AdminActivityEntry[] }) {
-  if (entries.length === 0) {
+export function ActivityList({ activity }: { activity: AdminActivityResult }) {
+  if (activity.state === "unavailable") {
+    return (
+      <AdminEmptyState
+        compact
+        icon="alert"
+        title="Activity unavailable"
+        description={`The activity read failed, so nothing is listed. This is not an empty platform — it means the control plane could not observe it. ${activity.error.message}`}
+        action={<AdminRefreshButton />}
+      />
+    );
+  }
+
+  if (activity.entries.length === 0) {
     return (
       <AdminEmptyState
         compact
         icon="activity"
-        title="No recorded activity"
-        description="Nothing has been written to the platform activity stream yet. It is filled from real rows — accounts, workspaces, subscriptions and workspace events — so an empty list means the platform genuinely has no recent history, not that the feed is broken."
+        title="No recent activity"
+        description="The read succeeded and returned nothing. The platform has no recorded account, workspace, subscription or workspace-event rows yet — which is a fact about the platform, not a failure of this panel."
       />
     );
   }
 
   return (
     <ol className="divide-y divide-admin-border">
-      {entries.map((entry) => (
+      {activity.entries.map((entry) => (
         <li
           key={entry.id}
           className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
@@ -69,5 +92,42 @@ export function ActivityList({ entries }: { entries: AdminActivityEntry[] }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Header counter for the panel. Shows the event count only when the read
+ *  actually succeeded — never a number sourced from somewhere else. */
+export function ActivityCount({
+  activity,
+  recordedEvents,
+}: {
+  activity: AdminActivityResult;
+  /** events_total from the aggregate, when it is available. */
+  recordedEvents: string | null;
+}) {
+  if (activity.state === "unavailable") {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-danger">
+        <AdminIcon name="alert" size="action" />
+        Read failed
+      </span>
+    );
+  }
+
+  if (activity.entries.length === 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-text-3">
+        <AdminIcon name="activity" size="action" />
+        {recordedEvents ? `${recordedEvents} events recorded` : "No events"}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-text-3">
+      <AdminIcon name="activity" size="action" />
+      {activity.entries.length} shown
+      {recordedEvents ? ` · ${recordedEvents} recorded` : ""}
+    </span>
   );
 }

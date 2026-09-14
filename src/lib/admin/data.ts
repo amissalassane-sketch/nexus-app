@@ -19,6 +19,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type {
   AdminActivityEntry,
+  AdminActivityResult,
   AdminDataError,
   AdminOverview,
   AdminOverviewResult,
@@ -88,7 +89,14 @@ function isActivityList(value: unknown): value is AdminActivityEntry[] {
   );
 }
 
-async function readOverview(supabase: SupabaseClient): Promise<AdminOverviewResult> {
+/** The aggregate alone. The caller composes it with the activity read, so
+ *  there is never a placeholder value sitting in a field that means
+ *  something. */
+type OverviewReadResult =
+  | { ok: true; overview: AdminOverview }
+  | { ok: false; error: AdminDataError };
+
+async function readOverview(supabase: SupabaseClient): Promise<OverviewReadResult> {
   const controller = new AbortController();
   const overviewResult = await withTimeout(
     Promise.resolve(
@@ -116,10 +124,23 @@ async function readOverview(supabase: SupabaseClient): Promise<AdminOverviewResu
     };
   }
 
-  return { ok: true, overview: overviewResult.data, activity: [] };
+  return { ok: true, overview: overviewResult.data };
 }
 
-async function readActivity(supabase: SupabaseClient): Promise<AdminActivityEntry[]> {
+/**
+ * Reads the activity feed.
+ *
+ * A failure here must never become an empty list: "no recent activity" is
+ * a statement about the platform, while "the read failed" is a statement
+ * about our ability to observe it. The two are returned as distinct
+ * states so the Overview can render them differently.
+ */
+// Exported for tests: SECURITY-ADMIN-06 asserts the failure path returns
+// "unavailable" rather than an empty list, and that is only a meaningful
+// test against this function rather than a reimplementation of it.
+export async function readActivity(
+  supabase: SupabaseClient
+): Promise<AdminActivityResult> {
   const controller = new AbortController();
   const result = await withTimeout(
     Promise.resolve(
@@ -130,11 +151,34 @@ async function readActivity(supabase: SupabaseClient): Promise<AdminActivityEntr
     ACTIVITY_TIMEOUT_MS,
     "ADMIN_ACTIVITY_TIMEOUT",
     controller
-  ).catch(() => ({ data: null, error: { code: null, message: "timed out" } }));
+  ).catch((cause) => ({
+    data: null,
+    error: {
+      code: null,
+      message:
+        cause instanceof Error && cause.message.includes("ADMIN_ACTIVITY_TIMEOUT")
+          ? "timed out"
+          : cause instanceof Error
+            ? cause.message
+            : "unknown",
+    },
+  }));
 
-  // The activity feed is decorative next to the aggregate: if it fails,
-  // the Overview still renders with an honest "unavailable" panel.
-  return isActivityList(result.data) ? result.data : [];
+  if (result.error) return { state: "unavailable", error: classify(result.error) };
+
+  // The RPC answered, but not with the shape this build expects. That is a
+  // failure to read, not an absence of activity.
+  if (!isActivityList(result.data)) {
+    return {
+      state: "unavailable",
+      error: {
+        code: "INVALID_PAYLOAD",
+        message: "admin_recent_activity() returned an unexpected shape.",
+      },
+    };
+  }
+
+  return { state: "ok", entries: result.data };
 }
 
 /** Everything the Overview page renders. Bounded, fail-closed, and never

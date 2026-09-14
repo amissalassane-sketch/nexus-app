@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { ActivityList } from "@/components/admin/activity-list";
-import { AdminIcon } from "@/components/admin/admin-icons";
+import { ActivityCount, ActivityList } from "@/components/admin/activity-list";
 import { AdminRefreshButton } from "@/components/admin/admin-refresh-button";
 import { HealthList } from "@/components/admin/health-list";
 import { KpiGrid, KpiTile } from "@/components/admin/kpi";
@@ -67,6 +66,12 @@ export default async function AdminOverviewPage() {
   const health = summariseHealth(services);
   const overview = result.ok ? result.overview : null;
   const generatedAt = overview?.generated_at ?? new Date().toISOString();
+
+  // When the aggregate itself failed there is no activity read to show
+  // either — but that is reported as unavailable, never as an empty feed.
+  const activity = result.ok
+    ? result.activity
+    : { state: "unavailable" as const, error: result.error };
 
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6">
@@ -328,16 +333,16 @@ export default async function AdminOverviewPage() {
           title="Recent Activity"
           description="Newest first, assembled from real rows. Each entry names the table it came from."
           action={
-            overview ? (
-              <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-text-3">
-                <AdminIcon name="activity" size="action" />
-                {formatCount(overview.activity.events_total)} events recorded
-              </span>
-            ) : null
+            <ActivityCount
+              activity={activity}
+              recordedEvents={
+                overview ? formatCount(overview.activity.events_total) : null
+              }
+            />
           }
         />
         <div className="mt-4">
-          <ActivityList entries={result.ok ? result.activity : []} />
+          <ActivityList activity={activity} />
         </div>
       </AdminPanel>
     </div>

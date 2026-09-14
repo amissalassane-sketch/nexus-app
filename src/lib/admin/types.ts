@@ -171,8 +171,25 @@ export type ServiceHealth = {
   checkedAt: string;
 };
 
+/**
+ * The activity feed has three genuinely different outcomes, and they must
+ * not collapse into one another:
+ *
+ *   ok + entries  → "12 events"
+ *   ok + []       → "No recent activity"  (measured, and there is none)
+ *   unavailable   → "Activity unavailable" + Retry  (we could not read it)
+ *
+ * An earlier revision returned a bare array, which made a failed RPC
+ * indistinguishable from an empty platform. On a control plane that is the
+ * worst possible confusion: "nothing is happening" and "I cannot see"
+ * lead to opposite decisions.
+ */
+export type AdminActivityResult =
+  | { state: "ok"; entries: AdminActivityEntry[] }
+  | { state: "unavailable"; error: AdminDataError };
+
 export type AdminOverviewResult =
-  | { ok: true; overview: AdminOverview; activity: AdminActivityEntry[] }
+  | { ok: true; overview: AdminOverview; activity: AdminActivityResult }
   | { ok: false; error: AdminDataError };
 
 export type AdminDataError = {

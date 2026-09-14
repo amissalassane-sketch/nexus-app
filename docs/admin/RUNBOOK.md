@@ -49,6 +49,37 @@ with zero policies** and **no table grants** for `anon`, `authenticated`
 or `service_role`. The only way in is a `SECURITY DEFINER` function that
 re-checks the caller first.
 
+### Hardening applied to every function in migration 026
+
+- **`search_path` is `public, pg_temp` everywhere.** `pg_temp` must be
+  listed explicitly: when it is omitted, PostgreSQL searches the temporary
+  schema *first*, which is how a session-scoped object shadows a lookup
+  inside a `SECURITY DEFINER` body. Note that the pre-026 migrations in
+  this repository use bare `search_path = public` — that legacy
+  convention is not being rewritten here, but do not copy it into new
+  admin code.
+- **Internal helpers are not callable at all.** `platform_admin_is_admin`,
+  `admin_assert_access`, `admin_role_rank` and both trigger functions have
+  `EXECUTE` revoked from `PUBLIC`, `anon`, `authenticated` *and*
+  `service_role`. Only the five intentional RPCs remain reachable.
+- **No dynamic SQL.** `admin_safe_count(p_table text)` was deleted rather
+  than merely locked down. Its ACL was already correct, but a
+  caller-supplied relation name inside a `SECURITY DEFINER` body is a
+  latent footgun: one future `grant execute` would have turned it into an
+  arbitrary-table inspector. The counts it produced are now static,
+  fully-qualified queries.
+- **`platform_admin_is_admin()` takes no arguments.** It can only answer
+  for `auth.uid()`, so it cannot become an admin-discovery oracle even if
+  someone later grants `EXECUTE` on it.
+- **`admin_assert_access` fails closed.** `admin_role_rank()` maps an
+  unrecognised role to `0`, so a `NULL` or misspelled requirement would
+  have been cleared by any active admin. An unknown requirement now raises
+  `NEXUS_ADMIN_BAD_REQUIREMENT` instead of passing.
+- **Caller-supplied audit strings are bounded.** `admin_audit_record_denied`
+  is callable by any authenticated user and writes to an append-only
+  table, so `reason` is capped at 120 characters and `path` at 200 — an
+  unbounded column there is a way to grow a log nobody can clean up.
+
 Consequences worth knowing before you change anything here:
 
 - Knowing the URL grants nothing. The gate is the database.
@@ -169,6 +200,18 @@ npm run test:admin:structure  # routing, responsive, a11y, no-fake-data
 | ADMIN-10 responsive | `structure` |
 | ADMIN-11 accessibility | `structure` |
 | ADMIN-12 no fake metrics | `sql` + `unit` (formatters) + `structure` |
+| SECURITY-ADMIN-01 non-admin cannot execute internal helpers | `sql` |
+| SECURITY-ADMIN-02 anonymous caller cannot | `sql` |
+| SECURITY-ADMIN-03 no dynamic-SQL table inspector | `sql` (asserts `admin_safe_count` no longer exists and no admin function builds SQL from a caller-supplied name) |
+| SECURITY-ADMIN-04 no arbitrary-user-id probing | `sql` (`platform_admin_is_admin()` takes zero arguments) |
+| SECURITY-ADMIN-05 `admin_overview` restricted to intended roles | `sql` |
+| SECURITY-ADMIN-06 activity failure ≠ empty feed | `unit` (drives the real `readActivity`) |
+
+The privilege assertions run against a database whose **default privileges
+match a real Supabase project** (`alter default privileges … grant execute
+on functions to anon, authenticated, service_role`). Without that, a
+`revoke from public` looks sufficient in the test and is not sufficient in
+production — the same trap documented in migration 021.
 
 ADMIN-05 (users), ADMIN-06 (workspace inspector) and ADMIN-07 (activity)
 have no tests yet because those screens do not exist yet. They land with
