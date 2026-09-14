@@ -14,10 +14,16 @@
 
 create schema if not exists auth;
 
+-- GoTrue columns the application actually reads. email_confirmed_at and
+-- last_sign_in_at are used by the admin control plane (026) for
+-- "email confirmed" and "signed in during the last 30 days"; created_at
+-- drives the growth numbers.
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text,
   raw_user_meta_data jsonb default '{}'::jsonb,
+  email_confirmed_at timestamptz,
+  last_sign_in_at    timestamptz,
   created_at         timestamptz not null default now()
 );
 

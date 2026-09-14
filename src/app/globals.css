@@ -85,6 +85,60 @@
   --color-info-bg: rgba(127, 157, 238, 0.09);
   --color-info-border: rgba(127, 157, 238, 0.2);
 
+  /* ---------- ADMIN CONTROL PLANE ----------
+     The internal operator surface is a different room in the same house,
+     and it gets its own ramp on purpose.
+
+     WHY THIS EXISTS SEPARATELY FROM THE RAMP ABOVE:
+     the product identity ("Pill Atelier Noir") is pure black with a white
+     accent and a lavender intelligence tint. The control plane spec calls
+     for a slightly lifted charcoal base and a single rare accent — Volt
+     Lime — reserved for live/active/progress. Rather than repaint the
+     product (which would touch every existing screen) or fake it with
+     one-off hex values inside admin components, the admin palette is
+     declared here as its own namespaced ramp.
+
+     Rules, so this stays a system and not a theme:
+       * `admin-*` utilities are used ONLY inside src/components/admin and
+         src/app/admin. Nothing else in the app may reach for them.
+       * The product ramp above is untouched: no existing value changes.
+       * Volt Lime (--color-admin-accent) is reserved for active state,
+         live indicators, progress and focus. It is never a background,
+         never body text, and never decorative. */
+  --color-admin-base: #0c0c0e;
+  --color-admin-sidebar: #111114;
+  --color-admin-surface: #17171a;
+  --color-admin-surface-2: #1e1e22;
+  --color-admin-surface-3: #27272c;
+
+  --color-admin-border: rgba(242, 241, 237, 0.08);
+  --color-admin-border-strong: rgba(242, 241, 237, 0.16);
+
+  --color-admin-text: #f2f1ed;
+  --color-admin-text-2: #9f9fa6;
+  --color-admin-text-3: #6e6e76;
+
+  --color-admin-success: #6eff8e;
+  --color-admin-success-bg: rgba(110, 255, 142, 0.1);
+  --color-admin-success-border: rgba(110, 255, 142, 0.24);
+
+  --color-admin-warning: #ffc857;
+  --color-admin-warning-bg: rgba(255, 200, 87, 0.1);
+  --color-admin-warning-border: rgba(255, 200, 87, 0.24);
+
+  --color-admin-danger: #ff5a5f;
+  --color-admin-danger-bg: rgba(255, 90, 95, 0.1);
+  --color-admin-danger-border: rgba(255, 90, 95, 0.24);
+
+  --color-admin-info: #8aa8ff;
+  --color-admin-info-bg: rgba(138, 168, 255, 0.1);
+  --color-admin-info-border: rgba(138, 168, 255, 0.24);
+
+  /* Volt Lime. Rare by contract — see the note above. */
+  --color-admin-accent: #d2ff4d;
+  --color-admin-accent-bg: rgba(210, 255, 77, 0.12);
+  --color-admin-accent-border: rgba(210, 255, 77, 0.28);
+
   /* ---------- Typography ---------- */
   --font-sans: var(--font-inter), Inter, "Geist Sans", -apple-system,
     BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
