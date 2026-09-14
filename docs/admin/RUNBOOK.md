@@ -45,9 +45,33 @@ request /admin/*
 ```
 
 `public.platform_admins` and `public.admin_audit_log` have **RLS enabled
-with zero policies** and **no table grants** for `anon`, `authenticated`
-or `service_role`. The only way in is a `SECURITY DEFINER` function that
-re-checks the caller first.
+with zero policies**. Direct table access from the application is
+therefore impossible: the only way in is a `SECURITY DEFINER` function
+that re-checks the caller first.
+
+The table ACLs are not uniform, and the difference is deliberate:
+
+| Table | `PUBLIC` | `anon` | `authenticated` | `service_role` |
+| --- | --- | --- | --- | --- |
+| `platform_admins` | none | none | none | **full DML** |
+| `admin_audit_log` | none | none | none | **none** |
+
+- **`service_role` keeps full DML on `platform_admins` on purpose.** It is
+  the only path an operator has to insert the bootstrap admin row, and
+  there is no `service_role` key anywhere in this application — so the
+  grant is reachable only by someone already holding the project's
+  service key. Granting the first admin is a SQL operation
+  (see "First admin" below), not an application feature.
+- **`admin_audit_log` is revoked from `service_role` too.** Even a
+  compromised service key must not be able to rewrite history. The
+  trigger lock in §2 is the second line of defence, because on a
+  provisioned Supabase project `service_role` may carry `BYPASSRLS`,
+  which would make the ACL alone insufficient.
+
+Both facts are asserted by `SECURITY-ADMIN-07` in `test:admin:sql`, under
+a harness that emulates Supabase's default privileges on **tables** as
+well as functions. Without that emulation a missing `revoke` here would
+pass every test and be wide open in production.
 
 ### Hardening applied to every function in migration 026
 

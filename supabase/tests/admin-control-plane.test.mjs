@@ -93,15 +93,23 @@ await db.exec(`
 
 // ---- schema + migrations ---------------------------------------------
 // Emulate the real Supabase platform BEFORE the migrations run: default
-// privileges hand every newly created function in public an explicit
-// EXECUTE entry for anon / authenticated / service_role that
+// privileges hand every newly created function AND table in public an
+// explicit ACL entry for anon / authenticated / service_role that
 // `revoke from public` does NOT clear (the same trap documented in 021).
 // Without this, a privilege assertion here would only prove that plain
 // PostgreSQL defaults were revoked — which is not the condition a real
 // project is in, and would let a regression through.
+//
+// This includes tables: without `grant all on tables`, a missing
+// `revoke` on platform_admins would go unnoticed here and be wide open
+// on a provisioned project.
 await db.exec(`
   alter default privileges in schema public
     grant execute on functions to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on sequences to anon, authenticated, service_role;
   grant usage on schema public to anon, authenticated, service_role;
 `);
 
@@ -527,6 +535,70 @@ await expectPasses(
   "SECURITY-ADMIN-05b a real requirement still works for a real admin",
   `select public.admin_assert_access('operator')`
 );
+
+// SECURITY-ADMIN-07 — the table ACLs, asserted directly. Until this
+// section existed the suite only ever measured FUNCTION privileges, so a
+// missing `revoke` on platform_admins would have passed every test here
+// and been wide open on a provisioned project.
+const TABLE_PRIVS = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"];
+
+async function tablePrivileges(table) {
+  const roles = ["public", "anon", "authenticated", "service_role"];
+  const cols = roles.map((r) => TABLE_PRIVS.map((p) =>
+    `has_table_privilege('${r}', '${table}', '${p}') as ${p.toLowerCase()}_${r}`
+  ).join(", ")).join(", ");
+  const q = await db.query(`select ${cols}`);
+  return q.rows[0];
+}
+
+const paPriv = await tablePrivileges("public.platform_admins");
+const alPriv = await tablePrivileges("public.admin_audit_log");
+
+for (const role of ["public", "anon", "authenticated"]) {
+  for (const priv of TABLE_PRIVS) {
+    const key = `${priv.toLowerCase()}_${role}`;
+    assert(
+      `SECURITY-ADMIN-07 ${role} has no ${priv} on platform_admins`,
+      paPriv[key] === false,
+      `${key} = ${paPriv[key]}`
+    );
+    assert(
+      `SECURITY-ADMIN-07 ${role} has no ${priv} on admin_audit_log`,
+      alPriv[key] === false,
+      `${key} = ${alPriv[key]}`
+    );
+  }
+}
+
+// service_role is the documented bootstrap path for the first admin row.
+// That is deliberate: there is no service_role key anywhere in the
+// application, so this grant is reachable only by an operator holding the
+// project's service key, and the RUNBOOK states the first admin must be
+// granted by SQL. What matters is that it is *asserted here* rather than
+// left as an undocumented side effect of Supabase's default privileges.
+assert(
+  "SECURITY-ADMIN-07 service_role CAN insert the bootstrap admin row (deliberate)",
+  paPriv.insert_service_role === true,
+  `insert_service_role = ${paPriv.insert_service_role}`
+);
+assert(
+  "SECURITY-ADMIN-07 service_role CAN update/revoke an admin row (deliberate)",
+  paPriv.update_service_role === true && paPriv.delete_service_role === true,
+  `update = ${paPriv.update_service_role}, delete = ${paPriv.delete_service_role}`
+);
+
+// The audit log is the one table service_role must NOT reach: even a
+// compromised service key must not be able to rewrite history. The
+// trigger lock is the second line of defence on a real project, where
+// service_role may carry BYPASSRLS.
+for (const priv of TABLE_PRIVS) {
+  const key = `${priv.toLowerCase()}_service_role`;
+  assert(
+    `SECURITY-ADMIN-07 service_role has no ${priv} on admin_audit_log`,
+    alPriv[key] === false,
+    `${key} = ${alPriv[key]}`
+  );
+}
 
 // HARDENING — every admin function pins its search_path, and pg_temp is
 // listed explicitly. Omitting it makes PostgreSQL search the temporary

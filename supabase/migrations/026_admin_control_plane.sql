@@ -148,7 +148,19 @@ alter table public.platform_admins  enable row level security;
 alter table public.admin_audit_log  enable row level security;
 
 -- Belt and braces: even a role that somehow bypasses RLS must not be
--- able to write to the audit log or grant itself admin.
+-- able to write to the audit log.
+--
+-- Note the asymmetry this block leaves in place, which is intentional:
+--   admin_audit_log  — revoked from service_role as well. Nobody outside
+--                      the owner may touch history.
+--   platform_admins  — service_role KEEPS its grant. That is the only
+--                      path an operator has to insert the bootstrap
+--                      admin row, and the application holds no
+--                      service_role key at all.
+-- So the guarantee is "no application caller can grant itself admin",
+-- not "no credential can". Whoever holds the project's service key is
+-- already trusted with the database; the point is that a user session
+-- never is.
 --
 -- `revoke from public` does not clear explicit ACL entries left by
 -- Supabase's platform default privileges (the same trap documented in
