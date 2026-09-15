@@ -37,8 +37,9 @@ Replayed statement by statement against the real lineage, **6 of its 13 statemen
 #2 #4 #7  type "public.workspace_member_role" does not exist
 ```
 
-Its very first statement is an unguarded `ALTER FUNCTION` on a function that does not exist, so
-under any transactional runner the whole file rolls back and nothing is repaired.
+Its very first statement **was** an unguarded `ALTER FUNCTION` on a function that does not exist,
+so under any transactional runner the whole file rolled back and nothing was repaired. It has
+since been neutralised — see §4.1.
 
 ### The "obvious" repair is a trap
 
@@ -158,21 +159,34 @@ already visible on clean `master` — `npm run test:admin` exits 1 with
 
 ### 4.1 What to do with `20260915130000_nexus_core_contract.sql`
 
-**Chosen: leave it byte-identical, add a corrective migration with a higher timestamp, and record
-it as void for this lineage.** Replacement, in-place edit and inverse migration were all rejected:
+**Chosen: neutralise the file in a forward commit, and add a corrective migration with a higher
+timestamp as the authoritative contract.** Two changes, one logical decision:
 
-- *Edit it in place* — rewrites already-merged history and hides the fact that it was wrong.
-- *Inverse migration* — there is nothing to undo. Under a transactional runner it never applied;
-  the 7 statements that do parse are benign (`is_active_workspace_member` re-pinned to the same
-  value, `is_workspace_owner` replaced by a body identical to 018's, plus revokes/grants that
-  `20260915130500` re-states explicitly anyway).
-- *Delete it* — loses the audit trail and rewrites merged history.
+1. `20260915130000_nexus_core_contract.sql` is rewritten **in place, by a new forward commit**,
+   into a guarded no-op. The PR #68 commit itself is untouched — this is not a history rewrite,
+   no force push, no amend. Every function body is gone; what remains is a single `DO` block that
+   pins `search_path = public, pg_temp` and makes the EXECUTE ACL explicit **for whichever of the
+   five helpers actually exist**, each statement guarded by `to_regprocedure`. It creates nothing:
+   no type, no table, no function, no policy, no trigger.
+2. `20260915130500_nexus_lineage_reconciliation.sql` states the real contract and is authoritative.
 
-Corrective migration it is. One consequence must be stated plainly: **a corrective migration
-cannot make an earlier one succeed.** In a clean rebuild the runner still reaches `130000` first
-and still fails there. Retiring that file is an operator decision (see §6), deliberately kept out
-of this PR because it either rewrites merged history or requires a remote
-`supabase migration repair`, and both were ruled out for this step.
+Alternatives rejected:
+
+- *Leave it byte-identical* — was the first choice, and it is the one thing that does **not** work:
+  a corrective migration **cannot make an earlier one succeed**. The runner reaches `130000` first,
+  its opening statement is an unguarded `ALTER FUNCTION` on a function that does not exist, and a
+  plain `supabase db reset` dies there. Every whole-directory harness inherits that failure.
+- *Inverse migration* — there is nothing to undo. Under a transactional runner the file never
+  applied; the 7 statements that did parse were benign.
+- *Delete the file* — loses the audit trail, and worse, makes a remote database that already
+  recorded version `20260915130000` report it as remote-only, so `db push` would refuse without
+  `--include-all` or a `migration repair`. Both are remote operations. Neutralising keeps the
+  **version key stable in every world**, which is why it was preferred.
+
+The trade-off accepted, stated plainly: a misleading filename survives in `supabase/migrations/`.
+It is mitigated by a 60-line header recording exactly what it assumed, why that is void, and where
+the real contract lives — plus `supabase/tests/core-contract.test.mjs`, converted into a canary
+that fails loudly if anyone revives the enum contract.
 
 ### 4.2 Timestamp choice
 
@@ -247,15 +261,19 @@ existing timestamped files without ambiguity.
 
 ### Scenario A — clean database rebuilt from the repository
 
-`001 → 006…027 → 20260915130500 → 20260915131000` applies cleanly, **0 failures**, and produces a
-coherent tenant bootstrap (harness PHASE 1, 4, 5). `20260915130000` **cannot** be part of this
-chain and is excluded from it.
+**The entire directory now applies in one pass.** `001 → 006…027 → 20260915130000 →
+20260915130500 → 20260915131000` — all **26 files**, in plain sorted order, **0 failures**
+(harness PHASE 9). Signup on that chain yields 1 profile / 1 workspace / 1 owner membership /
+1 FREE subscription, and exactly one `auth.users` trigger survives.
 
-Consequence, stated honestly: as long as `20260915130000_nexus_core_contract.sql` remains in
-`supabase/migrations/`, a plain `supabase db reset` — which applies every file in order — still
-fails at that file. **This PR does not and cannot fix that**, because fixing it means either
-editing/removing an already-merged migration or fabricating an enum that breaks the 4 stored
-policy expressions calling `can_manage_workspace()` plus every function body depending on it. The follow-up is §6.
+This is the concrete payoff of neutralising rather than merely superseding `130000`: a runner that
+applies every file in order — which is what `supabase db reset` does — **now succeeds**. It did not
+before, and no corrective migration placed after `130000` could ever have fixed that.
+
+Measured consequence on the test suite: `npm run test:admin` went from **exit 1** (one suite
+reporting `FAIL migration applied: 20260915130000_nexus_core_contract.sql`, three others
+`process.exit(1)` at the same file) to **exit 0** with six suites green — 58/0, 117/0, 114/0,
+105/0, 100/0, 139/0.
 
 ### Scenario B — existing remote database whose history already contains `001`–`005`
 
@@ -281,11 +299,11 @@ is authoritative (and remote history must be repaired). This PR deliberately doe
 
 ## 6. Recommended follow-ups (out of scope here)
 
-1. **Retire `20260915130000_nexus_core_contract.sql`.** It is unappliable on the lineage of record
-   and has zero consumers. A forward commit deleting the file — plus
-   `supabase/tests/core-contract.test.mjs`, which only passes against a fixture it invents — is the
-   smallest honest fix and would unblock `npm run test:admin` and every whole-directory harness.
-   Kept out of this PR because the instruction was to leave it byte-identical.
+1. ~~**Retire `20260915130000_nexus_core_contract.sql`.**~~ **DONE.** Neutralised to a guarded
+   no-op in a forward commit, and `supabase/tests/core-contract.test.mjs` converted from a
+   self-referential fixture test into a retirement canary (21 assertions). `npm run test:admin`
+   and every whole-directory harness are unblocked. The file was kept rather than deleted so the
+   remote version key stays stable — see §4.1.
 2. **Settle scenario B** with someone holding remote access, then write the outcome down here.
 3. **Decide the `anon` EXECUTE question deliberately.** `20260915130500` preserves today's
    effective behaviour (anon keeps EXECUTE, because RLS policy expressions are evaluated as the
@@ -495,22 +513,17 @@ repeat PR #68's mistake.
 What actually remains is retirement of the void contract, settlement of the remote, and coverage.
 One logical change per PR:
 
-### PR-B — `retire the void core contract`
+### ~~PR-B — retire the void core contract~~ — DONE, folded into PR-A
 
 | | |
 |---|---|
-| **Exact change** | delete `supabase/migrations/20260915130000_nexus_core_contract.sql` and `supabase/tests/core-contract.test.mjs`; keep `20260915130500` as the authoritative statement of the helper contract |
-| **Objective** | make the whole-directory chain appliable end to end, so `db reset` and every harness that scans `supabase/migrations/` stop dying at `130000` |
-| **Tables** | none — the file never created one that survives |
-| **Functions** | none removed from the database: of its 13 statements only 7 parse, and those are `is_active_workspace_member` (re-pinned to the value `130500` also sets), `is_workspace_owner` (a body identical to 018's) and grants/revokes that `130500` re-states explicitly |
-| **Dependencies** | requires PR-A merged (so `130500` is already the contract of record) |
-| **Risks** | **Remote divergence.** If a remote database already recorded version `20260915130000`, deleting the local file makes Supabase report it as remote-only and `db push` will refuse without `--include-all` or a repair — both remote operations. Mitigation: sequence PR-B **after** the scenario-B decision, or accept that the remote needs an operator action and record it in the PR description |
-| **Order** | **2nd** |
-
-This is a forward commit that removes a file; PR #68's commit stays in history untouched, so merged
-history is not rewritten. Rule 5's precondition — proof before deletion — is now met: 6 of 13
-statements fail, the failures are unresolvable without a column-type conversion, and the file has
-zero consumers.
+| **What was done** | `20260915130000_nexus_core_contract.sql` neutralised in place by a forward commit: all function bodies removed, replaced by one `DO` block that pins `search_path` and makes the EXECUTE ACL explicit for whichever helpers actually exist, every statement guarded by `to_regprocedure`. `core-contract.test.mjs` converted into a retirement canary |
+| **Objective** | make the whole-directory chain appliable end to end, so `db reset` and every harness scanning `supabase/migrations/` stop dying at `130000` |
+| **Tables** | none — the retired file creates nothing |
+| **Functions** | none created, none removed. It may pin `search_path` / set ACLs / add COMMENTs on helpers that already exist; `prosrc`, signature and return type are asserted unchanged |
+| **Dependencies** | `20260915130500` remains the authoritative contract and sorts right after |
+| **Risks** | **Closed.** The remote-divergence risk that made deletion unattractive does not apply: the version key `20260915130000` is preserved, so a remote that already recorded it stays consistent. Residual risk is cosmetic — a misleading filename, mitigated by its header and by the canary |
+| **Result** | 26/26 files apply in one pass, 0 failures. `npm run test:admin` exit 1 → **exit 0** |
 
 ### PR-C — `settle scenario B`
 

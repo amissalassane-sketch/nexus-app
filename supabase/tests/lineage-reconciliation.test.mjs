@@ -8,20 +8,23 @@
  *
  * PHASE 1  001_nexus_base_schema.sql then 006 -> 027 apply with ZERO
  *          failures. This is what makes that lineage the source of truth.
- * PHASE 2  Forensic replay of 20260915130000_nexus_core_contract.sql
- *          (PR #68) statement by statement on an isolated database, to
- *          measure exactly which statements fail and why.
- * PHASE 3  The "obvious" repair is disproved: creating the enum does not
- *          make the contract migration applicable, because
- *          workspace_members.role is text.
+ * PHASE 2  20260915130000_nexus_core_contract.sql has been RETIRED to a
+ *          guarded no-op. It now applies cleanly on the lineage of record,
+ *          creates nothing, and leaves every helper body untouched.
+ * PHASE 3  Why it was retired, kept as a permanent regression fixture: even
+ *          with the enum created, the original enum-cast can_manage_workspace()
+ *          body cannot exist, because workspace_members.role is text.
+ * PHASE 9  The COMPLETE chain - 001 -> 027 -> 130000 -> 130500 -> 131000 -
+ *          applies in one pass with zero failures, and signup still works.
+ *          This is what neutralising 130000 buys: `db reset` is unblocked.
  * PHASE 4  20260915130500_nexus_lineage_reconciliation.sql applies, pins
  *          the canonical helpers and changes no type, no table, no policy.
  * PHASE 5  20260915131000_nexus_auth_workspace_bootstrap.sql applies ONLY
  *          AFTER the reconciliation, and the signup chain still works.
  * PHASE 6  Every stored RLS policy expression still resolves — the check
  *          that a column-type conversion would have failed.
- * PHASE 7  Static quarantine: 20260915130000 is the ONLY migration that
- *          references the void contract.
+ * PHASE 7  Static quarantine: NO migration creates the void contract
+ *          objects, and none references a bare public.subscriptions table.
  * PHASE 8  Idempotence: the reconciliation is safe to re-apply.
  *
  * No remote Supabase operation is performed. No db reset, no db push, no
@@ -62,8 +65,7 @@ const one = (v) => v === 1 || v === "1";
  * it tracks line comments, single-quoted literals (with '' escapes) and both
  * $$ and $tag$ dollar-quoted bodies, which is where plpgsql lives.
  */
-function sqlCodeOnly(file) {
-  const text = readFileSync(join(migrationsDir, file), "utf8");
+function sqlCodeOnlyFromText(text) {
   let out = "";
   let i = 0;
   let dollar = null;
@@ -143,46 +145,9 @@ function sqlCodeOnly(file) {
   return out;
 }
 
-/** Split top-level statements, respecting $$ and $tag$ dollar quoting. */
-function splitStatements(sql) {
-  const out = [];
-  let buf = "";
-  let i = 0;
-  let dollar = null;
-  while (i < sql.length) {
-    if (dollar) {
-      if (sql.startsWith(dollar, i)) {
-        buf += dollar;
-        i += dollar.length;
-        dollar = null;
-        continue;
-      }
-      buf += sql[i++];
-      continue;
-    }
-    if (sql.startsWith("$$", i)) {
-      dollar = "$$";
-      buf += "$$";
-      i += 2;
-      continue;
-    }
-    const tagged = /^\$([a-zA-Z_][a-zA-Z0-9_]*)\$/.exec(sql.slice(i));
-    if (tagged) {
-      dollar = tagged[0];
-      buf += tagged[0];
-      i += tagged[0].length;
-      continue;
-    }
-    if (sql[i] === ";") {
-      if (buf.trim()) out.push(buf.trim());
-      buf = "";
-      i += 1;
-      continue;
-    }
-    buf += sql[i++];
-  }
-  if (buf.trim()) out.push(buf.trim());
-  return out;
+/** Same tokeniser, applied to a migration file on disk. */
+function sqlCodeOnly(file) {
+  return sqlCodeOnlyFromText(readFileSync(join(migrationsDir, file), "utf8"));
 }
 
 /** A database that looks like a provisioned Supabase project. */
@@ -315,56 +280,120 @@ ok(
 );
 
 // ============================================================
-console.log("\n== PHASE 2 — forensic replay of 20260915130000 (PR #68) ==");
+console.log("\n== PHASE 2 — the retired core contract is a safe no-op ==");
 // ============================================================
-// Isolated database: the statements that DO parse must not pollute the
-// chain under test.
+// Isolated database: 130000 must be shown to change nothing, so it gets its
+// own copy of the lineage rather than polluting the chain under test.
 const forensic = await createPlatformDb();
 for (const file of lineageFiles) {
   await forensic.exec(strip(readFileSync(join(migrationsDir, file), "utf8")));
 }
 
-const voidStatements = splitStatements(
-  strip(readFileSync(join(migrationsDir, VOID_CONTRACT), "utf8"))
-);
-const voidResults = [];
-for (const statement of voidStatements) {
-  try {
-    await forensic.exec(statement);
-    voidResults.push({ ok: true, statement });
-  } catch (error) {
-    voidResults.push({ ok: false, statement, error: String(error.message).split("\n")[0] });
-  }
+const snapshotQuery = `
+  select
+    (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public')                                   as functions,
+    (select count(*) from pg_type t join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typtype in ('e','c','d'))     as types,
+    (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relkind = 'r')                as tables,
+    (select count(*) from pg_policies where schemaname = 'public')   as policies,
+    (select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and not t.tgisinternal)             as triggers,
+    -- prosrc + signature + return type, deliberately NOT pg_get_functiondef:
+    -- that renders the SET search_path clause, which this migration is
+    -- allowed (and meant) to change. Body and signature are what must not move.
+    -- The sort key is spelled out because inside an aggregate's ORDER BY a
+    -- bare integer is a CONSTANT, not an output-column ordinal - "order by 1"
+    -- would leave the concatenation order up to the heap scan and make this
+    -- assertion flaky.
+    (select coalesce(string_agg(sig, ',' order by sig), '')
+       from (select p.proname || '(' || oidvectortypes(p.proargtypes) || ')->' ||
+                    p.prorettype::text || ':' || md5(coalesce(p.prosrc, '')) as sig
+               from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public') s)                         as bodies
+`;
+const beforeRetired = await forensic.query(snapshotQuery);
+
+const retiredSql = strip(readFileSync(join(migrationsDir, VOID_CONTRACT), "utf8"));
+let retiredError = null;
+try {
+  await forensic.exec(retiredSql);
+} catch (error) {
+  retiredError = String(error.message).split("\n")[0];
 }
-const voidFailures = voidResults.filter((r) => !r.ok);
-console.log(
-  `        (${voidResults.length} statements: ${voidResults.length - voidFailures.length} apply, ${voidFailures.length} fail)`
-);
-for (const f of voidFailures) {
-  console.log(`        -> ${f.error}`);
-}
+const afterRetired = await forensic.query(snapshotQuery);
+
 ok(
-  "20260915130000 cannot be applied on the versioned lineage",
-  voidFailures.length > 0,
-  "it applied cleanly — the incompatibility is no longer reproducible"
+  "20260915130000 (retired) applies cleanly on the lineage of record",
+  retiredError === null,
+  retiredError ?? ""
 );
 ok(
-  "its failures are exactly the missing helper and the missing enum type",
-  voidFailures.length > 0 &&
-    voidFailures.every((f) =>
-      /is_workspace_member\(uuid\) does not exist|workspace_member_role/.test(f.error)
-    ),
-  JSON.stringify(voidFailures.map((f) => f.error))
+  "…and creates no function, type, table, policy or trigger",
+  ["functions", "types", "tables", "policies", "triggers"].every(
+    (k) => beforeRetired.rows[0][k] === afterRetired.rows[0][k]
+  ),
+  JSON.stringify({ before: beforeRetired.rows[0], after: afterRetired.rows[0] })
 );
 ok(
-  "the first failing statement is the opening ALTER FUNCTION (nothing can recover from it)",
-  voidResults[0]?.ok === false,
-  JSON.stringify(voidResults[0])
+  "…and rewrites no function body, signature or return type (search_path / ACL / COMMENT may move)",
+  beforeRetired.rows[0].bodies === afterRetired.rows[0].bodies,
+  "a prosrc/signature/return-type digest changed"
+);
+
+const stillAbsent = await forensic.query(`
+  select to_regtype('public.workspace_member_role')                  as enum_role,
+         to_regtype('public.workspace_member_status')                as enum_status,
+         to_regprocedure('public.is_workspace_member(uuid)')         as iwm,
+         to_regprocedure('public.has_workspace_role(uuid, public.workspace_member_role[])') as hwr
+`);
+ok(
+  "the void contract objects still do not exist after it runs",
+  Object.values(stillAbsent.rows[0]).every((v) => v === null),
+  JSON.stringify(stillAbsent.rows[0])
+);
+
+// The retired file must not have smuggled the enum-cast body back in: the
+// canonical management helper has to keep 001's text-based semantics.
+const cmwAfterRetired = await forensic.query(
+  `select pg_get_functiondef('public.can_manage_workspace(uuid, uuid)'::regprocedure) as def`
+);
+ok(
+  "can_manage_workspace() keeps the lineage's text semantics, not the enum cast",
+  !/workspace_member_role/.test(cmwAfterRetired.rows[0].def),
+  cmwAfterRetired.rows[0].def
 );
 
 // ============================================================
-console.log("\n== PHASE 3 — creating the enum does NOT rescue the contract ==");
+console.log("\n== PHASE 3 — why it was retired: the enum does NOT rescue the contract ==");
 // ============================================================
+// Permanent regression fixture. The file on disk no longer contains this body
+// (it was retired in PHASE 2), so the proof is embedded here: if anyone ever
+// proposes reviving the enum-based contract, this phase shows it still cannot
+// exist against workspace_members.role text.
+const RETIRED_ENUM_CAST_BODY = `
+  create or replace function public.can_manage_workspace(
+    p_workspace_id uuid,
+    p_user_id uuid default auth.uid()
+  )
+  returns boolean language sql stable security definer
+  set search_path = public, pg_temp
+  as $body$
+    select exists (
+      select 1 from public.workspace_members
+      where workspace_id = p_workspace_id
+        and user_id = p_user_id
+        and status = 'active'
+        and role = any (array[
+          'owner'::public.workspace_member_role,
+          'admin'::public.workspace_member_role
+        ])
+    );
+  $body$;
+`;
+
 await forensic.exec(
   `create type public.workspace_member_role as enum ('owner','admin','member','viewer');`
 );
@@ -379,17 +408,14 @@ await forensic.exec(`
           and status = 'active') $$;
 `);
 
-const enumRepairAttempt = voidStatements.find((s) =>
-  /create or replace function public\.can_manage_workspace/.test(s)
-);
 let enumRepairError = null;
 try {
-  await forensic.exec(enumRepairAttempt);
+  await forensic.exec(RETIRED_ENUM_CAST_BODY);
 } catch (error) {
   enumRepairError = String(error.message).split("\n")[0];
 }
 ok(
-  "even with the enum present, PR #68's can_manage_workspace() still cannot be created",
+  "even with the enum present, the retired enum-cast can_manage_workspace() still cannot be created",
   enumRepairError !== null && /operator does not exist: text = workspace_member_role/.test(enumRepairError),
   enumRepairError ?? "it succeeded — the analysis needs revisiting"
 );
@@ -611,32 +637,42 @@ const rlsEnabled = await db.query(`
 ok("row level security is still enabled on the tenant tables", rlsEnabled.rows[0].n >= 10, JSON.stringify(rlsEnabled.rows[0]));
 
 // ============================================================
-console.log("\n== PHASE 7 — the void contract is quarantined to one file ==");
+console.log("\n== PHASE 7 — nothing creates the void contract ==");
 // ============================================================
-const VOID_SYMBOLS = [
-  "workspace_member_role",
-  "workspace_member_status",
-  "is_workspace_member(",
-  "has_workspace_role(",
+// The retired file probes these names inside to_regprocedure('...') string
+// literals, which sqlCodeOnly() strips. What must never appear in executable
+// SQL anywhere is a statement that CREATES them.
+const CREATORS = [
+  /create\s+type\s+(public\.)?workspace_member_(role|status)\b/i,
+  /create\s+(or\s+replace\s+)?function\s+(public\.)?is_workspace_member\s*\(/i,
+  /create\s+(or\s+replace\s+)?function\s+(public\.)?has_workspace_role\s*\(/i,
 ];
-const offenders = [];
+const creators = [];
 for (const file of allMigrations) {
-  if (file === VOID_CONTRACT) continue;
-  const hits = VOID_SYMBOLS.filter((symbol) => sqlCodeOnly(file).includes(symbol));
-  if (hits.length > 0) offenders.push(`${file}: ${hits.join(", ")}`);
+  const code = sqlCodeOnly(file);
+  const hits = CREATORS.filter((re) => re.test(code));
+  if (hits.length > 0) creators.push(`${file}: ${hits.length} creating statement(s)`);
 }
 ok(
-  "no migration other than 20260915130000 references the void contract in SQL",
-  offenders.length === 0,
-  offenders.join("\n        ")
+  "no migration creates workspace_member_role, workspace_member_status, is_workspace_member or has_workspace_role",
+  creators.length === 0,
+  creators.join("\n        ")
 );
 
 // Positive control: without it the assertion above would also pass if the
-// scanner simply returned nothing for every file.
+// scanner simply matched nothing at all.
+const POSITIVE_CONTROL = `create type public.workspace_member_role as enum ('owner','admin');`;
 ok(
-  "…and the scanner really does detect those references (positive control on 20260915130000)",
-  VOID_SYMBOLS.filter((symbol) => sqlCodeOnly(VOID_CONTRACT).includes(symbol)).length >= 3,
-  JSON.stringify(VOID_SYMBOLS.filter((symbol) => sqlCodeOnly(VOID_CONTRACT).includes(symbol)))
+  "…and the scanner really would detect such a statement (positive control)",
+  CREATORS.some((re) => re.test(sqlCodeOnlyFromText(POSITIVE_CONTROL))),
+  "the scanner is vacuous"
+);
+// A comment or a string literal must NOT count as creating anything — that is
+// what allows 130000 to keep documenting the retired names.
+ok(
+  "…while prose and to_regprocedure() literals correctly do NOT count as creating",
+  !CREATORS.some((re) => re.test(sqlCodeOnly(VOID_CONTRACT))),
+  "130000's guarded probes were mistaken for creating statements"
 );
 
 const fakeSubscriptions = allMigrations.filter((file) =>
@@ -693,6 +729,79 @@ const stillPinned = await db.query(`
     and (p.proconfig @> array['search_path=public, pg_temp'])
 `);
 ok("all three helpers are still pinned after re-apply", stillPinned.rows[0].n === 3, JSON.stringify(stillPinned.rows[0]));
+
+// ============================================================
+console.log("\n== PHASE 9 — the COMPLETE chain applies in one pass ==");
+// ============================================================
+// The headline result of retiring 20260915130000: a runner that simply applies
+// every file in supabase/migrations/ in order - which is what `supabase db
+// reset` does - now succeeds. Before the retirement it died at 130000.
+const full = await createPlatformDb();
+const fullFailures = [];
+for (const file of allMigrations) {
+  try {
+    await full.exec(strip(readFileSync(join(migrationsDir, file), "utf8")));
+  } catch (error) {
+    fullFailures.push(`${file}: ${String(error.message).split("\n")[0]}`);
+  }
+}
+ok(
+  `every file in supabase/migrations/ applies in order, one pass (${allMigrations.length} files)`,
+  fullFailures.length === 0,
+  fullFailures.join("\n        ")
+);
+ok(
+  "…and that chain really contains the retired contract plus both 2026 migrations",
+  [VOID_CONTRACT, RECONCILIATION, AUTH_BOOTSTRAP].every((f) => allMigrations.includes(f)),
+  JSON.stringify(allMigrations.filter((f) => f.startsWith("2026")))
+);
+
+// Signup through the complete chain, exactly as `db reset` + first user would.
+const FULL_USER = "a1b2c3d4-2222-4333-8444-555566667777";
+await full.query(
+  "insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3::jsonb)",
+  [FULL_USER, "Full.Chain@Nexus.Test", { full_name: "Full Chain", username: "FullChain" }]
+);
+const fullSignup = await full.query(
+  `select (select count(*)::int from public.profiles p where p.id = $1)              as profiles,
+          (select count(*)::int from public.workspaces w where w.owner_id = $1)      as workspaces,
+          (select count(*)::int from public.workspace_members m
+             where m.user_id = $1 and m.role = 'owner' and m.status = 'active')      as owner_memberships,
+          (select count(*)::int from public.workspace_subscriptions s
+             where s.plan = 'FREE' and s.status = 'active'
+               and s.workspace_id in (select id from public.workspaces where owner_id = $1)) as free_subs,
+          (select count(*)::int from pg_trigger t
+             join pg_class c on c.oid = t.tgrelid
+             join pg_namespace n on n.oid = c.relnamespace
+             where n.nspname = 'auth' and c.relname = 'users' and not t.tgisinternal) as auth_triggers`,
+  [FULL_USER]
+);
+ok(
+  "signup on the COMPLETE chain yields 1 profile / 1 workspace / 1 owner membership / 1 FREE subscription",
+  one(fullSignup.rows[0].profiles) &&
+    one(fullSignup.rows[0].workspaces) &&
+    one(fullSignup.rows[0].owner_memberships) &&
+    one(fullSignup.rows[0].free_subs),
+  JSON.stringify(fullSignup.rows[0])
+);
+ok(
+  "…and exactly one auth.users trigger survives the whole chain",
+  one(fullSignup.rows[0].auth_triggers),
+  JSON.stringify(fullSignup.rows[0].auth_triggers)
+);
+
+// The retired contract must stay inert even on a fully migrated database.
+let retiredTwiceError = null;
+try {
+  await full.exec(strip(readFileSync(join(migrationsDir, VOID_CONTRACT), "utf8")));
+} catch (error) {
+  retiredTwiceError = String(error.message).split("\n")[0];
+}
+ok(
+  "re-applying the retired contract after the full chain is still inert",
+  retiredTwiceError === null,
+  retiredTwiceError ?? ""
+);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
