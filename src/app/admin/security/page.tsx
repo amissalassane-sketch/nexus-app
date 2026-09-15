@@ -1,0 +1,13 @@
+import type { Metadata } from "next";
+import { getAdminSecurity } from "@/lib/admin/activity-security";
+import { AdminRefreshButton } from "@/components/admin/admin-refresh-button";
+import { AdminPanel, AdminSectionTitle } from "@/components/admin/panel";
+import { AdminEmptyState, AdminErrorState } from "@/components/admin/states";
+import { formatCount, NOT_AVAILABLE } from "@/lib/admin/format";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Security", robots: { index: false, follow: false } };
+export default async function AdminSecurityPage() {
+  const result = await getAdminSecurity();
+  return <div className="mx-auto flex w-full max-w-page flex-col gap-5"><header className="flex items-start justify-between gap-3"><div><h1 className="text-[22px] font-semibold text-admin-text">Security</h1><p className="mt-1 text-[13px] text-admin-text-2">Measured platform-admin context and security-relevant audit events. GoTrue sessions are not exposed without a service key.</p></div><AdminRefreshButton /></header>{result.state === "unavailable" ? <AdminPanel><AdminErrorState error={result.error} /></AdminPanel> : <div className="grid gap-4 lg:grid-cols-2"><AdminPanel><AdminSectionTitle title="Platform admin context" description="Resolved from the current JWT and platform_admins." /><dl className="mt-3 divide-y divide-admin-border"><div className="flex justify-between py-2 text-[13px]"><dt className="text-admin-text-2">Role</dt><dd className="font-mono text-admin-text">{String(result.payload.platform_admin.role ?? "Unavailable")}</dd></div><div className="flex justify-between py-2 text-[13px]"><dt className="text-admin-text-2">Status</dt><dd className="font-mono text-admin-text">{String(result.payload.platform_admin.status ?? "Unavailable")}</dd></div></dl></AdminPanel><AdminPanel><AdminSectionTitle title="Audit signal" description="Counts from the append-only audit log." /><dl className="mt-3 divide-y divide-admin-border"><div className="flex justify-between py-2 text-[13px]"><dt className="text-admin-text-2">Recorded events</dt><dd className="font-mono text-admin-text">{formatCount(result.payload.audit.events_total)}</dd></div><div className="flex justify-between py-2 text-[13px]"><dt className="text-admin-text-2">Denied events</dt><dd className="font-mono text-admin-text">{formatCount(result.payload.audit.denied_total)}</dd></div></dl></AdminPanel><AdminPanel className="lg:col-span-2"><AdminEmptyState compact icon="sessions" title={NOT_AVAILABLE + ": sessions"} description={result.payload.sessions.reason} /></AdminPanel></div>}</div>;
+}
