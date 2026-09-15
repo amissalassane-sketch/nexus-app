@@ -68,12 +68,17 @@ Measured across `supabase/migrations`, `src/`, `scripts/` and `supabase/tests/`:
 
 | Symbol | Real references | Where |
 |---|---|---|
-| `public.is_active_workspace_member(uuid, uuid)` | **49 policy call sites** | 001 (20), 015 (3), 016 (2), 017 (1), 023 (5), 024 (5), 025 (5) |
-| `public.is_workspace_owner(uuid, uuid)` | **14 call sites** | 017 policy, 018, diagnostics |
-| `public.can_manage_workspace(uuid, uuid)` | **14 call sites** | 001 (5), 016 (3), 017 (1) |
+| `public.is_active_workspace_member(uuid, uuid)` | **43 occurrences, 39 inside stored policies** | 001 24 (21 pol.), 015 3 (3), 016 1, 023 5 (5), 024 5 (5), 025 5 (5) |
+| `public.can_manage_workspace(uuid, uuid)` | **8 occurrences, 4 inside stored policies** | 001 7 (4 pol.), 016 1 |
+| `public.is_workspace_owner(uuid, uuid)` | **7 occurrences, 1 inside a stored policy** | 017 4 (1 pol.), 018 3 |
 | `public.is_workspace_member(uuid)` | **0** | only inside `20260915130000` + its own test fixture |
 | `public.has_workspace_role(uuid, enum[])` | **0** | only inside `20260915130000` + its own test fixture |
 | `public.workspace_member_role` | **0** | only inside `20260915130000` + its own test fixture |
+
+Counts above are reproducible: they are occurrences of the bare identifier in **executable SQL
+only** — `--` comments and string literals stripped by a tokeniser, including inside `DO $$ … $$`
+bodies — so prose and `COMMENT` text never inflate them. `grep -c` on the raw file gives larger,
+misleading numbers.
 
 `supabase/tests/core-contract.test.mjs` passes today **only because it fabricates the entire
 missing world itself** — it creates the two enums, a stripped-down `profiles`/`workspaces`/
@@ -104,7 +109,7 @@ Conflict classes: **A** compatible · **B** migration nécessaire · **C** objet
 | `workspace_subscriptions` | 007: `workspace_id` → `workspaces`, `plan text` CHECK `(FREE,PRO,TEAM)`, `status text` CHECK, billing stubs, partial unique index `(workspace_id) where status='active'` | PR #68 silent | `get_workspace_plan`, `get_owner_plan` (011), 021 bootstrap, `src/lib/entitlements.ts`, billing/upgrade/admin pages | **A** | Canonical subscription table. FREE creation already idempotent. |
 | auth triggers | `on_auth_user_created_profile` → `bootstrap_profile()` (001, re-asserted 020); `on_auth_user_created_workspace` → `create_default_workspace()` (006) | PR #68 silent | 019/020 `bootstrap_profile`, 008/016/018 `create_default_workspace` | **B** | Consolidated by PR #69 (`20260915131000`) into one `on_auth_user_created`. Not this PR's scope. |
 | workspace bootstrap | `bootstrap_personal_workspace(uuid)` (018, hardened 021), `ensure_personal_workspace(uuid)`, `get_or_create_personal_workspace()` | PR #68 silent | `src/lib/auth-flow.ts`, `src/app/api/profile/route.ts`, `bootstrap-diagnostics` | **A** | Valid and canonical. PR #69 fixes slug normalisation; not this PR's scope. |
-| RLS helpers | `is_active_workspace_member(uuid,uuid)`, `can_manage_workspace(uuid,uuid)` (001), `is_workspace_owner(uuid,uuid)` (017/018) — all SECURITY DEFINER, `search_path = public` | PR #68 wanted them pinned to `public, pg_temp` and granted to `authenticated`+`service_role` | **77 policy call sites** | **B** | **This is the one legitimate intent of PR #68, and it is what `20260915130500` delivers** — against the real signatures. |
+| RLS helpers | `is_active_workspace_member(uuid,uuid)`, `can_manage_workspace(uuid,uuid)` (001), `is_workspace_owner(uuid,uuid)` (017/018) — all SECURITY DEFINER, `search_path = public` | PR #68 wanted them pinned to `public, pg_temp` and granted to `authenticated`+`service_role` | **44 occurrences inside stored policy expressions** (58 total) | **B** | **This is the one legitimate intent of PR #68, and it is what `20260915130500` delivers** — against the real signatures. |
 | `is_workspace_member` / `has_workspace_role` | do not exist | PR #68 hardens them | 0 consumers | **C + E** | **Not created.** Adding them beside `is_active_workspace_member` puts two names for one rule in front of every future contributor. Decision recorded here so it is not silently re-litigated. |
 | intelligence | 023 `intelligence_memory`, 024 `intelligence_signals`, 025 `intelligence_missions` — all `user_id` + `workspace_id`, `text` + CHECK statuses, 12 policies on `is_active_workspace_member` | PR #68 silent | `src/lib/intelligence/*`, `src/app/api/intelligence/*` | **A** | Clean. No modern-contract reference. |
 | admin | 026 `platform_admins` (`role`/`status` **text** + CHECK), `admin_audit_log` (`actor_id`); 027 directory functions. No RLS policies — access is asserted in-function via `admin_assert_access()` | PR #68 silent | `src/lib/admin/*`, `src/app/admin/*` | **A** | Clean, and reinforces the finding: **the whole repo uses `text` + CHECK, never enums.** |
@@ -187,7 +192,8 @@ They are not replaced, re-created or renamed. `20260915130500` only:
    relying on Supabase platform default privileges nobody wrote down;
 3. attaches a `COMMENT` recording which lineage each helper belongs to.
 
-Bodies, signatures, return types and all 77 policy call sites are untouched. Every statement is
+Bodies, signatures, return types and all 44 stored policy-expression occurrences are untouched.
+Every statement is
 guarded by `to_regprocedure`, so the file is a no-op on a database that lacks a given helper.
 
 ### 4.4 How modern contracts get introduced later without breaking anything
@@ -248,8 +254,8 @@ chain and is excluded from it.
 Consequence, stated honestly: as long as `20260915130000_nexus_core_contract.sql` remains in
 `supabase/migrations/`, a plain `supabase db reset` — which applies every file in order — still
 fails at that file. **This PR does not and cannot fix that**, because fixing it means either
-editing/removing an already-merged migration or fabricating an enum that breaks 14 policy call
-sites. The follow-up is §6.
+editing/removing an already-merged migration or fabricating an enum that breaks the 4 stored
+policy expressions calling `can_manage_workspace()` plus every function body depending on it. The follow-up is §6.
 
 ### Scenario B — existing remote database whose history already contains `001`–`005`
 
@@ -307,3 +313,252 @@ is authoritative (and remote history must be repaired). This PR deliberately doe
 | 6 | Every stored RLS policy expression still re-plans via `pg_get_expr` — the check a column-type conversion would have failed; RLS still enabled on the tenant tables |
 | 7 | `20260915130000` is the **only** migration referencing the void contract in executable SQL (prose and `COMMENT` literals excluded by a tokeniser), with a positive control proving the scanner detects real references; no migration references a bare `public.subscriptions` |
 | 8 | `20260915130500` is idempotent: re-applying creates no duplicate function, each helper keeps exactly one signature, all three stay pinned |
+
+---
+
+## Annex A — Inventory of the lineage of record
+
+Everything below was read directly out of the migration files; nothing is inferred.
+
+### A. Tables created by `001_nexus_base_schema.sql`
+
+`profiles` · `workspaces` · `workspace_members` · `goals` · `projects` · `tasks` · `activities` ·
+`notifications` — **8 tables**, all `if not exists`.
+
+Added later by `006`–`027`: `workspace_subscriptions` (007), `task_dependencies` (015),
+`intelligence_memory` (023), `intelligence_signals` (024), `intelligence_missions` (025),
+`platform_admins` (026), `admin_audit_log` (026).
+
+### B. Enums / domains / composite types
+
+**Zero.** `create type` and `create domain` counts in `001_nexus_base_schema.sql`: **0** — and 0
+across the whole lineage. Every constrained value is `text` + `CHECK`:
+
+| Column | CHECK values | Source |
+|---|---|---|
+| `workspace_members.role` | `owner, admin, member, viewer` | 001:37 |
+| `workspace_members.status` | `active, invited, suspended` | 001:38 |
+| `tasks.status` | `todo, in_progress, in_review, blocked, done, cancelled` | 001:78 |
+| `intelligence_signals.status` | `new, seen, dismissed, acted, resolved` | 024 |
+| `intelligence_missions.status` | `active, blocked, completed, failed, cancelled` | 025 |
+| `platform_admins.role` | `owner, operator, viewer` | 026 |
+| `platform_admins.status` | `active, revoked` | 026 |
+| `admin_audit_log.outcome` | `success, denied, failed` | 026 |
+| `workspace_subscriptions.plan` | `FREE, PRO, TEAM` | 007 |
+
+### C. Functions / helpers created by `001`
+
+`is_active_workspace_member(uuid, uuid)` · `can_manage_workspace(uuid, uuid)` ·
+`bootstrap_profile()` · `bootstrap_workspace_owner()` · `set_updated_at()` — **5**.
+
+Added later: `is_workspace_owner(uuid, uuid)` (017, re-asserted 018),
+`create_default_workspace()` (006), `create_default_subscription()` (007),
+`enforce_project_limit` / `enforce_task_limit` / `enforce_member_limit` (007, 009, 021),
+`enforce_workspace_limit` + `get_workspace_plan` + `get_owner_plan` (011),
+`assert_workspace_member` / `assert_authorship` (012),
+`validate_task_dependency` + `record_workspace_activity` (015),
+`ensure_personal_workspace` (016, 018), `get_or_create_personal_workspace()` (016, 018, 021),
+`bootstrap_personal_workspace(uuid)` (018, 021), `admin_assert_access()` + directory functions
+(026, 027).
+
+**Absent from the entire lineage:** `is_workspace_member` · `has_workspace_role` · `handle_new_user`
+— **0 occurrences each** in executable SQL, anywhere.
+
+### D. Auth triggers
+
+Chain on `auth.users`, in order:
+
+| Migration | Trigger | Effect |
+|---|---|---|
+| 001:156–158 | `on_auth_user_created_profile` | → `bootstrap_profile()` |
+| 006:46 | `on_auth_user_created_workspace` | → `create_default_workspace()` |
+| 020:78–79 | `on_auth_user_created_profile` | replaced, access-first variant |
+| 20260915131000:209–214 | drops **all three** names, creates `on_auth_user_created` | single canonical bootstrap |
+
+`016` creates **no** trigger on `auth.users` (verified). After the full chain exactly **one**
+auth trigger remains.
+
+### E. Foreign keys
+
+**15 FKs to `auth.users(id)` · 0 FKs to `public.profiles`.**
+
+`profiles.id` *is* the FK to `auth.users(id)` — a shared primary key, the standard Supabase 1:1, so
+"FK profiles" and "FK auth.users" are not two competing options here. Distribution:
+001 (9: `profiles.id`, `workspaces.owner_id`, `workspace_members.user_id`, `goals.created_by`,
+`projects.owner_id`, `tasks.assignee_id`, `tasks.created_by`, `activities.actor_id`,
+`notifications.user_id`), 015 (1: `task_dependencies.created_by`), 023/024/025 (1 each: `user_id`),
+026 (2: `platform_admins.user_id`, `admin_audit_log.actor_id`).
+
+Deletion semantics are deliberate and consistent: `on delete cascade` where the row belongs to the
+user, `on delete set null` where it is a historical actor reference.
+
+### F. `activities` structure
+
+```sql
+create table if not exists public.activities (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  actor_id     uuid references auth.users(id) on delete set null,
+  entity_type  text,
+  entity_id    uuid,
+  action       text,
+  metadata     jsonb not null default '{}'::jsonb,
+  created_at   timestamptz not null default now()
+);
+```
+
+Written by `record_workspace_activity()` (015). **Never altered by `006`–`027`** — no
+`alter table public.activities` anywhere. There is no `activities.user_id`.
+
+### G. Dependency map, `006`–`027`
+
+Occurrences of the bare identifier in executable SQL (comments and string literals stripped):
+
+| Symbol | 001 | 006–027 files | Policies |
+|---|---|---|---|
+| `is_active_workspace_member` | 24 (21 pol.) | 015:3 (3) · 016:1 · 023:5 (5) · 024:5 (5) · 025:5 (5) | **39** |
+| `can_manage_workspace` | 7 (4 pol.) | 016:1 | **4** |
+| `is_workspace_owner` | — | 017:4 (1) · 018:3 | **1** |
+| `bootstrap_profile` | 2 | 019:1 · 020:2 | — |
+| `create_default_workspace` | — | 006:2 · 008:2 · 011:1 · 016:4 · 018:1 | — |
+| `workspace_subscriptions` | — | 007:9 · 011:1 · 018:1 · 021:1 · 026:9 · 027:4 | — |
+| `actor_id` | 1 | 015:1 · 026:2 · 027:5 | — |
+| `intelligence_*` | — | 023:12 · 024:14 · 025:14 · 026:6 · 027:2 | — |
+| `platform_admins` | — | 026:18 · 027:2 | — |
+| `admin_audit_log` | — | 026:19 | — |
+| `is_workspace_member` | **0** | **0** | **0** |
+| `has_workspace_role` | **0** | **0** | **0** |
+| `workspace_member_role` | **0** | **0** | **0** |
+| `handle_new_user` | **0** | **0** | **0** |
+
+`user_id` is pervasive (001:17 plus nearly every file in `006`–`027`) and means "owner or
+recipient", never "actor" — `activities` and `admin_audit_log` use `actor_id` for that, both
+nullable with `on delete set null` so history outlives the user.
+
+**`subscriptions` as a bare table: none.** 27 textual occurrences in `006`–`027`, of which 25 are
+`workspace_subscriptions` and the rest are prose; a `(from|into|table|join|update) subscriptions`
+scan returns nothing.
+
+---
+
+## Annex B — Git status of `001_core` … `005_worker`
+
+Required determination: tracked / untracked / ignored / absent from master / local-workspace-only.
+
+**Verdict: absent, everywhere. Not merely uncommitted.**
+
+| Check | Command | Result |
+|---|---|---|
+| On disk in the repo (ignored dirs included) | `find . -name '00[1-5]_nexus_core.sql' …` | **nothing** |
+| Anywhere in the workspace | `find /home/user -name '00[1-5]_nexus_*.sql'` | only `001_nexus_base_schema.sql` (pattern false-positive) |
+| Untracked or ignored under `supabase/` | `git status --porcelain --ignored=matching` | **empty** |
+| Excluded by an ignore rule | `git check-ignore -v` on all five paths | **not ignored** (all five would be visible if present) |
+| Ever committed on any ref | `git log --all --diff-filter=A --name-only` | **never added** |
+| Recoverable from a dangling object | `git fsck --dangling` | 1 commit + 1 blob: the commit is a stash-style `WIP on arena/01a0a584-nexus-app` whose tree contains **none** of the five; the blob is a PGlite JS harness, not SQL |
+| Other remotes / branches | `git branch -r` | `origin/master` only |
+
+So there is nothing to decide about *files* — there is no local copy. The "001–005 history" exists,
+if at all, only in the **remote project's `supabase_migrations.schema_migrations` table**, which is
+scenario B (§5) and cannot be inspected without remote access.
+
+### Recommended destination, if they are ever retrieved (§7 decision)
+
+**Archive outside `supabase/migrations/`; never restore them into Git as migrations.**
+
+Concretely: `docs/supabase/remote-history-reference/` with a README marking them read-only forensic
+evidence. Justification:
+
+1. The migration runner scans only `supabase/migrations/`, so anything placed elsewhere cannot be
+   applied by accident — which is exactly the failure mode that produced PR #68.
+2. The filename prefix before the first `_` is Supabase's version key. Restoring `001_nexus_core.sql`
+   beside `001_nexus_base_schema.sql` creates **two migrations claiming version `001`**; `db push`
+   and the local runner would disagree about which one that version means.
+3. They are needed for exactly one purpose — settling scenario B — and that purpose is served by
+   *reading* them, never by *applying* them.
+4. Deleting them is not an option either: rule 5 forbids removing a migration without proof, and
+   here there is nothing to remove. Do not fabricate a deletion.
+
+If they are never retrieved, the correct action is **none** — and §5's scenario-B decision should
+then be taken on the remote's recorded version list alone.
+
+---
+
+## Annex C — Forward migration plan
+
+The five domains the roadmap names are **already schema-complete in the lineage of record**.
+Verified, not assumed: Freemium is 007/008/009/011 around `workspace_subscriptions`; Activity is
+001 + 015 around `activities.actor_id`; Intelligence is 023/024/025 with 12 policies on
+`is_active_workspace_member`; Admin is 026/027 with function-level `admin_assert_access()` instead
+of RLS. **No new table, enum or helper is required for any of them**, and inventing some would
+repeat PR #68's mistake.
+
+What actually remains is retirement of the void contract, settlement of the remote, and coverage.
+One logical change per PR:
+
+### PR-B — `retire the void core contract`
+
+| | |
+|---|---|
+| **Exact change** | delete `supabase/migrations/20260915130000_nexus_core_contract.sql` and `supabase/tests/core-contract.test.mjs`; keep `20260915130500` as the authoritative statement of the helper contract |
+| **Objective** | make the whole-directory chain appliable end to end, so `db reset` and every harness that scans `supabase/migrations/` stop dying at `130000` |
+| **Tables** | none — the file never created one that survives |
+| **Functions** | none removed from the database: of its 13 statements only 7 parse, and those are `is_active_workspace_member` (re-pinned to the value `130500` also sets), `is_workspace_owner` (a body identical to 018's) and grants/revokes that `130500` re-states explicitly |
+| **Dependencies** | requires PR-A merged (so `130500` is already the contract of record) |
+| **Risks** | **Remote divergence.** If a remote database already recorded version `20260915130000`, deleting the local file makes Supabase report it as remote-only and `db push` will refuse without `--include-all` or a repair — both remote operations. Mitigation: sequence PR-B **after** the scenario-B decision, or accept that the remote needs an operator action and record it in the PR description |
+| **Order** | **2nd** |
+
+This is a forward commit that removes a file; PR #68's commit stays in history untouched, so merged
+history is not rewritten. Rule 5's precondition — proof before deletion — is now met: 6 of 13
+statements fail, the failures are unresolvable without a column-type conversion, and the file has
+zero consumers.
+
+### PR-C — `settle scenario B`
+
+| | |
+|---|---|
+| **Exact change** | no migration. A decision recorded in §5 plus, if the remote turns out to carry lineage A, a reconciliation *to the remote* planned as its own effort |
+| **Objective** | establish whether the repository or the remote is authoritative, so `db push` becomes possible at all |
+| **Tables / functions** | none |
+| **Dependencies** | requires someone with remote read access (`supabase migration list` is a read-only remote call — still forbidden in this phase) |
+| **Risks** | If lineage A really exists remotely, its `can_manage_workspace()` compares enum to enum and is coherent *there* while being incompatible *here*; picking the wrong source of truth would then break whichever side is discarded. `130500` is existence-guarded and therefore safe on both |
+| **Order** | **1st or 3rd** — it does not block PR-B technically, but it should precede PR-B's `db push` |
+
+### PR-D — `close the anon oracle on the membership helpers`
+
+| | |
+|---|---|
+| **Exact change** | add `auth.uid()`-only variants (`is_active_workspace_member()` / `can_manage_workspace()` with no `p_user_id`) and sweep policies to them; then revoke EXECUTE from `anon` |
+| **Objective** | stop any caller using `is_active_workspace_member(uuid, uuid)` as a boolean oracle about a third party |
+| **Tables** | none |
+| **Functions** | the three canonical helpers + 39 stored policy expressions |
+| **Dependencies** | PR-A merged. Independent of PR-B |
+| **Risks** | **Highest-risk item in this plan.** A policy expression evaluated as `anon` that cannot EXECUTE the helper turns "zero rows" into a hard error. Must be done with the §7-PHASE-6 `pg_get_expr` re-plan check plus an explicit `anon`-role smoke test per table. Pre-existing debt — `130500` preserves today's behaviour deliberately rather than changing it silently |
+| **Order** | **4th**, and only if the team accepts the sweep |
+
+### PR-E — `add supabase/config.toml`
+
+| | |
+|---|---|
+| **Exact change** | a committed `supabase/config.toml` (and `supabase/.gitignore`) pinning project id, ports and the migration path |
+| **Objective** | make `supabase start` / `db reset` reproducible for every contributor |
+| **Tables / functions** | none |
+| **Dependencies** | none |
+| **Risks** | Low, but it is a **new decision** (ports, project id) rather than a correction, so it is its own PR. Note this is the structural cause of the whole incident: with no committed config, nobody could run the chain locally, and a self-referential test became the only signal |
+| **Order** | **any time**; earlier is better |
+
+### Domain work — Auth/Workspace, Freemium, Activity, Intelligence, Admin
+
+No schema migration is required to *start* any of them. What each needs is coverage proving the
+existing schema still holds after PR #69's bootstrap rewrite:
+
+| Domain | Schema state | Needed before building on it |
+|---|---|---|
+| Auth + Workspace bootstrap | complete (131000) | nothing — PHASE 5 already proves 1 profile / 1 workspace / 1 owner membership / 1 FREE subscription, single trigger |
+| Freemium | complete (007/008/009/011) | a test that plan limits still enforce through the **new** bootstrap path, since `131000` now inserts the FREE row itself while `007`'s `trg_default_subscription` still exists. `131000` coordinates via `to_regprocedure('public.create_default_subscription()')`, and PHASE 5 observes exactly one subscription — but that invariant deserves its own assertion |
+| Activity | complete (001 + 015) | nothing. `actor_id` canonical, table never altered by `006`–`027` |
+| Intelligence | complete (023/024/025) | nothing schema-wise |
+| Admin | complete (026/027) | nothing schema-wise; note it uses function-level `admin_assert_access()` and has **no RLS policies**, so the `pg_get_expr` sweep does not cover it |
+
+**Naming convention for everything after this point:** timestamp scheme
+`YYYYMMDDHHMMSS_snake_case.sql`. The repo currently mixes `001`–`027` with timestamps; both sort
+correctly as text, but new files should not extend the short scheme.
