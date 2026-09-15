@@ -10,6 +10,8 @@ import {
   type LimitCheckResult,
   PLAN_LIMITS,
   DEFAULT_PLAN,
+  highestPlan,
+  isPlanName,
 } from "@/lib/plan-limits";
 
 // -- Workspace plan lookup -------------------------------------
@@ -23,7 +25,34 @@ export async function getWorkspacePlan(workspaceId: string): Promise<PlanName> {
     .eq("workspace_id", workspaceId)
     .eq("status", "active")
     .maybeSingle();
-  return (data?.plan as PlanName) ?? DEFAULT_PLAN;
+  return isPlanName(data?.plan) ? data.plan : DEFAULT_PLAN;
+}
+
+/**
+ * The workspace creation trigger uses the highest active plan owned by the
+ * user. Resolve the same scope in the client before opening a create flow;
+ * a missing subscription is deliberately FREE, just like PostgreSQL.
+ */
+export async function getOwnerPlan(ownerId: string): Promise<PlanName> {
+  const supabase = createClient();
+  const { data: workspaces } = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("owner_id", ownerId);
+
+  const workspaceIds = (workspaces ?? [])
+    .map((workspace) => workspace.id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+  if (workspaceIds.length === 0) return DEFAULT_PLAN;
+
+  const { data: subscriptions } = await supabase
+    .from("workspace_subscriptions")
+    .select("plan")
+    .in("workspace_id", workspaceIds)
+    .eq("status", "active");
+
+  return highestPlan((subscriptions ?? []).map((subscription) => subscription.plan));
 }
 
 // -- Generic count helper --------------------------------------
@@ -40,6 +69,20 @@ async function countRows(
 }
 
 // -- Individual limit checks -----------------------------------
+export async function checkWorkspaceLimit(
+  ownerId: string
+): Promise<LimitCheckResult> {
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("workspaces")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId);
+  const current = count ?? 0;
+  const plan = await getOwnerPlan(ownerId);
+  const limit = PLAN_LIMITS[plan].workspaces;
+  return { allowed: current < limit, current, limit, plan, resource: "workspaces" };
+}
+
 export async function checkProjectLimit(
   workspaceId: string
 ): Promise<LimitCheckResult> {
