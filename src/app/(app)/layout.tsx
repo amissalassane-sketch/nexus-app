@@ -13,7 +13,8 @@ import {
 } from "@/lib/bootstrap-diagnostics";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/workspace";
-import { DEFAULT_PLAN, PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
+import { effectivePlanOf } from "@/lib/billing/subscription-state";
 
 // ============================================================
 // AUTHENTICATED SHELL LAYOUT (ACCESS FIRST)
@@ -207,7 +208,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       workspaceId
         ? supabase
             .from("workspace_subscriptions")
-            .select("plan")
+            .select("plan, status, current_period_end")
             .eq("workspace_id", workspaceId)
             .eq("status", "active")
             .abortSignal(shellDataController.signal)
@@ -227,7 +228,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const [counts, workspace, subscription] = shellData;
 
-  const plan = ((subscription?.data?.plan as PlanName) ?? DEFAULT_PLAN) as PlanName;
+  // Same resolution as get_workspace_plan(): a lapsed 'active' row (or any
+  // incoherent value) displays FREE, matching what the write guards enforce.
+  const plan = effectivePlanOf(subscription?.data);
   const limits = PLAN_LIMITS[plan];
 
   logBootstrapEvent("DASHBOARD_RENDER_STARTED", {

@@ -11,27 +11,37 @@ import {
   PLAN_LIMITS,
   DEFAULT_PLAN,
   highestPlan,
-  isPlanName,
 } from "@/lib/plan-limits";
+import {
+  effectivePlanOf,
+  isSubscriptionCurrent,
+} from "@/lib/billing/subscription-state";
 
 // -- Workspace plan lookup -------------------------------------
-// The workspace plan is stored in workspace_subscriptions.
-// If no record exists, the workspace is on FREE.
+// The workspace plan is stored in workspace_subscriptions. The
+// resolution below mirrors public.get_workspace_plan() exactly: only
+// an 'active' row whose billing period has not lapsed grants its
+// plan; anything else (absent, cancelled, expired, past_due,
+// trialing, lapsed period, unknown plan value) is FREE. The unique
+// partial index guarantees at most one 'active' row per workspace,
+// so maybeSingle() can never face an ambiguous choice.
 export async function getWorkspacePlan(workspaceId: string): Promise<PlanName> {
   const supabase = createClient();
   const { data } = await supabase
     .from("workspace_subscriptions")
-    .select("plan")
+    .select("plan, status, current_period_end")
     .eq("workspace_id", workspaceId)
     .eq("status", "active")
     .maybeSingle();
-  return isPlanName(data?.plan) ? data.plan : DEFAULT_PLAN;
+  return effectivePlanOf(data);
 }
 
 /**
  * The workspace creation trigger uses the highest active plan owned by the
  * user. Resolve the same scope in the client before opening a create flow;
- * a missing subscription is deliberately FREE, just like PostgreSQL.
+ * a missing subscription is deliberately FREE, just like PostgreSQL. Rows
+ * whose billing period lapsed are filtered out before the highest-plan
+ * reduction, mirroring public.get_owner_plan().
  */
 export async function getOwnerPlan(ownerId: string): Promise<PlanName> {
   const supabase = createClient();
@@ -48,11 +58,15 @@ export async function getOwnerPlan(ownerId: string): Promise<PlanName> {
 
   const { data: subscriptions } = await supabase
     .from("workspace_subscriptions")
-    .select("plan")
+    .select("plan, status, current_period_end")
     .in("workspace_id", workspaceIds)
     .eq("status", "active");
 
-  return highestPlan((subscriptions ?? []).map((subscription) => subscription.plan));
+  return highestPlan(
+    (subscriptions ?? [])
+      .filter((subscription) => isSubscriptionCurrent(subscription))
+      .map((subscription) => subscription.plan)
+  );
 }
 
 // -- Generic count helper --------------------------------------
