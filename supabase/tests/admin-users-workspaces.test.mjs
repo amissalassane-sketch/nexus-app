@@ -981,6 +981,54 @@ await expectError(
 );
 await asRole(null);
 
+// ============================================================
+console.log("\n-- ADMIN-PR3: activity, audit and security reads -------------");
+// ============================================================
+await asUser(OWNER);
+await asRole("authenticated");
+
+const activity028 = (
+  await db.query(`select public.admin_activity_list(null, null, 1, 25) as r`)
+).rows[0].r;
+assert(
+  "ADMIN-PR3 activity read returns a measured paginated payload",
+  typeof activity028.total === "number" &&
+    Array.isArray(activity028.items) &&
+    activity028.page === 1 &&
+    activity028.page_size === 25,
+  JSON.stringify(activity028)
+);
+
+const audit028 = (
+  await db.query(`select public.admin_audit_log_list(null, null, 1, 25) as r`)
+).rows[0].r;
+assert(
+  "ADMIN-PR3 audit read returns the append-only log shape",
+  typeof audit028.total === "number" &&
+    Array.isArray(audit028.items) &&
+    audit028.page === 1,
+  JSON.stringify(audit028)
+);
+
+const security028 = (
+  await db.query(`select public.admin_security_overview() as r`)
+).rows[0].r;
+assert(
+  "ADMIN-PR3 security read reports measured admin context and unavailable sessions",
+  security028.platform_admin.role === "owner" &&
+    typeof security028.audit.events_total === "number" &&
+    security028.sessions.state === "unavailable",
+  JSON.stringify(security028)
+);
+
+await asUser(CUSTOMER);
+await expectError(
+  "ADMIN-PR3 a customer cannot read activity",
+  () => db.query(`select public.admin_activity_list(null, null, 1, 25)`),
+  "NEXUS_ADMIN_FORBIDDEN"
+);
+await asRole(null);
+
 // ---- summary -------------------------------------------------------------
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);

@@ -294,13 +294,16 @@ const granted = grantedFunctions.rows.map((r) => r.proname);
 // No write RPCs exist for the directory; nothing here may change that
 // without a permission model + audit (PR 3).
 assert(
-  "only the intended RPCs are executable by authenticated (PR 1 + PR 2)",
+  "only the intended RPCs are executable by authenticated (PR 1 + PR 2 + PR 3)",
   JSON.stringify(granted) ===
     JSON.stringify([
+      "admin_activity_list",
+      "admin_audit_log_list",
       "admin_audit_record",
       "admin_audit_record_denied",
       "admin_overview",
       "admin_recent_activity",
+      "admin_security_overview",
       "admin_user_detail",
       "admin_users_list",
       "admin_workspace_detail",
