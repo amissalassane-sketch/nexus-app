@@ -5,6 +5,7 @@
 // ============================================================
 
 import {
+  checkWorkspaceLimit,
   checkProjectLimit,
   checkTaskLimit,
   checkGoalLimit,
@@ -12,6 +13,14 @@ import {
   getWorkspacePlan,
 } from "@/lib/entitlements";
 import { getFeatures, type PlanName, type LimitCheckResult } from "@/lib/plan-limits";
+
+/**
+ * Workspace creation is owner-scoped, so this argument is the authenticated
+ * owner's user id rather than an existing workspace id.
+ */
+export async function canCreateWorkspace(ownerId: string): Promise<LimitCheckResult> {
+  return checkWorkspaceLimit(ownerId);
+}
 
 export async function canCreateProject(workspaceId: string): Promise<LimitCheckResult> {
   return checkProjectLimit(workspaceId);

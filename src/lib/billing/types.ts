@@ -6,9 +6,16 @@
 
 import type { PlanName } from "@/lib/plan-limits";
 
+/**
+ * Mirrors the workspace_subscriptions status check constraint
+ * (007 + 20260915220000). 'expired' is materialized by the backend
+ * expiry helpers; only 'active' rows with a current period ever grant
+ * a plan — see src/lib/billing/subscription-state.ts.
+ */
 export type SubscriptionStatus =
   | "active"
   | "cancelled"
+  | "expired"
   | "past_due"
   | "trialing";
 

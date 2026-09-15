@@ -218,6 +218,15 @@ export function listHref(
   params.set("size", String(current.pageSize));
   if ("status" in current) params.set("status", current.status);
   if ("view" in current) params.set("view", current.view);
+  // PR3 read-only feeds carry one additional server-validated filter.
+  // Keeping it here makes pagination and sort links preserve the active
+  // activity/audit filter just like the directory filters above.
+  if ("action" in current && typeof current.action === "string" && current.action !== "all") {
+    params.set("action", current.action);
+  }
+  if ("outcome" in current && typeof current.outcome === "string" && current.outcome !== "all") {
+    params.set("outcome", current.outcome);
+  }
 
   for (const [key, value] of Object.entries(overrides)) {
     if (value === null) params.delete(key);

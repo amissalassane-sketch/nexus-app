@@ -66,6 +66,22 @@ export const PLAN_FEATURES: Record<PlanName, PlanFeatures> = {
 
 export const DEFAULT_PLAN: PlanName = "FREE";
 
+export function isPlanName(value: unknown): value is PlanName {
+  return typeof value === "string" && PLAN_NAMES.includes(value as PlanName);
+}
+
+/** Resolve the highest valid plan without ever trusting an unknown DB value. */
+export function highestPlan(values: readonly unknown[]): PlanName {
+  let result = DEFAULT_PLAN;
+  for (const value of values) {
+    if (!isPlanName(value)) continue;
+    if (PLAN_NAMES.indexOf(value) > PLAN_NAMES.indexOf(result)) {
+      result = value;
+    }
+  }
+  return result;
+}
+
 export function getLimits(plan: PlanName): PlanLimits {
   return PLAN_LIMITS[plan];
 }

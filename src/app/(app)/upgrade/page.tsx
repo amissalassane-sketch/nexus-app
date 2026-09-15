@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
 import { PLAN_ORDER, PLAN_PRESENTATION, planRank } from "@/lib/billing/plans";
 import { parseWorkspaceUsage, type WorkspaceUsage } from "@/lib/billing/usage";
-import { type PlanName } from "@/lib/plan-limits";
+import { effectivePlanOf } from "@/lib/billing/subscription-state";
 import { canManageBilling, getActiveMembership } from "@/lib/workspace";
 
 const USAGE_ROWS: { label: string; key: keyof WorkspaceUsage["usage"] }[] = [
@@ -30,13 +30,15 @@ export default async function UpgradePage() {
   const { data: subscription } = workspaceId
     ? await supabase
         .from("workspace_subscriptions")
-        .select("plan, status")
+        .select("plan, status, current_period_end")
         .eq("workspace_id", workspaceId)
         .eq("status", "active")
         .maybeSingle()
     : { data: null };
 
-  const currentPlan = ((subscription?.plan as PlanName) ?? "FREE") as PlanName;
+  // Mirrors get_workspace_plan(): a lapsed 'active' row grants FREE, so
+  // the upgrade pitch always starts from the plan the DB really enforces.
+  const currentPlan = effectivePlanOf(subscription);
 
   let usage: WorkspaceUsage | null = null;
   if (workspaceId) {
