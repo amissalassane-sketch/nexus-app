@@ -259,9 +259,11 @@ ok(
     !constraintDef.includes("'retired'"),
   constraintDef
 );
-ok("the vocabulary is active|cancelled|expired|past_due|trialing", 
+ok(
+  "the vocabulary is active|cancelled|expired|past_due|trialing",
   JSON.stringify(SUBSCRIPTION_STATUSES) ===
-    JSON.stringify(["active", "cancelled", "expired", "past_due", "trialing"]));
+    JSON.stringify(["active", "cancelled", "expired", "past_due", "trialing"])
+);
 
 const activeIndex = await db.query(`
   select indexdef from pg_indexes
