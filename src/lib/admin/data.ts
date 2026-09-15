@@ -32,7 +32,9 @@ const ACTIVITY_TIMEOUT_MS = 8_000;
 
 const ACTIVITY_LIMIT = 12;
 
-function classify(error: { code?: string | null; message?: string | null }): AdminDataError {
+/** Exported so the directory reads (027) classify failures with exactly the same
+ *  rules as the Overview — one vocabulary of errors across the surface. */
+export function classify(error: { code?: string | null; message?: string | null }): AdminDataError {
   const code = String(error.code ?? "");
   const message = String(error.message ?? "");
   const haystack = message.toLowerCase();

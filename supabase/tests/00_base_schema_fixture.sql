@@ -17,13 +17,18 @@ create schema if not exists auth;
 -- GoTrue columns the application actually reads. email_confirmed_at and
 -- last_sign_in_at are used by the admin control plane (026) for
 -- "email confirmed" and "signed in during the last 30 days"; created_at
--- drives the growth numbers.
+-- drives the growth numbers. banned_until mirrors the real Supabase
+-- auth.users column maintained by GoTrue (set out-of-band via the admin
+-- API); the admin users directory (027) reports it as the 'banned'
+-- account status. The product itself never writes it — hence normally
+-- NULL, exactly like the fixture default.
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text,
   raw_user_meta_data jsonb default '{}'::jsonb,
   email_confirmed_at timestamptz,
   last_sign_in_at    timestamptz,
+  banned_until       timestamptz,
   created_at         timestamptz not null default now()
 );
 

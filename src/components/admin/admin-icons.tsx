@@ -20,8 +20,14 @@ import {
   IconActivity,
   IconAlertCircle,
   IconAlertTriangle,
+  IconArrowLeft,
+  IconArrowDown,
+  IconArrowUp,
   IconArrowUpRight,
   IconBuilding,
+  IconChevronLeft,
+  IconChevronRight,
+  IconCopy,
   IconBug,
   IconChartArea,
   IconCircleCheck,
@@ -47,8 +53,10 @@ import {
   IconSettings,
   IconShield,
   IconShieldLock,
+  IconMail,
   IconSitemap,
   IconSparkles,
+  IconUser,
   IconUsers,
   IconWallet,
   IconX,
@@ -115,7 +123,15 @@ export type AdminUiIconName =
   | "cpu"
   | "shield"
   | "lock"
-  | "server";
+  | "server"
+  | "arrowLeft"
+  | "arrowUp"
+  | "arrowDown"
+  | "chevronLeft"
+  | "chevronRight"
+  | "copy"
+  | "user"
+  | "mail";
 
 const UI_ICONS: Record<AdminUiIconName, TablerIcon> = {
   search: IconSearch,
@@ -136,6 +152,16 @@ const UI_ICONS: Record<AdminUiIconName, TablerIcon> = {
   shield: IconShield,
   lock: IconLock,
   server: IconServer,
+  // Directory (PR 2): sort affordances in table headers, pagination,
+  // back navigation and the copy affordance on inspectors.
+  arrowLeft: IconArrowLeft,
+  arrowUp: IconArrowUp,
+  arrowDown: IconArrowDown,
+  chevronLeft: IconChevronLeft,
+  chevronRight: IconChevronRight,
+  copy: IconCopy,
+  user: IconUser,
+  mail: IconMail,
 };
 
 export type AdminIconProps = {

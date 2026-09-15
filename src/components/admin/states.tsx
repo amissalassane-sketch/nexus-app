@@ -27,16 +27,10 @@ export function AdminEmptyState({
 }: {
   title: string;
   description: string;
-  icon?:
-    | "info"
-    | "activity"
-    | "clock"
-    | "database"
-    | "cloud"
-    | "shield"
-    | "chart"
-    | "check"
-    | "alert";
+  /** Any icon of the admin vocabulary (nav + ui maps in admin-icons.tsx).
+   *  Widened from a literal list in PR 2 so directory empty states can
+   *  name their own subject (users, building…) without new code. */
+  icon?: import("./admin-icons").AdminIconProps["name"];
   action?: ReactNode;
   className?: string;
   compact?: boolean;

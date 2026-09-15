@@ -277,23 +277,34 @@ const grantedFunctions = await db.query(`
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
-    and p.proname in (
-      'platform_admin_context','admin_overview','admin_recent_activity',
-      'admin_audit_record','admin_audit_record_denied',
-      'platform_admin_is_admin','admin_assert_access','admin_role_rank'
-    )
+    and (left(p.proname, 6) = 'admin_' or left(p.proname, 14) = 'platform_admin')
     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
   order by 1
 `);
 const granted = grantedFunctions.rows.map((r) => r.proname);
+// Closed-world assertion: the list below is the COMPLETE authenticated
+// surface across 026 (PR 1) and 027 (PR 2). Any new admin function that
+// forgets to revoke, and any accidental grant, fails here. The query
+// matches the whole admin_/platform_admin_ namespace rather than an
+// explicit IN list so the test cannot be widened by a forgotten entry.
+//
+// PR 2 added the four directory reads (admin_users_list,
+// admin_user_detail, admin_workspaces_list, admin_workspace_detail) —
+// reads over real tables, each gated by admin_assert_access('viewer').
+// No write RPCs exist for the directory; nothing here may change that
+// without a permission model + audit (PR 3).
 assert(
-  "only the five intended RPCs are executable by authenticated",
+  "only the intended RPCs are executable by authenticated (PR 1 + PR 2)",
   JSON.stringify(granted) ===
     JSON.stringify([
       "admin_audit_record",
       "admin_audit_record_denied",
       "admin_overview",
       "admin_recent_activity",
+      "admin_user_detail",
+      "admin_users_list",
+      "admin_workspace_detail",
+      "admin_workspaces_list",
       "platform_admin_context",
     ]),
   `granted: ${JSON.stringify(granted)}`

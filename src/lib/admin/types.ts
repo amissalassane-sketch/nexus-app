@@ -196,3 +196,242 @@ export type AdminDataError = {
   code: "FORBIDDEN" | "NOT_INSTALLED" | "TIMEOUT" | "UNAVAILABLE" | "INVALID_PAYLOAD";
   message: string;
 };
+
+// ------------------------------------------------------------
+// Directory payloads — the exact JSONB shapes of migration 027
+// ------------------------------------------------------------
+// Same contract as the Overview: every field maps to a real column or a
+// derivation documented next to the SQL. `null` means "no measurement
+// exists" and renders as NOT_AVAILABLE, never as 0 or as a dash someone
+// could mistake for a fact.
+
+/** Derived from real GoTrue state only (banned_until / email_confirmed_at).
+ *  There is no status column on auth.users in this product; the UI states
+ *  the derivation rather than implying an account flag that isn't there. */
+export type AdminAccountStatus = "active" | "pending" | "banned";
+
+export type AdminUserRow = {
+  user_id: string;
+  email: string | null;
+  display_name: string | null;
+  username: string | null;
+  /** False when the signup trigger never produced a profiles row. */
+  has_profile: boolean;
+  created_at: string;
+  last_sign_in_at: string | null;
+  /** greatest(last_sign_in_at, newest row in activities). */
+  last_activity_at: string | null;
+  email_confirmed: boolean;
+  banned_until: string | null;
+  account_status: AdminAccountStatus;
+  memberships: { total: number; active: number; owned: number };
+  platform_role: PlatformAdminRole | null;
+};
+
+export type AdminUsersListPayload = {
+  generated_at: string;
+  page: number;
+  page_size: number;
+  sort: string;
+  direction: "asc" | "desc";
+  search: string | null;
+  status: string;
+  total: number;
+  items: AdminUserRow[];
+};
+
+export type AdminUserWorkspaceRef = {
+  workspace_id: string;
+  name: string;
+  slug: string;
+  role: string;
+  membership_status: string;
+  joined_at: string;
+  is_creator: boolean;
+};
+
+export type AdminUserActivityRef = {
+  activity_id: string;
+  workspace_id: string;
+  workspace_name: string;
+  action: string | null;
+  entity_type: string | null;
+  occurred_at: string;
+};
+
+export type AdminUserDetail = {
+  generated_at: string;
+  identity: {
+    user_id: string;
+    email: string | null;
+    display_name: string | null;
+    username: string | null;
+    job_title: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    created_at: string;
+    profile_created_at: string | null;
+    profile_updated_at: string | null;
+  };
+  account: {
+    has_profile: boolean;
+    email_confirmed: boolean;
+    email_confirmed_at: string | null;
+    last_sign_in_at: string | null;
+    banned_until: string | null;
+    onboarding_completed: boolean;
+    account_status: AdminAccountStatus;
+    last_activity_at: string | null;
+  };
+  platform_admin: {
+    is_admin: boolean;
+    role: PlatformAdminRole | null;
+    status: string | null;
+    since: string | null;
+    note: string | null;
+  };
+  usage: {
+    memberships_total: number;
+    memberships_active: number;
+    workspaces_owned: number;
+    tasks_created: number;
+    tasks_assigned: number;
+    tasks_open: number;
+    tasks_done: number;
+    projects_owned: number;
+    goals_created: number;
+    notifications_unread: number;
+    activity_events: number;
+  };
+  workspaces: AdminUserWorkspaceRef[];
+  recent_activity: AdminUserActivityRef[];
+};
+
+export type AdminWorkspaceRow = {
+  workspace_id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string | null;
+  owner: {
+    user_id: string;
+    email: string | null;
+    display_name: string | null;
+    username: string | null;
+  };
+  members: { total: number; active: number };
+  projects: number;
+  tasks: number;
+  /** 'FREE' with has_subscription=false means "no active subscription
+   *  row; this is the documented default plan", not a measurement. */
+  plan: "FREE" | "PRO" | "TEAM";
+  has_subscription: boolean;
+  subscription_status: string | null;
+  has_active_owner: boolean;
+};
+
+export type AdminWorkspacesListPayload = {
+  generated_at: string;
+  page: number;
+  page_size: number;
+  sort: string;
+  direction: "asc" | "desc";
+  search: string | null;
+  view: string;
+  total: number;
+  items: AdminWorkspaceRow[];
+};
+
+export type AdminWorkspaceMemberRow = {
+  user_id: string;
+  email: string | null;
+  display_name: string | null;
+  username: string | null;
+  role: string;
+  membership_status: string;
+  joined_at: string;
+  account_status: AdminAccountStatus;
+  is_creator: boolean;
+};
+
+export type AdminWorkspaceActivityRef = {
+  activity_id: string;
+  actor_id: string | null;
+  actor_email: string | null;
+  action: string | null;
+  entity_type: string | null;
+  occurred_at: string;
+};
+
+export type AdminWorkspaceProjectRow = {
+  project_id: string;
+  name: string;
+  status: string;
+  progress: number;
+  due_date: string | null;
+  updated_at: string;
+  tasks_total: number;
+  tasks_done: number;
+};
+
+export type AdminWorkspaceTaskRow = {
+  task_id: string;
+  title: string;
+  status: string;
+  priority: string;
+  due_at: string | null;
+  completed_at: string | null;
+  updated_at: string;
+  project_id: string | null;
+  assignee_id: string | null;
+};
+
+export type AdminWorkspaceSubscriptionRow = {
+  subscription_id: string;
+  plan: "FREE" | "PRO" | "TEAM";
+  status: string;
+  trial_ends_at: string | null;
+  current_period_end: string | null;
+  has_billing_ids: boolean;
+  updated_at: string;
+};
+
+export type AdminWorkspaceDetail = {
+  generated_at: string;
+  overview: {
+    workspace_id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    icon: string | null;
+    color: string | null;
+    created_at: string;
+    updated_at: string;
+    last_activity_at: string | null;
+  };
+  owner: {
+    user_id: string;
+    email: string | null;
+    display_name: string | null;
+    username: string | null;
+    account_status: AdminAccountStatus;
+    last_sign_in_at: string | null;
+  } | null;
+  health: { has_active_owner: boolean; member_count_active: number };
+  subscription: AdminWorkspaceSubscriptionRow[];
+  members: AdminWorkspaceMemberRow[];
+  usage: {
+    projects: number;
+    tasks: number;
+    goals: number;
+    events: number;
+    notifications: number;
+    signals: number;
+    missions: number;
+  };
+  tasks_by_status: Record<string, number>;
+  recent_projects: AdminWorkspaceProjectRow[];
+  recent_tasks: AdminWorkspaceTaskRow[];
+  recent_activity: AdminWorkspaceActivityRef[];
+};
