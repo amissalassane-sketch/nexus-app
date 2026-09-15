@@ -74,7 +74,7 @@ export default async function AdminOverviewPage() {
     : { state: "unavailable" as const, error: result.error };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-6">
       {/* -------------------------------------------------- header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

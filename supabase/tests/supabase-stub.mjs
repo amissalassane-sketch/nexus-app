@@ -298,6 +298,13 @@ export function startSupabaseStub(port = 54321, host = "127.0.0.1", shared = nul
   // over the defaults, without touching the seeded e2e state. Existing
   // callers (shared.tables) are unaffected.
   if (shared?.extraTables) Object.assign(tables, shared.extraTables);
+  // Same precedent for RPC: a harness can back named RPCs with a real
+  // engine instead of stub logic (see scripts/preview-admin.mjs, which
+  // serves the Admin Control Plane from PGlite running the actual
+  // migrations). Handlers receive (body, { userId }) and answer with
+  // either { data } or { error: { code, message } }. Unknown names and
+  // absent hooks behave exactly as before, so no existing suite changes.
+  const extraRpc = shared?.extraRpc ?? null;
   if (shared) shared.tables = tables;
 
   // TLS options turn this instance into an HTTPS listener (sandbox preview).
@@ -546,6 +553,22 @@ document.querySelectorAll("a[data-code]").forEach((el) => {
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
       const claims = decodeJwt(token);
       const userId = claims?.sub ?? null;
+
+      // Harness-provided RPC (see startSupabaseStub docs): lets a preview
+      // back named functions with a real PostgreSQL instead of stub logic.
+      if (extraRpc?.[rpcName]) {
+        const body = await readBody(req);
+        try {
+          const outcome = await extraRpc[rpcName](body, { userId, token });
+          if (outcome?.error) return json(400, outcome.error);
+          return json(200, outcome?.data ?? null);
+        } catch (error) {
+          return json(400, {
+            code: "XX000",
+            message: String(error?.message ?? error),
+          });
+        }
+      }
 
       // get_or_create_personal_workspace: idempotent bootstrap RPC
       // added in migration 016. Mimics the security-definer DB function:

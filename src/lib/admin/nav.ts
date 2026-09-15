@@ -69,15 +69,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: "Users",
         href: "/admin/users",
         icon: "users",
-        status: "planned",
-        note: "Needs a cross-tenant user query (PR 2).",
+        status: "ready",
       },
       {
         label: "Workspaces",
         href: "/admin/workspaces",
         icon: "building",
-        status: "planned",
-        note: "Needs a cross-tenant workspace query (PR 2).",
+        status: "ready",
       },
       {
         label: "Organizations",
