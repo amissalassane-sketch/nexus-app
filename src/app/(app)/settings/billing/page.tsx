@@ -10,7 +10,10 @@ import { Alert, Progress } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { PLAN_ORDER, PLAN_PRESENTATION, planRank } from "@/lib/billing/plans";
 import { parseWorkspaceUsage, type WorkspaceUsage } from "@/lib/billing/usage";
-import { type PlanName } from "@/lib/plan-limits";
+import {
+  displayStatusOf,
+  effectivePlanOf,
+} from "@/lib/billing/subscription-state";
 import { canManageBilling, getActiveMembership } from "@/lib/workspace";
 
 const USAGE_ROWS: { label: string; key: keyof WorkspaceUsage["usage"] }[] = [
@@ -38,7 +41,11 @@ export default async function BillingPage() {
         .maybeSingle()
     : { data: null };
 
-  const currentPlan = ((subscription?.plan as PlanName) ?? "FREE") as PlanName;
+  // Same resolution the database applies (get_workspace_plan): an
+  // 'active' row whose period lapsed displays as expired and grants
+  // FREE, so this page never shows a plan the write guards would deny.
+  const currentPlan = effectivePlanOf(subscription);
+  const displayStatus = displayStatusOf(subscription);
 
   let usage: WorkspaceUsage | null = null;
   let usageError: string | null = null;
@@ -80,9 +87,9 @@ export default async function BillingPage() {
                 Current plan
               </p>
               <h2 className="mt-1 text-display text-text-primary">{currentPlan}</h2>
-              {subscription?.status ? (
+              {displayStatus ? (
                 <p className="mt-1 text-small capitalize text-text-secondary">
-                  {subscription.status}
+                  {displayStatus}
                 </p>
               ) : (
                 <p className="mt-1 text-small text-text-secondary">
