@@ -449,7 +449,7 @@ console.log("-- RLS / security invariants -------------------------");
   ok("Tool layer never imports Supabase", !toolsSrc.includes("supabase") && !toolsSrc.includes("createClient"));
   ok("Agent layer never imports Supabase", !agentSrc.includes("supabase") && !agentSrc.includes("createClient"));
   ok("No SQL strings in the tool layer", !toolsSrc.includes("select ") && !toolsSrc.includes("insert into"));
-  const migration = fs.readFileSync("supabase/migrations/001_nexus_base_schema.sql", "utf8");
+  const migration = fs.readFileSync("supabase/tests/fixtures/001_nexus_base_schema.sql", "utf8");
   ok("RLS enabled on tasks", /policy "[a-z_]*tasks[a-z_]*" on public\.tasks for select/.test(migration));
   ok("RLS enabled on projects", /policy "[a-z_]*projects[a-z_]*" on public\.projects for select/.test(migration));
   ok("RLS read policies exist for goals + activities", /policy "[a-z_]*goals[a-z_]*" on public\.goals for select/.test(migration) && /policy "[a-z_]*activities[a-z_]*" on public\.activities for select/.test(migration));

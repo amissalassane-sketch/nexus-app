@@ -27,6 +27,10 @@ const SKIPPED = new Set([
   "20260915130000_nexus_core_contract.sql",
   "20260915130500_nexus_lineage_reconciliation.sql",
   "20260915131000_nexus_auth_workspace_bootstrap.sql",
+  "002_nexus_storage.sql",
+  "003_nexus_ai.sql",
+  "004_nexus_automations.sql",
+  "005_nexus_worker.sql",
 ]);
 
 const db = await PGlite.create();
@@ -209,6 +213,9 @@ begin
   end if;
   if not exists (select 1 from pg_roles where rolname = 'anon') then
     execute 'create role anon nologin';
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then
+    execute 'create role service_role nologin';
   end if;
 end
 $$;

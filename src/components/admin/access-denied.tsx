@@ -81,10 +81,10 @@ export function AdminAccessDenied({ state }: { state: PlatformAdminState }) {
             Back to NEXUS
           </Link>
           <Link
-            href="/login"
+            href="/admin/login"
             className="inline-flex h-9 items-center rounded-[8px] border border-admin-border bg-admin-surface-2 px-3.5 text-[13px] leading-[20px] text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
-            Sign in as someone else
+            Sign in with an Administrator Account
           </Link>
         </div>
       </div>

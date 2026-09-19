@@ -7,6 +7,7 @@ import { ADMIN_NAV, type AdminNavItem } from "@/lib/admin/nav";
 import { cn } from "@/lib/cn";
 import { AdminIcon } from "./admin-icons";
 import { AdminStatusPill, type AdminTone } from "./status";
+import { AdminCommandMenu } from "./admin-command-menu";
 
 // ============================================================
 // NEXUS ADMIN — SHELL
@@ -202,10 +203,9 @@ function SignOutButton() {
 
   async function signOut() {
     setPending(true);
-    // Same contract as the product shell: POST, then leave. A failed
-    // sign-out must not strand the operator inside the control plane.
+    // Invalidate session cookies via POST /api/auth/signout
     await fetch("/api/auth/signout", { method: "POST" }).catch(() => null);
-    router.push("/login");
+    router.push("/admin/login");
     router.refresh();
   }
 
@@ -243,6 +243,7 @@ export function AdminShell({
   // itself by derivation — no effect that fights the navigation, and no
   // setState racing a render.
   const [drawerPath, setDrawerPath] = useState<string | null>(null);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const drawerOpen = drawerPath !== null && drawerPath === pathname;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -308,6 +309,15 @@ export function AdminShell({
             <AdminIcon name="menu" size="toolbar" />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setCommandMenuOpen(true)}
+            aria-label="Search admin sections (Cmd+K)"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent sm:hidden"
+          >
+            <AdminIcon name="search" size="toolbar" />
+          </button>
+
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-[10px] uppercase leading-[14px] tracking-[0.12em] text-admin-text-3">
               NEXUS Admin
@@ -316,6 +326,20 @@ export function AdminShell({
               Control plane
             </p>
           </div>
+
+          {/* Global Quick Search Button (Ctrl/Cmd + K) */}
+          <button
+            type="button"
+            onClick={() => setCommandMenuOpen(true)}
+            aria-label="Search admin sections (Cmd+K)"
+            className="hidden sm:inline-flex h-9 items-center gap-2.5 rounded-[8px] border border-admin-border bg-admin-surface px-3 text-[12.5px] leading-[18px] text-admin-text-2 transition-colors duration-150 hover:border-admin-border/80 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+          >
+            <AdminIcon name="search" size="action" className="text-admin-text-3" />
+            <span className="hidden md:inline">Jump to…</span>
+            <kbd className="rounded border border-admin-border bg-admin-surface-2 px-1.5 py-0.5 font-mono text-[10px] font-medium text-admin-text-3">
+              ⌘K
+            </kbd>
+          </button>
 
           <AdminStatusPill tone={platformTone} className="hidden sm:inline-flex">
             {platformLabel}
@@ -332,6 +356,11 @@ export function AdminShell({
           {children}
         </main>
       </div>
+
+      <AdminCommandMenu
+        open={commandMenuOpen}
+        onOpenChange={setCommandMenuOpen}
+      />
 
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">

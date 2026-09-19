@@ -18,12 +18,17 @@ import { readSupabaseConfig } from "@/lib/supabase/config";
  * workspace bootstrap before rendering the product.
  */
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   let response = NextResponse.next({
-    request,
+    request: {
+      headers: requestHeaders,
+    },
   });
 
   const { config } = readSupabaseConfig();
-  const pathname = request.nextUrl.pathname;
 
   // A deployment without Supabase cannot have an authenticated session.
   if (!config) {
@@ -47,6 +52,9 @@ export async function updateSession(request: NextRequest) {
       pathname.startsWith("/forgot-password") ||
       pathname.startsWith("/reset-password") ||
       pathname.startsWith("/verify-email") ||
+      pathname.startsWith("/admin/login") ||
+      pathname.startsWith("/admin/forgot-password") ||
+      pathname.startsWith("/admin/reset-password") ||
       pathname.startsWith("/auth/") ||
       pathname.startsWith("/api/") ||
       pathname === "/robots.txt" ||
@@ -87,7 +95,12 @@ export async function updateSession(request: NextRequest) {
         });
 
         response = NextResponse.next({
-          request,
+          request: {
+            headers: new Headers({
+              ...Object.fromEntries(request.headers.entries()),
+              "x-pathname": pathname,
+            }),
+          },
         });
 
         cookiesToSet.forEach(({ name, value, options }) => {
@@ -96,6 +109,8 @@ export async function updateSession(request: NextRequest) {
       },
     },
   });
+
+  response.headers.set("x-pathname", pathname);
 
   const {
     data: { user },
@@ -130,6 +145,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password") ||
     pathname.startsWith("/verify-email") ||
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/forgot-password") ||
+    pathname.startsWith("/admin/reset-password") ||
     pathname.startsWith("/auth/");
 
   const isAuthForm =
@@ -138,8 +156,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/verify-email");
 
-  // Unauthenticated users on private routes → /login
+  // Unauthenticated users on private routes → /login (or /admin/login for admin paths)
   if (!user && !isPublicRoute) {
+    if (pathname.startsWith("/admin")) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
