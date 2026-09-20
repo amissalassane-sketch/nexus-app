@@ -66,8 +66,8 @@ check(
 );
 
 check(
-  "spotlight: panes yield pointer events while a modal dialog is active",
-  spotlight.includes('modalActive ? "pointer-events-none opacity-20" : "pointer-events-auto"')
+  "spotlight: panes step out entirely while a modal dialog is active",
+  spotlight.includes('modalActive ? "pointer-events-none opacity-0" : "pointer-events-auto"')
 );
 
 // ------------------------------------------------------------------

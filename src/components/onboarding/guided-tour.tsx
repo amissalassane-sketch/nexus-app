@@ -13,6 +13,7 @@ import {
   Spotlight,
   findGuideTarget,
   useGuideTarget,
+  useModalActive,
   useReducedMotion,
   type SpotlightRect,
 } from "@/components/onboarding/spotlight";
@@ -126,7 +127,10 @@ export function GuidedTour({
   const isWelcome = step.id === "welcome";
   const isMobile = useIsMobile();
   const [pending, setPending] = useState(false);
-  const [modalActive, setModalActive] = useState(false);
+  // Single dialog observation shared with the spotlight below: one
+  // MutationObserver for the whole tour, so the card and the panes can
+  // never disagree about yielding to an open dialog.
+  const modalActive = useModalActive();
   const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -136,22 +140,6 @@ export function GuidedTour({
     []
   );
 
-  useEffect(() => {
-    // Same rule as the spotlight: only a visible dialog yields the card.
-    const checkModal = () => {
-      const dialogs = document.querySelectorAll<HTMLElement>(
-        "[role='dialog'][aria-modal='true']"
-      );
-      const modal = Array.from(dialogs).find(
-        (el) => el.getBoundingClientRect().width >= 2
-      );
-      setModalActive(Boolean(modal));
-    };
-    checkModal();
-    const mo = new MutationObserver(checkModal);
-    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
-    return () => mo.disconnect();
-  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -235,7 +223,11 @@ export function GuidedTour({
     // click "New project" / "Add project" forever with no effect. Only the
     // spotlight panes (pointer-events-auto) and the card below intercept.
     <div className="pointer-events-none fixed inset-0 z-[70]" aria-live="polite">
-      <Spotlight rect={isWelcome ? null : rect} reduced={reduced} />
+      <Spotlight
+        rect={isWelcome ? null : rect}
+        reduced={reduced}
+        modalActive={modalActive}
+      />
 
       <div
         role="dialog"

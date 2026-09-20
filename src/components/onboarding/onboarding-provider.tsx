@@ -167,7 +167,15 @@ export function OnboardingProvider({
     (next: PersistedOnboarding) => {
       setState(next);
       writeLocalOnboarding(userId, next);
-      void writeRemoteOnboarding(createClient(), userId, next).catch(() => null);
+      // Remote sync is best-effort only: it must never throw into a click
+      // or activation handler (missing env throws synchronously inside
+      // createClient(), a dead network rejects) — local state is the
+      // source of truth and already updated above.
+      try {
+        void writeRemoteOnboarding(createClient(), userId, next).catch(() => null);
+      } catch {
+        // ignore — the guide keeps working from local state
+      }
     },
     [userId]
   );
@@ -176,11 +184,20 @@ export function OnboardingProvider({
     let cancelled = false;
     const boot = async () => {
       const local = readLocalOnboarding(userId);
-      const remote = await readRemoteOnboarding(createClient(), userId);
-      const merged = remote ? mergeOnboarding(local, remote) : local;
-      if (cancelled) return;
-      setState(merged);
-      setHydrated(true);
+      try {
+        const remote = await readRemoteOnboarding(createClient(), userId);
+        const merged = remote ? mergeOnboarding(local, remote) : local;
+        if (cancelled) return;
+        setState(merged);
+      } catch {
+        // Remote state is a bonus, never a gate: a network failure or a
+        // misconfigured client falls back to local state instead of
+        // leaving the guidance layer unhydrated (and invisible) forever.
+        if (cancelled) return;
+        setState(local);
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
     };
     void boot();
     return () => {

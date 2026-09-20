@@ -227,7 +227,7 @@ export function WorkspaceSidebar({
               type="button"
               ref={ref}
               onClick={toggle}
-              data-guide="create-project"
+              data-guide="global-create"
               className="flex h-10 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base lg:h-9"
               {...ariaProps}
             >
