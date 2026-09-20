@@ -57,11 +57,18 @@ function NavRow({
 
   // Planned entries are not links. A control plane that links to a route
   // it has not built trains the operator to expect 404s.
+  //
+  // Accessible "coming soon" state: the row announces itself as disabled
+  // (aria-disabled) and the reason is in the accessibility tree itself —
+  // an sr-only note, not only in the `title` tooltip, which keyboard and
+  // screen-reader users do not reliably receive. The visual "soon" badge
+  // and the hover tooltip stay as they are.
   if (item.status !== "ready") {
     return (
       <span
+        role="note"
         aria-disabled="true"
-        title={`${item.label} — ${item.note ?? "not available yet"}`}
+        title={`${item.label} — coming soon: ${item.note ?? "not available yet"}`}
         className={cn(
           "flex h-8 w-full cursor-not-allowed items-center gap-2.5 rounded-[7px] text-[13px] leading-[18px] text-admin-text-3",
           rowShape
@@ -78,6 +85,9 @@ function NavRow({
           )}
         >
           soon
+        </span>
+        <span className="sr-only">
+          {`Coming soon — ${item.note ?? "not available yet"}`}
         </span>
       </span>
     );
