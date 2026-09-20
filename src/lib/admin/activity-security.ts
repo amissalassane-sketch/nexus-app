@@ -49,7 +49,7 @@ export async function getAdminActivity(q: AdminListQuery): Promise<AdminRead<Adm
   const resolved = await client(); if ("error" in resolved) return { state: "unavailable", error: resolved.error };
   const r = await callAdminRpc(resolved.supabase, "admin_activity_list",
     { p_search: q.search, p_action: q.filter === "all" ? null : q.filter, p_page: q.page, p_page_size: q.pageSize }, 10000, "ADMIN_ACTIVITY_LIST_TIMEOUT");
-  if (r.error) return { state: "unavailable", error: classify(r.error) };
+  if (r.error) return { state: "unavailable", error: classify(r.error, "admin_activity_list()") };
   if (!validList(r.data)) return { state: "unavailable", error: { code: "INVALID_PAYLOAD", message: "admin_activity_list() returned an unexpected shape." } };
   return { state: r.data.items.length ? "ok" : "empty", payload: r.data as AdminActivityPayload };
 }
@@ -58,7 +58,7 @@ export async function getAdminAuditLog(q: AdminListQuery): Promise<AdminRead<Adm
   const resolved = await client(); if ("error" in resolved) return { state: "unavailable", error: resolved.error };
   const r = await callAdminRpc(resolved.supabase, "admin_audit_log_list",
     { p_search: q.search, p_outcome: q.filter === "all" ? null : q.filter, p_page: q.page, p_page_size: q.pageSize }, 10000, "ADMIN_AUDIT_LIST_TIMEOUT");
-  if (r.error) return { state: "unavailable", error: classify(r.error) };
+  if (r.error) return { state: "unavailable", error: classify(r.error, "admin_audit_log_list()") };
   if (!validList(r.data)) return { state: "unavailable", error: { code: "INVALID_PAYLOAD", message: "admin_audit_log_list() returned an unexpected shape." } };
   return { state: r.data.items.length ? "ok" : "empty", payload: r.data as AdminAuditPayload };
 }
@@ -66,7 +66,7 @@ export async function getAdminAuditLog(q: AdminListQuery): Promise<AdminRead<Adm
 export async function getAdminSecurity(): Promise<AdminRead<AdminSecurityPayload>> {
   const resolved = await client(); if ("error" in resolved) return { state: "unavailable", error: resolved.error };
   const r = await callAdminRpc(resolved.supabase, "admin_security_overview", {}, 10000, "ADMIN_SECURITY_TIMEOUT");
-  if (r.error) return { state: "unavailable", error: classify(r.error) };
+  if (r.error) return { state: "unavailable", error: classify(r.error, "admin_security_overview()") };
   if (!r.data || typeof r.data !== "object" || typeof (r.data as { generated_at?: unknown }).generated_at !== "string") {
     return { state: "unavailable", error: { code: "INVALID_PAYLOAD", message: "admin_security_overview() returned an unexpected shape." } };
   }
