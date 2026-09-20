@@ -1,14 +1,15 @@
 import {
-  CheckCircle2,
-  CircleDot,
-  FolderKanban,
-  PenLine,
-  Plus,
-  Radar,
-  Target,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+  IconCircleCheck,
+  IconCircleDot,
+  IconLayoutKanban,
+  IconPencil,
+  IconPlus,
+  IconRadar,
+  IconTarget,
+  IconTrash,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/feedback";
 
@@ -30,24 +31,24 @@ export type ActivityRow = {
   actor?: string | null;
 };
 
-const ACTION_ICON: Record<string, LucideIcon> = {
-  created: Plus,
-  updated: PenLine,
-  completed: CheckCircle2,
-  deleted: Trash2,
+const ACTION_ICON: Record<string, TablerIcon> = {
+  created: IconPlus,
+  updated: IconPencil,
+  completed: IconCircleCheck,
+  deleted: IconTrash,
 };
 
-const ENTITY_ICON: Record<string, LucideIcon> = {
-  project: FolderKanban,
-  goal: Target,
-  task: CircleDot,
-  intelligence: Radar,
+const ENTITY_ICON: Record<string, TablerIcon> = {
+  project: IconLayoutKanban,
+  goal: IconTarget,
+  task: IconCircleDot,
+  intelligence: IconRadar,
 };
 
-function iconFor(activity: ActivityRow): LucideIcon {
+function iconFor(activity: ActivityRow): TablerIcon {
   const action = (activity.action ?? "").toLowerCase();
   if (ACTION_ICON[action]) return ACTION_ICON[action];
-  return ENTITY_ICON[(activity.entity_type ?? "").toLowerCase()] ?? CircleDot;
+  return ENTITY_ICON[(activity.entity_type ?? "").toLowerCase()] ?? IconCircleDot;
 }
 
 function labelFor(activity: ActivityRow): string {
@@ -128,7 +129,7 @@ export function ActivityList({
         <EmptyState
           title="No activity recorded yet"
           description="Every action on projects, tasks and goals creates an automatic audit trail here so you can see what moved without asking anyone."
-          icon={<CircleDot size={17} strokeWidth={1.75} />}
+          icon={<NexusIcon icon={IconCircleDot} size="state" />}
         />
       </div>
     );
@@ -156,7 +157,7 @@ export function ActivityList({
                   : "border-border-subtle bg-bg-surface text-text-tertiary"
               )}
             >
-              <Icon size={12} strokeWidth={1.75} />
+              <NexusIcon icon={Icon} />
             </span>
 
             <div className="min-w-0 flex-1">

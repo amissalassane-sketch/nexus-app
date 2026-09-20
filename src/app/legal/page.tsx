@@ -3,7 +3,8 @@ import { LegalHubLayout } from "@/components/legal/legal-layout";
 import { LegalCard } from "@/components/legal/legal-card";
 import { LEGAL_DOCUMENTS_LIST } from "@/components/legal/legal-data";
 import { LegalContactBox, LegalDisclaimerNotice } from "@/components/legal/legal-ui";
-import { Database, Lock, Shield, Sparkles } from "lucide-react";
+import { IconDatabase, IconLock, IconShield, IconSparkles } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 
 export const metadata: Metadata = {
   title: "Legal Center",
@@ -19,25 +20,25 @@ export const metadata: Metadata = {
 
 const TRUST_PILLARS = [
   {
-    icon: Database,
+    icon: IconDatabase,
     title: "Tenant-Isolated PostgreSQL RLS",
     description:
       "Every workspace operates with database-level isolation. Row-Level Security policies cryptographically verify active workspace membership before returning any row.",
   },
   {
-    icon: Sparkles,
+    icon: IconSparkles,
     title: "Human-Confirmed AI Model",
     description:
       "NEXUS Intelligence models propose insights, plans, and actions, but the server strictly requires explicit human confirmation before executing any state mutation.",
   },
   {
-    icon: Shield,
+    icon: IconShield,
     title: "Zero Third-Party Ad Trackers",
     description:
       "We do not embed third-party advertising cookies, social tracking pixels, or cross-site behavioral telemetry. Your workspace remains entirely your own.",
   },
   {
-    icon: Lock,
+    icon: IconLock,
     title: "Complete Data Sovereignty",
     description:
       "You retain full intellectual property ownership of your projects, tasks, and goals. Account and workspace deletions trigger immediate database cascades.",
@@ -51,7 +52,7 @@ export default function LegalCenterPage() {
         {/* Hero Section */}
         <div className="mx-auto max-w-[840px] text-center">
           <span className="nexus-eyebrow-pill">
-            <Shield size={12} className="text-lavender" aria-hidden="true" />
+            <NexusIcon icon={IconShield} px={12} className="text-lavender" />
             Legal &amp; Trust Center
           </span>
 
@@ -100,7 +101,7 @@ export default function LegalCenterPage() {
                 className="rounded-card border border-border-subtle bg-bg-surface/50 p-5 transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface"
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-input border border-border-subtle bg-bg-base/80 text-lavender">
-                  <pillar.icon size={18} strokeWidth={1.5} aria-hidden="true" />
+                  <NexusIcon icon={pillar.icon} size="toolbar" />
                 </div>
                 <h3 className="mt-4 text-h3 font-medium text-text-primary">
                   {pillar.title}

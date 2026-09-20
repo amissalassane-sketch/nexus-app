@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 
@@ -156,7 +157,7 @@ export function Modal({
             aria-label="Close dialog"
             className="shrink-0 transition-transform duration-150 ease-nexus active:scale-90"
           >
-            <X size={16} strokeWidth={1.75} />
+            <NexusIcon icon={IconX} />
           </Button>
         </div>
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 
@@ -33,6 +34,8 @@ export function HelpCenter({
   const locale = browserLocale();
   const [closing, setClosing] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(
     () => () => {
@@ -59,6 +62,27 @@ export function HelpCenter({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, requestClose]);
 
+  // Modal manners, mirroring the Modal primitive: lock the background
+  // scroll, move keyboard focus inside the dialog on open, and hand it
+  // back to the opener on close.
+  useEffect(() => {
+    if (!open || closing) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    const timer = setTimeout(() => {
+      const focusable = panelRef.current?.querySelector<HTMLElement>(
+        "button, [href], input, [tabindex]:not([tabindex='-1'])"
+      );
+      (focusable ?? panelRef.current)?.focus();
+    }, 60);
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = overflow;
+      previouslyFocused.current?.focus?.();
+    };
+  }, [open, closing]);
+
   if (!open) return null;
 
   const panelClass = cn(
@@ -78,9 +102,11 @@ export function HelpCenter({
         onClick={requestClose}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="nexus-help-title"
+        tabIndex={-1}
         className={panelClass}
       >
         <div className="flex items-start justify-between gap-3">
@@ -99,7 +125,7 @@ export function HelpCenter({
             aria-label="Close"
             className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary hover:bg-accent-ghost hover:text-text-primary"
           >
-            <X size={16} />
+            <NexusIcon icon={IconX} />
           </button>
         </div>
         <ul className="mt-4 divide-y divide-border-subtle border-y border-border-subtle">

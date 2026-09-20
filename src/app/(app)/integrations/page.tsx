@@ -1,4 +1,5 @@
-import { PlugZap } from "lucide-react";
+import { IconPlugConnected } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/card";
@@ -31,7 +32,7 @@ export default async function IntegrationsPage() {
 
       <Panel title="What NEXUS already understands" description="No external connection required">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"><PlugZap size={16} aria-hidden="true" /></span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"><NexusIcon icon={IconPlugConnected} /></span>
           <p className="max-w-[62ch] text-small text-text-secondary">Projects, tasks, goals, activity, notifications and Intelligence are already connected inside your workspace. External integrations will extend that context; they will not replace the NEXUS core.</p>
         </div>
       </Panel>

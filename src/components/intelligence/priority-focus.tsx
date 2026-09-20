@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Crosshair } from "lucide-react";
+import { IconCrosshair } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import type { PrioritizedTask } from "@/lib/intelligence/advanced";
 
@@ -101,7 +102,7 @@ export function PriorityFocusPanel({
 function PanelHeader() {
   return (
     <p className="eyebrow flex items-center gap-1.5 text-text-quaternary">
-      <Crosshair size={12} strokeWidth={1.75} aria-hidden="true" />
+      <NexusIcon icon={IconCrosshair} px={12} />
       Focus list: what NEXUS would do first
     </p>
   );

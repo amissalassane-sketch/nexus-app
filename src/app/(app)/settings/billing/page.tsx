@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { BillingUpgradeButton } from "@/components/billing-upgrade-button";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
@@ -202,7 +203,7 @@ export default async function BillingPage() {
           href="/settings"
           className="inline-flex items-center gap-1.5 text-small text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
         >
-          <ArrowLeft size={14} strokeWidth={1.75} />
+          <NexusIcon icon={IconArrowLeft} px={14} />
           Back to settings
         </Link>
     </div>

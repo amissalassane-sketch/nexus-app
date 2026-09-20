@@ -1,4 +1,5 @@
-import { Layers, Lock, ShieldCheck, Zap } from "lucide-react";
+import { IconBolt, IconLock, IconShieldCheck, IconStack2 } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 
@@ -22,25 +23,25 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 
 const TRUST_POINTS = [
   {
-    icon: Layers,
+    icon: IconStack2,
     title: "Connected by design",
     proof: "One data model",
     body: "Goals, projects, tasks and activity live in one model. Nothing is a silo.",
   },
   {
-    icon: Lock,
+    icon: IconLock,
     title: "Private by architecture",
     proof: "Row-level security",
     body: "Every workspace is isolated in Postgres with row-level security.",
   },
   {
-    icon: ShieldCheck,
+    icon: IconShieldCheck,
     title: "Honest by construction",
     proof: "Server-side limits",
     body: "Plan limits are enforced server-side. The numbers you see are the ones the database checks.",
   },
   {
-    icon: Zap,
+    icon: IconBolt,
     title: "Lean by default",
     proof: "Self-hosted, no trackers",
     body: "Self-hosted fonts, no third-party trackers. Nothing watches you browse.",
@@ -60,7 +61,7 @@ function Pillar({
       <span className="nexus-trust-node" aria-hidden="true" />
       <span className="nexus-trust-drop -mt-px block" aria-hidden="true" />
       <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-pill border border-border-default bg-bg-surface text-text-secondary">
-        <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+        <NexusIcon icon={Icon} />
       </span>
       <span className="nexus-meta mt-3">
         {String(index + 1).padStart(2, "0")}
@@ -140,7 +141,7 @@ export function TrustSection() {
                     />
                   )}
                   <span className="relative flex h-[31px] w-[31px] shrink-0 items-center justify-center rounded-pill border border-border-default bg-bg-surface text-text-secondary">
-                    <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+                    <NexusIcon icon={Icon} />
                   </span>
                   <div className="min-w-0 pt-1">
                     <div className="flex items-baseline gap-2">

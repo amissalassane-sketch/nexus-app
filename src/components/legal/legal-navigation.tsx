@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, LayoutGrid } from "lucide-react";
+import { IconArrowLeft, IconArrowRight, IconLayoutGrid } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { LegalDocumentId } from "./types";
 import { LEGAL_DOCUMENTS_LIST } from "./legal-data";
 import { cn } from "@/lib/cn";
@@ -31,7 +32,7 @@ export function LegalDocumentNavigation({
             className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
-              <ArrowLeft size={12} aria-hidden="true" />
+              <NexusIcon icon={IconArrowLeft} px={12} />
               <span>Previous Document</span>
             </span>
             <span className="mt-2 text-h3 text-text-primary group-hover:text-lavender">
@@ -44,7 +45,7 @@ export function LegalDocumentNavigation({
             className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
-              <LayoutGrid size={12} aria-hidden="true" />
+              <NexusIcon icon={IconLayoutGrid} px={12} />
               <span>Legal Center</span>
             </span>
             <span className="mt-2 text-h3 text-text-primary group-hover:text-lavender">
@@ -61,7 +62,7 @@ export function LegalDocumentNavigation({
           >
             <span className="flex items-center justify-end gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <span>Next Document</span>
-              <ArrowRight size={12} aria-hidden="true" />
+              <NexusIcon icon={IconArrowRight} px={12} />
             </span>
             <span className="mt-2 text-h3 text-text-primary group-hover:text-lavender">
               {nextDoc.title}
@@ -74,7 +75,7 @@ export function LegalDocumentNavigation({
           >
             <span className="flex items-center justify-end gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <span>Legal Center</span>
-              <LayoutGrid size={12} aria-hidden="true" />
+              <NexusIcon icon={IconLayoutGrid} px={12} />
             </span>
             <span className="mt-2 text-h3 text-text-primary group-hover:text-lavender">
               Back to Overview

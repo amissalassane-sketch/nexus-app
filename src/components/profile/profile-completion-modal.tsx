@@ -3,7 +3,8 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { UserRound, ImagePlus, Loader2 } from "lucide-react";
+import { IconLoader2, IconPhotoPlus, IconUser } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { computeProfileCompleteness, isValidUsername, missingLabel } from "@/lib/profile-state";
@@ -168,7 +169,7 @@ function ProfileCompletionForm({
             className="inline-flex h-9 flex-1 sm:flex-none items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-medium text-black hover:bg-white/90 transition-colors disabled:opacity-60"
           >
             {saving ? (
-              <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+              <NexusIcon icon={IconLoader2} px={14} className="animate-spin" />
             ) : null}
             {saving ? "Saving…" : "Save profile"}
           </motion.button>
@@ -178,7 +179,7 @@ function ProfileCompletionForm({
       <form id="profile-completion-form" onSubmit={handleSave} className="flex flex-col gap-4">
         {/* Progress indicator */}
         <div className="flex items-center gap-2.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-          <UserRound size={14} strokeWidth={1.75} className="shrink-0 text-white/30" aria-hidden="true" />
+          <NexusIcon icon={IconUser} px={14} className="text-white/30" />
           <p className="min-w-0 flex-1 truncate text-[11.5px] text-white/40">
             {completeness.complete
               ? "Profile complete. Ready to go."
@@ -244,10 +245,9 @@ function ProfileCompletionForm({
             A link to an image you host. Leave it empty and NEXUS uses your initial.
           </p>
           <div className="relative">
-            <ImagePlus
-              size={14}
-              strokeWidth={1.75}
-              aria-hidden="true"
+            <NexusIcon
+              icon={IconPhotoPlus}
+              px={14}
               className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
             />
             <input

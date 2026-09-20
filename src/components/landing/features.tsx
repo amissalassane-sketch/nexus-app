@@ -1,13 +1,14 @@
 import {
-  Activity,
-  BrainCircuit,
-  CheckSquare,
-  Command,
-  FolderKanban,
-  LayoutDashboard,
-  Sparkles,
-  Target,
-} from "lucide-react";
+  IconActivity,
+  IconBrain,
+  IconChecklist,
+  IconCommand,
+  IconLayoutDashboard,
+  IconLayoutKanban,
+  IconSparkles,
+  IconTarget,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 
@@ -34,32 +35,32 @@ const MODEL_FLOW = ["Goal", "Project", "Task", "Activity", "Intelligence"] as co
 
 const OPERATING_MODEL = [
   {
-    icon: LayoutDashboard,
+    icon: IconLayoutDashboard,
     title: "Workspace",
     body: "One surface for everything operational. No tabs, no context switching.",
   },
   {
-    icon: Target,
+    icon: IconTarget,
     title: "Goals",
     body: "Outcomes stay visible next to the work, measured by real progress.",
   },
   {
-    icon: FolderKanban,
+    icon: IconLayoutKanban,
     title: "Projects",
     body: "Work grouped around a goal. Progress counts real tasks, not sliders.",
   },
   {
-    icon: CheckSquare,
+    icon: IconChecklist,
     title: "Tasks",
     body: "Priorities, due dates and a focus list, captured in seconds.",
   },
   {
-    icon: Activity,
+    icon: IconActivity,
     title: "Activity",
     body: "A record of what actually happened, so nothing quietly disappears.",
   },
   {
-    icon: BrainCircuit,
+    icon: IconBrain,
     title: "NEXUS Intelligence",
     body: "Reads the workspace, explains the evidence, and names the next action.",
   },
@@ -67,12 +68,12 @@ const OPERATING_MODEL = [
 
 const PRODUCT_EXPERIENCE = [
   {
-    icon: Command,
+    icon: IconCommand,
     title: "Command K",
     body: "Jump to any task, project or destination straight from the keyboard.",
   },
   {
-    icon: Sparkles,
+    icon: IconSparkles,
     title: "Free to start",
     body: "One workspace, two projects, one hundred tasks. No card required.",
   },
@@ -133,7 +134,7 @@ export function FeaturesSection() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                        <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                        <NexusIcon icon={Icon} />
                       </span>
                       <span className="nexus-meta mt-0.5">
                         {String(index + 1).padStart(2, "0")}
@@ -170,7 +171,7 @@ export function FeaturesSection() {
                     className="flex items-start gap-3.5 p-5 sm:p-6"
                   >
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary">
-                      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                      <NexusIcon icon={Icon} />
                     </span>
                     <div className="min-w-0">
                       <div className="flex items-baseline justify-between gap-3">

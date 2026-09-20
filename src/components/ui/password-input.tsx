@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ComponentPropsWithRef } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 
@@ -28,9 +29,9 @@ export function PasswordInput({
         className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-input text-text-tertiary transition-colors hover:bg-accent-ghost hover:text-text-primary disabled:pointer-events-none disabled:opacity-40"
       >
         {visible ? (
-          <EyeOff size={15} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconEyeOff} />
         ) : (
-          <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconEye} />
         )}
       </button>
     </div>

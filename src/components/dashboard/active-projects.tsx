@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FolderKanban } from "lucide-react";
+import { IconLayoutKanban } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Panel } from "@/components/ui/card";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -62,7 +63,7 @@ export function ActiveProjectsPanel({
           <EmptyState
             title="No active projects yet"
             description="Projects give NEXUS the context to track pace, deadlines and risk."
-            icon={<FolderKanban size={17} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconLayoutKanban} size="state" />}
             action={
               <Link
                 href="/projects?create=1"
@@ -106,7 +107,7 @@ export function ActiveProjectsPanel({
                         aria-hidden="true"
                         className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
                       >
-                        <FolderKanban size={13} strokeWidth={1.75} />
+                        <NexusIcon icon={IconLayoutKanban} />
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-body-medium text-text-primary">

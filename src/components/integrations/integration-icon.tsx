@@ -1,4 +1,5 @@
-import { Webhook } from "lucide-react";
+import { IconWebhook } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { siGithub, siGooglecalendar, siJira, siLinear, siNotion } from "simple-icons";
 
 // Slack asked to be removed from Simple Icons (trademark request), so its
@@ -30,5 +31,5 @@ export function IntegrationIcon({ id, size = 16, className }: { id: string; size
   }
 
   // Non-brand integrations (e.g. NEXUS Webhooks) keep a neutral glyph.
-  return <Webhook size={size} strokeWidth={1.75} aria-hidden="true" className={className} />;
+  return <NexusIcon icon={IconWebhook} px={size} className={className} />;
 }

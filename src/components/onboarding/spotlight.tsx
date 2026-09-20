@@ -28,34 +28,24 @@ export function findGuideTarget(selector?: string): HTMLElement | null {
   return null;
 }
 
-export function measureGuide(selector?: string): SpotlightRect | null {
-  if (!selector || typeof document === "undefined") return null;
-  const el = findGuideTarget(selector);
-  if (!el) return null;
-  const box = el.getBoundingClientRect();
-  el.scrollIntoView({ block: "nearest", inline: "nearest" });
-  return {
-    top: box.top,
-    left: box.left,
-    width: box.width,
-    height: box.height,
-  };
-}
-
-/** Four-pane overlay so the target stays clickable, yielding pointer events if a modal dialog is active. */
-export function Spotlight({
-  rect,
-  reduced,
-}: {
-  rect: SpotlightRect | null;
-  reduced: boolean;
-}) {
+/**
+ * True while a visible modal dialog owns the screen. Shared by the tour
+ * card and the spotlight so both agree through a single DOM observation
+ * instead of each running its own MutationObserver over the document.
+ *
+ * Only a *visible* modal dialog counts. A hidden or leftover dialog
+ * (route transition, closing animation, display:none panel) would
+ * otherwise dim the tour card and steal its pointer events.
+ *
+ * Pre-paint (`useLayoutEffect`): when a dialog and the tour mount in the
+ * same commit (e.g. the `/projects?create=1` deep link), detection runs
+ * before the browser paints — the tour never flashes a frame over the
+ * dialog it is supposed to yield to.
+ */
+export function useModalActive(): boolean {
   const [modalActive, setModalActive] = useState(false);
 
-  useEffect(() => {
-    // Only a *visible* modal dialog counts. A hidden or leftover dialog
-    // (route transition, closing animation, display:none panel) would
-    // otherwise dim the tour card and steal its pointer events.
+  useLayoutEffect(() => {
     const checkModal = () => {
       const dialogs = document.querySelectorAll<HTMLElement>(
         "[role='dialog'][aria-modal='true']"
@@ -63,13 +53,42 @@ export function Spotlight({
       const modal = Array.from(dialogs).find(
         (el) => el.getBoundingClientRect().width >= 2
       );
-      setModalActive(Boolean(modal));
+      setModalActive((current) => {
+        const next = Boolean(modal);
+        return current === next ? current : next;
+      });
     };
     checkModal();
     const mo = new MutationObserver(checkModal);
     mo.observe(document.body, { childList: true, subtree: true, attributes: true });
     return () => mo.disconnect();
   }, []);
+
+  return modalActive;
+}
+
+/**
+ * Four-pane overlay so the target stays clickable, yielding pointer events
+ * if a modal dialog is active.
+ *
+ * INVARIANT: the parent tour wrapper MUST be pointer-events-none, or the
+ * wrapper itself swallows every click (spotlight hole included) and the
+ * product underneath — including open modals — becomes unclickable.
+ */
+export function Spotlight({
+  rect,
+  reduced,
+  modalActive = false,
+}: {
+  rect: SpotlightRect | null;
+  reduced: boolean;
+  /**
+   * Owned by the tour via `useModalActive()` and passed down, so the
+   * spotlight and the card always agree through one observation instead
+   * of each watching the document separately.
+   */
+  modalActive?: boolean;
+}) {
 
   const pad = 8;
   if (!rect) {
@@ -86,10 +105,12 @@ export function Spotlight({
   const width = rect.width + pad * 2;
   const height = rect.height + pad * 2;
 
-  // When a modal dialog is open, yield pointer events so the user can type and submit without obstacle
+  // While a modal dialog owns the screen the tour steps out entirely:
+  // no pointer interception and no residual dim over the form the user
+  // is completing — the panes fade back in when the dialog closes.
   const pane = cn(
     "absolute bg-black/50 transition-opacity duration-200",
-    modalActive ? "pointer-events-none opacity-20" : "pointer-events-auto"
+    modalActive ? "pointer-events-none opacity-0" : "pointer-events-auto"
   );
 
   return (

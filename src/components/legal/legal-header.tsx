@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Copy, Printer, Shield } from "lucide-react";
+import { IconArrowLeft, IconCheck, IconCopy, IconPrinter, IconShield } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { LegalDocumentMeta } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
@@ -42,7 +43,7 @@ export function LegalDocumentHeader({
           href="/legal"
           className="inline-flex items-center gap-1.5 rounded-input py-1 text-text-secondary transition-colors duration-150 ease-nexus hover:text-text-primary"
         >
-          <ArrowLeft size={14} aria-hidden="true" />
+          <NexusIcon icon={IconArrowLeft} px={14} />
           <span>Legal Center</span>
         </Link>
 
@@ -55,7 +56,7 @@ export function LegalDocumentHeader({
       {/* Main Title & Description */}
       <div className="mt-5">
         <span className="nexus-eyebrow-pill">
-          <Shield size={12} className="text-lavender" aria-hidden="true" />
+          <NexusIcon icon={IconShield} px={12} className="text-lavender" />
           {document.eyebrow}
         </span>
 
@@ -91,12 +92,12 @@ export function LegalDocumentHeader({
           >
             {copied ? (
               <>
-                <Check size={12} className="text-success" aria-hidden="true" />
+                <NexusIcon icon={IconCheck} px={12} className="text-success" />
                 <span className="text-success">Link copied</span>
               </>
             ) : (
               <>
-                <Copy size={12} aria-hidden="true" />
+                <NexusIcon icon={IconCopy} px={12} />
                 <span>Share link</span>
               </>
             )}
@@ -108,7 +109,7 @@ export function LegalDocumentHeader({
             aria-label="Print document"
             className="inline-flex h-8 items-center gap-1.5 rounded-pill border border-border-subtle bg-bg-surface px-3 font-mono text-[11px] text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary"
           >
-            <Printer size={12} aria-hidden="true" />
+            <NexusIcon icon={IconPrinter} px={12} />
             <span>Print</span>
           </button>
         </div>

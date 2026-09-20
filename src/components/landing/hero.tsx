@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
 import { HeroAtmosphere } from "@/components/landing/hero-atmosphere";
 import { HeroHeadline } from "@/components/landing/hero-headline";
@@ -97,7 +98,7 @@ export function Hero({ notice }: { notice?: ReactNode }) {
         >
           <ButtonLink href="/signup" size="lg" className="sm:min-w-[190px]">
             Get started
-            <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconArrowRight} />
           </ButtonLink>
           <ButtonLink
             href="/intelligence"

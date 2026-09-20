@@ -3,17 +3,19 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  Activity,
-  Bell,
-  CalendarClock,
-  CheckSquare,
-  FolderKanban,
-  LayoutDashboard,
-  Pause,
-  Radar,
-  Target,
-  Waves,
-} from "lucide-react";
+  IconActivity,
+  IconBell,
+  IconCalendarClock,
+  IconChecklist,
+  IconLayoutDashboard,
+  IconLayoutKanban,
+  IconPlayerPause,
+  IconRadar,
+  IconTarget,
+  IconWaveSine,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/feedback";
@@ -32,38 +34,38 @@ import { Progress } from "@/components/ui/feedback";
 // ============================================================
 
 const NAV_PRIMARY = [
-  { icon: LayoutDashboard, label: "Overview", count: null },
-  { icon: Radar, label: "Intelligence", count: null },
+  { icon: IconLayoutDashboard, label: "Overview", count: null },
+  { icon: IconRadar, label: "Intelligence", count: null },
 ];
 
 const NAV_WORK = [
-  { icon: FolderKanban, label: "Projects", count: 3 },
-  { icon: CheckSquare, label: "Tasks", count: 12 },
-  { icon: Target, label: "Goals", count: 2 },
+  { icon: IconLayoutKanban, label: "Projects", count: 3 },
+  { icon: IconChecklist, label: "Tasks", count: 12 },
+  { icon: IconTarget, label: "Goals", count: 2 },
 ];
 
 const NAV_WORKSPACE = [
-  { icon: Activity, label: "Activity", count: null },
-  { icon: Bell, label: "Notifications", count: 1 },
+  { icon: IconActivity, label: "Activity", count: null },
+  { icon: IconBell, label: "Notifications", count: 1 },
 ];
 
 const SIGNALS = [
   {
-    icon: CalendarClock,
+    icon: IconCalendarClock,
     kind: "Deadline",
     tone: "danger" as const,
     title: "2 tasks are past their due date",
     body: "The oldest is “Ship onboarding emails”, due 5 days ago.",
   },
   {
-    icon: Pause,
+    icon: IconPlayerPause,
     kind: "Blocked",
     tone: "warning" as const,
     title: "“Migrate auth cookies” is blocked",
     body: "Nothing downstream of it can move.",
   },
   {
-    icon: Waves,
+    icon: IconWaveSine,
     kind: "At risk",
     tone: "warning" as const,
     title: "“Website redesign” may miss its date",
@@ -88,7 +90,7 @@ function NavGroup({
 }: {
   label?: string;
   items: {
-    icon: typeof LayoutDashboard;
+    icon: TablerIcon;
     label: string;
     count: number | null;
   }[];
@@ -118,9 +120,9 @@ function NavGroup({
                   : "border-transparent text-text-secondary hover:bg-white/[0.04] hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
               )}
             >
-              <item.icon
-                size={12}
-                strokeWidth={1.75}
+              <NexusIcon
+                icon={item.icon}
+                px={12}
                 className={active ? "text-text-primary" : "text-text-tertiary"}
               />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
@@ -273,9 +275,9 @@ export function ProductPreview() {
                   {/* Next best action */}
                   <div className="rounded-card border border-lavender-border bg-lavender-subtle p-3.5">
                     <div className="flex items-center gap-2">
-                      <CalendarClock
-                        size={11}
-                        strokeWidth={1.75}
+                      <NexusIcon
+                        icon={IconCalendarClock}
+                        px={11}
                         className="text-lavender"
                       />
                       <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-text-tertiary">
@@ -308,14 +310,10 @@ export function ProductPreview() {
                         key={signal.title}
                         className="flex items-start gap-2.5 border-b border-border-subtle px-3 py-2.5 last:border-b-0"
                       >
-                        <signal.icon
-                          size={11}
-                          strokeWidth={1.75}
-                          className={`mt-0.5 shrink-0 ${
-                            signal.tone === "danger"
-                              ? "text-danger"
-                              : "text-warning"
-                          }`}
+<NexusIcon
+                          icon={signal.icon}
+                          px={11}
+                          className={`mt-0.5 ${signal.tone === "danger" ? "text-danger" : "text-warning"}`}
                         />
                         <div className="min-w-0 flex-1">
                           <Badge tone={signal.tone}>{signal.kind}</Badge>

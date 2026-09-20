@@ -2,7 +2,14 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckSquare, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  IconChecklist,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateTask } from "@/lib/access";
@@ -772,7 +779,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
             aria-label={`Edit ${task.title}`}
             onClick={() => populateEditForm(task)}
           >
-            <Pencil size={15} strokeWidth={1.75} />
+            <NexusIcon icon={IconPencil} />
           </Button>
           <Button
             variant="icon"
@@ -780,7 +787,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
             onClick={() => setConfirmingDelete(task)}
             className="hover:text-danger"
           >
-            <Trash2 size={15} strokeWidth={1.75} />
+            <NexusIcon icon={IconTrash} />
           </Button>
         </div>
       </li>
@@ -872,10 +879,8 @@ function TaskManagerInner({ userId }: { userId: string }) {
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
-              <Search
-                size={14}
-                strokeWidth={1.75}
-                aria-hidden="true"
+              <NexusIcon
+                icon={IconSearch}
                 className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
               />
               <Input
@@ -967,7 +972,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                     ? "This view has no matching tasks. Switch back to All to see everything in your workspace."
                     : "Adjust your search or reset the filters to see the other tasks."
               }
-              icon={<CheckSquare size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconChecklist} size="state" />}
               action={
                 tasks.length === 0 ? (
                   <CreateButton label="New Task" onClick={openCreateForm} data-guide="new-task" />
@@ -1018,7 +1023,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
                       onClick={() => setQuickOpen(true)}
                       className="flex h-9 w-full items-center gap-2 px-4 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-bg-surface/60 hover:text-text-secondary"
                     >
-                      <Plus size={14} strokeWidth={1.75} />
+                      <NexusIcon icon={IconPlus} />
                       Add task
                     </button>
                   )

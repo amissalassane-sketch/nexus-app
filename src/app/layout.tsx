@@ -4,14 +4,17 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 /**
- * NEXUS V3 typography.
- * Self-hosted (Inter Variable + Geist Mono Variable) so the app never depends
- * on a third-party font CDN at build or runtime.
+ * NEXUS typography.
+ * Self-hosted (Instrument Sans Variable + Geist Mono Variable) so the app
+ * never depends on a third-party font CDN at build or runtime.
+ * Instrument Sans is the single UI voice: navigation, headings, labels,
+ * buttons, forms, tables, dashboard, admin, system states. Geist Mono is
+ * reserved for technical data (IDs, timestamps, keys, logs, code).
  */
-const inter = localFont({
-  src: "../fonts/Inter-Variable.woff2",
-  variable: "--font-inter",
-  weight: "100 900",
+const instrumentSans = localFont({
+  src: "../fonts/InstrumentSans-Variable.woff2",
+  variable: "--font-instrument",
+  weight: "400 700",
   display: "swap",
   fallback: ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
 });
@@ -92,7 +95,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${instrumentSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <head>
         <script

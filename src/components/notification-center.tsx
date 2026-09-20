@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
-  Bell,
-  CheckCircle2,
-  FolderKanban,
-  Info,
-  Target,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconBell,
+  IconCircleCheck,
+  IconInfoCircle,
+  IconLayoutKanban,
+  IconTarget,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
@@ -44,16 +46,16 @@ const entityRoutes: Record<string, string> = {
   workspace: "/dashboard",
 };
 
-function iconFor(notification: NotificationItem) {
+function iconFor(notification: NotificationItem): TablerIcon {
   const key = `${notification.entity_type ?? ""}${notification.type ?? ""}`.toLowerCase();
-  if (key.includes("project")) return FolderKanban;
-  if (key.includes("goal")) return Target;
+  if (key.includes("project")) return IconLayoutKanban;
+  if (key.includes("goal")) return IconTarget;
   if (key.includes("task") || key.includes("done") || key.includes("complete"))
-    return CheckCircle2;
+    return IconCircleCheck;
   if (key.includes("warn") || key.includes("limit") || key.includes("overdue"))
-    return AlertTriangle;
-  if (key.includes("info")) return Info;
-  return Bell;
+    return IconAlertTriangle;
+  if (key.includes("info")) return IconInfoCircle;
+  return IconBell;
 }
 
 const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -261,7 +263,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
             <EmptyState
               title="Workspace connecting"
               description="Your personal workspace is being prepared. Notifications will appear here once connected."
-              icon={<Bell size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconBell} size="state" />}
               action={
                 <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
                   Retry connection
@@ -278,7 +280,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
                   ? "You are all caught up on updates and signals in this workspace."
                   : "When work changes or NEXUS detects risks and recommendations, you will be notified here."
               }
-              icon={<Bell size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconBell} size="state" />}
               action={
                 tab === "unread" ? (
                   <button
@@ -317,7 +319,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
                         : "border-border-subtle bg-bg-surface text-text-tertiary"
                     )}
                   >
-                    <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                    <NexusIcon icon={Icon} />
                   </span>
 
                   {isUnread ? (

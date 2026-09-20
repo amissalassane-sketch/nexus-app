@@ -2,7 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Pencil, Target, Trash2 } from "lucide-react";
+import {
+  IconPencil,
+  IconTarget,
+  IconTrash,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateGoal } from "@/lib/access";
@@ -86,6 +91,19 @@ function GoalManagerInner({ userId }: { userId: string }) {
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(searchParams.get("create") === "1");
+  // Deep link (?create=1): open the form even when the manager is already
+  // mounted on this route — the checklist links here in place, where a
+  // mount-only initializer would miss it. Derive-on-prop-change (not an
+  // effect) so it never re-opens the form on unrelated URL edits.
+  const [prevCreateParam, setPrevCreateParam] = useState(
+    searchParams.get("create") === "1"
+  );
+  if (searchParams.get("create") === "1" && !prevCreateParam) {
+    setPrevCreateParam(true);
+    setFormOpen(true);
+  } else if (searchParams.get("create") !== "1" && prevCreateParam) {
+    setPrevCreateParam(false);
+  }
   // Destructive confirmation — the ConfirmDialog gates the delete; the
   // mutation itself is unchanged.
   const [confirmingDelete, setConfirmingDelete] = useState<Goal | null>(null);
@@ -376,7 +394,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
         <EmptyState
           title="Workspace connecting"
           description="Your personal workspace is being prepared. Goals will appear here once connected."
-          icon={<Target size={17} strokeWidth={1.75} />}
+          icon={<NexusIcon icon={IconTarget} size="state" />}
           action={
             <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
               Retry connection
@@ -387,7 +405,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
         <EmptyState
           title="No goals set yet"
           description="Define key outcomes to measure whether your projects and tasks are making real progress. NEXUS monitors progress and alerts you if work falls behind."
-          icon={<Target size={17} strokeWidth={1.75} />}
+          icon={<NexusIcon icon={IconTarget} size="state" />}
           action={<CreateButton label="Set a goal" onClick={openCreateForm} />}
         />
       ) : (
@@ -432,7 +450,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
                       aria-label={`Edit ${goal.title}`}
                       onClick={() => populateEditForm(goal)}
                     >
-                      <Pencil size={15} strokeWidth={1.75} />
+                      <NexusIcon icon={IconPencil} />
                     </Button>
                     <Button
                       variant="icon"
@@ -440,7 +458,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
                       onClick={() => setConfirmingDelete(goal)}
                       className="hover:text-danger"
                     >
-                      <Trash2 size={15} strokeWidth={1.75} />
+                      <NexusIcon icon={IconTrash} />
                     </Button>
                   </div>
                 </div>

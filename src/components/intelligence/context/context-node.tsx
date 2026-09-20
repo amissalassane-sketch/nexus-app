@@ -1,14 +1,15 @@
 import type { CSSProperties } from "react";
 import {
-  Activity,
-  CalendarClock,
-  CheckSquare,
-  FolderKanban,
-  GitBranch,
-  Layers,
-  Target,
-  TrendingUp,
-} from "lucide-react";
+  IconActivity,
+  IconCalendarClock,
+  IconChecklist,
+  IconGitBranch,
+  IconLayoutKanban,
+  IconStack2,
+  IconTarget,
+  IconTrendingUp,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { ContextNodeConfig } from "./config";
 import { scaleForZ } from "./config";
 
@@ -26,14 +27,14 @@ import { scaleForZ } from "./config";
 // ============================================================
 
 const ICONS = {
-  "check-square": CheckSquare,
-  "folder-kanban": FolderKanban,
-  target: Target,
-  "calendar-clock": CalendarClock,
-  "trending-up": TrendingUp,
-  "git-branch": GitBranch,
-  activity: Activity,
-  layers: Layers,
+  "check-square": IconChecklist,
+  "folder-kanban": IconLayoutKanban,
+  target: IconTarget,
+  "calendar-clock": IconCalendarClock,
+  "trending-up": IconTrendingUp,
+  "git-branch": IconGitBranch,
+  activity: IconActivity,
+  layers: IconStack2,
 } as const;
 
 export function ContextNode({ config }: { config: ContextNodeConfig }) {
@@ -61,7 +62,7 @@ export function ContextNode({ config }: { config: ContextNodeConfig }) {
     >
       <div className="nexus-context-node-card">
         <span className="nexus-context-node-tile" aria-hidden="true">
-          <Icon size={13} strokeWidth={1.75} />
+          <NexusIcon icon={Icon} px={13} />
         </span>
         <span className="nexus-context-node-text">
           <span className="nexus-context-node-label">{config.label}</span>

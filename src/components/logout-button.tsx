@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { IconLogout } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 
 export function LogoutButton() {
@@ -29,7 +30,7 @@ export function LogoutButton() {
       onClick={handleLogout}
       className="flex h-8 w-full items-center gap-2.5 rounded-nav px-2.5 text-[13px] text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
     >
-      <LogOut size={18} strokeWidth={1.75} className="shrink-0" />
+      <NexusIcon icon={IconLogout} />
       Log out
     </button>
   );

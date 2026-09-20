@@ -275,6 +275,6 @@ stroke `1.75` and the size scale (navigation 18, toolbar 18, compact
 actions 16, empty states 24–32), and makes the accessibility default
 correct: decorative unless the caller supplies a label.
 
-Note: the rest of the application still uses `lucide-react` (78 files).
-Migrating it is a separate, deliberate piece of work — this PR does not
-touch a single existing screen.
+Note: the application-wide migration off `lucide-react` is complete —
+every surface now renders through `NexusIcon` (product) or `AdminIcon`
+(admin), and the `lucide-react` dependency has been removed.

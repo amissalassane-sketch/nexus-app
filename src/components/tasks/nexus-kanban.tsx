@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, CalendarDays, ChevronDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconCalendar,
+  IconChevronDown,
+  IconGripVertical,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -111,7 +121,7 @@ export function NexusKanban({
       <div className="flex items-center justify-between gap-3">
         <p className="text-caption text-text-tertiary">Drag to move work between NEXUS statuses.</p>
         <Button size="sm" variant="secondary" onClick={onAddTask}>
-          <Plus size={14} aria-hidden="true" />
+          <NexusIcon icon={IconPlus} />
           New task
         </Button>
       </div>
@@ -174,7 +184,7 @@ export function NexusKanban({
                       ) : null}
                       <Card as="article" className="p-3" interactive>
                         <div className="flex items-start gap-2">
-                          <GripVertical size={14} className="mt-0.5 shrink-0 text-text-quaternary" aria-hidden="true" />
+                          <NexusIcon icon={IconGripVertical} px={14} className="mt-0.5 text-text-quaternary" />
                           <button
                             type="button"
                             className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
@@ -186,10 +196,10 @@ export function NexusKanban({
                           </button>
                           <div className="flex shrink-0 items-center opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100">
                             <Button variant="icon" aria-label={`Edit ${task.title}`} onClick={() => onEdit(task)}>
-                              <Pencil size={14} aria-hidden="true" />
+                              <NexusIcon icon={IconPencil} />
                             </Button>
                             <Button variant="icon" aria-label={`Delete ${task.title}`} className="hover:text-danger" onClick={() => onDelete(task)}>
-                              <Trash2 size={14} aria-hidden="true" />
+                              <NexusIcon icon={IconTrash} />
                             </Button>
                           </div>
                         </div>
@@ -197,7 +207,7 @@ export function NexusKanban({
                           <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
                           {task.due_at ? (
                             <span className={cn("inline-flex items-center gap-1 text-caption", overdue ? "text-danger" : "text-text-tertiary")}>
-                              <CalendarDays size={12} aria-hidden="true" />
+                              <NexusIcon icon={IconCalendar} px={12} />
                               {formatDate(task.due_at)}
                             </span>
                           ) : null}
@@ -212,14 +222,14 @@ export function NexusKanban({
                           >
                             {STATUSES.map((option) => <option key={option} value={option}>{STATUS_LABELS[option]}</option>)}
                           </select>
-                          <ChevronDown size={13} className="-ml-6 pointer-events-none text-text-quaternary" aria-hidden="true" />
+                          <NexusIcon icon={IconChevronDown} px={13} className="-ml-6 pointer-events-none text-text-quaternary" />
                           <Button
                             variant="icon"
                             className="h-7 w-7"
                             aria-label={`Move ${task.title} up`}
                             onClick={() => moveWithinColumn(task, -1)}
                           >
-                            <ArrowUp size={13} aria-hidden="true" />
+                            <NexusIcon icon={IconArrowUp} />
                           </Button>
                           <Button
                             variant="icon"
@@ -227,7 +237,7 @@ export function NexusKanban({
                             aria-label={`Move ${task.title} down`}
                             onClick={() => moveWithinColumn(task, 1)}
                           >
-                            <ArrowDown size={13} aria-hidden="true" />
+                            <NexusIcon icon={IconArrowDown} />
                           </Button>
                         </div>
                       </Card>
@@ -249,7 +259,7 @@ export function NexusKanban({
                     }}
                   >
                     <span>No tasks here</span>
-                    <span className="inline-flex items-center gap-1 text-text-secondary"><Plus size={12} aria-hidden="true" /> Add task</span>
+                    <span className="inline-flex items-center gap-1 text-text-secondary"><NexusIcon icon={IconPlus} px={12} /> Add task</span>
                   </button>
                 ) : null}
               </div>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Info, ShieldAlert, Sparkles, Database } from "lucide-react";
+import { IconDatabase, IconInfoCircle, IconShieldExclamation, IconSparkles } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
 export function LegalSection({
@@ -126,10 +127,10 @@ export function LegalCallout({
   className?: string;
 }) {
   const IconComponent = {
-    info: Info,
-    warning: ShieldAlert,
-    ai: Sparkles,
-    database: Database,
+    info: IconInfoCircle,
+    warning: IconShieldExclamation,
+    ai: IconSparkles,
+    database: IconDatabase,
   }[icon];
 
   const toneClasses = {
@@ -155,11 +156,10 @@ export function LegalCallout({
       )}
     >
       <div className="flex items-start gap-3">
-        <IconComponent
-          size={18}
-          strokeWidth={1.75}
-          className={cn("mt-0.5 shrink-0", iconColors)}
-          aria-hidden="true"
+        <NexusIcon
+          icon={IconComponent}
+          size="toolbar"
+          className={cn("mt-0.5", iconColors)}
         />
         <div className="min-w-0 flex-1 text-small leading-relaxed text-text-secondary">
           {title ? (

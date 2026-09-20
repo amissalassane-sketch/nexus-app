@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { IconMenu2, IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -192,7 +193,7 @@ export function LandingNav({
             aria-label={open ? "Close menu" : "Open menu"}
             className="flex h-11 w-11 items-center justify-center rounded-pill text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:h-9 sm:w-9"
           >
-            {open ? <X size={18} strokeWidth={1.75} /> : <Menu size={18} strokeWidth={1.75} />}
+            {open ? <NexusIcon icon={IconX} size="nav" /> : <NexusIcon icon={IconMenu2} size="nav" />}
           </button>
         </div>
       </div>

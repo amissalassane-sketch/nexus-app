@@ -1,5 +1,14 @@
 import type { CSSProperties } from "react";
-import { Ban, Clock, FolderOpen, Target, TrendingUp, Zap } from "lucide-react";
+import {
+  IconBan,
+  IconBolt,
+  IconClock,
+  IconFolderOpen,
+  IconTarget,
+  IconTrendingUp,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Badge } from "@/components/ui/badge";
@@ -12,49 +21,49 @@ import type { BadgeTone } from "@/components/ui/badge";
 // ============================================================
 
 const SIGNALS: {
-  icon: typeof Clock;
+  icon: TablerIcon;
   state: string;
   tone: BadgeTone;
   title: string;
   body: string;
 }[] = [
   {
-    icon: Clock,
+    icon: IconClock,
     state: "Critical",
     tone: "danger",
     title: "Overdue work",
     body: "A deadline has passed and the task is still open. NEXUS names the oldest one first.",
   },
   {
-    icon: Ban,
+    icon: IconBan,
     state: "Warning",
     tone: "warning",
     title: "Blocked tasks",
     body: "Work marked as blocked, held back by something that has to move first.",
   },
   {
-    icon: Target,
+    icon: IconTarget,
     state: "Warning",
     tone: "warning",
     title: "Goals at risk",
     body: "Progress is too low for the time left before the target date.",
   },
   {
-    icon: FolderOpen,
+    icon: IconFolderOpen,
     state: "Info",
     tone: "info",
     title: "No next action",
     body: "An active project with nothing open against it. The work has quietly stopped.",
   },
   {
-    icon: TrendingUp,
+    icon: IconTrendingUp,
     state: "Positive",
     tone: "success",
     title: "Momentum",
     body: "What actually got finished this week, so progress is visible, not assumed.",
   },
   {
-    icon: Zap,
+    icon: IconBolt,
     state: "Priority",
     tone: "lavender",
     title: "Next best action",
@@ -86,7 +95,7 @@ export function IntelligenceSignals() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                      <NexusIcon icon={Icon} />
                     </span>
                     <Badge tone={signal.tone}>{signal.state}</Badge>
                   </div>

@@ -2,7 +2,13 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FolderKanban, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  IconLayoutKanban,
+  IconPencil,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateProject } from "@/lib/access";
@@ -69,6 +75,34 @@ const formatDate = (value: string | null) => {
   return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit" }).format(date);
 };
 
+/**
+ * Slug base derived from the project name. Diacritics are folded
+ * ("Café" → "cafe") so French names keep readable, collision-free slugs
+ * instead of collapsing accented letters into bare dashes. Never empty.
+ */
+const slugBase = (name: string): string => {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base || "project";
+};
+
+/**
+ * Creation slugs carry a random suffix: two projects may legitimately
+ * share a name ("Website", "Website"), and without the suffix the second
+ * insert dies on the unique(workspace_id, slug) constraint with a
+ * confusing "already exists" error.
+ */
+const uniqueSlug = (name: string): string => {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${slugBase(name)}-${suffix}`;
+};
+
 function ProjectManagerInner({ userId }: { userId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
@@ -79,6 +113,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
@@ -168,20 +203,49 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     await fetchTaskCounts(activeWorkspaceId);
   };
 
+  const resolveWorkspace = async (): Promise<string | null> => {
+    const { membership, error: membershipError } = await getActiveMembership(
+      supabase,
+      userId
+    );
+
+    if (membershipError) {
+      setError(membershipError);
+    }
+
+    const nextWorkspaceId = membership?.workspaceId ?? null;
+    setWorkspaceId(nextWorkspaceId);
+    return nextWorkspaceId;
+  };
+
+  const retryWorkspace = async () => {
+    if (reconnecting) return;
+    setReconnecting(true);
+    setError("");
+    try {
+      const nextWorkspaceId = await resolveWorkspace();
+      if (nextWorkspaceId) {
+        await fetchProjects(nextWorkspaceId);
+      } else {
+        setError(
+          "Your workspace is still connecting. Wait a moment, then retry — your form content is kept."
+        );
+      }
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? `Could not reach your workspace: ${cause.message}`
+          : "Could not reach your workspace. Check your connection and retry."
+      );
+    } finally {
+      setReconnecting(false);
+    }
+  };
+
   useEffect(() => {
     const loadWorkspace = async () => {
       try {
-        const { membership, error: membershipError } = await getActiveMembership(
-          supabase,
-          userId
-        );
-
-        if (membershipError) {
-          setError(membershipError);
-        }
-
-        const nextWorkspaceId = membership?.workspaceId ?? null;
-        setWorkspaceId(nextWorkspaceId);
+        const nextWorkspaceId = await resolveWorkspace();
         await fetchProjects(nextWorkspaceId);
       } catch (cause) {
         // Network/config failure: surface it instead of spinning forever.
@@ -226,17 +290,9 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   }, []);
 
   const createProject = async () => {
-    if (!workspaceId || !form.name.trim()) {
+    const name = form.name.trim();
+    if (!name) {
       setError("Please provide a project name.");
-      return;
-    }
-
-    const allowed = await guardCreate();
-    if (!allowed) {
-      setError(
-        "You have reached your plan limit for projects. See the upgrade options above."
-      );
-      setFormOpen(false);
       return;
     }
 
@@ -244,12 +300,48 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     setError("");
     setSuccess("");
 
-    const slug = form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
+    // Never a dead submit: when the workspace id is missing (slow
+    // bootstrap, transient membership read), re-resolve it right here
+    // instead of failing — and say so plainly if it stays unreachable.
+    let activeWorkspaceId = workspaceId;
+    if (!activeWorkspaceId) {
+      try {
+        activeWorkspaceId = await resolveWorkspace();
+      } catch {
+        activeWorkspaceId = null;
+      }
+      if (!activeWorkspaceId) {
+        setSaving(false);
+        setError(
+          "Your workspace is not connected yet, so this project cannot be saved. Retry in a moment — your form content is kept."
+        );
+        return;
+      }
+    }
+
+    let allowed = true;
+    try {
+      allowed = await guardCreate();
+    } catch {
+      setSaving(false);
+      setError(
+        "NEXUS could not verify your plan limit. Check your connection and try again."
+      );
+      return;
+    }
+    if (!allowed) {
+      setSaving(false);
+      setError(
+        "You have reached your plan limit for projects. See the upgrade options above."
+      );
+      setFormOpen(false);
+      return;
+    }
 
     const { error: createError } = await supabase.from("projects").insert({
-      workspace_id: workspaceId,
-      name: form.name.trim(),
-      slug,
+      workspace_id: activeWorkspaceId,
+      name,
+      slug: uniqueSlug(name),
       description: form.description.trim() || null,
       status: form.status,
       progress: Math.min(100, Math.max(0, Number(form.progress))),
@@ -268,17 +360,20 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Project created.");
+    // closeForm() resets the form state (including any success text), so the
+    // confirmation is set after it — otherwise the user never sees it.
     window.dispatchEvent(
       new CustomEvent("nexus:activation", { detail: { type: "project_created" } })
     );
     closeForm();
-    await fetchProjects(workspaceId);
+    setSuccess("Project created.");
+    await fetchProjects(activeWorkspaceId);
     syncServerViews();
   };
 
   const updateProject = async () => {
-    if (!editingProjectId || !workspaceId || !form.name.trim()) {
+    const name = form.name.trim();
+    if (!editingProjectId || !name) {
       setError("Please provide a valid project name.");
       return;
     }
@@ -287,13 +382,27 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     setError("");
     setSuccess("");
 
-    const slug = form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
+    let activeWorkspaceId = workspaceId;
+    if (!activeWorkspaceId) {
+      try {
+        activeWorkspaceId = await resolveWorkspace();
+      } catch {
+        activeWorkspaceId = null;
+      }
+      if (!activeWorkspaceId) {
+        setSaving(false);
+        setError(
+          "Your workspace is not connected yet, so this change cannot be saved. Retry in a moment — your form content is kept."
+        );
+        return;
+      }
+    }
 
     const { error: updateError } = await supabase
       .from("projects")
       .update({
-        name: form.name.trim(),
-        slug,
+        name,
+        slug: slugBase(name),
         description: form.description.trim() || null,
         status: form.status,
         progress: Math.min(100, Math.max(0, Number(form.progress))),
@@ -301,7 +410,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", editingProjectId)
-      .eq("workspace_id", workspaceId);
+      .eq("workspace_id", activeWorkspaceId);
 
     setSaving(false);
 
@@ -310,9 +419,9 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess("Project updated.");
     closeForm();
-    await fetchProjects(workspaceId);
+    setSuccess("Project updated.");
+    await fetchProjects(activeWorkspaceId);
     syncServerViews();
   };
 
@@ -460,10 +569,8 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
-              <Search
-                size={14}
-                strokeWidth={1.75}
-                aria-hidden="true"
+              <NexusIcon
+                icon={IconSearch}
                 className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
               />
               <Input
@@ -515,7 +622,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
             <EmptyState
               title="Workspace connecting"
               description="Your personal workspace is being prepared. Projects will appear here once connected."
-              icon={<FolderKanban size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconLayoutKanban} size="state" />}
               action={
                 <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
                   Retry connection
@@ -534,7 +641,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                   ? "Create a project to organize related tasks. NEXUS tracks momentum and detects risks as deadlines approach."
                   : "Adjust your search keywords or status filter to see other projects."
               }
-              icon={<FolderKanban size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconLayoutKanban} size="state" />}
               action={
                 projects.length === 0 ? (
                   <CreateButton label="New Project" onClick={openCreateForm} data-guide="new-project" />
@@ -555,7 +662,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary">
-                      <FolderKanban size={16} strokeWidth={1.75} />
+                      <NexusIcon icon={IconLayoutKanban} />
                     </span>
 
                     <div className="min-w-0 flex-1">
@@ -620,7 +727,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                           aria-label={`Edit ${project.name}`}
                           onClick={() => populateEditForm(project)}
                         >
-                          <Pencil size={15} strokeWidth={1.75} />
+                          <NexusIcon icon={IconPencil} />
                         </Button>
                         <Button
                           variant="icon"
@@ -628,7 +735,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                           onClick={() => setConfirmingDelete(project)}
                           className="hover:text-danger"
                         >
-                          <Trash2 size={15} strokeWidth={1.75} />
+                          <NexusIcon icon={IconTrash} />
                         </Button>
                       </div>
                     </div>
@@ -653,7 +760,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
           <>
             <Button
               onClick={submitProject}
-              disabled={saving || !workspaceId}
+              disabled={saving || reconnecting}
               data-guide="create-project"
             >
               {saving
@@ -671,6 +778,21 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         }
       >
         <div className="flex flex-col gap-4">
+          {!workspaceId && !loading ? (
+            <Alert tone="warning">
+              Your workspace is not connected yet. You can fill in this form —
+              it is kept — then{" "}
+              <button
+                type="button"
+                onClick={() => void retryWorkspace()}
+                disabled={reconnecting}
+                className="font-medium text-text-primary underline underline-offset-2 hover:text-text-primary disabled:opacity-50"
+              >
+                {reconnecting ? "retrying the connection…" : "retry the connection"}
+              </button>{" "}
+              before saving.
+            </Alert>
+          ) : null}
           <Field label="Name" htmlFor="project-name">
             <Input
               id="project-name"

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import {
-  ArrowRight,
-  CheckCircle2,
-  Cookie,
-  FileCheck2,
-  FileText,
-  ShieldCheck,
-} from "lucide-react";
+  IconArrowRight,
+  IconCircleCheck,
+  IconCookie,
+  IconFileCheck,
+  IconFileText,
+  IconShieldCheck,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { LegalDocumentMeta } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
@@ -19,10 +20,10 @@ export function LegalCard({
   className?: string;
 }) {
   const IconComponent = {
-    terms: FileText,
-    privacy: ShieldCheck,
-    cookies: Cookie,
-    "acceptable-use": FileCheck2,
+    terms: IconFileText,
+    privacy: IconShieldCheck,
+    cookies: IconCookie,
+    "acceptable-use": IconFileCheck,
   }[document.id];
 
   return (
@@ -35,7 +36,7 @@ export function LegalCard({
       <div>
         <div className="flex items-center justify-between gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-input border border-border-subtle bg-bg-base/80 text-lavender">
-            <IconComponent size={20} strokeWidth={1.5} aria-hidden="true" />
+            <NexusIcon icon={IconComponent} size="toolbar" />
           </div>
           <div className="flex items-center gap-2">
             <Badge tone="lavender">v{document.version}</Badge>
@@ -66,10 +67,10 @@ export function LegalCard({
                 key={idx}
                 className="flex items-start gap-2 text-[12.5px] leading-snug text-text-secondary"
               >
-                <CheckCircle2
-                  size={13}
-                  className="mt-0.5 shrink-0 text-text-tertiary"
-                  aria-hidden="true"
+                <NexusIcon
+                  icon={IconCircleCheck}
+                  px={13}
+                  className="mt-0.5 text-text-tertiary"
                 />
                 <span>{highlight}</span>
               </li>
@@ -88,10 +89,10 @@ export function LegalCard({
           className="inline-flex min-h-[36px] items-center gap-1.5 rounded-pill border border-border-subtle bg-bg-base/80 px-3.5 text-small font-medium text-text-primary transition-all duration-150 ease-nexus hover:border-border-strong hover:bg-white hover:text-black"
         >
           <span>Read document</span>
-          <ArrowRight
-            size={13}
+          <NexusIcon
+            icon={IconArrowRight}
+            px={13}
             className="transition-transform duration-150 group-hover:translate-x-0.5"
-            aria-hidden="true"
           />
         </Link>
       </div>

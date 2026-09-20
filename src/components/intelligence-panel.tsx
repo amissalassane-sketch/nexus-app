@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -54,7 +55,7 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
         </div>
         <div className="flex items-center gap-2">
           <span className={cn("shrink-0", SEVERITY_TEXT[insight.severity])}>
-            <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={Icon} px={14} />
           </span>
           <Badge tone={SEVERITY_TONE[insight.severity]}>
             {SIGNAL_LABEL[insight.kind]}
@@ -106,7 +107,7 @@ export function FocusPanel({ insight }: { insight: Insight | null }) {
           className="inline-flex h-11 items-center gap-2 rounded-input bg-accent px-5 text-button font-medium text-accent-fg shadow-[0_2px_14px_rgba(255,255,255,0.12)] transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px sm:h-10"
         >
           {insight.cta}
-          <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
+          <NexusIcon icon={IconArrowRight} />
         </Link>
         <Link
           href="/app/intelligence"
@@ -142,7 +143,7 @@ export function InsightRow({
           className={cn("mt-0.5 shrink-0", SEVERITY_TEXT[insight.severity])}
           aria-hidden="true"
         >
-          <Icon size={14} strokeWidth={1.75} />
+          <NexusIcon icon={Icon} px={14} />
         </span>
 
         <span className="min-w-0 flex-1">
@@ -162,11 +163,10 @@ export function InsightRow({
           </span>
         </span>
 
-        <ArrowRight
-          size={13}
-          strokeWidth={1.75}
-          aria-hidden="true"
-          className="mt-1 shrink-0 text-text-quaternary transition-[color,transform] duration-150 ease-nexus group-hover:translate-x-0.5 group-hover:text-text-secondary"
+        <NexusIcon
+          icon={IconArrowRight}
+          px={14}
+          className="mt-1 text-text-quaternary transition-[color,transform] duration-150 ease-nexus group-hover:translate-x-0.5 group-hover:text-text-secondary"
         />
       </Link>
     </li>

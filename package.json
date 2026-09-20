@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing",
+    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing && npm run test:creation && npm run test:guide && npm run test:type && npm run test:icon",
     "test:freemium": "node --import tsx supabase/tests/freemium-contract.test.mjs",
     "test:subscription": "node --import tsx supabase/tests/subscription-contract.test.mjs",
     "test:unit": "node --import tsx supabase/tests/intelligence-agent.test.mjs && node --import tsx supabase/tests/intelligence-agent-v2.test.mjs && node --import tsx supabase/tests/intelligence-memory.test.mjs && node --import tsx supabase/tests/intelligence-proactive.test.mjs && node --import tsx supabase/tests/intelligence-signals.test.mjs && node --import tsx supabase/tests/intelligence-mission.test.mjs && node --import tsx supabase/tests/intelligence-experience.test.mjs && node --import tsx supabase/tests/onboarding-product.test.mjs && node --import tsx supabase/tests/schema-errors.test.mjs && node --import tsx supabase/tests/mobile-experience.test.mjs",
@@ -17,6 +17,10 @@
     "test:admin:structure": "node scripts/test-admin-foundation.mjs && node scripts/test-admin-users-workspaces.mjs && node scripts/test-admin-pr3.mjs",
     "test:mobile": "node scripts/test-mobile-ux.mjs",
     "test:landing": "node scripts/test-landing-design.mjs",
+    "test:creation": "node scripts/test-project-creation.mjs",
+    "test:guide": "node scripts/test-onboarding-guide.mjs",
+    "test:type": "node scripts/test-typography.mjs",
+    "test:icon": "node scripts/test-icons.mjs",
     "test:mobile-experience": "node --import tsx supabase/tests/mobile-experience.test.mjs"
   },
   "dependencies": {
@@ -25,7 +29,6 @@
     "@supabase/supabase-js": "^2.112.3",
     "@tabler/icons-react": "^3.46.0",
     "framer-motion": "^13.2.0",
-    "lucide-react": "^1.31.0",
     "next": "^16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",

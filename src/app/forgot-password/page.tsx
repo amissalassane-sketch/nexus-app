@@ -4,7 +4,8 @@ import { FormEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
 
@@ -132,7 +133,7 @@ export default function ForgotPasswordPage() {
             className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              <NexusIcon icon={IconLoader2} className="animate-spin" />
             ) : null}
             {loading ? "Sending…" : "Send"}
           </motion.button>

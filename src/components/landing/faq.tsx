@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 
@@ -85,7 +86,7 @@ export function FaqSection() {
                     className="mt-[3px] flex h-7 w-7 shrink-0 items-center justify-center rounded-pill border border-border-default text-text-secondary transition-transform duration-200 ease-nexus group-open:rotate-45"
                     aria-hidden="true"
                   >
-                    <Plus size={14} strokeWidth={1.75} />
+                    <NexusIcon icon={IconPlus} />
                   </span>
                 </summary>
                 <div className="nexus-faq-answer pb-6 pl-0 sm:pl-[38px]">

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ListTodo } from "lucide-react";
+import { IconListCheck } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import type { PrioritizedTask } from "@/lib/intelligence/advanced";
@@ -32,7 +33,7 @@ export function PriorityQueuePanel({ items }: { items: PrioritizedTask[] }) {
           <EmptyState
             title="Nothing in the queue"
             description="No open tasks to triage. NEXUS will rank them the moment work exists."
-            icon={<ListTodo size={17} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconListCheck} size="state" />}
             action={
               <Link
                 href="/tasks?create=1"

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -158,11 +159,10 @@ export default async function UpgradePage() {
                       key={highlight}
                       className="flex items-center gap-2 text-small text-text-secondary"
                     >
-                      <Check
-                        size={14}
-                        strokeWidth={2}
-                        className="shrink-0 text-text-tertiary"
-                        aria-hidden="true"
+                      <NexusIcon
+                        icon={IconCheck}
+                        px={14}
+                        className="text-text-tertiary"
                       />
                       <span>{highlight}</span>
                     </li>

@@ -1,5 +1,12 @@
 import type { CSSProperties } from "react";
-import { AlertTriangle, ArrowRight, Ban, Clock, FolderOpen } from "lucide-react";
+import {
+  IconAlertTriangle,
+  IconArrowRight,
+  IconBan,
+  IconClock,
+  IconFolderOpen,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Badge } from "@/components/ui/badge";
@@ -15,28 +22,28 @@ import { NexusLogo } from "@/components/nexus-logo";
 
 const EXAMPLE_SIGNALS = [
   {
-    icon: Clock,
+    icon: IconClock,
     state: "Critical",
     tone: "danger" as const,
     title: "3 tasks are overdue.",
     reason: "Oldest: “Ship onboarding”, 4 days past due.",
   },
   {
-    icon: Ban,
+    icon: IconBan,
     state: "Blocked",
     tone: "warning" as const,
     title: "Design review is preventing progress.",
     reason: "2 tasks in “Onboarding v2” are waiting on it.",
   },
   {
-    icon: AlertTriangle,
+    icon: IconAlertTriangle,
     state: "At risk",
     tone: "warning" as const,
     title: "“Ship v1” is at risk.",
     reason: "45% complete with 9 days to the target date.",
   },
   {
-    icon: FolderOpen,
+    icon: IconFolderOpen,
     state: "No action",
     tone: "info" as const,
     title: "“Website refresh” has no next action.",
@@ -93,7 +100,7 @@ export function NextBestAction() {
                         }
                       >
                         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface text-text-tertiary">
-                          <Icon size={12} strokeWidth={1.75} aria-hidden="true" />
+                          <NexusIcon icon={Icon} />
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -148,7 +155,7 @@ export function NextBestAction() {
                   aria-hidden="true"
                 >
                   Review task
-                  <ArrowRight size={13} strokeWidth={1.75} />
+                  <NexusIcon icon={IconArrowRight} px={13} />
                 </span>
               </div>
             </div>

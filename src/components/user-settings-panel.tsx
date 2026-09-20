@@ -4,15 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  CreditCard,
-  KeyRound,
-  Layers,
-  LogOut,
-  Mail,
-  Radar,
-  ShieldAlert,
-  User,
-} from "lucide-react";
+  IconCreditCard,
+  IconKey,
+  IconLogout,
+  IconMail,
+  IconRadar,
+  IconShieldExclamation,
+  IconStack2,
+  IconUser,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership, canManageBilling } from "@/lib/workspace";
@@ -63,13 +64,13 @@ type StatusState = {
 type TabId = "profile" | "account" | "workspace" | "intelligence";
 
 const SECTIONS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "profile", label: "Profile", icon: <User size={15} strokeWidth={1.75} /> },
-  { id: "account", label: "Account", icon: <KeyRound size={15} strokeWidth={1.75} /> },
-  { id: "workspace", label: "Workspace", icon: <Layers size={15} strokeWidth={1.75} /> },
+  { id: "profile", label: "Profile", icon: <NexusIcon icon={IconUser} /> },
+  { id: "account", label: "Account", icon: <NexusIcon icon={IconKey} /> },
+  { id: "workspace", label: "Workspace", icon: <NexusIcon icon={IconStack2} /> },
   {
     id: "intelligence",
     label: "Intelligence",
-    icon: <Radar size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconRadar} />,
   },
 ];
 
@@ -525,7 +526,7 @@ export function UserSettingsPanel({
             </p>
             <div className="mt-5 flex items-center justify-between gap-3 rounded-row bg-bg-surface px-3.5 py-2.5">
               <span className="flex items-center gap-2.5 text-body text-text-primary">
-                <Mail size={15} strokeWidth={1.75} className="text-text-tertiary" />
+                <NexusIcon icon={IconMail} className="text-text-tertiary" />
                 {loading ? "…" : email || "Not available"}
               </span>
               <span className="eyebrow text-text-quaternary">
@@ -541,7 +542,7 @@ export function UserSettingsPanel({
             </p>
             <div className="mt-5">
               <Button variant="secondary" onClick={handleSignOutEverywhere}>
-                <LogOut size={15} strokeWidth={1.75} />
+                <NexusIcon icon={IconLogout} />
                 Sign out everywhere
               </Button>
             </div>
@@ -549,7 +550,7 @@ export function UserSettingsPanel({
 
           <Card className="p-6">
             <div className="flex items-start gap-3">
-              <ShieldAlert size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-text-tertiary" />
+              <NexusIcon icon={IconShieldExclamation} size="toolbar" className="mt-0.5 text-text-tertiary" />
               <div>
                 <h2 className="text-h2 text-text-primary">Danger zone</h2>
                 <p className="mt-1 max-w-[58ch] text-small text-text-secondary">
@@ -700,10 +701,10 @@ export function UserSettingsPanel({
                   capacity.
                 </p>
               </div>
-              <CreditCard
-                size={18}
-                strokeWidth={1.75}
-                className="shrink-0 text-text-tertiary"
+              <NexusIcon
+                icon={IconCreditCard}
+                size="toolbar"
+                className="text-text-tertiary"
               />
             </div>
 

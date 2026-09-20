@@ -1,12 +1,13 @@
 import type { CSSProperties } from "react";
 import {
-  Activity,
-  ArrowRight,
-  Check,
-  CheckSquare,
-  FolderKanban,
-  Target,
-} from "lucide-react";
+  IconActivity,
+  IconArrowRight,
+  IconCheck,
+  IconChecklist,
+  IconLayoutKanban,
+  IconTarget,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { ButtonLink } from "@/components/ui/button";
@@ -31,7 +32,7 @@ import { ButtonLink } from "@/components/ui/button";
 
 const LEVELS = [
   {
-    icon: Target,
+    icon: IconTarget,
     name: "Goal",
     example: "Ship v1",
     meta: "Target · Sep 14",
@@ -39,7 +40,7 @@ const LEVELS = [
     detail: "Outcomes with real progress, not a slider.",
   },
   {
-    icon: FolderKanban,
+    icon: IconLayoutKanban,
     name: "Project",
     example: "Onboarding",
     meta: "8 tasks · 2 blocked",
@@ -47,7 +48,7 @@ const LEVELS = [
     detail: "Work grouped around a goal. Progress counts real tasks.",
   },
   {
-    icon: CheckSquare,
+    icon: IconChecklist,
     name: "Task",
     example: "Review signup flow",
     meta: "Due in 2 days",
@@ -55,7 +56,7 @@ const LEVELS = [
     detail: "Priorities, due dates and a focus list. Nothing decorative.",
   },
   {
-    icon: Activity,
+    icon: IconActivity,
     name: "Activity",
     example: "Last completion",
     meta: "42 minutes ago",
@@ -95,11 +96,10 @@ export function ModelSection() {
                 className="flex items-start gap-2.5 text-small text-text-secondary"
               >
                 <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong bg-bg-surface">
-                  <Check
-                    size={10}
-                    strokeWidth={2.5}
+                  <NexusIcon
+                    icon={IconCheck}
+                    px={10}
                     className="text-text-primary"
-                    aria-hidden="true"
                   />
                 </span>
                 <span>{point}</span>
@@ -110,7 +110,7 @@ export function ModelSection() {
           <div className="mt-8">
             <ButtonLink href="/signup" variant="secondary" size="md">
               Get started
-              <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
+              <NexusIcon icon={IconArrowRight} />
             </ButtonLink>
           </div>
         </LandingReveal>
@@ -140,7 +140,7 @@ export function ModelSection() {
                         next level. */}
                     <div className="flex w-11 shrink-0 flex-col items-center">
                       <span className="flex h-11 w-11 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                        <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
+                        <NexusIcon icon={Icon} />
                       </span>
                       {isLast ? null : (
                         <span

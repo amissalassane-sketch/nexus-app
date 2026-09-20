@@ -3,7 +3,8 @@
 import { FormEvent, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { AdminIcon } from "@/components/admin/admin-icons";
 
 // ============================================================
@@ -162,9 +163,9 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-admin-text-3 transition-colors hover:text-admin-text disabled:opacity-50"
               >
                 {showPassword ? (
-                  <EyeOff size={15} aria-hidden="true" />
+                  <NexusIcon icon={IconEyeOff} />
                 ) : (
-                  <Eye size={15} aria-hidden="true" />
+                  <NexusIcon icon={IconEye} />
                 )}
               </button>
             </div>
@@ -188,7 +189,7 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
             className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent text-[13px]"
           >
             {loading ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              <NexusIcon icon={IconLoader2} className="animate-spin" />
             ) : null}
             {loading ? "Authenticating…" : "Authenticate Operator"}
           </button>

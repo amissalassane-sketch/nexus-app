@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { IconRefresh } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Button } from "@/components/ui/button";
 
 // ============================================================
@@ -96,7 +97,7 @@ export function WorkspaceStatusBanner({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button type="button" size="sm" variant="secondary" onClick={retry}>
-          <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+          <NexusIcon icon={IconRefresh} />
           Retry
         </Button>
         {failed ? (

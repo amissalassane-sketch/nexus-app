@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { UserRound } from "lucide-react";
+import { IconUser } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Button } from "@/components/ui/button";
 
 // ============================================================
@@ -45,7 +46,7 @@ export function ProfileCompletionPrompt({
           aria-hidden="true"
           className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
         >
-          <UserRound size={15} strokeWidth={1.75} />
+          <NexusIcon icon={IconUser} />
         </span>
         <div className="min-w-0">
           <p className="text-body-medium text-text-primary">

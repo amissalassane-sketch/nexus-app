@@ -1,13 +1,15 @@
 import {
-  ArrowRight,
-  Ban,
-  Clock,
-  FolderOpen,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
+  IconArrowRight,
+  IconBan,
+  IconBolt,
+  IconClock,
+  IconFolderOpen,
+  IconSparkles,
+  IconTarget,
+  IconTrendingUp,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -28,49 +30,49 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 // ============================================================
 
 const SIGNALS: {
-  icon: typeof Clock;
+  icon: TablerIcon;
   state: string;
   tone: BadgeTone;
   title: string;
   body: string;
 }[] = [
   {
-    icon: Clock,
+    icon: IconClock,
     state: "Critical",
     tone: "danger",
     title: "Overdue work",
     body: "Deadlines pass, NEXUS notices.",
   },
   {
-    icon: Ban,
+    icon: IconBan,
     state: "Warning",
     tone: "warning",
     title: "Blocked tasks",
     body: "Anything stuck that stalls the rest.",
   },
   {
-    icon: FolderOpen,
+    icon: IconFolderOpen,
     state: "Info",
     tone: "info",
     title: "No next action",
     body: "Projects with nothing moving them forward.",
   },
   {
-    icon: Target,
+    icon: IconTarget,
     state: "Warning",
     tone: "warning",
     title: "Goals at risk",
     body: "Progress too low for the time left.",
   },
   {
-    icon: TrendingUp,
+    icon: IconTrendingUp,
     state: "Positive",
     tone: "success",
     title: "Momentum",
     body: "What actually got done this week.",
   },
   {
-    icon: Zap,
+    icon: IconBolt,
     state: "Priority",
     tone: "lavender",
     title: "Next best action",
@@ -120,7 +122,7 @@ export function IntelligenceSection() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                      <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                      <NexusIcon icon={Icon} />
                     </span>
                     <Badge tone={signal.tone}>{signal.state}</Badge>
                   </div>
@@ -144,11 +146,10 @@ export function IntelligenceSection() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Sparkles
-                  size={14}
-                  strokeWidth={1.75}
+                <NexusIcon
+                  icon={IconSparkles}
+                  px={14}
                   className="text-lavender"
-                  aria-hidden="true"
                 />
                 <span className="nexus-eyebrow">
                   What it looks like in the workspace
@@ -162,11 +163,10 @@ export function IntelligenceSection() {
               <article className="nexus-signal" data-severity="critical">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Clock
-                      size={14}
-                      strokeWidth={1.75}
-                      className="nexus-signal-icon shrink-0"
-                      aria-hidden="true"
+                    <NexusIcon
+                      icon={IconClock}
+                      px={14}
+                      className="nexus-signal-icon"
                     />
                     <Badge tone="danger">Critical</Badge>
                   </div>
@@ -183,7 +183,7 @@ export function IntelligenceSection() {
 
                 <span className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-pill border border-border-default bg-bg-surface px-3 text-caption text-text-secondary">
                   Review task
-                  <ArrowRight size={12} strokeWidth={1.75} aria-hidden="true" />
+                  <NexusIcon icon={IconArrowRight} px={12} />
                 </span>
               </article>
 
@@ -194,11 +194,10 @@ export function IntelligenceSection() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Target
-                      size={14}
-                      strokeWidth={1.75}
-                      className="nexus-signal-icon shrink-0"
-                      aria-hidden="true"
+                    <NexusIcon
+                      icon={IconTarget}
+                      px={14}
+                      className="nexus-signal-icon"
                     />
                     <Badge tone="warning">Warning</Badge>
                   </div>
@@ -237,11 +236,10 @@ export function IntelligenceSection() {
               <article className="nexus-signal mt-3" data-severity="positive">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Zap
-                      size={14}
-                      strokeWidth={1.75}
-                      className="nexus-signal-icon shrink-0"
-                      aria-hidden="true"
+                    <NexusIcon
+                      icon={IconBolt}
+                      px={14}
+                      className="nexus-signal-icon"
                     />
                     <Badge tone="lavender">Next best action</Badge>
                   </div>

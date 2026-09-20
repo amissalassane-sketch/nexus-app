@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, TrendingDown, TrendingUp } from "lucide-react";
+import { IconArrowRight, IconCalendarClock, IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { WeeklyBriefing } from "@/lib/intelligence/advanced";
 import { cn } from "@/lib/cn";
 
@@ -18,7 +19,7 @@ export function WeeklyBriefingPanel({
 }) {
   const up = briefing.momentumDelta > 0;
   const down = briefing.momentumDelta < 0;
-  const DeltaIcon = down ? TrendingDown : TrendingUp;
+  const DeltaIcon = down ? IconTrendingDown : IconTrendingUp;
 
   return (
     <section
@@ -27,7 +28,7 @@ export function WeeklyBriefingPanel({
     >
       <div className="flex items-center justify-between gap-3">
         <p className="eyebrow flex items-center gap-1.5 text-text-quaternary">
-          <CalendarClock size={12} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconCalendarClock} px={12} />
           Weekly briefing
         </p>
         <span
@@ -39,7 +40,7 @@ export function WeeklyBriefingPanel({
           )}
         >
           {up || down ? (
-            <DeltaIcon size={11} strokeWidth={2} aria-hidden="true" />
+            <NexusIcon icon={DeltaIcon} px={11} />
           ) : null}
           {briefing.momentumDelta > 0 ? "+" : ""}
           {briefing.momentumDelta} vs last week
@@ -71,11 +72,10 @@ export function WeeklyBriefingPanel({
                   {move.cta}
                 </span>
               </span>
-              <ArrowRight
-                size={14}
-                strokeWidth={1.75}
-                aria-hidden="true"
-                className="shrink-0 text-text-quaternary transition-colors duration-150 group-hover:text-text-primary"
+              <NexusIcon
+                icon={IconArrowRight}
+                px={14}
+                className="text-text-quaternary transition-colors duration-150 group-hover:text-text-primary"
               />
             </Link>
           ))}

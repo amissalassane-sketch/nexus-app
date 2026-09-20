@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, Bell, CheckCircle2, FolderKanban, Info, Target } from "lucide-react";
+import {
+  IconAlertTriangle,
+  IconBell,
+  IconCircleCheck,
+  IconInfoCircle,
+  IconLayoutKanban,
+  IconTarget,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDataError } from "@/lib/data-errors";
 import { cn } from "@/lib/cn";
@@ -22,14 +31,14 @@ export type NotificationPreviewItem = {
   severity?: string | null;
 };
 
-const iconFor = (notification: NotificationPreviewItem) => {
+const iconFor = (notification: NotificationPreviewItem): TablerIcon => {
   const key = `${notification.entity_type ?? ""}${notification.type}`.toLowerCase();
-  if (key.includes("project")) return FolderKanban;
-  if (key.includes("goal")) return Target;
-  if (key.includes("task") || key.includes("complete")) return CheckCircle2;
-  if (key.includes("warn") || key.includes("overdue") || notification.severity === "critical") return AlertTriangle;
-  if (key.includes("info")) return Info;
-  return Bell;
+  if (key.includes("project")) return IconLayoutKanban;
+  if (key.includes("goal")) return IconTarget;
+  if (key.includes("task") || key.includes("complete")) return IconCircleCheck;
+  if (key.includes("warn") || key.includes("overdue") || notification.severity === "critical") return IconAlertTriangle;
+  if (key.includes("info")) return IconInfoCircle;
+  return IconBell;
 };
 
 const routeFor = (entityType: string | null) => {
@@ -145,7 +154,7 @@ export function NotificationPreview({
           )}
           {...ariaProps}
         >
-          <Bell size={15} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconBell} size="toolbar" />
           {previewUnreadCount > 0 ? <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-lavender animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" /> : null}
         </button>
       )}
@@ -171,7 +180,7 @@ export function NotificationPreview({
         <p role="alert" className="px-3 py-4 text-caption text-danger">{error}</p>
       ) : items.length === 0 ? (
         <div className="px-3 py-5 text-center">
-          <Bell size={16} className="mx-auto mb-2 text-text-quaternary" aria-hidden="true" />
+          <NexusIcon icon={IconBell} size="state" className="mx-auto mb-2 text-text-quaternary" />
           <p className="text-small text-text-secondary">You are all caught up.</p>
           <p className="mt-1 text-caption text-text-tertiary">NEXUS will surface what needs your attention.</p>
         </div>
@@ -195,7 +204,7 @@ export function NotificationPreview({
                   <div className={cn("rounded-card border bg-bg-surface p-3 shadow-dropdown transition-colors", unread ? "border-lavender-border/60" : "border-border-subtle")}>
                     <div className="flex items-start gap-2.5">
                       <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-input border", unread ? "border-lavender-border bg-lavender-subtle text-lavender" : "border-border-subtle text-text-tertiary")}>
-                        <Icon size={13} aria-hidden="true" />
+                        <NexusIcon icon={Icon} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-2">

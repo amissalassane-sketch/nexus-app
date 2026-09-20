@@ -1,23 +1,27 @@
 import {
-  Activity,
-  Bell,
-  CheckSquare,
-  CreditCard,
-  FolderKanban,
-  LayoutDashboard,
-  Plug,
-  Radar,
-  Settings2,
-  Sparkles,
-  Target,
-  type LucideIcon,
-} from "lucide-react";
+  IconActivity,
+  IconBell,
+  IconChecklist,
+  IconCreditCard,
+  IconLayoutDashboard,
+  IconLayoutKanban,
+  IconPlug,
+  IconRadar,
+  IconSettings,
+  IconSparkles,
+  IconTarget,
+  type TablerIcon,
+} from "@tabler/icons-react";
 
 // ============================================================
 // NEXUS — NAVIGATION MODEL
 // One declaration of the product's information architecture, shared by
 // the sidebar, the mobile navigation, the breadcrumb and the command
 // palette. Adding a destination in one place adds it everywhere.
+//
+// The `icon` map is the navigation half of the NEXUS icon language:
+// explicit Tabler component references (tree-shakable), rendered through
+// <NexusIcon> at every call site — never resolved from strings.
 // ============================================================
 
 export type NavCountKey = "tasks" | "projects" | "goals" | "unreadNotifications";
@@ -25,7 +29,7 @@ export type NavCountKey = "tasks" | "projects" | "goals" | "unreadNotifications"
 export type NavEntry = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: TablerIcon;
   /** Live counter resolved by the shell from Supabase. */
   count?: NavCountKey;
   /** Counter rendered with the intelligence accent instead of muted. */
@@ -48,14 +52,14 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         href: "/dashboard",
         label: "Overview",
-        icon: LayoutDashboard,
+        icon: IconLayoutDashboard,
         hint: "What deserves your attention",
         keywords: "home dashboard overview start",
       },
       {
         href: "/app/intelligence",
         label: "Intelligence",
-        icon: Radar,
+        icon: IconRadar,
         hint: "Signals detected in your workspace",
         keywords: "signals risk blocked insight intelligence",
       },
@@ -68,21 +72,21 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         href: "/projects",
         label: "Projects",
-        icon: FolderKanban,
+        icon: IconLayoutKanban, // Kanban board — the board reads better than a folder for the projects surface.
         count: "projects",
         keywords: "project initiative",
       },
       {
         href: "/tasks",
         label: "Tasks",
-        icon: CheckSquare,
+        icon: IconChecklist,
         count: "tasks",
         keywords: "task todo work item",
       },
       {
         href: "/goals",
         label: "Goals",
-        icon: Target,
+        icon: IconTarget,
         count: "goals",
         keywords: "goal objective outcome",
       },
@@ -95,14 +99,14 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         href: "/activity",
         label: "Activity",
-        icon: Activity,
+        icon: IconActivity,
         hint: "Everything that happened",
         keywords: "activity feed history events log",
       },
       {
         href: "/notifications",
         label: "Notifications",
-        icon: Bell,
+        icon: IconBell,
         count: "unreadNotifications",
         accentCount: true,
         keywords: "notification inbox alerts",
@@ -110,7 +114,7 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         href: "/integrations",
         label: "Integrations",
-        icon: Plug,
+        icon: IconPlug,
         hint: "Sources NEXUS can read",
         keywords: "integration connect slack github notion calendar sync",
       },
@@ -122,19 +126,19 @@ export const NAV_FOOTER: NavEntry[] = [
   {
     href: "/settings",
     label: "Settings",
-    icon: Settings2,
+    icon: IconSettings,
     keywords: "settings preferences profile account workspace",
   },
   {
     href: "/settings/billing",
     label: "Billing",
-    icon: CreditCard,
+    icon: IconCreditCard,
     keywords: "billing plan invoice subscription",
   },
   {
     href: "/upgrade",
     label: "Plans",
-    icon: Sparkles,
+    icon: IconSparkles,
     keywords: "upgrade plan pricing pro team",
   },
 ];

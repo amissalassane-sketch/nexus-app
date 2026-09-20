@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { Radar, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  IconRadar,
+  IconTrendingDown,
+  IconTrendingUp,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Panel } from "@/components/ui/card";
 import type { WeeklyBriefing } from "@/lib/intelligence/advanced";
@@ -36,7 +41,7 @@ export function BriefingPanel({ briefing }: { briefing: WeeklyBriefing }) {
             aria-hidden="true"
             className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-lavender-border bg-lavender-subtle text-lavender"
           >
-            <Radar size={13} strokeWidth={1.75} />
+            <NexusIcon icon={IconRadar} />
           </span>
           <div className="min-w-0">
             <p className="text-body-medium font-medium text-text-primary">
@@ -71,9 +76,9 @@ export function BriefingPanel({ briefing }: { briefing: WeeklyBriefing }) {
           )}
         >
           {momentumUp ? (
-            <TrendingUp size={13} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconTrendingUp} px={14} />
           ) : momentumFlat ? null : (
-            <TrendingDown size={13} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconTrendingDown} px={14} />
           )}
           {momentumFlat
             ? "Same pace as last week."

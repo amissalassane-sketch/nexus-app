@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, FileText, List } from "lucide-react";
+import { IconChevronDown, IconFileText, IconList } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import type { LegalDocumentId, LegalTocItem } from "./types";
 import { LEGAL_DOCUMENTS_LIST } from "./legal-data";
 import { cn } from "@/lib/cn";
@@ -64,19 +65,18 @@ export function LegalTableOfContents({
           className="flex min-h-[44px] w-full items-center justify-between rounded-input px-3 text-small font-medium text-text-primary"
         >
           <div className="flex items-center gap-2">
-            <List size={16} className="text-lavender" aria-hidden="true" />
+            <NexusIcon icon={IconList} className="text-lavender" />
             <span>Table of Contents</span>
             <span className="font-mono text-[11px] text-text-quaternary">
               ({items.length} sections)
             </span>
           </div>
-          <ChevronDown
-            size={16}
+          <NexusIcon
+            icon={IconChevronDown}
             className={cn(
               "text-text-tertiary transition-transform duration-200",
               mobileOpen && "rotate-180"
             )}
-            aria-hidden="true"
           />
         </button>
 
@@ -157,10 +157,10 @@ export function LegalTableOfContents({
                   )}
                 >
                   <span className="flex items-center gap-2">
-                    <FileText
-                      size={13}
+                    <NexusIcon
+                      icon={IconFileText}
+                      px={13}
                       className={isCurrent ? "text-lavender" : "text-text-quaternary"}
-                      aria-hidden="true"
                     />
                     <span>{doc.title}</span>
                   </span>
@@ -176,7 +176,7 @@ export function LegalTableOfContents({
         {/* Section Table of Contents */}
         <div className="rounded-card border border-border-subtle bg-bg-subtle/70 p-4">
           <h3 className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.08em] text-text-quaternary">
-            <List size={13} className="text-text-tertiary" aria-hidden="true" />
+            <NexusIcon icon={IconList} px={13} className="text-text-tertiary" />
             <span>On this page</span>
           </h3>
 

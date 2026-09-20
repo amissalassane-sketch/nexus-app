@@ -35,7 +35,7 @@ export function NexusLogo({
   );
 }
 
-/** Symbol + wordmark lockup (Inter 600, tracking 0.08em, uppercase). */
+/** Symbol + wordmark lockup (Instrument Sans 700, tracking 0.08em, uppercase). */
 export function NexusWordmark({
   size = 28,
   className,
