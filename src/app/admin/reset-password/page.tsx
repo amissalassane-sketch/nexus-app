@@ -3,7 +3,8 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { AdminIcon } from "@/components/admin/admin-icons";
 
 // ============================================================
@@ -138,7 +139,7 @@ export default function AdminResetPasswordPage() {
             className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 text-[13px]"
           >
             {loading ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              <NexusIcon icon={IconLoader2} className="animate-spin" />
             ) : null}
             {loading ? "Updating credentials…" : "Update Credentials"}
           </button>

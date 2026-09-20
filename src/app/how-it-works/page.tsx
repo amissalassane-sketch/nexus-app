@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ArrowRight, CheckCircle2, Network, Radar } from "lucide-react";
+import { IconArrowRight, IconCircleCheck, IconNetwork, IconRadar } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingAtmosphere } from "@/components/landing/landing-atmosphere";
@@ -21,19 +22,19 @@ export const metadata: Metadata = {
 
 const stages = [
   {
-    icon: Network,
+    icon: IconNetwork,
     label: "Context",
     title: "NEXUS reads connected work",
     copy: "Projects, tasks, goals, deadlines and activity form one workspace model. You do not have to restate that context in a chat.",
   },
   {
-    icon: Radar,
+    icon: IconRadar,
     label: "Signals",
     title: "Relationships reveal what changed",
     copy: "Deterministic checks surface blocked work, deadline pressure, stalled projects and priority drift from the data already present.",
   },
   {
-    icon: CheckCircle2,
+    icon: IconCircleCheck,
     label: "Action",
     title: "A recommendation stays under your control",
     copy: "Each signal includes evidence, why it matters and a proposed next step. Consequential changes always require review and confirmation.",
@@ -59,7 +60,7 @@ export default function HowItWorksPage() {
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <ButtonLink href="/signup" size="lg">Get started</ButtonLink>
                 <ButtonLink href="/intelligence" variant="secondary" size="lg">
-                  See Intelligence <ArrowRight size={14} aria-hidden="true" />
+                  See Intelligence <NexusIcon icon={IconArrowRight} />
                 </ButtonLink>
               </div>
             </div>
@@ -71,7 +72,7 @@ export default function HowItWorksPage() {
             {stages.map((stage, index) => (
               <article key={stage.label} className="bg-bg-subtle p-6 sm:p-8">
                 <div className="flex items-center justify-between">
-                  <stage.icon size={18} strokeWidth={1.5} className="text-lavender" aria-hidden="true" />
+                  <NexusIcon icon={stage.icon} size="toolbar" className="text-lavender" />
                   <span className="font-mono text-mono text-text-quaternary">0{index + 1}</span>
                 </div>
                 <p className="eyebrow mt-10 text-text-tertiary">{stage.label}</p>

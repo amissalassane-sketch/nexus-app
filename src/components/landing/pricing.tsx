@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { Check, Minus } from "lucide-react";
+import { IconCheck, IconMinus } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SpotlightBorder } from "@/components/landing/spotlight-border";
 import { ButtonLink, type ButtonVariant } from "@/components/ui/button";
@@ -375,10 +376,9 @@ function PricingCard({
                   className="flex items-start gap-3 border-t border-white/[0.055] py-3 text-small text-text-primary first:border-t-0 first:pt-0"
                 >
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.05]">
-                    <Check
-                      size={11}
-                      strokeWidth={2.25}
-                      aria-hidden="true"
+                    <NexusIcon
+                      icon={IconCheck}
+                      px={11}
                       className="text-text-primary"
                     />
                   </span>
@@ -532,10 +532,9 @@ export function PricingSection() {
                               </span>
                             ) : on ? (
                               <span className="inline-flex items-center gap-1.5 text-small text-text-primary">
-                                <Check
-                                  size={12}
-                                  strokeWidth={2.25}
-                                  aria-hidden="true"
+                                <NexusIcon
+                                  icon={IconCheck}
+                                  px={12}
                                 />
                                 <span className="sr-only">Included</span>
                                 <span aria-hidden="true" className="nexus-meta">
@@ -544,11 +543,10 @@ export function PricingSection() {
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5">
-                                <Minus
-                                  size={12}
-                                  strokeWidth={2}
+                                <NexusIcon
+                                  icon={IconMinus}
+                                  px={12}
                                   className="text-text-tertiary"
-                                  aria-hidden="true"
                                 />
                                 <span className="sr-only">Not included</span>
                                 <span

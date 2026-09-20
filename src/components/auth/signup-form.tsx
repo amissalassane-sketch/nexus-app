@@ -4,7 +4,8 @@ import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError } from "@/lib/auth-errors";
@@ -216,9 +217,9 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
                 className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white/70 disabled:pointer-events-none disabled:opacity-40"
               >
                 {showPassword ? (
-                  <EyeOff size={15} strokeWidth={1.75} aria-hidden="true" />
+                  <NexusIcon icon={IconEyeOff} />
                 ) : (
-                  <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
+                  <NexusIcon icon={IconEye} />
                 )}
               </button>
             </div>
@@ -258,7 +259,7 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
             className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              <NexusIcon icon={IconLoader2} className="animate-spin" />
             ) : null}
             {loading ? "Creating account…" : "Sign up"}
           </motion.button>
@@ -278,7 +279,7 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
           className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed text-white border border-white/10 rounded-full py-3 px-4 transition-colors"
         >
           {googleLoading ? (
-            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+            <NexusIcon icon={IconLoader2} px={18} className="animate-spin" />
           ) : (
             <GoogleGlyph />
           )}

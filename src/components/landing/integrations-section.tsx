@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { NexusLogo } from "@/components/nexus-logo";
@@ -52,7 +53,7 @@ export function IntegrationsSection() {
         <LandingReveal delay={140}>
           <div className="mt-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <p className="max-w-[52ch] text-small text-text-secondary">Connect the tools your work already lives in. When a provider is ready, NEXUS will make its permissions, capabilities and health explicit.</p>
-            <Link href="/integrations" className="inline-flex h-10 items-center gap-2 rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-[background-color,color,border-color,transform] hover:border-border-strong hover:bg-bg-surface hover:text-text-primary active:scale-[0.98]">Explore integrations <ArrowRight size={14} aria-hidden="true" /></Link>
+            <Link href="/integrations" className="inline-flex h-10 items-center gap-2 rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-[background-color,color,border-color,transform] hover:border-border-strong hover:bg-bg-surface hover:text-text-primary active:scale-[0.98]">Explore integrations <NexusIcon icon={IconArrowRight} /></Link>
           </div>
         </LandingReveal>
       </div>

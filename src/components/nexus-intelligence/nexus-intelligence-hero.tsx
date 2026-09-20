@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
 import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 
@@ -163,7 +164,7 @@ export function NexusIntelligenceHero({
           >
             <ButtonLink href={primaryCta.href} size="lg">
               {primaryCta.label}
-              <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
+              <NexusIcon icon={IconArrowRight} />
             </ButtonLink>
             <ButtonLink href={secondaryCta.href} variant="secondary" size="lg">
               {secondaryCta.label}

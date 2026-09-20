@@ -6,7 +6,8 @@
  * stroke/size/a11y defaults, explicit tree-shakable Tabler imports, and
  * the per-zone migration state (navigation migrated in PR2; dashboard,
  * product, intelligence and command-menu surfaces in PR3; landing, auth,
- * legal and admin surfaces follow in PR4).
+ * legal and admin surfaces in PR4 — the migration is complete and the
+ * lucide-react dependency has been removed).
  *
  * Run:  node scripts/test-icons.mjs   (or  npm run test:icon)
  * Exit: 0 = all invariants hold, 1 = at least one check failed.
@@ -220,6 +221,72 @@ check(
   read("components/command-menu.tsx").includes(
     '<NexusIcon icon={IconSearch} size="state" />'
   )
+);
+
+// ------------------------------------------------------------------
+console.log("Landing + auth + legal + admin zones migrated (PR4)");
+// ------------------------------------------------------------------
+const PR4_ZONE = [
+  "app/admin/forgot-password/page.tsx",
+  "app/admin/reset-password/page.tsx",
+  "app/forgot-password/page.tsx",
+  "app/how-it-works/page.tsx",
+  "app/legal/page.tsx",
+  "app/reset-password/page.tsx",
+  "components/admin/admin-login-form.tsx",
+  "components/auth/confirm-error.tsx",
+  "components/auth/login-form.tsx",
+  "components/auth/signup-form.tsx",
+  "components/auth/verify-code.tsx",
+  "components/landing/faq.tsx",
+  "components/landing/features.tsx",
+  "components/landing/final-cta.tsx",
+  "components/landing/hero.tsx",
+  "components/landing/integrations-section.tsx",
+  "components/landing/intelligence-section.tsx",
+  "components/landing/landing-nav.tsx",
+  "components/landing/model-section.tsx",
+  "components/landing/pricing.tsx",
+  "components/landing/product-preview.tsx",
+  "components/landing/trust.tsx",
+  "components/legal/legal-card.tsx",
+  "components/legal/legal-header.tsx",
+  "components/legal/legal-navigation.tsx",
+  "components/legal/legal-toc.tsx",
+  "components/legal/legal-ui.tsx",
+  "components/nexus-intelligence/nexus-intelligence-hero.tsx",
+];
+
+for (const rel of PR4_ZONE) {
+  const text = read(rel);
+  check(`${rel}: Lucide-free`, !text.includes("lucide-react"));
+  check(`${rel}: no LucideIcon type residue`, !text.includes("LucideIcon"));
+  check(
+    `${rel}: no one-off strokeWidth (wrapper default 1.75)`,
+    !text.includes("strokeWidth={")
+  );
+}
+
+check(
+  "product-preview: mock-nav map typed on TablerIcon",
+  read("components/landing/product-preview.tsx").includes("icon: TablerIcon")
+);
+
+check(
+  "landing-nav: menu toggle renders through NexusIcon at nav size",
+  read("components/landing/landing-nav.tsx").includes(
+    '<NexusIcon icon={IconMenu2} size="nav" />'
+  )
+);
+
+check(
+  "auth: Google-button spinners preserve the 18px glyph swap (no layout shift)",
+  read("components/auth/login-form.tsx").includes(
+    '<NexusIcon icon={IconLoader2} px={18} className="animate-spin" />'
+  ) &&
+    read("components/auth/signup-form.tsx").includes(
+      '<NexusIcon icon={IconLoader2} px={18} className="animate-spin" />'
+    )
 );
 
 console.log(`\n${passes} passed, ${failures} failed.\n`);

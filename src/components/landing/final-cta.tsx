@@ -1,4 +1,5 @@
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { ButtonLink } from "@/components/ui/button";
 
@@ -34,7 +35,7 @@ export function FinalCtaSection() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href="/signup" size="lg">
                 Get started
-                <ArrowRight size={15} strokeWidth={1.75} aria-hidden="true" />
+                <NexusIcon icon={IconArrowRight} />
               </ButtonLink>
               <ButtonLink href="/intelligence" variant="secondary" size="lg">
                 See it in action
