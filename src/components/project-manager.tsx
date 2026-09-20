@@ -44,6 +44,9 @@ type ProjectForm = {
   due_date: string;
 };
 
+/** New projects start with NO due date (empty string → NULL in the
+ *  database). No default is invented: a deadline is a fact about the
+ *  work, and an empty form must not claim one. */
 const blankProjectForm = (): ProjectForm => ({
   name: "",
   description: "",
@@ -839,9 +842,17 @@ function ProjectManagerInner({ userId }: { userId: string }) {
             </Field>
 
             <Field label="Due date" htmlFor="project-due">
+              {/* The default is intentionally EMPTY (null due date): a
+                  project without a deadline is a valid state, and the
+                  code never pre-fills a date. Browsers (Chrome in
+                  particular) remember the last value typed into a date
+                  field per origin — a "pre-filled yesterday" observed in
+                  the UI is that autofill memory, not application logic.
+                  autoComplete="off" keeps the field honest. */}
               <Input
                 id="project-due"
                 type="date"
+                autoComplete="off"
                 value={form.due_date}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, due_date: event.target.value }))
