@@ -20,6 +20,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
@@ -131,7 +132,7 @@ const PAGE_COMMANDS: Command[] = ALL_NAV_ENTRIES.map((entry) => ({
   category: "Pages" as const,
   label: `Go to ${entry.label}`,
   hint: entry.hint,
-  icon: <entry.icon size={15} strokeWidth={1.75} />,
+  icon: <NexusIcon icon={entry.icon} />,
   href: entry.href,
   keywords: `${entry.label} ${entry.keywords ?? ""}`.toLowerCase(),
 }));

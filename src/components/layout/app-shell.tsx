@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LifeBuoy, LogOut, Menu, UserRound, X } from "lucide-react";
+import {
+  IconLifebuoy,
+  IconLogout,
+  IconMenu,
+  IconSearch,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { CommandMenu } from "@/components/command-menu";
@@ -151,7 +159,7 @@ function AppShellInner({
                 aria-expanded={navOpen}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
               >
-                <Menu size={19} strokeWidth={1.75} aria-hidden="true" />
+                <NexusIcon icon={IconMenu} size="toolbar" />
               </button>
               <p
                 className="min-w-0 flex-1 truncate px-1 text-[14px] font-medium tracking-[-0.01em] text-text-primary transition-opacity duration-200 ease-nexus"
@@ -167,19 +175,7 @@ function AppShellInner({
                   aria-label="Search NEXUS"
                   className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
-                  </svg>
+                  <NexusIcon icon={IconSearch} size="toolbar" />
                 </button>
                 <NotificationPreview
                   userId={userId}
@@ -234,7 +230,7 @@ function AppShellInner({
                     ? counts.unreadNotifications
                     : undefined
                 }
-                icon={<item.icon size={17} strokeWidth={1.75} />}
+                icon={<NexusIcon icon={item.icon} size="nav" />}
                 data-guide={
                   item.href === "/app/intelligence"
                     ? "intelligence-nav"
@@ -254,7 +250,7 @@ function AppShellInner({
               aria-label="More destinations"
               className="flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-[color,transform,background-color] duration-150 ease-nexus hover:text-text-primary active:scale-[0.94] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
             >
-              <Menu size={17} strokeWidth={1.75} aria-hidden="true" />
+              <NexusIcon icon={IconMenu} size="nav" />
               <span className="text-[10.5px] leading-none">More</span>
             </button>
           </nav>
@@ -308,7 +304,7 @@ function AppShellInner({
                     aria-label="Close navigation"
                     className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9]"
                   >
-                    <X size={17} strokeWidth={1.75} aria-hidden="true" />
+                    <NexusIcon icon={IconX} />
                   </button>
                 </div>
               </div>
@@ -332,7 +328,7 @@ function AppShellInner({
                     className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
                   >
                     <span className="flex h-6 w-6 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[9px] font-semibold text-text-primary">
-                      {user.name?.trim() ? user.name.trim().slice(0, 1).toUpperCase() : <UserRound size={10} strokeWidth={2} aria-hidden="true" />}
+                      {user.name?.trim() ? user.name.trim().slice(0, 1).toUpperCase() : <NexusIcon icon={IconUser} />}
                     </span>
                     <span>Account Profile</span>
                   </button>
@@ -345,7 +341,7 @@ function AppShellInner({
                     className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
                   >
                     <span className="flex h-6 w-6 items-center justify-center text-text-tertiary">
-                      <LifeBuoy size={14} strokeWidth={1.75} />
+                      <NexusIcon icon={IconLifebuoy} />
                     </span>
                     <span>Help & Guide</span>
                   </button>
@@ -355,7 +351,7 @@ function AppShellInner({
                     className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-danger-bg hover:text-danger active:scale-[0.97]"
                   >
                     <span className="flex h-6 w-6 items-center justify-center">
-                      <LogOut size={13} strokeWidth={1.75} />
+                      <NexusIcon icon={IconLogout} />
                     </span>
                     <span>Sign out</span>
                   </button>

@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Boxes,
-  CheckSquare,
-  ChevronsUpDown,
-  CreditCard,
-  FolderKanban,
-  Plus,
-  Search,
-  Sparkles,
-  Target,
-} from "lucide-react";
+  IconBox,
+  IconChecklist,
+  IconCreditCard,
+  IconLayoutKanban,
+  IconPlus,
+  IconSearch,
+  IconSelector,
+  IconSparkles,
+  IconTarget,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { useCommandKeyLabel } from "@/hooks/use-command-key";
@@ -149,7 +150,7 @@ export function WorkspaceSidebar({
                 aria-hidden="true"
                 className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface-2 text-text-tertiary"
               >
-                <Boxes size={13} strokeWidth={1.75} />
+                <NexusIcon icon={IconBox} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium text-text-primary">
@@ -159,11 +160,9 @@ export function WorkspaceSidebar({
                   {workspace.role ?? "workspace"}
                 </span>
               </span>
-              <ChevronsUpDown
-                size={13}
-                strokeWidth={1.75}
-                className="shrink-0 text-text-quaternary"
-                aria-hidden="true"
+              <NexusIcon
+                icon={IconSelector}
+                className="text-text-quaternary"
               />
             </button>
           )}
@@ -181,7 +180,7 @@ export function WorkspaceSidebar({
           {!workspace.name ? (
             <DropdownLink
               href="/settings?tab=workspace"
-              icon={<Boxes size={15} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconBox} />}
               onNavigate={onNavigate}
             >
               Set up workspace
@@ -189,14 +188,14 @@ export function WorkspaceSidebar({
           ) : null}
           <DropdownLink
             href="/settings"
-            icon={<Sparkles size={15} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconSparkles} />}
             onNavigate={onNavigate}
           >
             Workspace settings
           </DropdownLink>
           <DropdownLink
             href="/settings/billing"
-            icon={<CreditCard size={15} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconCreditCard} />}
             onNavigate={onNavigate}
           >
             Plan and billing
@@ -209,7 +208,7 @@ export function WorkspaceSidebar({
           onClick={openCommandPalette}
           className="flex h-10 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-transparent px-2.5 text-left text-[13px] text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-accent-ghost hover:text-text-secondary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-9"
         >
-          <Search size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+          <NexusIcon icon={IconSearch} />
           <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
           <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary">
             {commandKey}
@@ -231,7 +230,7 @@ export function WorkspaceSidebar({
               className="flex h-10 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base lg:h-9"
               {...ariaProps}
             >
-              <Plus size={15} strokeWidth={2} aria-hidden="true" />
+              <NexusIcon icon={IconPlus} />
               <span className="flex-1 text-left">Create</span>
               <kbd className="font-mono text-[10px] text-black/45">C</kbd>
             </button>
@@ -239,14 +238,14 @@ export function WorkspaceSidebar({
         >
           <DropdownLink
             href="/tasks?create=1"
-            icon={<CheckSquare size={15} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconChecklist} />}
             onNavigate={onNavigate}
           >
             Task
           </DropdownLink>
           <DropdownLink
             href="/projects?create=1"
-            icon={<FolderKanban size={15} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconLayoutKanban} />}
             onNavigate={onNavigate}
             data-guide="new-project"
           >
@@ -254,7 +253,7 @@ export function WorkspaceSidebar({
           </DropdownLink>
           <DropdownLink
             href="/goals?create=1"
-            icon={<Target size={15} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconTarget} />}
             onNavigate={onNavigate}
           >
             Goal
@@ -280,7 +279,7 @@ export function WorkspaceSidebar({
                 count={item.count ? counts[item.count] : undefined}
                 countTone={item.accentCount ? "accent" : "muted"}
                 onNavigate={onNavigate}
-                icon={<item.icon size={15} strokeWidth={1.75} />}
+                icon={<NexusIcon icon={item.icon} size="nav" />}
                 data-guide={
                   item.href === "/app/intelligence"
                     ? "intelligence-nav"
@@ -309,7 +308,7 @@ export function WorkspaceSidebar({
               label={item.label}
               active={isNavActive(pathname, item.href)}
               onNavigate={onNavigate}
-              icon={<item.icon size={15} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={item.icon} size="nav" />}
               data-guide={item.href === "/settings" ? "settings-nav" : undefined}
             />
           ))}

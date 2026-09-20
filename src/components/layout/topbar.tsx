@@ -2,17 +2,17 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ChevronRight,
-  CreditCard,
-  KeyRound,
-  LifeBuoy,
-  LogOut,
-  Search,
-  Settings2,
-  User,
-  UserRound,
-  UserRoundCheck,
-} from "lucide-react";
+  IconChevronRight,
+  IconCreditCard,
+  IconKey,
+  IconLifebuoy,
+  IconLogout,
+  IconSearch,
+  IconSettings,
+  IconUser,
+  IconUserCheck,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { createClient } from "@/lib/supabase/client";
 import { useCommandKeyLabel } from "@/hooks/use-command-key";
@@ -70,7 +70,7 @@ export function Topbar({
             return (
               <li key={crumb} className="flex min-w-0 items-center gap-1.5">
                 {index > 0 ? (
-                  <ChevronRight size={13} strokeWidth={1.75} className="shrink-0 text-text-quaternary transition-transform duration-150 ease-nexus" aria-hidden="true" />
+                  <NexusIcon icon={IconChevronRight} px={14} className="text-text-quaternary transition-transform duration-150 ease-nexus" />
                 ) : null}
                 <span
                   aria-current={last ? "page" : undefined}
@@ -93,7 +93,7 @@ export function Topbar({
         aria-label="Search NEXUS, command palette"
         className="hidden h-8 w-[260px] items-center gap-2 rounded-nav border border-border-subtle bg-bg-surface/40 px-2.5 text-left text-[12.5px] text-text-tertiary transition-[border-color,background-color,color,transform] duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface hover:text-text-secondary active:scale-[0.98] md:flex xl:w-[320px] will-change-transform"
       >
-        <Search size={14} strokeWidth={1.75} className="shrink-0 transition-transform duration-150 ease-nexus group-hover:scale-105" aria-hidden="true" />
+        <NexusIcon icon={IconSearch} className="transition-transform duration-150 ease-nexus group-hover:scale-105" />
         <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
         <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary"> {commandKey} </kbd>
       </button>
@@ -117,7 +117,7 @@ export function Topbar({
           data-guide="help-button"
           className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
         >
-          <LifeBuoy size={15} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconLifebuoy} size="toolbar" />
         </button>
 
         <Dropdown
@@ -133,7 +133,7 @@ export function Topbar({
               className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary outline-none transition-[border-color,background-color,transform] duration-150 ease-nexus hover:border-border-strong active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
               {...ariaProps}
             >
-              {hasName ? initial : <UserRound size={13} strokeWidth={1.75} aria-hidden="true" />}
+              {hasName ? initial : <NexusIcon icon={IconUser} />}
             </button>
           )}
         >
@@ -143,24 +143,24 @@ export function Topbar({
           </div>
           <DropdownSeparator />
           {!user.profileComplete && onOpenProfileModal ? (
-            <DropdownItem icon={<UserRoundCheck size={15} strokeWidth={1.75} />} onSelect={() => onOpenProfileModal()}>
+            <DropdownItem icon={<NexusIcon icon={IconUserCheck} />} onSelect={() => onOpenProfileModal()}>
               Complete profile
             </DropdownItem>
           ) : null}
-          <DropdownLink href="/settings?tab=profile" icon={<User size={15} strokeWidth={1.75} />}>
+          <DropdownLink href="/settings?tab=profile" icon={<NexusIcon icon={IconUser} />}>
             Profile
           </DropdownLink>
-          <DropdownLink href="/settings?tab=account" icon={<KeyRound size={15} strokeWidth={1.75} />}>
+          <DropdownLink href="/settings?tab=account" icon={<NexusIcon icon={IconKey} />}>
             Security
           </DropdownLink>
-          <DropdownLink href="/settings?tab=workspace" icon={<Settings2 size={15} strokeWidth={1.75} />}>
+          <DropdownLink href="/settings?tab=workspace" icon={<NexusIcon icon={IconSettings} />}>
             {workspace.name ? `${workspace.name} settings` : "Workspace settings"}
           </DropdownLink>
-          <DropdownLink href="/settings/billing" icon={<CreditCard size={15} strokeWidth={1.75} />}>
+          <DropdownLink href="/settings/billing" icon={<NexusIcon icon={IconCreditCard} />}>
             Billing
           </DropdownLink>
           <DropdownSeparator />
-          <DropdownItem icon={<LogOut size={15} strokeWidth={1.75} />} onSelect={() => void handleLogout()}>
+          <DropdownItem icon={<NexusIcon icon={IconLogout} />} onSelect={() => void handleLogout()}>
             Sign out
           </DropdownItem>
         </Dropdown>
