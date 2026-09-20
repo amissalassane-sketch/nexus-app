@@ -69,7 +69,7 @@ export default {
         pill: '9999px',
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'sans-serif'],
+        sans: ['Instrument Sans', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'sans-serif'],
         mono: ['Geist Mono', 'JetBrains Mono', 'SF Mono', 'Menlo', 'monospace'],
       },
       fontSize: {

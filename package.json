@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing && npm run test:creation && npm run test:guide",
+    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing && npm run test:creation && npm run test:guide && npm run test:type",
     "test:freemium": "node --import tsx supabase/tests/freemium-contract.test.mjs",
     "test:subscription": "node --import tsx supabase/tests/subscription-contract.test.mjs",
     "test:unit": "node --import tsx supabase/tests/intelligence-agent.test.mjs && node --import tsx supabase/tests/intelligence-agent-v2.test.mjs && node --import tsx supabase/tests/intelligence-memory.test.mjs && node --import tsx supabase/tests/intelligence-proactive.test.mjs && node --import tsx supabase/tests/intelligence-signals.test.mjs && node --import tsx supabase/tests/intelligence-mission.test.mjs && node --import tsx supabase/tests/intelligence-experience.test.mjs && node --import tsx supabase/tests/onboarding-product.test.mjs && node --import tsx supabase/tests/schema-errors.test.mjs && node --import tsx supabase/tests/mobile-experience.test.mjs",
@@ -19,6 +19,7 @@
     "test:landing": "node scripts/test-landing-design.mjs",
     "test:creation": "node scripts/test-project-creation.mjs",
     "test:guide": "node scripts/test-onboarding-guide.mjs",
+    "test:type": "node scripts/test-typography.mjs",
     "test:mobile-experience": "node --import tsx supabase/tests/mobile-experience.test.mjs"
   },
   "dependencies": {

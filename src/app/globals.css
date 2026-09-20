@@ -139,9 +139,31 @@
   --color-admin-accent-bg: rgba(210, 255, 77, 0.12);
   --color-admin-accent-border: rgba(210, 255, 77, 0.28);
 
-  /* ---------- Typography ---------- */
-  --font-sans: var(--font-inter), Inter, "Geist Sans", -apple-system,
-    BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  /* ---------- Typography ----------
+     NEXUS type system. Two voices, strict roles:
+       SANS (Instrument Sans) — everything a person reads: navigation,
+         headings, labels, buttons, forms, tables, dashboard, admin,
+         system states, eyebrows.
+       MONO (Geist Mono) — technical data only: IDs, timestamps, request
+         IDs, API keys, logs, code. Never ordinary prose.
+     Hierarchy (each step has one job):
+       DISPLAY-XL 58 / DISPLAY-LG 40 / DISPLAY 34 — public pages only;
+         application screens never use display sizes.
+       H1 22 — page title, one per screen.
+       XL 20 — large section openers on public pages.
+       H2 16 — card / panel titles.
+       LEAD 15.5 — landing intro paragraph.
+       H3 14 — subsections inside a panel.
+       H4 13 — small group titles.
+       BODY 13.5 / BODY-MEDIUM — default reading.
+       BUTTON 13 — control labels.
+       SMALL 12.5 — secondary descriptions.
+       CAPTION 11.5 — hints, helper text.
+       MONO 11.5 — technical data sizing (always paired with font-mono).
+       EYEBROW 10.5 — uppercase kickers (sans, never mono).
+     --------------------------------------------------------------- */
+  --font-sans: var(--font-instrument), "Instrument Sans", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), "Geist Mono", "JetBrains Mono",
     "SF Mono", Menlo, monospace;
 
@@ -833,11 +855,13 @@ input[type="range"] {
   letter-spacing: 0;
 }
 
-/* Eyebrow / label: the quiet uppercase mono caption used across NEXUS. */
+/* Eyebrow / label: the quiet uppercase sans caption used across NEXUS.
+   Labels are ordinary text — Instrument Sans semibold, never mono. */
 @utility eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10.5px;
   line-height: 14px;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1270,7 +1294,7 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
    paired font-size + colour so contrast is never an afterthought. */
 
 .nexus-eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10.5px;
   line-height: 14px;
   font-weight: 500;
@@ -1291,10 +1315,10 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   border: 1px solid var(--color-border-default);
   background-color: var(--color-bg-surface);
   color: var(--color-text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10.5px;
   line-height: 1;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -2012,7 +2036,7 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 /* ---------- Editorial accent ----------------------------------
    One or two emphasised words only. No new font is loaded: the
    system serif stack is used as a typographic accent next to
-   Inter, exactly like a pull-quote inside the NEXUS system. */
+   Instrument Sans, exactly like a pull-quote inside the NEXUS system. */
 .nexus-intel-accent {
   font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
   font-style: italic;
