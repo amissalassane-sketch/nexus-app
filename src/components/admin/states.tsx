@@ -121,6 +121,26 @@ export function AdminErrorState({
             {error.message}
           </p>
         ) : null}
+        {/* Diagnostic line for operators: the real code (SQLSTATE / PGRST)
+            and the bounded raw message the database answered with. This is
+            the difference between "the aggregate could not be read" and
+            "42703: column actor_id does not exist — reconcile the schema".
+            Rendered inside the operator-only admin surface, never in the
+            product app, and logged identically to the runtime logs. */}
+        {error.detail ? (
+          <p
+            className="mt-2 rounded-[6px] border border-admin-border bg-admin-surface px-2.5 py-1.5 font-mono text-[11px] leading-[16px] text-admin-text-2"
+            data-error-code={error.detail.code}
+          >
+            <span className="text-admin-text">
+              code {error.detail.code}
+            </span>{" "}
+            {error.detail.message}
+            {error.detail.hint ? (
+              <span className="block text-admin-text-3">hint: {error.detail.hint}</span>
+            ) : null}
+          </p>
+        ) : null}
       </div>
     </div>
   );

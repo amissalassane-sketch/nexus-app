@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/card";
 import { Alert } from "@/components/ui/feedback";
 import { ActivityList, type ActivityRow } from "@/components/activity-list";
+import { logDataReadFailure } from "@/lib/server-logs";
 
 // ============================================================
 // NEXUS — ACTIVITY
@@ -31,6 +32,10 @@ export default async function ActivityPage() {
         .order("created_at", { ascending: false })
         .limit(100)
     : { data: [], error: null };
+
+  // The UI shows an honest "feed unavailable" state; the runtime logs keep
+  // the real error triple (code/message/hint) for the operator.
+  logDataReadFailure("activity.feed", "error" in result ? result.error : null);
 
   const rows = (result.data ?? []) as ActivityRow[];
 

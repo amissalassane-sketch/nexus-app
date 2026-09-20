@@ -195,6 +195,24 @@ export type AdminOverviewResult =
 export type AdminDataError = {
   code: "FORBIDDEN" | "NOT_INSTALLED" | "TIMEOUT" | "UNAVAILABLE" | "INVALID_PAYLOAD";
   message: string;
+  /**
+   * The raw database/transport error behind the classified one, reduced
+   * to the three fields that diagnose it: SQLSTATE or PGRST code
+   * (`42703`, `PGRST204`, …), the bounded raw message, and the Postgres
+   * hint when the database supplied one.
+   *
+   * Contract for what may appear here (enforced at the point of capture):
+   * schema-level strings only — column names, table names, error codes.
+   * Never request data, headers, tokens or account identifiers. The admin
+   * UI renders `code` as a short chip under the friendly message so an
+   * operator can act without opening the runtime logs; the same triple is
+   * logged server-side (Vercel Runtime Logs) for the full context.
+   */
+  detail?: {
+    code: string;
+    message: string;
+    hint?: string;
+  };
 };
 
 // ------------------------------------------------------------

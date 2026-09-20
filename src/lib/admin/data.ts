@@ -32,15 +32,75 @@ const ACTIVITY_TIMEOUT_MS = 8_000;
 
 const ACTIVITY_LIMIT = 12;
 
+/**
+ * The raw error shape captured from PostgREST. `hint` and `details` come
+ * straight from the database (SQLSTATE error context); they are schema-level
+ * strings, which is exactly what an operator needs to fix the problem.
+ */
+export type RawDataError = {
+  code?: string | null;
+  message?: string | null;
+  hint?: string | null;
+  details?: string | null;
+};
+
+/**
+ * Bounded copy of the raw error kept for diagnosis. Truncation here is a
+ * data-boundary decision, not a style one: these strings land in the admin
+ * HTML (operators only) and in the runtime logs, and the contract is that
+ * they contain codes and schema names — never row data, credentials or
+ * account identifiers. Postgres error text for the reads in this surface
+ * (column/permission/function errors) satisfies that by construction; the
+ * slice is the backstop.
+ */
+function rawDetail(error: RawDataError): AdminDataError["detail"] {
+  const code = String(error.code ?? "").trim();
+  const message = String(error.message ?? "").trim();
+  const hint = String(error.hint ?? "").trim();
+  if (!code && !message) return undefined;
+  return {
+    code: code || "unknown",
+    message: message.slice(0, 300),
+    ...(hint ? { hint: hint.slice(0, 200) } : {}),
+  };
+}
+
+/**
+ * Server-side diagnostics for a failed admin read — lands in the Vercel
+ * Runtime Logs. One structured line per failure: which RPC, and the real
+ * code / message / hint the database answered with. This is what turns
+ * "Platform data unavailable" from a mystery into a one-line diagnosis.
+ * No request data, no headers, no tokens — only the error triple.
+ */
+export function logAdminReadFailure(fn: string, error: RawDataError): void {
+  const detail = rawDetail(error);
+  if (!detail) return;
+  console.error(
+    `[nexus-admin] read failed fn=${fn} code=${detail.code} message=${JSON.stringify(detail.message)}${detail.hint ? ` hint=${JSON.stringify(detail.hint)}` : ""}`
+  );
+}
+
 /** Exported so the directory reads (027) classify failures with exactly the same
- *  rules as the Overview — one vocabulary of errors across the surface. */
-export function classify(error: { code?: string | null; message?: string | null }): AdminDataError {
+ *  rules as the Overview — one vocabulary of errors across the surface.
+ *
+ *  `source` names the RPC being read; it is used for the runtime log line
+ *  and is never shown to the user. Every classified failure is logged
+ *  server-side: the admin surface is low-traffic and an unlogged failure
+ *  is the exact situation that cost this diagnostic round. */
+export function classify(
+  error: RawDataError,
+  source = "admin-read"
+): AdminDataError {
   const code = String(error.code ?? "");
   const message = String(error.message ?? "");
   const haystack = message.toLowerCase();
 
   if (message.includes("NEXUS_ADMIN_FORBIDDEN") || message.includes("NEXUS_ADMIN_INSUFFICIENT_ROLE")) {
-    return { code: "FORBIDDEN", message: "This account is not a platform admin." };
+    return {
+      code: "FORBIDDEN",
+      message: "This account is not a platform admin.",
+      detail: rawDetail(error),
+    };
   }
   if (
     code === "404" ||
@@ -51,14 +111,17 @@ export function classify(error: { code?: string | null; message?: string | null 
       code: "NOT_INSTALLED",
       message:
         "The admin control plane is not installed in this database. Apply supabase/migrations/026_admin_control_plane.sql.",
+      detail: rawDetail(error),
     };
   }
   if (haystack.includes("timed out")) {
     return { code: "TIMEOUT", message: "The platform aggregate did not answer in time." };
   }
+  logAdminReadFailure(source, error);
   return {
     code: "UNAVAILABLE",
     message: "The platform aggregate could not be read. No data is shown rather than guessed.",
+    detail: rawDetail(error),
   };
 }
 
@@ -115,7 +178,7 @@ async function readOverview(supabase: SupabaseClient): Promise<OverviewReadResul
         : { code: null, message: cause instanceof Error ? cause.message : "unknown" },
   }));
 
-  if (overviewResult.error) return { ok: false, error: classify(overviewResult.error) };
+  if (overviewResult.error) return { ok: false, error: classify(overviewResult.error, "admin_overview()") };
   if (!isOverview(overviewResult.data)) {
     return {
       ok: false,
@@ -166,7 +229,7 @@ export async function readActivity(
     },
   }));
 
-  if (result.error) return { state: "unavailable", error: classify(result.error) };
+  if (result.error) return { state: "unavailable", error: classify(result.error, "admin_recent_activity()") };
 
   // The RPC answered, but not with the shape this build expects. That is a
   // failure to read, not an absence of activity.
