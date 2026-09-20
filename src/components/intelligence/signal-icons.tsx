@@ -1,14 +1,14 @@
 import {
-  AlertOctagon,
-  CalendarClock,
-  GitBranch,
-  Lightbulb,
-  MoonStar,
-  Pause,
-  TrendingUp,
-  Waves,
-  type LucideIcon,
-} from "lucide-react";
+  IconAlertOctagon,
+  IconBulb,
+  IconCalendarClock,
+  IconGitBranch,
+  IconMoonStars,
+  IconPlayerPause,
+  IconTrendingUp,
+  IconWaveSine,
+  type TablerIcon,
+} from "@tabler/icons-react";
 import type { InsightSeverity, SignalKind } from "@/lib/intelligence/engine";
 import type { BadgeTone } from "@/components/ui/badge";
 
@@ -20,15 +20,15 @@ import type { BadgeTone } from "@/components/ui/badge";
 // position, never by colour alone.
 // ============================================================
 
-export const SIGNAL_ICON: Record<SignalKind, LucideIcon> = {
-  blocked: Pause,
-  "at-risk": Waves,
-  deadline: CalendarClock,
-  drifting: MoonStar,
-  inactive: Pause,
-  dependency: GitBranch,
-  opportunity: Lightbulb,
-  momentum: TrendingUp,
+export const SIGNAL_ICON: Record<SignalKind, TablerIcon> = {
+  blocked: IconPlayerPause,
+  "at-risk": IconWaveSine,
+  deadline: IconCalendarClock,
+  drifting: IconMoonStars,
+  inactive: IconPlayerPause,
+  dependency: IconGitBranch,
+  opportunity: IconBulb,
+  momentum: IconTrendingUp,
 };
 
 export const SEVERITY_TONE: Record<InsightSeverity, BadgeTone> = {
@@ -52,4 +52,4 @@ export const SEVERITY_RAIL: Record<InsightSeverity, string> = {
   positive: "bg-success",
 };
 
-export const CriticalIcon = AlertOctagon;
+export const CriticalIcon = IconAlertOctagon;

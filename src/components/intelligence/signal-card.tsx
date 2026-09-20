@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -72,7 +73,7 @@ export function SignalCard({
       <div className="px-4 py-3.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className={cn("shrink-0 transition-transform duration-150 ease-nexus group-hover:scale-105", SEVERITY_TEXT[insight.severity])}>
-            <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={Icon} px={14} />
           </span>
           <Badge tone={SEVERITY_TONE[insight.severity]} className="transition-transform duration-150 ease-nexus">
             {SIGNAL_LABEL[insight.kind]}
@@ -108,10 +109,9 @@ export function SignalCard({
             aria-expanded={expanded}
             className="-ml-1.5 inline-flex min-h-[40px] items-center gap-1.5 rounded-input px-1.5 text-caption text-text-tertiary transition-[color,background-color,transform] duration-[150ms] ease-nexus hover:text-text-secondary active:bg-accent-ghost active:scale-[0.97] sm:min-h-[28px]"
           >
-            <ChevronDown
-              size={12}
-              strokeWidth={2}
-              aria-hidden="true"
+            <NexusIcon
+              icon={IconChevronDown}
+              px={12}
               className={cn("transition-transform duration-200 ease-nexus", expanded && "rotate-180")}
             />
             Why NEXUS flagged this
@@ -142,7 +142,7 @@ export function SignalCard({
             className="inline-flex h-9 items-center gap-1.5 rounded-input border border-border-default px-3 text-caption text-text-secondary transition-[border-color,background-color,color,transform] duration-[150ms] ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.97] sm:h-7 sm:px-2.5 will-change-transform"
           >
             {insight.cta}
-            <ArrowRight size={12} strokeWidth={1.75} aria-hidden="true" className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5" />
+            <NexusIcon icon={IconArrowRight} px={12} className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5" />
           </Link>
           {onOpen ? (
             <button

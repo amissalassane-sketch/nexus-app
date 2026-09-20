@@ -1,4 +1,5 @@
-import { Activity } from "lucide-react";
+import { IconActivity } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import type { WorkspaceHealth } from "@/lib/intelligence/advanced";
 
@@ -49,7 +50,7 @@ export function WorkspaceHealthPanel({ health }: { health: WorkspaceHealth }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="eyebrow flex items-center gap-1.5 text-text-quaternary">
-            <Activity size={12} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconActivity} px={12} />
             Operating index
           </p>
           <p className="mt-2 max-w-[30ch] text-small text-text-secondary">

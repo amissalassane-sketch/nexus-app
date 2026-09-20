@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
 const shell =
@@ -20,7 +21,7 @@ function Spinner() {
 function Badge({ icon }: { icon?: ReactNode }) {
   return (
     <span aria-hidden="true" className="shrink-0 transition-transform duration-150 ease-nexus group-active:scale-90">
-      {icon ?? <Plus size={15} strokeWidth={2} />}
+      {icon ?? <NexusIcon icon={IconPlus} />}
     </span>
   );
 }

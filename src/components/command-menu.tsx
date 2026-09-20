@@ -10,16 +10,16 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckSquare,
-  CornerDownLeft,
-  FolderKanban,
-  History,
-  Plus,
-  Radar,
-  Search,
-  Sparkles,
-  Target,
-} from "lucide-react";
+  IconChecklist,
+  IconCornerDownLeft,
+  IconHistory,
+  IconLayoutKanban,
+  IconPlus,
+  IconRadar,
+  IconSearch,
+  IconSparkles,
+  IconTarget,
+} from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
@@ -67,7 +67,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Create task",
     hint: "Task",
-    icon: <Plus size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconPlus} />,
     href: "/tasks?create=1",
     keywords: "new task add create",
   },
@@ -76,7 +76,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Create project",
     hint: "Project",
-    icon: <Plus size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconPlus} />,
     href: "/projects?create=1",
     keywords: "new project add create",
   },
@@ -85,7 +85,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Create goal",
     hint: "Goal",
-    icon: <Plus size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconPlus} />,
     href: "/goals?create=1",
     keywords: "new goal add create objective",
   },
@@ -94,7 +94,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Review what needs attention",
     hint: "Intelligence",
-    icon: <Radar size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconRadar} />,
     href: "/app/intelligence",
     keywords: "signals blocked risk attention review intelligence ask",
   },
@@ -103,7 +103,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Ask NEXUS: What should I focus on today?",
     hint: "Intelligence",
-    icon: <Sparkles size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconSparkles} />,
     href: "/app/intelligence?q=What%20should%20I%20focus%20on%20today%3F",
     keywords: "ask nexus focus today priorities intelligence",
   },
@@ -112,7 +112,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Ask NEXUS: Organise my day",
     hint: "Plan",
-    icon: <Sparkles size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconSparkles} />,
     href: "/app/intelligence?q=Organise%20my%20day",
     keywords: "ask nexus organise plan schedule day",
   },
@@ -121,7 +121,7 @@ const CREATE_COMMANDS: Command[] = [
     category: "Actions",
     label: "Ask NEXUS: What's at risk?",
     hint: "Signals",
-    icon: <Radar size={15} strokeWidth={1.75} />,
+    icon: <NexusIcon icon={IconRadar} />,
     href: "/app/intelligence?q=What%27s%20at%20risk%3F",
     keywords: "ask nexus risk overdue blocked attention",
   },
@@ -330,7 +330,7 @@ export function CommandMenu() {
           category: "Projects",
           label: project.name as string,
           hint: (project.status as string) ?? undefined,
-          icon: <FolderKanban size={15} strokeWidth={1.75} />,
+          icon: <NexusIcon icon={IconLayoutKanban} />,
           href: "/projects",
           keywords: (project.name as string).toLowerCase(),
         });
@@ -341,7 +341,7 @@ export function CommandMenu() {
           category: "Tasks",
           label: task.title as string,
           hint: (task.status as string)?.replace("_", " "),
-          icon: <CheckSquare size={15} strokeWidth={1.75} />,
+          icon: <NexusIcon icon={IconChecklist} />,
           href: "/tasks",
           keywords: (task.title as string).toLowerCase(),
         });
@@ -352,7 +352,7 @@ export function CommandMenu() {
           category: "Goals",
           label: goal.title as string,
           hint: (goal.status as string) ?? undefined,
-          icon: <Target size={15} strokeWidth={1.75} />,
+          icon: <NexusIcon icon={IconTarget} />,
           href: "/goals",
           keywords: (goal.title as string).toLowerCase(),
         });
@@ -569,11 +569,9 @@ export function CommandMenu() {
 
         {/* ---- Search row ---- */}
         <div className="flex h-[52px] items-center gap-3 border-b border-border-subtle pl-4 pr-3">
-          <Search
-            size={16}
-            strokeWidth={1.75}
-            className="shrink-0 text-text-tertiary"
-            aria-hidden="true"
+          <NexusIcon
+            icon={IconSearch}
+            className="text-text-tertiary"
           />
           <input
             ref={inputRef}
@@ -614,7 +612,7 @@ export function CommandMenu() {
           {flat.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <span className="mx-auto flex size-9 items-center justify-center rounded-input border border-border-default bg-bg-surface-2 text-text-quaternary">
-                <Search size={15} strokeWidth={1.75} aria-hidden="true" />
+                <NexusIcon icon={IconSearch} size="state" />
               </span>
               <p className="mt-3 text-small text-text-secondary">
                 Nothing matches “{query.trim()}”.
@@ -683,7 +681,7 @@ export function CommandMenu() {
                         )}
                       >
                         {command.category === "Recent" ? (
-                          <History size={15} strokeWidth={1.75} />
+                          <NexusIcon icon={IconHistory} />
                         ) : (
                           command.icon
                         )}
@@ -710,9 +708,9 @@ export function CommandMenu() {
                             : "opacity-0"
                         )}
                       >
-                        <CornerDownLeft
-                          size={11}
-                          strokeWidth={1.75}
+                        <NexusIcon
+                          icon={IconCornerDownLeft}
+                          px={11}
                           className="text-text-tertiary"
                         />
                       </span>

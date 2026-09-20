@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarClock } from "lucide-react";
+import { IconCalendarClock } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { Panel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 
@@ -61,7 +62,7 @@ export function UpcomingPanel({ items }: { items: UpcomingItem[] }) {
           <EmptyState
             title="Nothing due this week"
             description="No open task carries a deadline in the next seven days."
-            icon={<CalendarClock size={17} strokeWidth={1.75} />}
+            icon={<NexusIcon icon={IconCalendarClock} size="state" />}
           />
         </div>
       ) : (
@@ -76,7 +77,7 @@ export function UpcomingPanel({ items }: { items: UpcomingItem[] }) {
                   aria-hidden="true"
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
                 >
-                  <CalendarClock size={13} strokeWidth={1.75} />
+                  <NexusIcon icon={IconCalendarClock} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-body-medium text-text-primary">

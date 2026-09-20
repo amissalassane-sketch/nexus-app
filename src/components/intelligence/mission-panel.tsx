@@ -3,17 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  Circle,
-  CircleDot,
-  Loader2,
-  Pause,
-  RotateCcw,
-  Target,
-  X,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconCheck,
+  IconChevronDown,
+  IconCircle,
+  IconCircleDot,
+  IconLoader2,
+  IconPlayerPause,
+  IconRotate2,
+  IconTarget,
+  IconX,
+  type TablerIcon,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,15 +31,15 @@ import type {
   MissionStepStatus,
 } from "@/lib/intelligence/types";
 
-const STATUS_ICON: Record<MissionStepStatus, typeof Circle> = {
-  planned: Circle,
-  ready: CircleDot,
-  in_progress: Loader2,
-  blocked: Pause,
-  waiting: Circle,
-  completed: Check,
-  failed: X,
-  cancelled: X,
+const STATUS_ICON: Record<MissionStepStatus, TablerIcon> = {
+  planned: IconCircle,
+  ready: IconCircleDot,
+  in_progress: IconLoader2,
+  blocked: IconPlayerPause,
+  waiting: IconCircle,
+  completed: IconCheck,
+  failed: IconX,
+  cancelled: IconX,
 };
 
 const STATUS_LABEL: Record<MissionStepStatus, string> = {
@@ -224,7 +226,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         className="rounded-card border border-border-subtle bg-bg-subtle/60 px-4 py-4 sm:px-5 animate-[intelligence-state-in_320ms_var(--ease-nexus)_both]"
       >
         <div className="flex items-center gap-2">
-          <Target size={15} strokeWidth={1.75} className="text-accent animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" aria-hidden="true" />
+          <NexusIcon icon={IconTarget} className="text-accent animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" />
           <p className="eyebrow text-text-secondary">Mission</p>
           <span className="ml-auto flex items-center gap-1">
             <span className="h-1 w-1 rounded-pill bg-text-tertiary animate-[intelligence-thinking_1s_var(--ease-nexus)_infinite]" />
@@ -250,12 +252,12 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           className="rounded-card border border-border-subtle bg-bg-subtle/60 px-4 py-4 sm:px-5 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]"
         >
           <div className="flex items-center gap-2">
-            <Target size={15} strokeWidth={1.75} className="text-accent" aria-hidden="true" />
+            <NexusIcon icon={IconTarget} className="text-accent" />
             <p className="eyebrow text-text-secondary">Mission</p>
           </div>
           <p className="mt-2 text-small text-text-secondary">Connexion perdue. La mission sera chargée dès le retour du réseau.</p>
           <Button variant="secondary" onClick={() => void refresh()} className="mt-2.5 min-h-[44px] active:scale-[0.98]">
-            <RotateCcw size={13} strokeWidth={1.75} />
+            <NexusIcon icon={IconRotate2} px={13} />
             Réessayer
           </Button>
         </section>
@@ -268,13 +270,13 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         className="rounded-card border border-border-subtle bg-bg-subtle/60 px-4 py-4 sm:px-5"
       >
         <div className="flex items-center gap-2">
-          <Target size={15} strokeWidth={1.75} className="text-accent" aria-hidden="true" />
+          <NexusIcon icon={IconTarget} className="text-accent" />
           <p className="eyebrow text-text-secondary">Mission</p>
         </div>
         <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-text-secondary">{error}</p>
           <Button variant="secondary" onClick={() => void refresh()} className="min-h-[44px]">
-            <RotateCcw size={13} strokeWidth={1.75} />
+            <NexusIcon icon={IconRotate2} px={13} />
             Réessayer
           </Button>
         </div>
@@ -300,7 +302,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3.5 sm:px-5">
         <div className="flex items-center gap-2">
-          <Target size={15} strokeWidth={1.75} className="text-accent transition-transform duration-200 ease-nexus" aria-hidden="true" />
+          <NexusIcon icon={IconTarget} className="text-accent transition-transform duration-200 ease-nexus" />
           <p className="eyebrow text-text-secondary">Mission</p>
           {mission.status === "blocked" ? (
             <Badge tone="warning" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">Bloquée</Badge>
@@ -319,7 +321,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
             className="flex min-h-[44px] items-center gap-1.5 rounded-input px-2 text-caption text-text-quaternary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.96]"
             aria-label="Annuler la mission"
           >
-            <X size={14} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconX} />
             <span className="hidden sm:inline">Annuler</span>
           </button>
         ) : null}
@@ -364,7 +366,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         {whyReason ? (
           <div className="mt-3.5 rounded-card border border-warning-border/50 bg-warning-bg/15 p-3.5 animate-[intelligence-state-in_260ms_var(--ease-nexus)_both]">
             <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wider text-warning">
-              <AlertTriangle size={14} strokeWidth={2} className="shrink-0" aria-hidden="true" />
+              <NexusIcon icon={IconAlertTriangle} px={14} />
               <span>Pourquoi ça bloque</span>
             </p>
             <p className="mt-1 text-small leading-relaxed text-text-primary">
@@ -430,7 +432,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-input px-3 text-caption font-medium text-text-secondary transition-[color,background-color,transform] duration-150 ease-nexus hover:text-text-primary hover:bg-accent-ghost active:text-text-primary active:scale-[0.97]"
               >
                 <span>{whyOpen ? "Masquer le contexte" : "Voir pourquoi"}</span>
-                <ChevronDown size={13} strokeWidth={1.75} aria-hidden="true" className={cn("transition-transform duration-200 ease-nexus", whyOpen && "rotate-180")} />
+                <NexusIcon icon={IconChevronDown} px={13} className={cn("transition-transform duration-200 ease-nexus", whyOpen && "rotate-180")} />
               </button>
             </div>
 
@@ -439,7 +441,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         ) : mission.status === "completed" ? (
           <div className="mt-3.5 rounded-input border border-success-border bg-success-bg/40 px-3 py-2.5 text-small text-success animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
             <span className="flex items-center gap-1.5">
-              <Check size={14} strokeWidth={2.5} className="animate-[check-pop_320ms_var(--ease-nexus)_both]" />
+              <NexusIcon icon={IconCheck} className="animate-[check-pop_320ms_var(--ease-nexus)_both]" />
               Mission terminée. Toutes les étapes sont vérifiées.
             </span>
           </div>
@@ -456,7 +458,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
             </p>
             {pendingAction.action.risk === "high" ? (
               <p className="mt-1.5 flex items-start gap-1.5 text-caption text-danger animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
-                <AlertTriangle size={13} strokeWidth={1.75} className="mt-px shrink-0" aria-hidden="true" />
+                <NexusIcon icon={IconAlertTriangle} px={13} className="mt-px" />
                 Action destructive. Exécutée côté serveur puis vérifiée.
               </p>
             ) : null}
@@ -490,7 +492,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           <div ref={responseRef} className="mt-3.5 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both] rounded-card border border-success-border bg-success-bg/30 p-3.5 text-small text-success">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 font-medium">
-                <Check size={16} strokeWidth={2.5} className="animate-[check-pop_280ms_var(--ease-nexus)_both] text-success" />
+                <NexusIcon icon={IconCheck} className="animate-[check-pop_280ms_var(--ease-nexus)_both] text-success" />
                 <span>{executedResult.message}</span>
               </span>
               {executedResult.verified ? (
@@ -574,7 +576,7 @@ function MissionStepRow({
           completed ? "border-success-border bg-success-bg/40 text-success" : failed ? "border-danger-border bg-danger-bg/40 text-danger" : blocked ? "border-warning-border bg-warning-bg/40 text-warning animate-[intelligence-state-in_240ms_var(--ease-nexus)_both]" : step.status === "in_progress" || step.status === "ready" ? "border-accent/60 bg-accent/10 text-accent" : "border-border-subtle text-text-quaternary"
         )}
       >
-        <Icon size={13} strokeWidth={2} className={cn(step.status === "in_progress" && "animate-spin", completed && "animate-[check-pop_280ms_var(--ease-nexus)_both]")} />
+        <NexusIcon icon={Icon} className={cn(step.status === "in_progress" && "animate-spin", completed && "animate-[check-pop_280ms_var(--ease-nexus)_both]")} />
       </span>
       <div className="min-w-0 flex-1">
         <p className={cn("text-[13px] leading-[19px] font-medium transition-[color,opacity] duration-200 ease-nexus", completed ? "text-text-tertiary line-through" : "text-text-primary")}>

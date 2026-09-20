@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { IconArrowRight, IconCheck, IconChevronDown, IconRefresh, IconShieldExclamation, IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -210,7 +211,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3.5 sm:px-5">
         <div className="flex items-center gap-2">
-          <ShieldAlert size={15} strokeWidth={1.75} className="text-lavender transition-transform duration-200 ease-nexus" aria-hidden="true" />
+          <NexusIcon icon={IconShieldExclamation} className="text-lavender transition-transform duration-200 ease-nexus" />
           <p className="eyebrow text-text-secondary">Votre attention</p>
           {criticalCount > 0 ? <Badge tone="danger" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">{criticalCount} critique{criticalCount === 1 ? "" : "s"}</Badge> : null}
         </div>
@@ -231,7 +232,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
             aria-label="Rafraîchir les signaux"
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-input text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.92]"
           >
-            <RefreshCw size={14} strokeWidth={1.75} className={cn(loading && "animate-spin")} />
+            <NexusIcon icon={IconRefresh} className={cn(loading && "animate-spin")} />
           </button>
         </div>
       </div>
@@ -276,7 +277,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                   aria-label="Ignorer ce signal"
                   className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-input text-text-quaternary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9]"
                 >
-                  <X size={14} strokeWidth={1.75} />
+                  <NexusIcon icon={IconX} />
                 </button>
               </div>
 
@@ -303,7 +304,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                 }}
                 className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-caption font-medium text-text-tertiary transition-[color,transform] duration-150 ease-nexus hover:text-text-primary active:scale-[0.97]"
               >
-                <ChevronDown size={12} strokeWidth={1.75} className={cn("transition-transform duration-200 ease-nexus", isExpanded && "rotate-180")} />
+                <NexusIcon icon={IconChevronDown} px={12} className={cn("transition-transform duration-200 ease-nexus", isExpanded && "rotate-180")} />
                 <span>{isExpanded ? "Masquer les preuves" : "Pourquoi ?"}</span>
                 {!isExpanded ? <span className="ml-1 h-1 w-1 rounded-pill bg-lavender/50 animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" /> : null}
               </button>
@@ -339,7 +340,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                   suggested.kind === "navigate" && suggested.href ? (
                     <Link key={`${suggested.label}-${suggested.href}`} href={suggested.href} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-3 text-caption font-medium text-text-secondary transition-[border-color,background-color,color,transform] duration-150 ease-nexus hover:border-border-strong hover:text-text-primary active:scale-[0.97]">
                       <span>{suggested.label}</span>
-                      <ArrowRight size={12} strokeWidth={1.75} />
+                      <NexusIcon icon={IconArrowRight} px={12} />
                     </Link>
                   ) : suggested.kind === "mutate" ? (
                     <button
@@ -379,7 +380,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               {executedResult && !confirming ? (
                 <div className="mt-2.5 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both] rounded-input border border-success-border bg-success-bg/40 px-3 py-2 text-caption text-success">
                   <span className="flex items-center gap-1.5">
-                    <Check size={13} strokeWidth={2.5} className="animate-[check-pop_280ms_var(--ease-nexus)_both]" />
+                    <NexusIcon icon={IconCheck} px={13} className="animate-[check-pop_280ms_var(--ease-nexus)_both]" />
                     {executedResult.message}
                     {executedResult.verification.verified ? <span className="opacity-80">· Vérifié : {executedResult.verification.matched.join(", ")}</span> : null}
                   </span>

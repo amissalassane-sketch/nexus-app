@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { INTEGRATION_CATALOG, INTEGRATION_CATEGORIES, type IntegrationDefinition } from "@/lib/integrations/catalog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function IntegrationHub() {
       <Panel bodyClassName="p-3 sm:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative min-w-0 flex-1 lg:max-w-sm">
-            <Search size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <NexusIcon icon={IconSearch} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search integrations" aria-label="Search integrations" className="pl-8" />
           </div>
           <div className="flex max-w-full gap-1 overflow-x-auto" role="tablist" aria-label="Integration availability">

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, X } from "lucide-react";
+import { IconArrowRight, IconClock, IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ export function SignalDetail({
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.875rem)" }}
         >
           <span className={cn("mt-0.5 shrink-0", SEVERITY_TEXT[insight.severity])}>
-            <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={Icon} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -130,7 +131,7 @@ export function SignalDetail({
             aria-label="Close signal"
             className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-input text-text-tertiary transition-colors duration-150 hover:bg-accent-ghost hover:text-text-primary"
           >
-            <X size={15} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconX} />
           </button>
         </header>
 
@@ -193,7 +194,7 @@ export function SignalDetail({
             className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px"
           >
             {insight.cta}
-            <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconArrowRight} />
           </Link>
           <Button
             variant="secondary"
@@ -205,7 +206,7 @@ export function SignalDetail({
               });
             }}
           >
-            <Clock size={14} strokeWidth={1.75} aria-hidden="true" />
+            <NexusIcon icon={IconClock} />
             Snooze
           </Button>
           <Button

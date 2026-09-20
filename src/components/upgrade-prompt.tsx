@@ -9,7 +9,8 @@
 // ============================================================
 
 import Link from "next/link";
-import { ArrowUpRight, X } from "lucide-react";
+import { IconArrowUpRight, IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import {
   type LimitCheckResult,
   PLAN_LIMITS,
@@ -89,7 +90,7 @@ export function UpgradePrompt({ limitResult, onDismiss }: UpgradePromptProps) {
                 className={buttonClasses({ variant: "primary", size: "md" })}
               >
                 Upgrade to {nextPlan}
-                <ArrowUpRight size={15} strokeWidth={1.75} />
+                <NexusIcon icon={IconArrowUpRight} />
               </Link>
             </div>
           ) : (
@@ -106,7 +107,7 @@ export function UpgradePrompt({ limitResult, onDismiss }: UpgradePromptProps) {
             onClick={onDismiss}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input text-text-tertiary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary"
           >
-            <X size={16} strokeWidth={1.75} />
+            <NexusIcon icon={IconX} />
           </button>
         ) : null}
       </div>

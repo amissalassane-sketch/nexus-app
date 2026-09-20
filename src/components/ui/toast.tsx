@@ -10,7 +10,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AlertTriangle, Check, Info, X } from "lucide-react";
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconInfoCircle,
+  IconX,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
 // ============================================================
@@ -44,10 +50,10 @@ export function useToast(): ToastContextValue {
 }
 
 const TONE_ICON = {
-  success: Check,
-  danger: AlertTriangle,
-  info: Info,
-  warning: AlertTriangle,
+  success: IconCheck,
+  danger: IconAlertTriangle,
+  info: IconInfoCircle,
+  warning: IconAlertTriangle,
 } as const;
 
 const TONE_CLASS: Record<ToastTone, string> = {
@@ -150,12 +156,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 entry.exiting ? "animate-[toast-out_200ms_var(--ease-nexus)_both]" : "animate-[toast-in_280ms_var(--ease-nexus)_both]"
               )}
             >
-              <Icon
-                size={15}
-                strokeWidth={1.75}
-                aria-hidden="true"
+              <NexusIcon
+                icon={Icon}
                 className={cn(
-                  "mt-0.5 shrink-0 transition-transform duration-200 ease-nexus",
+                  "mt-0.5 transition-transform duration-200 ease-nexus",
                   TONE_CLASS[entry.tone],
                   entry.exiting ? "scale-90" : "scale-100"
                 )}
@@ -176,7 +180,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 aria-label="Dismiss notification"
                 className="-mr-1 -mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] text-text-quaternary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-secondary active:scale-90"
               >
-                <X size={13} strokeWidth={1.75} aria-hidden="true" />
+                <NexusIcon icon={IconX} />
               </button>
               {/* Progress indicator */}
               <span

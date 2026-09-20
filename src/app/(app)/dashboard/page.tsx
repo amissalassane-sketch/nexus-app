@@ -1,15 +1,16 @@
 import Link from "next/link";
 import {
-  ArrowRight,
-  Ban,
-  CalendarClock,
-  CheckSquare,
-  FolderKanban,
-  ListChecks,
-  ListTodo,
-  Sparkles,
-  Target,
-} from "lucide-react";
+  IconArrowRight,
+  IconBan,
+  IconCalendarClock,
+  IconChecklist,
+  IconCircleCheck,
+  IconLayoutKanban,
+  IconListCheck,
+  IconSparkles,
+  IconTarget,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileSummary, requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -318,7 +319,7 @@ export default async function DashboardPage() {
             href="/app/intelligence?ask=1"
             className="group inline-flex h-9 items-center gap-1.5 rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
           >
-            <Sparkles size={14} className="text-lavender" aria-hidden="true" />
+            <NexusIcon icon={IconSparkles} className="text-lavender" />
             <span>Ask NEXUS</span>
             <kbd className="hidden font-mono text-[10px] text-text-quaternary sm:inline">⌘J</kbd>
           </Link>
@@ -327,10 +328,8 @@ export default async function DashboardPage() {
             className="group inline-flex h-9 items-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-150 ease-nexus hover:bg-accent-hover"
           >
             <span>Open Intelligence</span>
-            <ArrowRight
-              size={14}
-              strokeWidth={1.75}
-              aria-hidden="true"
+            <NexusIcon
+              icon={IconArrowRight}
               className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
             />
           </Link>
@@ -467,7 +466,7 @@ export default async function DashboardPage() {
                     size="lg"
                     data-guide="new-project"
                   >
-                    <FolderKanban size={16} strokeWidth={1.75} />
+                    <NexusIcon icon={IconLayoutKanban} />
                     Create your first project
                   </ButtonLink>
                 ) : context.tasks === 0 ? (
@@ -476,7 +475,7 @@ export default async function DashboardPage() {
                     size="lg"
                     data-guide="new-task"
                   >
-                    <CheckSquare size={16} strokeWidth={1.75} />
+                    <NexusIcon icon={IconChecklist} />
                     Create your first task
                   </ButtonLink>
                 ) : (
@@ -484,7 +483,7 @@ export default async function DashboardPage() {
                     href="/app/intelligence?ask=1"
                     size="lg"
                   >
-                    <Sparkles size={16} strokeWidth={1.75} />
+                    <NexusIcon icon={IconSparkles} />
                     Ask NEXUS what matters
                   </ButtonLink>
                 )}
@@ -493,10 +492,9 @@ export default async function DashboardPage() {
                   className="group inline-flex items-center gap-1.5 text-small text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary px-1 py-1.5"
                 >
                   Open Intelligence
-                  <ArrowRight
-                    size={13}
-                    strokeWidth={1.75}
-                    aria-hidden="true"
+                  <NexusIcon
+                    icon={IconArrowRight}
+                    px={13}
                     className="transition-transform duration-150 ease-nexus group-hover:translate-x-0.5"
                   />
                 </Link>
@@ -534,14 +532,14 @@ export default async function DashboardPage() {
                 {
                   label: "Open tasks",
                   value: context.openTasks,
-                  icon: ListTodo,
+                  icon: IconListCheck,
                   href: "/tasks",
                   hint: "in progress",
                 },
                 {
                   label: "Completed",
                   value: completedTasks,
-                  icon: ListChecks,
+                  icon: IconCircleCheck,
                   href: "/tasks",
                   tone: "success",
                   hint: `${context.completionRate}% rate`,
@@ -549,7 +547,7 @@ export default async function DashboardPage() {
                 {
                   label: "Overdue",
                   value: context.overdueTasks,
-                  icon: CalendarClock,
+                  icon: IconCalendarClock,
                   href: "/tasks?filter=overdue",
                   tone: context.overdueTasks > 0 ? "danger" : "default",
                   hint: "past deadline",
@@ -557,7 +555,7 @@ export default async function DashboardPage() {
                 {
                   label: "Blocked",
                   value: context.blockedTasks,
-                  icon: Ban,
+                  icon: IconBan,
                   href: "/tasks?filter=blocked",
                   tone: context.blockedTasks > 0 ? "warning" : "default",
                   hint: "waiting",
@@ -565,14 +563,14 @@ export default async function DashboardPage() {
                 {
                   label: "Active projects",
                   value: context.activeProjects,
-                  icon: FolderKanban,
+                  icon: IconLayoutKanban,
                   href: "/projects",
                   hint: "in flight",
                 },
                 {
                   label: "Active goals",
                   value: activeGoals,
-                  icon: Target,
+                  icon: IconTarget,
                   href: "/goals",
                   tone: "accent",
                   hint: "tracked",
@@ -720,7 +718,7 @@ export default async function DashboardPage() {
                     className="shrink-0 font-medium"
                   >
                     {activeMission.status === "blocked" ? "Unblock mission" : "Continue mission"}
-                    <ArrowRight size={14} strokeWidth={2} />
+                    <NexusIcon icon={IconArrowRight} />
                   </ButtonLink>
                 </div>
 
@@ -776,7 +774,7 @@ export default async function DashboardPage() {
                     aria-hidden="true"
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-success-border bg-success-bg text-success"
                   >
-                    <CheckSquare size={15} strokeWidth={1.75} />
+                    <NexusIcon icon={IconChecklist} />
                   </span>
                   <div className="min-w-0">
                     <p className="text-body-medium text-text-primary">
@@ -810,7 +808,7 @@ export default async function DashboardPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Sparkles size={15} className="text-lavender" aria-hidden="true" />
+                    <NexusIcon icon={IconSparkles} className="text-lavender" />
                     <span className="eyebrow text-lavender">TELL NEXUS WHAT MATTERS</span>
                   </div>
                   <h3 className="mt-1 text-h3 font-semibold text-text-primary">
@@ -826,7 +824,7 @@ export default async function DashboardPage() {
                   className="shrink-0"
                 >
                   Open Command Center
-                  <ArrowRight size={14} strokeWidth={2} />
+                  <NexusIcon icon={IconArrowRight} />
                 </ButtonLink>
               </div>
 
@@ -909,7 +907,7 @@ export default async function DashboardPage() {
                       <EmptyState
                         title="Set your first goal"
                         description="A goal gives NEXUS an outcome to measure progress against."
-                        icon={<Target size={17} strokeWidth={1.75} />}
+                        icon={<NexusIcon icon={IconTarget} size="state" />}
                         action={
                           <Link
                             href="/goals?create=1"

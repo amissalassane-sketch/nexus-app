@@ -3,18 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
-  ArrowRight,
-  Check,
-  ChevronDown,
-  CornerDownLeft,
-  History,
-  Plus,
-  RefreshCw,
-  ShieldAlert,
-  Sparkles,
-  X,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconArrowRight,
+  IconCheck,
+  IconChevronDown,
+  IconCornerDownLeft,
+  IconHistory,
+  IconPlus,
+  IconRefresh,
+  IconShieldExclamation,
+  IconSparkles,
+  IconX,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import { buildWorkspaceContext } from "@/lib/intelligence/context-builder";
 import { runAgentDeterministic } from "@/lib/intelligence/agent";
@@ -404,10 +405,8 @@ export function IntelligenceAsk({
       {/* Query Bar */}
       <div className="flex flex-col gap-2 p-3 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <Sparkles
-            size={15}
-            strokeWidth={1.75}
-            aria-hidden="true"
+          <NexusIcon
+            icon={IconSparkles}
             className="pointer-events-none absolute left-3 top-3.5 text-lavender/80"
           />
           <textarea
@@ -438,7 +437,7 @@ export function IntelligenceAsk({
               aria-label="Submit query"
               className="absolute right-1.5 top-1.5 flex min-h-[32px] min-w-[32px] items-center justify-center rounded-[6px] text-text-quaternary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40"
             >
-              <CornerDownLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+              <NexusIcon icon={IconCornerDownLeft} />
             </button>
           ) : null}
         </div>
@@ -490,7 +489,7 @@ export function IntelligenceAsk({
                   : "border-border-subtle bg-bg-surface text-text-tertiary hover:text-text-primary"
               )}
             >
-              <History size={16} strokeWidth={1.75} />
+              <NexusIcon icon={IconHistory} />
             </button>
           ) : null}
         </div>
@@ -505,7 +504,7 @@ export function IntelligenceAsk({
             onClick={() => void send()}
             className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
           >
-            <RefreshCw size={12} />
+            <NexusIcon icon={IconRefresh} px={12} />
             <span>Retry</span>
           </button>
         </div>
@@ -521,7 +520,7 @@ export function IntelligenceAsk({
               onClick={() => setShowHistory(false)}
               className="text-caption text-text-quaternary hover:text-text-secondary"
             >
-              <X size={14} />
+              <NexusIcon icon={IconX} />
             </button>
           </div>
           <div className="flex flex-col divide-y divide-border-subtle max-h-48 overflow-y-auto">
@@ -549,7 +548,7 @@ export function IntelligenceAsk({
       {!loading && !currentResponse && proactive.length > 0 ? (
         <div className="mx-3 mb-3 animate-fade-in rounded-input border border-lavender-border/30 bg-lavender/5 p-3.5">
           <div className="flex items-center gap-2">
-            <ShieldAlert size={14} strokeWidth={1.75} className="text-lavender" aria-hidden="true" />
+            <NexusIcon icon={IconShieldExclamation} px={14} className="text-lavender" />
             <p className="text-caption font-medium text-text-primary">
               {proactive.length} point{proactive.length === 1 ? "" : "s"} nécessitent votre attention
             </p>
@@ -691,7 +690,7 @@ export function IntelligenceAsk({
             return (
               <div className="mt-4 rounded-input border border-warning-border/40 bg-warning-bg/15 p-3.5 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle size={14} strokeWidth={2} className="text-warning shrink-0" aria-hidden="true" />
+                  <NexusIcon icon={IconAlertTriangle} px={14} className="text-warning" />
                   <p className="eyebrow text-warning font-semibold">
                     Risques & Dépendances détectés ({riskItems.length})
                   </p>
@@ -752,7 +751,7 @@ export function IntelligenceAsk({
                         className="mt-0.5 inline-flex min-h-[32px] shrink-0 items-center gap-1 text-caption font-medium text-text-tertiary hover:text-text-primary"
                       >
                         <span>Ouvrir</span>
-                        <ArrowRight size={12} strokeWidth={1.75} />
+                        <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     ) : null}
                   </li>
@@ -785,12 +784,11 @@ export function IntelligenceAsk({
                     ]}
                   </span>
                 </span>
-                <ChevronDown
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden="true"
+                <NexusIcon
+                  icon={IconChevronDown}
+                  px={13}
                   className={cn(
-                    "shrink-0 text-text-quaternary transition-transform duration-200 ease-nexus",
+                    "text-text-quaternary transition-transform duration-200 ease-nexus",
                     traceOpen && "rotate-180"
                   )}
                 />
@@ -838,12 +836,11 @@ export function IntelligenceAsk({
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
                   Outils consultés · {currentResponse.toolCalls.length}
                 </span>
-                <ChevronDown
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden="true"
+                <NexusIcon
+                  icon={IconChevronDown}
+                  px={13}
                   className={cn(
-                    "shrink-0 text-text-quaternary transition-transform duration-200 ease-nexus",
+                    "text-text-quaternary transition-transform duration-200 ease-nexus",
                     toolsOpen && "rotate-180"
                   )}
                 />
@@ -933,7 +930,7 @@ export function IntelligenceAsk({
                       className="mt-2 sm:mt-0 inline-flex min-h-[36px] items-center gap-1 text-caption font-medium text-text-tertiary hover:text-text-primary transition-colors"
                     >
                       <span>Voir</span>
-                      <ArrowRight size={12} strokeWidth={1.75} />
+                      <NexusIcon icon={IconArrowRight} px={12} />
                     </Link>
                   ) : null}
                 </div>
@@ -979,7 +976,7 @@ export function IntelligenceAsk({
                 <div className="mt-3 rounded-input border border-success-border bg-success-bg/40 px-3.5 py-2.5 text-small text-success animate-fade-in">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Check size={16} strokeWidth={2.5} />
+                      <NexusIcon icon={IconCheck} />
                       <span className="font-medium">{executedActionResult.message}</span>
                     </div>
                     {executedActionResult.actionType === "create_task" ? (
@@ -988,7 +985,7 @@ export function IntelligenceAsk({
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
                         <span>Ouvrir dans Tâches</span>
-                        <ArrowRight size={12} />
+                        <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     ) : (
                       <Link
@@ -996,7 +993,7 @@ export function IntelligenceAsk({
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
                         <span>Ouvrir dans {executedActionResult.actionType?.includes("goal") ? "Objectifs" : "Projets"}</span>
-                        <ArrowRight size={12} />
+                        <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     )}
                   </div>
@@ -1004,12 +1001,12 @@ export function IntelligenceAsk({
                     <div className="mt-2 border-t border-success-border/40 pt-2 text-caption text-success/80">
                       {executedActionResult.verification.verified ? (
                         <span className="flex items-center gap-1.5">
-                          <Check size={12} strokeWidth={2.5} />
+                          <NexusIcon icon={IconCheck} px={12} />
                           Verified · {executedActionResult.verification.summary} · {executedActionResult.verification.matched.join(", ")}
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5">
-                          <X size={12} strokeWidth={2.5} />
+                          <NexusIcon icon={IconX} px={12} />
                           Verification failed · {executedActionResult.verification.mismatched.join(", ") || "result could not be confirmed"}
                         </span>
                       )}
@@ -1113,7 +1110,7 @@ export function IntelligenceAsk({
                       onClick={() => setConfirmingAction(currentResponse.action!)}
                       className="min-h-[44px] sm:min-h-[36px]"
                     >
-                      <Plus size={14} strokeWidth={2} />
+                      <NexusIcon icon={IconPlus} />
                       <span>{currentResponse.action.label}</span>
                     </Button>
                   ) : currentResponse.action.payload?.url ? (
@@ -1122,7 +1119,7 @@ export function IntelligenceAsk({
                       className="inline-flex min-h-[44px] sm:min-h-[36px] items-center gap-2 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg hover:bg-accent-hover transition-colors"
                     >
                       <span>{currentResponse.action.label}</span>
-                      <ArrowRight size={13} strokeWidth={2} />
+                      <NexusIcon icon={IconArrowRight} px={13} />
                     </Link>
                   ) : null}
                 </div>
@@ -1142,7 +1139,7 @@ export function IntelligenceAsk({
                         className="inline-flex min-h-[40px] sm:min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary active:bg-accent-ghost transition-colors"
                       >
                         <span>{qa.label}</span>
-                        <ArrowRight size={12} />
+                        <NexusIcon icon={IconArrowRight} px={12} />
                       </button>
                     ) : qa.href ? (
                       <Link
@@ -1151,7 +1148,7 @@ export function IntelligenceAsk({
                         className="inline-flex min-h-[40px] sm:min-h-[36px] items-center gap-1.5 rounded-input border border-border-default bg-bg-surface px-2.5 text-caption font-medium text-text-secondary hover:border-border-strong hover:text-text-primary active:bg-accent-ghost transition-colors"
                       >
                         <span>{qa.label}</span>
-                        <ArrowRight size={12} />
+                        <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     ) : null
                   )}

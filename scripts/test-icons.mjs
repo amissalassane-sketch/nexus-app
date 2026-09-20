@@ -4,8 +4,9 @@
  * ======================================
  * Locks the PR2+ icon-system decisions: one wrapper (NexusIcon) fixing
  * stroke/size/a11y defaults, explicit tree-shakable Tabler imports, and
- * the per-zone migration state (navigation migrated in PR2; product,
- * intelligence and admin surfaces follow in PR3–PR4).
+ * the per-zone migration state (navigation migrated in PR2; dashboard,
+ * product, intelligence and command-menu surfaces in PR3; landing, auth,
+ * legal and admin surfaces follow in PR4).
  *
  * Run:  node scripts/test-icons.mjs   (or  npm run test:icon)
  * Exit: 0 = all invariants hold, 1 = at least one check failed.
@@ -128,6 +129,97 @@ check(
 check(
   "command-menu: page entries render through NexusIcon",
   read("components/command-menu.tsx").includes("<NexusIcon icon={entry.icon} />")
+);
+
+// ------------------------------------------------------------------
+console.log("Product + intelligence zones migrated (PR3)");
+// ------------------------------------------------------------------
+const PR3_ZONE = [
+  "app/(app)/dashboard/page.tsx",
+  "app/(app)/integrations/page.tsx",
+  "app/(app)/settings/billing/page.tsx",
+  "app/(app)/upgrade/page.tsx",
+  "components/activity-list.tsx",
+  "components/command-menu.tsx",
+  "components/dashboard/active-projects.tsx",
+  "components/dashboard/briefing-panel.tsx",
+  "components/dashboard/kpi-grid.tsx",
+  "components/dashboard/priority-queue.tsx",
+  "components/dashboard/upcoming-panel.tsx",
+  "components/goal-manager.tsx",
+  "components/integrations/integration-hub.tsx",
+  "components/integrations/integration-icon.tsx",
+  "components/intelligence-panel.tsx",
+  "components/intelligence/briefing-panel.tsx",
+  "components/intelligence/context/context-node.tsx",
+  "components/intelligence/explainable-intelligence.tsx",
+  "components/intelligence/forecast-panel.tsx",
+  "components/intelligence/health-panel.tsx",
+  "components/intelligence/intelligence-ask.tsx",
+  "components/intelligence/intelligence-closing.tsx",
+  "components/intelligence/intelligence-signals.tsx",
+  "components/intelligence/mission-panel.tsx",
+  "components/intelligence/next-best-action.tsx",
+  "components/intelligence/priority-focus.tsx",
+  "components/intelligence/proactive-signals-panel.tsx",
+  "components/intelligence/signal-card.tsx",
+  "components/intelligence/signal-detail.tsx",
+  "components/intelligence/signal-icons.tsx",
+  "components/logout-button.tsx",
+  "components/mobile-home/mobile-overview.tsx",
+  "components/notification-center.tsx",
+  "components/onboarding/checklist.tsx",
+  "components/onboarding/help-center.tsx",
+  "components/profile/profile-completion-modal.tsx",
+  "components/profile/profile-completion-prompt.tsx",
+  "components/project-manager.tsx",
+  "components/task-manager.tsx",
+  "components/tasks/nexus-kanban.tsx",
+  "components/ui/confirm-dialog.tsx",
+  "components/ui/create-button.tsx",
+  "components/ui/modal.tsx",
+  "components/ui/password-input.tsx",
+  "components/ui/toast.tsx",
+  "components/upgrade-prompt.tsx",
+  "components/user-settings-panel.tsx",
+  "components/workspace-status-banner.tsx",
+];
+
+for (const rel of PR3_ZONE) {
+  const text = read(rel);
+  check(`${rel}: Lucide-free`, !text.includes("lucide-react"));
+  check(`${rel}: no LucideIcon type residue`, !text.includes("LucideIcon"));
+  check(
+    `${rel}: no one-off strokeWidth (wrapper default 1.75)`,
+    !text.includes("strokeWidth={")
+  );
+}
+
+check(
+  "signal-icons: vocabulary typed on TablerIcon",
+  read("components/intelligence/signal-icons.tsx").includes(
+    "Record<SignalKind, TablerIcon>"
+  )
+);
+
+check(
+  "mission-panel: status map typed on TablerIcon",
+  read("components/intelligence/mission-panel.tsx").includes(
+    "Record<MissionStepStatus, TablerIcon>"
+  )
+);
+
+check(
+  "toast: tone map holds Tabler components",
+  read("components/ui/toast.tsx").includes("success: IconCheck") &&
+    read("components/ui/toast.tsx").includes("info: IconInfoCircle")
+);
+
+check(
+  "command-menu: fully migrated (no Lucide tag renders, empty state at state size)",
+  read("components/command-menu.tsx").includes(
+    '<NexusIcon icon={IconSearch} size="state" />'
+  )
 );
 
 console.log(`\n${passes} passed, ${failures} failed.\n`);

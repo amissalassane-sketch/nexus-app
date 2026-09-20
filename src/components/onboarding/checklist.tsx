@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, CircleHelp, Minus } from "lucide-react";
+import { IconCheck, IconHelpCircle, IconMinus } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import {
   CHECKLIST_ITEMS,
@@ -72,7 +73,7 @@ export function GetStartedChecklist({
         className="fixed bottom-[84px] left-4 lg:left-auto lg:right-5 z-40 inline-flex h-10 items-center gap-2 rounded-pill border border-border-default bg-bg-surface px-3 text-caption text-text-secondary shadow-dropdown hover:text-text-primary animate-pop-in lg:bottom-5"
         aria-label={t("checklist.title", locale)}
       >
-        <CircleHelp size={14} strokeWidth={1.75} />
+        <NexusIcon icon={IconHelpCircle} />
         {activated
           ? t("checklist.progress", locale)
           : t("checklist.title", locale)}{" "}
@@ -106,7 +107,7 @@ export function GetStartedChecklist({
           aria-label="Minimize checklist"
           className="flex h-7 w-7 items-center justify-center rounded-nav text-text-tertiary hover:bg-accent-ghost hover:text-text-primary"
         >
-          <Minus size={14} />
+          <NexusIcon icon={IconMinus} />
         </button>
       </div>
       {activated ? (
@@ -130,7 +131,7 @@ export function GetStartedChecklist({
                       : "flex h-4 w-4 items-center justify-center rounded-pill border border-border-strong"
                   }
                 >
-                  {complete ? <Check size={10} strokeWidth={2.5} /> : null}
+                  {complete ? <NexusIcon icon={IconCheck} px={10} /> : null}
                 </span>
                 <span className={complete ? "text-text-tertiary line-through" : ""}>
                   {t(item.labelKey, locale)}

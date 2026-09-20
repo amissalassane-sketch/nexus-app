@@ -1,4 +1,5 @@
-import { AlertTriangle } from "lucide-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +69,7 @@ export function ExplainableIntelligence() {
           <div className="nexus-intel-glass rounded-card p-5 sm:p-7">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-warning-border bg-warning-bg text-warning">
-                <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" />
+                <NexusIcon icon={IconAlertTriangle} />
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

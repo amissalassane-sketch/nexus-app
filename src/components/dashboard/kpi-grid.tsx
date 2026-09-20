@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import type { TablerIcon } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
 // ============================================================
@@ -14,7 +15,7 @@ export type KpiTone = "default" | "danger" | "warning" | "success" | "accent";
 export type KpiItem = {
   label: string;
   value: number;
-  icon: LucideIcon;
+  icon: TablerIcon;
   /** Where the number leads — a filtered view of the real data. */
   href: string;
   tone?: KpiTone;
@@ -69,7 +70,7 @@ export function KpiGrid({
                   TONE_ICON[tone]
                 )}
               >
-                <item.icon size={15} strokeWidth={1.75} />
+                <NexusIcon icon={item.icon} />
               </span>
               {item.hint ? (
                 <span className="eyebrow min-w-0 truncate text-text-quaternary">

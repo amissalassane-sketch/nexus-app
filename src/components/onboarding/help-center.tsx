@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { browserLocale, t } from "@/lib/onboarding/i18n";
 
@@ -124,7 +125,7 @@ export function HelpCenter({
             aria-label="Close"
             className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary hover:bg-accent-ghost hover:text-text-primary"
           >
-            <X size={16} />
+            <NexusIcon icon={IconX} />
           </button>
         </div>
         <ul className="mt-4 divide-y divide-border-subtle border-y border-border-subtle">

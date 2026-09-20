@@ -1,4 +1,5 @@
-import { TrendingUp } from "lucide-react";
+import { IconTrendingUp } from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import type {
   ForecastStatus,
@@ -44,7 +45,7 @@ export function ForecastPanel({ forecasts }: { forecasts: ProjectForecast[] }) {
     >
       <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
         <p className="eyebrow flex items-center gap-1.5 text-text-quaternary">
-          <TrendingUp size={12} strokeWidth={1.75} aria-hidden="true" />
+          <NexusIcon icon={IconTrendingUp} px={12} />
           Completion forecast
         </p>
         <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary">

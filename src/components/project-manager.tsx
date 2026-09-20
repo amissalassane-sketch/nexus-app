@@ -2,7 +2,13 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FolderKanban, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  IconLayoutKanban,
+  IconPencil,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
+import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveMembership } from "@/lib/workspace";
 import { canCreateProject } from "@/lib/access";
@@ -563,10 +569,8 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="relative">
-              <Search
-                size={14}
-                strokeWidth={1.75}
-                aria-hidden="true"
+              <NexusIcon
+                icon={IconSearch}
                 className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
               />
               <Input
@@ -618,7 +622,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
             <EmptyState
               title="Workspace connecting"
               description="Your personal workspace is being prepared. Projects will appear here once connected."
-              icon={<FolderKanban size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconLayoutKanban} size="state" />}
               action={
                 <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>
                   Retry connection
@@ -637,7 +641,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                   ? "Create a project to organize related tasks. NEXUS tracks momentum and detects risks as deadlines approach."
                   : "Adjust your search keywords or status filter to see other projects."
               }
-              icon={<FolderKanban size={17} strokeWidth={1.75} />}
+              icon={<NexusIcon icon={IconLayoutKanban} size="state" />}
               action={
                 projects.length === 0 ? (
                   <CreateButton label="New Project" onClick={openCreateForm} data-guide="new-project" />
@@ -658,7 +662,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary">
-                      <FolderKanban size={16} strokeWidth={1.75} />
+                      <NexusIcon icon={IconLayoutKanban} />
                     </span>
 
                     <div className="min-w-0 flex-1">
@@ -723,7 +727,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                           aria-label={`Edit ${project.name}`}
                           onClick={() => populateEditForm(project)}
                         >
-                          <Pencil size={15} strokeWidth={1.75} />
+                          <NexusIcon icon={IconPencil} />
                         </Button>
                         <Button
                           variant="icon"
@@ -731,7 +735,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
                           onClick={() => setConfirmingDelete(project)}
                           className="hover:text-danger"
                         >
-                          <Trash2 size={15} strokeWidth={1.75} />
+                          <NexusIcon icon={IconTrash} />
                         </Button>
                       </div>
                     </div>
