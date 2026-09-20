@@ -12,11 +12,15 @@ import { humanizeAuthError, validateCredentials } from "@/lib/auth-errors";
  * Profile identity is completed later, from inside the product, and is
  * never a gate to it.
  *
- * Two legitimate outcomes are handled explicitly:
+ * Three legitimate outcomes are handled explicitly:
  *   1. email confirmation disabled -> Supabase returns a session, the SSR
  *      cookies are written here and the user goes straight to /app;
  *   2. email confirmation enabled  -> a user is returned WITHOUT a session,
- *      and the UI must say so instead of pretending nothing happened.
+ *      and the UI must say so instead of pretending nothing happened;
+ *   3. the address is already registered -> Supabase returns an obfuscated
+ *      user with NO identities and sends NO email. That is reported as such,
+ *      instead of sending the person to a code screen that can never
+ *      receive anything.
  */
 export async function POST(request: Request) {
   const { error: configError } = readSupabaseConfig();
@@ -81,6 +85,21 @@ export async function POST(request: Request) {
 
   if (result.data.session) {
     return NextResponse.json({ ok: true, requiresConfirmation: false, redirectTo: "/app" });
+  }
+
+  // Already-registered address (for example an account created with Google):
+  // Supabase hides it by returning a user with an empty identities list and
+  // sends no email. Tell the person, do not pretend a code was sent.
+  const identities = result.data.user?.identities;
+  if (Array.isArray(identities) && identities.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "An account with this email already exists. Sign in instead, or continue with Google.",
+        errorCode: "ACCOUNT_EXISTS",
+      },
+      { status: 409 }
+    );
   }
 
   return NextResponse.json({
