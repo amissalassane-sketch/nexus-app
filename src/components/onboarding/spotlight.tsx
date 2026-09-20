@@ -42,7 +42,14 @@ export function measureGuide(selector?: string): SpotlightRect | null {
   };
 }
 
-/** Four-pane overlay so the target stays clickable, yielding pointer events if a modal dialog is active. */
+/**
+ * Four-pane overlay so the target stays clickable, yielding pointer events
+ * if a modal dialog is active.
+ *
+ * INVARIANT: the parent tour wrapper MUST be pointer-events-none, or the
+ * wrapper itself swallows every click (spotlight hole included) and the
+ * product underneath — including open modals — becomes unclickable.
+ */
 export function Spotlight({
   rect,
   reduced,

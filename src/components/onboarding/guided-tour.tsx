@@ -155,11 +155,16 @@ export function GuidedTour({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onSkip();
+      if (event.key !== "Escape") return;
+      // A visible dialog owns Escape while it is open (the modal closes
+      // itself). Skipping the whole tour underneath an open dialog would
+      // strand the user with no visible way back.
+      if (modalActive) return;
+      onSkip();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onSkip]);
+  }, [onSkip, modalActive]);
 
   const go = () => {
     if (pending) return;
@@ -222,7 +227,14 @@ export function GuidedTour({
     : placeCard(isWelcome ? null : rect).style;
 
   return (
-    <div className="fixed inset-0 z-[70]" aria-live="polite">
+    // CLICKABILITY INVARIANT: this wrapper MUST stay pointer-events-none.
+    // It sits at z-[70], above every product dialog (z-[60]). With default
+    // (auto) pointer events the wrapper itself becomes the hit target for
+    // the whole viewport — the spotlight hole, the yielded panes and even
+    // an open modal underneath would all be unclickable, so the user could
+    // click "New project" / "Add project" forever with no effect. Only the
+    // spotlight panes (pointer-events-auto) and the card below intercept.
+    <div className="pointer-events-none fixed inset-0 z-[70]" aria-live="polite">
       <Spotlight rect={isWelcome ? null : rect} reduced={reduced} />
 
       <div
@@ -230,10 +242,15 @@ export function GuidedTour({
         aria-modal="false"
         aria-labelledby="nexus-guide-title"
         aria-describedby="nexus-guide-body"
+        aria-hidden={modalActive || undefined}
         className={cn(
           "pointer-events-auto absolute z-[71] w-[min(360px,calc(100vw-24px))] rounded-card border border-border-default bg-bg-surface p-4 shadow-dropdown",
           !reduced && "animate-fade-in transition-[top,left,right,bottom,opacity] duration-200 ease-nexus",
-          modalActive && "pointer-events-none opacity-20",
+          // A modal dialog owns the screen while open: the card steps out
+          // of the way entirely (kept mounted so it returns without a
+          // re-animation once the dialog closes) instead of hovering over
+          // the form the user is trying to complete.
+          modalActive && "invisible pointer-events-none",
           isMobile && "w-auto"
         )}
         style={cardStyle}
