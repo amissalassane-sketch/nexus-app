@@ -73,7 +73,7 @@ function wave(x: number, y: number, t: number): number {
   return 0.4 + 0.6 * (0.5 + 0.5 * s);
 }
 
-export function NexusSpatialField() {
+export function NexusSpatialField({ subtle = false }: { subtle?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
   const [canvasSupported, setCanvasSupported] = useState(true);
@@ -96,6 +96,13 @@ export function NexusSpatialField() {
     let raf = 0;
     let last = performance.now();
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Subtle mode (application pages): the field must stay a background,
+    // not a wallpaper. Everything luminous is scaled down ~half so the
+    // cards and text carry the page; the public site keeps the full
+    // expression. (Not to be confused with the local projection `scale`
+    // inside draw().)
+    const luma = subtle ? 0.45 : 1;
 
     const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
 
@@ -145,7 +152,7 @@ export function NexusSpatialField() {
         const parallax = (d.layer + 1) * 2.4;
         const px = d.x + pointer.x * parallax;
         const py = d.y + pointer.y * parallax;
-        ctx.globalAlpha = d.a * (0.7 + 0.3 * Math.sin(time * 0.4 + d.phase));
+        ctx.globalAlpha = d.a * luma * (0.7 + 0.3 * Math.sin(time * 0.4 + d.phase));
         ctx.beginPath();
         ctx.arc(px, py, d.r, 0, Math.PI * 2);
         ctx.fill();
@@ -181,7 +188,7 @@ export function NexusSpatialField() {
           const w = wave((a.bx + b.bx) / 2, (a.by + b.by) / 2, time);
           const [ax, ay] = project(a);
           const [bx, by] = project(b);
-          ctx.globalAlpha = 0.05 * w;
+          ctx.globalAlpha = 0.05 * w * luma;
           ctx.strokeStyle = "rgba(233,228,255,1)";
           ctx.beginPath();
           ctx.moveTo(ax, ay);
@@ -194,7 +201,7 @@ export function NexusSpatialField() {
         for (const node of nodes) {
           const w = wave(node.bx, node.by, time);
           const [x, y] = project(node);
-          ctx.globalAlpha = 0.11 * w;
+          ctx.globalAlpha = 0.11 * w * luma;
           ctx.fillStyle = "rgba(233,228,255,1)";
           ctx.beginPath();
           ctx.arc(x, y, 1.1, 0, Math.PI * 2);
@@ -267,12 +274,17 @@ export function NexusSpatialField() {
       document.removeEventListener("visibilitychange", onVisibility);
       if (resizeTimer) clearTimeout(resizeTimer);
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, subtle]);
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      /* z-[-1]: unambiguously behind every sibling (all of which are
+         positioned or create stacking contexts), while still painting
+         above the shell's own background. pointer-events-none is
+         structural, not a class choice — the field must never capture
+         input. */
+      className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden"
     >
       {/* Atmosphere — also the full fallback when canvas is missing. */}
       <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_-12%,rgba(233,228,255,0.05),transparent_55%)]" />
