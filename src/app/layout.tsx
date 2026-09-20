@@ -94,6 +94,41 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased dark`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  if (typeof window === 'undefined') return;
+  try {
+    var _fetch = window.fetch;
+    var def = {
+      get: function() { return _fetch; },
+      set: function(val) { _fetch = val; },
+      configurable: true,
+      enumerable: true
+    };
+    try {
+      Object.defineProperty(window, 'fetch', def);
+    } catch (e1) {
+      try {
+        var proto = Object.getPrototypeOf(window);
+        if (proto) Object.defineProperty(proto, 'fetch', def);
+      } catch (e2) {}
+    }
+  } catch (e) {}
+
+  window.addEventListener('error', function(event) {
+    if (event && event.message && event.message.indexOf('fetch') !== -1 && event.message.indexOf('getter') !== -1) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+})();
+`,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-bg-base font-sans text-body text-text-primary">
         {children}
       </body>

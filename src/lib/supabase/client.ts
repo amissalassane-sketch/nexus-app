@@ -9,7 +9,11 @@ import { getSupabaseConfig, readSupabaseConfig } from "@/lib/supabase/config";
  */
 export function createClient() {
   const { url, key } = getSupabaseConfig();
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    global: {
+      fetch: (...args: Parameters<typeof fetch>) => fetch(...args),
+    },
+  });
 }
 
 export type SafeClientResult =
@@ -25,7 +29,14 @@ export function createClientSafe(): SafeClientResult {
   if (!config) return { client: null, error };
 
   try {
-    return { client: createBrowserClient(config.url, config.key), error: null };
+    return {
+      client: createBrowserClient(config.url, config.key, {
+        global: {
+          fetch: (...args: Parameters<typeof fetch>) => fetch(...args),
+        },
+      }),
+      error: null,
+    };
   } catch (cause) {
     return {
       client: null,

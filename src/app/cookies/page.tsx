@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { LegalDocumentLayout } from "@/components/legal/legal-layout";
 import { COOKIES_TOC } from "@/components/legal/legal-data";
 import {
@@ -87,7 +88,7 @@ export default function CookiesPage() {
           This Cookie Policy explains how <strong>[LEGAL ENTITY NAME]</strong> (&ldquo;NEXUS&rdquo;,
           &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) uses cookies, local browser
           storage, and related web technologies when you access our intelligent workspace application
-          at <a href="/" className="text-text-primary underline">nexus.app</a> and related domains.
+          at <Link href="/" className="text-text-primary underline">nexus.app</Link> and related domains.
         </LegalParagraph>
         <LegalParagraph>
           Unlike traditional web services that embed dozens of third-party advertising trackers and

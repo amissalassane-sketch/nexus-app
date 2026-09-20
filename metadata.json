@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS",
+  "description": "Operational intelligence for modern teams with workspace context, explainable signals, and controlled next actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
