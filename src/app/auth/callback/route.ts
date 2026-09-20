@@ -27,6 +27,23 @@ function asOtpType(value: string | null): EmailOtpType | null {
 }
 
 /**
+ * Server-side diagnostics for a failed auth return. Only the flow name and the
+ * provider/Supabase error text are logged (never tokens or codes), so the real
+ * cause shows up in the Vercel runtime logs instead of a generic "invalid link".
+ */
+function logAuthFailure(
+  flow: "recovery" | "oauth" | "email",
+  detail: {
+    message: string | null;
+    type: string | null;
+    hasCode: boolean;
+    hasTokenHash: boolean;
+  }
+): void {
+  console.error("[auth/callback] failure", JSON.stringify({ flow, ...detail }));
+}
+
+/**
  * Map a Google OAuth redirect error into a single, actionable NEXUS message.
  */
 function describeOAuthFailure(
@@ -81,6 +98,7 @@ export async function GET(request: NextRequest) {
   const oauthErrorCode = url.searchParams.get("error");
   const oauthErrorDescription = url.searchParams.get("error_description");
   const authError = oauthErrorDescription ?? oauthErrorCode;
+  const flow = recovery ? "recovery" : isOAuth ? "oauth" : "email";
 
   const recoveryFailed = `${origin}/forgot-password?error=${encodeURIComponent(
     "This reset link is invalid or has expired. Request a new one."
@@ -90,6 +108,12 @@ export async function GET(request: NextRequest) {
   )}`;
 
   if (authError) {
+    logAuthFailure(flow, {
+      message: authError,
+      type,
+      hasCode: Boolean(code),
+      hasTokenHash: Boolean(tokenHash),
+    });
     if (recovery) return NextResponse.redirect(recoveryFailed);
     if (isOAuth) return NextResponse.redirect(oauthFailed);
     return NextResponse.redirect(confirmErrorUrl(origin, "invalid"));
@@ -97,6 +121,12 @@ export async function GET(request: NextRequest) {
 
   const { config } = readSupabaseConfig();
   if (!config) {
+    logAuthFailure(flow, {
+      message: "Supabase configuration is missing on the server",
+      type,
+      hasCode: Boolean(code),
+      hasTokenHash: Boolean(tokenHash),
+    });
     return NextResponse.redirect(
       recovery ? recoveryFailed : isOAuth ? oauthFailed : confirmErrorUrl(origin, "invalid")
     );
@@ -104,6 +134,12 @@ export async function GET(request: NextRequest) {
 
   // Nothing to exchange
   if (!code && !tokenHash) {
+    logAuthFailure(flow, {
+      message: "No code or token_hash in the return URL",
+      type,
+      hasCode: false,
+      hasTokenHash: false,
+    });
     if (recovery) return NextResponse.redirect(recoveryFailed);
     if (isOAuth) return NextResponse.redirect(oauthFailed);
     return NextResponse.redirect(confirmErrorUrl(origin, "missing"));
@@ -156,6 +192,15 @@ export async function GET(request: NextRequest) {
       cause instanceof Error
         ? cause.message
         : "Authentication failed. Please try again.";
+  }
+
+  if (confirmError) {
+    logAuthFailure(flow, {
+      message: confirmError,
+      type,
+      hasCode: Boolean(code),
+      hasTokenHash: Boolean(tokenHash),
+    });
   }
 
   // --- Recovery: keep the session, continue to the password reset form. ----
