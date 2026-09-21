@@ -1,3 +1,5 @@
+import { IntelligenceDataError } from "@/lib/intelligence/data-error";
+import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -40,10 +42,14 @@ async function route(request: Request, method: "GET" | "POST") {
 
     const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const { membership } = await getActiveMembership(supabase, user?.id ?? "");
+    const { membership, error: membershipError } = await getActiveMembership(supabase, user?.id ?? "");
+    if (membershipError) throw new IntelligenceDataError();
     const workspaceId = membership?.workspaceId ?? null;
 
-    const body = method === "POST" ? await request.json().catch(() => ({})) : {};
+    const body = method === "POST" ? await readJsonObject(request).catch(() => null) : {};
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
 
     const { status, body: payload } = await handleSignalsRequest({
       db: supabase,
@@ -55,6 +61,9 @@ async function route(request: Request, method: "GET" | "POST") {
 
     return NextResponse.json(payload, { status });
   } catch (error) {
+    if (error instanceof IntelligenceDataError) {
+      return NextResponse.json({ ok: false, code: error.code, message: error.message, error: error.message }, { status: error.status });
+    }
     console.error("Intelligence signals error:", error);
     return NextResponse.json(
       { error: "Failed to process intelligence signals" },

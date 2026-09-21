@@ -1,3 +1,4 @@
+import { assertIntelligenceData } from "./data-error";
 // ============================================================
 // NEXUS INTELLIGENCE — STRUCTURED WORKING MEMORY (Phase 2)
 // ============================================================
@@ -437,13 +438,14 @@ export async function readMemory(
   workspaceId: string,
   userId: string
 ): Promise<StoredMemory | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from("intelligence_memory")
     .select("state, preferences")
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId)
     .maybeSingle();
 
+  assertIntelligenceData({ error });
   if (!data) return null;
   return {
     state: {
@@ -469,7 +471,7 @@ export async function saveMemory(
     preferences,
     updated_at: new Date().toISOString(),
   };
-  const { data: existing } = await db
+  const { data: existing, error } = await db
     .from("intelligence_memory")
     .update(payload)
     .eq("workspace_id", workspaceId)
@@ -477,12 +479,14 @@ export async function saveMemory(
     .select("id")
     .maybeSingle();
 
+  assertIntelligenceData({ error });
   if (!existing) {
-    await db.from("intelligence_memory").insert({
+    const inserted = await db.from("intelligence_memory").insert({
       user_id: userId,
       workspace_id: workspaceId,
       state,
       preferences,
     });
+    assertIntelligenceData(inserted);
   }
 }

@@ -1,3 +1,4 @@
+import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
 
   let body: ProfilePayload;
   try {
-    body = (await request.json()) as ProfilePayload;
+    body = (await readJsonObject(request)) as ProfilePayload;
   } catch {
     return responseError(requestId, 400, "Please enter a valid profile.");
   }

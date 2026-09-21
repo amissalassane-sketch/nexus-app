@@ -297,7 +297,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="flex min-h-dvh bg-admin-base text-admin-text">
+    <div data-dashboard-root="true" className="flex min-h-dvh bg-admin-base text-admin-text">
       {/* Desktop / tablet rail. One DOM tree: the compact state is CSS. */}
       <aside className="sticky top-0 hidden h-dvh w-[64px] shrink-0 flex-col border-r border-admin-border bg-admin-sidebar md:flex lg:w-[248px]">
         <BrandBlock />
@@ -306,7 +306,7 @@ export function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-admin-border bg-admin-base/95 px-4 backdrop-blur-sm sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-admin-border bg-admin-base px-4 sm:px-6">
           <button
             ref={triggerRef}
             type="button"

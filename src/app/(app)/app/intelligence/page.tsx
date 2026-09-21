@@ -58,12 +58,8 @@ export default async function IntelligencePage({
         .eq("workspace_id", workspaceId),
     ]);
 
-    if (tasks.error && projects.error && goals.error) {
-      error =
-        tasks.error?.message ??
-        projects.error?.message ??
-        goals.error?.message ??
-        null;
+    if (tasks.error || projects.error || goals.error) {
+      error = "Intelligence data is temporarily unavailable. Please retry.";
     } else {
       snapshot = {
         tasks: (tasks.data ?? []) as WorkspaceSnapshot["tasks"],

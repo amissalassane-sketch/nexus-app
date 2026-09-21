@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * NEXUS ADMIN — SUBSCRIPTIONS (MIGRATION 029) — SQL TESTS
+ * NEXUS ADMIN — SUBSCRIPTIONS (029 + EFFECTIVE PLAN CONTRACT) — SQL TESTS
  * ============================================================
  * Runs the real migrations against a real PostgreSQL engine (PGlite)
  * and asserts the properties /admin/subscriptions depends on:
@@ -10,7 +10,7 @@
  *     anon cannot even invoke the function;
  *   - every row branch the UI renders: paid live, churned (cancelled
  *     live row, default FREE plan), dunning (past_due), lapsed (an
- *     active PRO row past its period → paid badge, FREE limits),
+ *     active PRO row past its period → expired, FREE plan and limits),
  *     expired, trialing (tracked, grants nothing), and implicit free
  *     (no rows at all);
  *   - the filters are whitelists (unknown values → no filter, never
@@ -146,6 +146,7 @@ for (const file of migrations) {
     ko(`migration applied: ${file}`, String(error.message).split("\n")[0]);
   }
 }
+await db.exec(readFileSync(join(migrationsDir, "20260921190000_admin_effective_plans.sql"), "utf8"));
 assert("migration 029_admin_subscriptions.sql applies cleanly", migration029Applied);
 
 async function asUser(userId) {
@@ -482,6 +483,9 @@ assert(
   paid.has_active_owner === true
 );
 
+const effectiveOverview = (await db.query("select public.admin_overview() as r")).rows[0].r;
+assert("overview and subscriptions share effective plan counts", effectiveOverview.plans.pro === firstRead.summary.plans.pro && effectiveOverview.plans.free === firstRead.summary.plans.free);
+
 const churned = byId[customerWs];
 assert(
   "churned: default FREE plan, but the cancelled live row stays visible",
@@ -522,10 +526,10 @@ assert(
 
 const orphan = byId[orphanWs];
 assert(
-  "lapsed: the badge still reads the active PRO row…",
-  orphan.plan === "PRO" &&
-    orphan.has_subscription === true &&
-    orphan.subscription_status === "active",
+  "lapsed: expired status and FREE effective plan agree with enforcement",
+  orphan.plan === "FREE" &&
+    orphan.has_subscription === false &&
+    orphan.subscription_status === "expired",
   JSON.stringify({
     plan: orphan.plan,
     sub: orphan.has_subscription,
@@ -533,7 +537,7 @@ assert(
   })
 );
 assert(
-  "…but the limits fail closed to FREE (the guards' period rule), and the mismatch is the signal",
+  "lapsed limits also resolve to FREE",
   orphan.limits.projects === freeLimits.p &&
     orphan.limits.active_tasks === freeLimits.t &&
     orphan.limits.goals === freeLimits.g,
@@ -592,10 +596,10 @@ console.log("\n-- ADMIN-SUBS-05: filters, search, sort, pagination -----");
 // ============================================================
 const proOnly = await readSubs(`null,'PRO','all','plan','desc',1,25`);
 assert(
-  "plan filter PRO matches the two paid rows (live and lapsed)",
-  proOnly.total === 2 &&
+  "plan filter PRO matches only the effective paid row",
+  proOnly.total === 1 &&
     proOnly.items.every((i) => i.plan === "PRO") &&
-    proOnly.summary.plans.pro === 2 &&
+    proOnly.summary.plans.pro === 1 &&
     proOnly.summary.plans.free === 0,
   `total: ${proOnly.total}`
 );
@@ -603,7 +607,6 @@ assert(
 for (const [status, expectedId] of [
   ["cancelled", customerWs],
   ["past_due", viewerWs],
-  ["expired", expiredWs],
   ["trialing", trialWs],
 ]) {
   const res = await readSubs(`null,'all','${status}','plan','desc',1,25`);
@@ -614,6 +617,9 @@ for (const [status, expectedId] of [
   );
 }
 
+const expiredOnly = await readSubs(`null,'all','expired','plan','desc',1,25`);
+assert("expired filter includes materialized and unswept expiration", expiredOnly.total === 2 && [expiredWs, orphanWs].every(id => expiredOnly.items.some(i => i.workspace_id === id)));
+
 const implicitOnly = await readSubs(`null,'all','implicit_free','plan','desc',1,25`);
 assert(
   "status filter implicit_free matches ONLY the row-less tenant (churned/expired/trialing/dunning are states, not defaults)",
@@ -623,8 +629,8 @@ assert(
 
 const activeOnly = await readSubs(`null,'all','active','plan','desc',1,25`);
 assert(
-  "status filter active matches the live and lapsed paid rows (both live-active)",
-  activeOnly.total === 2 &&
+  "status filter active excludes lapsed periods",
+  activeOnly.total === 1 &&
     activeOnly.items.every((i) => i.subscription_status === "active"),
   `total: ${activeOnly.total}`
 );
@@ -668,7 +674,7 @@ assert(
 const byPlan = await readSubs(`null,'all','all','plan','desc',1,25`);
 assert(
   "default sort (plan desc) puts paid plans first",
-  byPlan.items[0].plan === "PRO" && byPlan.items[1].plan === "PRO",
+  byPlan.items[0].plan === "PRO" && byPlan.items[1].plan === "FREE",
   byPlan.items.map((i) => i.plan).join(",")
 );
 const unknownSort = await readSubs(`null,'all','all','mrr','desc',1,25`);
@@ -701,18 +707,18 @@ assert(
   `workspaces: ${summary.workspaces}, total: ${firstRead.total}`
 );
 assert(
-  "summary plans split live rows from defaults (2 PRO, 0 TEAM, rest FREE)",
-  summary.plans.pro === 2 &&
+  "summary plans reflect effective entitlements (1 PRO, 0 TEAM, rest FREE)",
+  summary.plans.pro === 1 &&
     summary.plans.team === 0 &&
-    summary.plans.free === firstRead.total - 2,
+    summary.plans.free === firstRead.total - 1,
   JSON.stringify(summary.plans)
 );
 assert(
   "summary statuses count live states, including expired and implicit free",
-  summary.statuses.active === 2 &&
+  summary.statuses.active === 1 &&
     summary.statuses.cancelled === 1 &&
     summary.statuses.past_due === 1 &&
-    summary.statuses.expired === 1 &&
+    summary.statuses.expired === 2 &&
     summary.statuses.trialing === 1 &&
     summary.statuses.implicit_free === 1,
   JSON.stringify(summary.statuses)
@@ -724,7 +730,7 @@ assert(
 );
 assert(
   "the summary follows the filter, not the page (PRO query, page of 1)",
-  proOnly.summary.workspaces === 2 && proOnly.items.length <= 2,
+  proOnly.summary.workspaces === 1 && proOnly.items.length === 1,
   `workspaces: ${proOnly.summary.workspaces}, items: ${proOnly.items.length}`
 );
 

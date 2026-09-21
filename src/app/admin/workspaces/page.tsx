@@ -264,7 +264,7 @@ export default async function AdminWorkspacesPage({
                           {!row.has_subscription ? (
                             <span
                               className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3"
-                              title="No workspace_subscriptions row: this is get_workspace_plan()'s default, not a measured plan"
+                              title="No current entitlement: get_workspace_plan() resolves to FREE; historical subscription rows may still exist"
                             >
                               default
                             </span>

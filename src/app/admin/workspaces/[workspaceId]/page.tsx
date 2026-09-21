@@ -1,3 +1,4 @@
+import { effectivePlanOf, displayStatusOf } from "@/lib/billing/subscription-state";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminCopyButton } from "@/components/admin/copy-button";
@@ -171,7 +172,12 @@ export default async function AdminWorkspaceDetailPage({
         }
         badges={
           <>
-            <AdminPlanBadge plan={activeSubscription?.plan ?? "FREE"} />
+            <AdminPlanBadge plan={effectivePlanOf(activeSubscription)} />
+            {displayStatusOf(activeSubscription) === "expired" ? (
+              <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+                expired · FREE effective
+              </span>
+            ) : null}
             {!activeSubscription ? (
               <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
                 default plan
@@ -434,7 +440,7 @@ export default async function AdminWorkspaceDetailPage({
           <AdminPanel>
             <AdminSectionTitle
               title="Subscription"
-              description="Rows in workspace_subscriptions. No payment provider writes to this table yet."
+              description="Stored subscription history (not effective entitlements). No payment provider writes to this table yet."
             />
             {detail.subscription.length === 0 ? (
               <p className="mt-3 text-[12.5px] leading-[18px] text-admin-text-2">

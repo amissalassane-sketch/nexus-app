@@ -1,3 +1,4 @@
+import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
 
   let body: { email?: unknown };
   try {
-    body = (await request.json()) as { email?: unknown };
+    body = (await readJsonObject(request)) as { email?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }

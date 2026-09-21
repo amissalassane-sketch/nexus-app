@@ -207,7 +207,7 @@ check(
 check(
   "the proxy redirects anonymous /admin visitors to /admin/login",
   middleware.includes('pathname.startsWith("/admin")') &&
-    middleware.includes('redirect(new URL("/admin/login"')
+    middleware.includes('redirectWithCookies(response, new URL("/admin/login"')
 );
 
 // ------------------------------------------------------------------
@@ -546,9 +546,9 @@ check(
 
 const globals = readFileSync(src("app/globals.css"), "utf8");
 check(
-  "design: the admin ramp is declared as its own namespaced ramp",
-  globals.includes("--color-admin-base: #0c0c0e") &&
-    globals.includes("--color-admin-sidebar: #111114") &&
+  "design: admin keeps namespaced tokens with the required pure-black base",
+  globals.includes("--color-admin-base: #000000") &&
+    globals.includes("--color-admin-sidebar: #000000") &&
     globals.includes("--color-admin-accent: #d2ff4d")
 );
 check(

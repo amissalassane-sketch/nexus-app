@@ -1,3 +1,4 @@
+import { assertIntelligenceData, IntelligenceDataError } from "./data-error";
 // ============================================================
 // NEXUS INTELLIGENCE — SIGNAL STORE & PROACTIVE ORCHESTRATION
 // ============================================================
@@ -54,7 +55,8 @@ export async function readSignals(
     .eq("user_id", userId)
     .order("score", { ascending: false });
 
-  if (error || !data) return [];
+  assertIntelligenceData({ error });
+  if (!data) return [];
   return (data as Record<string, unknown>[]).map((row) => normalizeRow(row));
 }
 
@@ -111,8 +113,9 @@ async function insertSignals(
     created_at: row.createdAt, // explicit — cooldown/lifetime rely on it
   }));
   // Batch insert, ignoring already-present fingerprints (upsert).
-  const { data } = await db.from("intelligence_signals").insert(payload).select("id, fingerprint");
-  if (!Array.isArray(data) || data.length === 0) return rows;
+  const { data, error } = await db.from("intelligence_signals").insert(payload).select("id, fingerprint");
+  assertIntelligenceData({ error });
+  if (!Array.isArray(data) || data.length !== rows.length) throw new IntelligenceDataError();
   // Return the inserted rows with their REAL persisted ids so the
   // orchestration can surface them (never placeholder ids).
   const byFingerprint = new Map(rows.map((row) => [row.fingerprint, row]));
@@ -143,12 +146,13 @@ async function updateSignals(
     if (patch.seenAt !== undefined) dbPatch.seen_at = patch.seenAt;
     if (patch.dismissedAt !== undefined) dbPatch.dismissed_at = patch.dismissedAt;
     if (patch.resolvedAt !== undefined) dbPatch.resolved_at = patch.resolvedAt;
-    await db
+    const result = await db
       .from("intelligence_signals")
       .update(dbPatch)
       .eq("id", id)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userId);
+    assertIntelligenceData(result);
   }
 }
 
@@ -161,12 +165,13 @@ async function resolveSignals(
 ): Promise<void> {
   if (ids.length === 0) return;
   for (const { id } of ids) {
-    await db
+    const result = await db
       .from("intelligence_signals")
       .update({ status: "resolved", resolved_at: now.toISOString() })
       .eq("id", id)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userId);
+    assertIntelligenceData(result);
   }
 }
 
@@ -183,7 +188,7 @@ export async function updateSignalStatus(
   if (status === "seen") patch.seen_at = now.toISOString();
   if (status === "dismissed") patch.dismissed_at = now.toISOString();
   if (status === "resolved") patch.resolved_at = now.toISOString();
-  const { data } = await db
+  const { data, error } = await db
     .from("intelligence_signals")
     .update(patch)
     .eq("id", id)
@@ -191,6 +196,7 @@ export async function updateSignalStatus(
     .eq("user_id", userId)
     .select("id")
     .maybeSingle();
+  assertIntelligenceData({ error });
   return Boolean(data);
 }
 
@@ -201,12 +207,13 @@ export async function markSignalActed(
   userId: string,
   id: string
 ): Promise<void> {
-  await db
+  const result = await db
     .from("intelligence_signals")
     .update({ status: "acted" })
     .eq("id", id)
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId);
+  assertIntelligenceData(result);
 }
 
 // ============================================================

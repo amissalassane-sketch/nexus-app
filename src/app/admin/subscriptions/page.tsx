@@ -291,7 +291,7 @@ export default async function AdminSubscriptionsPage({
                           <AdminPlanBadge plan={row.plan} />
                           {row.has_subscription ? null : (
                             <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
-                              implicit
+                              {row.subscription_status ? "FREE effective" : "implicit"}
                             </span>
                           )}
                         </span>
@@ -387,18 +387,14 @@ export default async function AdminSubscriptionsPage({
       {/* ------------------------------------------------- footnotes */}
       <p className="max-w-[92ch] text-[11.5px] leading-[16px] text-admin-text-3">
         Definitions, stated so numbers cannot be over-read:{" "}
-        <span className="font-mono">Plan</span> is the active row&apos;s plan,
-        or FREE when no active row exists (
-        <span className="font-mono">implicit</span>) — the identical predicate
-        the workspaces screen uses, so the two can never disagree.{" "}
-        <span className="font-mono">Status</span> is the live row: the active
-        row when one exists, otherwise the most recently updated row — a
-        cancelled subscription stays visible as cancelled until replaced.{" "}
-        <span className="font-mono">Usage</span> is live counts against the
-        limits for <span className="font-mono">get_workspace_plan()</span>,
-        the period-aware resolution the write guards enforce: a lapsed paid
-        row shows its paid plan with FREE limits, and that mismatch is the
-        signal. <span className="font-mono">Tasks</span> counts active tasks
+        <span className="font-mono">Plan</span> is the effective plan from
+        <span className="font-mono"> get_workspace_plan()</span>, identical
+        to the write guards and the workspace directory. A lapsed paid row
+        displays expired with FREE effective plan and FREE limits. No sweep
+        is needed. Cancelled and past-due records remain visible but grant
+        only FREE capacity. The live record is the active row, otherwise the
+        most recently updated row. Usage is measured against those same limits.
+        <span className="font-mono">Tasks</span> counts active tasks
         only (neither done nor cancelled). No money is shown anywhere on
         this screen: no payment provider is connected, so there is no
         revenue to report and none is estimated.
