@@ -1,3 +1,4 @@
+import { assertIntelligenceData } from "@/lib/intelligence/data-error";
 // ============================================================
 // NEXUS INTELLIGENCE — SIGNALS API CORE (injectable)
 // ============================================================
@@ -45,6 +46,8 @@ async function loadWorkspace(db: SignalsApiDb, workspaceId: string) {
       .select("task_id, depends_on_task_id")
       .eq("workspace_id", workspaceId),
   ]);
+
+  assertIntelligenceData(tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes);
 
   const snapshot: WorkspaceSnapshot = {
     tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],

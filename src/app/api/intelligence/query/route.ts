@@ -1,3 +1,4 @@
+import { IntelligenceDataError, assertIntelligenceData } from "@/lib/intelligence/data-error";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -67,7 +68,8 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { membership } = await getActiveMembership(supabase, user.id);
+    const { membership, error: membershipError } = await getActiveMembership(supabase, user.id);
+    if (membershipError) throw new IntelligenceDataError();
     const workspaceId = membership?.workspaceId ?? null;
 
     if (!workspaceId) {
@@ -154,6 +156,8 @@ export async function POST(request: Request) {
         .select("task_id, depends_on_task_id")
         .eq("workspace_id", workspaceId),
     ]);
+
+    assertIntelligenceData(tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes);
 
     const snapshot: WorkspaceSnapshot = {
       tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],
@@ -297,6 +301,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof IntelligenceDataError) {
+      return NextResponse.json({ ok: false, code: error.code, message: error.message, error: error.message }, { status: error.status });
+    }
     console.error("Intelligence query error:", error);
     return NextResponse.json(
       { error: "Failed to process intelligence query" },

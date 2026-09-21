@@ -1,3 +1,4 @@
+import { IntelligenceDataError, assertIntelligenceData } from "@/lib/intelligence/data-error";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -62,7 +63,8 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { membership } = await getActiveMembership(supabase, user.id);
+    const { membership, error: membershipError } = await getActiveMembership(supabase, user.id);
+    if (membershipError) throw new IntelligenceDataError();
     const workspaceId = membership?.workspaceId ?? null;
 
     if (!workspaceId) {
@@ -204,6 +206,9 @@ export async function POST(request: Request) {
       throw err;
     }
   } catch (error) {
+    if (error instanceof IntelligenceDataError) {
+      return NextResponse.json({ ok: false, code: error.code, message: error.message, error: error.message }, { status: error.status });
+    }
     console.error("Intelligence action execution error:", error);
     return NextResponse.json(
       { error: "Failed to execute intelligence action" },
@@ -233,6 +238,7 @@ async function loadMissionSnapshot(
       .select("id, title, status, progress, target_date, updated_at")
       .eq("workspace_id", workspaceId),
   ]);
+  assertIntelligenceData(tasksRes, projectsRes, goalsRes);
   return {
     tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],
     projects: (projectsRes.data ?? []) as WorkspaceSnapshot["projects"],

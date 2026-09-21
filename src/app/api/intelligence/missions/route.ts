@@ -1,3 +1,4 @@
+import { IntelligenceDataError, assertIntelligenceData } from "@/lib/intelligence/data-error";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -70,6 +71,8 @@ async function loadWorkspace(supabase: Awaited<ReturnType<typeof createClient>>,
       .eq("workspace_id", workspaceId),
   ]);
 
+  assertIntelligenceData(tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes);
+
   const snapshot: WorkspaceSnapshot = {
     tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],
     projects: (projectsRes.data ?? []) as WorkspaceSnapshot["projects"],
@@ -124,7 +127,8 @@ async function route(method: "GET" | "POST", body: Record<string, unknown>) {
     }
 
     const supabase = await createClient();
-    const { membership } = await getActiveMembership(supabase, user.id);
+    const { membership, error: membershipError } = await getActiveMembership(supabase, user.id);
+    if (membershipError) throw new IntelligenceDataError();
     const workspaceId = membership?.workspaceId ?? null;
     if (!workspaceId) {
       return NextResponse.json(
@@ -168,6 +172,18 @@ async function route(method: "GET" | "POST", body: Record<string, unknown>) {
       }
 
       return NextResponse.json({ success: true, mission: evaluated, created: true });
+    }
+
+    if (action === "recompute") {
+      const { snapshot } = await loadWorkspace(supabase, workspaceId);
+      const missions = await readActiveMissions(supabase, workspaceId, user.id);
+      const evaluated = [];
+      for (const m of missions) {
+        const next = runMissionLoop(m, snapshot, signals);
+        await saveMission(supabase, next);
+        evaluated.push(next);
+      }
+      return NextResponse.json({ success: true, missions: evaluated });
     }
 
     if (!missionId) {
@@ -244,20 +260,11 @@ async function route(method: "GET" | "POST", body: Record<string, unknown>) {
       }
     }
 
-    if (action === "recompute") {
-      const { snapshot } = await loadWorkspace(supabase, workspaceId);
-      const missions = await readActiveMissions(supabase, workspaceId, user.id);
-      const evaluated = [];
-      for (const m of missions) {
-        const next = runMissionLoop(m, snapshot, signals);
-        await saveMission(supabase, next);
-        evaluated.push(next);
-      }
-      return NextResponse.json({ success: true, missions: evaluated });
-    }
-
     return NextResponse.json({ error: `Unknown action "${action}"` }, { status: 400 });
   } catch (error) {
+    if (error instanceof IntelligenceDataError) {
+      return NextResponse.json({ ok: false, code: error.code, message: error.message, error: error.message }, { status: error.status });
+    }
     console.error("Intelligence missions error:", error);
     return NextResponse.json(
       { error: "Failed to process intelligence missions" },

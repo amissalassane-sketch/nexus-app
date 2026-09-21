@@ -1,3 +1,4 @@
+import { assertIntelligenceData } from "./data-error";
 // ============================================================
 // NEXUS INTELLIGENCE — MISSION ENGINE (Phase 4)
 // ============================================================
@@ -777,13 +778,14 @@ export async function readMission(
   userId: string,
   missionId: string
 ): Promise<IntelligenceMission | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from("intelligence_missions")
     .select("*")
     .eq("id", missionId)
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId)
     .maybeSingle();
+  assertIntelligenceData({ error });
   if (!data) return null;
   return normalizeMissionRow(data as Record<string, unknown>);
 }
@@ -811,7 +813,8 @@ export async function readActiveMissions(
     query = query.abortSignal(signal);
   }
   const { data, error } = await query;
-  if (error || !data) return [];
+  assertIntelligenceData({ error });
+  if (!data) return [];
   return (data as Record<string, unknown>[]).map((row) => normalizeMissionRow(row));
 }
 
@@ -834,7 +837,7 @@ export async function saveMission(
     last_evaluated_at: mission.lastEvaluatedAt,
     updated_at: mission.updatedAt,
   };
-  const { data: existing } = await db
+  const { data: existing, error } = await db
     .from("intelligence_missions")
     .update(payload)
     .eq("id", mission.id)
@@ -842,12 +845,14 @@ export async function saveMission(
     .eq("user_id", mission.userId)
     .select("id")
     .maybeSingle();
+  assertIntelligenceData({ error });
   if (!existing) {
-    await db.from("intelligence_missions").insert({
+    const inserted = await db.from("intelligence_missions").insert({
       id: mission.id,
       ...payload,
       created_at: mission.createdAt,
     });
+    assertIntelligenceData(inserted);
   }
 }
 
@@ -942,7 +947,7 @@ export async function cancelMission(
   missionId: string,
   now: Date = new Date()
 ): Promise<boolean> {
-  const { data } = await db
+  const { data, error } = await db
     .from("intelligence_missions")
     .update({ status: "cancelled", updated_at: now.toISOString() })
     .eq("id", missionId)
@@ -950,5 +955,6 @@ export async function cancelMission(
     .eq("user_id", userId)
     .select("id")
     .maybeSingle();
+  assertIntelligenceData({ error });
   return Boolean(data);
 }
