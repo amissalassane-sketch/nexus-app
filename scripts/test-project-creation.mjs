@@ -110,5 +110,68 @@ check(
   manager.includes("await fetchProjects(activeWorkspaceId)")
 );
 
+// ------------------------------------------------------------------
+console.log("A failed read/write is diagnosable from the screen");
+// ------------------------------------------------------------------
+// The friendly sentence ("This workspace is temporarily unavailable…")
+// is a bucket, not a diagnosis: PGRST204, 42703, 23502 and 42804 all land
+// in it. Each manager therefore renders the real code / message / hint in
+// small text under the sentence (ErrorDiagnostic) and writes one
+// console.error line, so the cause can be copied without the devtools.
+const managers = {
+  "project-manager": { source: manager, ops: ["load", "create", "update", "delete"], prefix: "projects" },
+  "task-manager": { source: read("components/task-manager.tsx"), ops: ["load", "create", "update", "delete"], prefix: "tasks" },
+  "goal-manager": { source: read("components/goal-manager.tsx"), ops: ["load", "create", "update", "delete"], prefix: "goals" },
+};
+
+for (const [name, { source, ops, prefix }] of Object.entries(managers)) {
+  check(
+    `${name}: error slot pairs the friendly sentence with the database diagnostic (useDataError)`,
+    source.includes("useDataError()") && !source.includes('const [error, setError] = useState("")')
+  );
+  for (const op of ops) {
+    check(
+      `${name}: ${op} failure is reported with its code (reportDataError("${prefix}.${op}", …))`,
+      source.includes(`reportDataError("${prefix}.${op}"`)
+    );
+  }
+  check(
+    `${name}: no failure is humanized without its diagnostic (no bare setError(humanizeDataError(…)))`,
+    !source.includes("setError(humanizeDataError(")
+  );
+  const diagnostics = source.split("<ErrorDiagnostic detail={errorDetail} />").length - 1;
+  check(
+    `${name}: the diagnostic is rendered under BOTH error alerts (page + form dialog)`,
+    diagnostics === 2,
+    `found ${diagnostics}`
+  );
+}
+
+const taskManager = managers["task-manager"].source;
+check(
+  "task-manager: inline mutations (toggle, move, quick add, rename) log and surface the code too",
+  ["tasks.toggle", "tasks.move", "tasks.quickCreate", "tasks.rename"].every((ctx) =>
+    taskManager.includes(`"${ctx}"`)
+  )
+);
+
+const dataErrors = read("lib/data-errors.ts");
+check(
+  "data-errors: the diagnostic never carries `details` (Postgres puts row values there)",
+  dataErrors.includes("export function describeDataError") && !/details:\s*error\.details/.test(dataErrors)
+);
+check(
+  "data-errors: console line shares the server log shape ([nexus-data] … code= message=)",
+  dataErrors.includes("[nexus-data] ${context} failed code=${detail.code} message=")
+);
+
+const feedback = read("components/ui/feedback.tsx");
+check(
+  "feedback: the diagnostic is selectable in one click and carries data-error-code",
+  feedback.includes("export function ErrorDiagnostic") &&
+    feedback.includes("select-all") &&
+    feedback.includes("data-error-code={detail.code}")
+);
+
 console.log(`\n${passes} passed, ${failures} failed.\n`);
 process.exit(failures === 0 ? 0 : 1);
