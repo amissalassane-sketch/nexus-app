@@ -54,7 +54,17 @@ const migrationsDir = join(here, "..", "migrations");
 const CONTRACT_MIGRATION = "20260915220000_nexus_subscription_contract.sql";
 // Same omission rule as freemium-contract.test.mjs: the admin suites and
 // the earlier 2026 contracts are owned by their own suites.
+//
+// 002–005 are skipped exactly like in the freemium suite: 002 inserts into
+// storage.buckets (a Supabase-platform schema PGlite does not provide —
+// 42P01), 003 needs the pgvector extension, and 004/005 build on the 003
+// AI tables. Without the skips the whole suite aborts before the contract
+// under test is ever applied; none of those four is owned by this test.
 const SKIPPED = new Set([
+  "002_nexus_storage.sql",
+  "003_nexus_ai.sql",
+  "004_nexus_automations.sql",
+  "005_nexus_worker.sql",
   "026_admin_control_plane.sql",
   "027_admin_directory.sql",
   "028_admin_activity_security.sql",

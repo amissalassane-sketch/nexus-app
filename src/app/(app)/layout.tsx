@@ -13,6 +13,8 @@ import {
 } from "@/lib/bootstrap-diagnostics";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/workspace";
+import { getPlatformAdminState } from "@/lib/admin/guard";
+import { logDataReadFailure } from "@/lib/server-logs";
 import { PLAN_LIMITS } from "@/lib/plan-limits";
 import { effectivePlanOf } from "@/lib/billing/subscription-state";
 
@@ -92,6 +94,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   let bootstrap = await ensurePersonalWorkspaceServer(supabase);
   const activeRead = await boundedMembershipRead(supabase, user.id);
   let activeMembership = activeRead.membership;
+  if (activeRead.error && activeRead.error !== "timeout") {
+    // getActiveMembership() reports the raw PostgREST message; bounded
+    // copy to the runtime logs (no PII — schema/transport-level text).
+    logDataReadFailure("shell.membership", { message: String(activeRead.error) });
+  }
 
   // Step 3: ONE bounded retry when the context is not yet visible.
   // This absorbs the only legitimate transient: concurrent first loads
@@ -189,6 +196,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 .abortSignal(shellDataController.signal),
             ]);
 
+            // A failed count degrades to 0 in the shell (the designed
+            // behaviour — the product is never blocked on decorative reads)
+            // but is never silent: the real code/message/hint goes to the
+            // runtime logs, so a schema drift is diagnosable without a
+            // user report.
+            logDataReadFailure("shell.counts.tasks", tasks.error);
+            logDataReadFailure("shell.counts.projects", projects.error);
+            logDataReadFailure("shell.counts.goals", goals.error);
+            logDataReadFailure("shell.counts.notifications", unread.error);
             return {
               tasks: tasks.count ?? 0,
               projects: projects.count ?? 0,
@@ -204,7 +220,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .eq("id", workspaceId)
             .abortSignal(shellDataController.signal)
             .maybeSingle()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
       workspaceId
         ? supabase
             .from("workspace_subscriptions")
@@ -213,7 +229,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .eq("status", "active")
             .abortSignal(shellDataController.signal)
             .maybeSingle()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
     ]),
     SHELL_DATA_TIMEOUT_MS,
     "SHELL_DATA_TIMEOUT",
@@ -223,10 +239,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       userId: user.id,
       ...summarizeError(cause),
     });
-    return [emptyCounts, { data: null }, { data: null }] as const;
+    return [emptyCounts, { data: null, error: null }, { data: null, error: null }] as const;
   });
 
   const [counts, workspace, subscription] = shellData;
+  logDataReadFailure("shell.workspace_name", workspace.error);
+  logDataReadFailure("shell.subscription", subscription.error);
 
   // Same resolution as get_workspace_plan(): a lapsed 'active' row (or any
   // incoherent value) displays FREE, matching what the write guards enforce.
@@ -245,10 +263,24 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       ? "failed"
       : "preparing";
 
+  // Platform-admin identity for the account menu's "Admin" entry.
+  // Decided server-side from platform_admin_context() — the same gate the
+  // /admin layout enforces — and handed down as a boolean. A non-admin
+  // never receives the link in the HTML at all: the prop is `false`, so
+  // the DropdownLink simply is not rendered. The server guard on /admin
+  // remains the real protection; this only removes the need to type the
+  // URL. `cache()` inside getPlatformAdminState() means the layout, the
+  // page and the admin layout share one round trip per request.
+  // Fail-closed: any "unavailable" state is "not an admin", so a broken
+  // RPC can never leak the link to a non-admin.
+  const adminState = await getPlatformAdminState();
+  const isPlatformAdmin = adminState.status === "admin";
+
   return (
     <AppShell
       userId={user.id}
       workspaceId={workspaceId}
+      isPlatformAdmin={isPlatformAdmin}
       user={{
         name: profile.displayName,
         username: profile.username ?? undefined,

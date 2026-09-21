@@ -9,6 +9,7 @@ import {
   IconLogout,
   IconSearch,
   IconSettings,
+  IconShield,
   IconUser,
   IconUserCheck,
 } from "@tabler/icons-react";
@@ -32,6 +33,7 @@ export function Topbar({
   unreadCount,
   userId,
   workspaceId,
+  isPlatformAdmin,
   onOpenProfileModal,
   onOpenHelp,
 }: {
@@ -40,6 +42,10 @@ export function Topbar({
   unreadCount: number;
   userId: string;
   workspaceId: string | null;
+  /** Verified server-side (platform_admin_context). When false the Admin
+      entry is not rendered at all — it never appears in the HTML for a
+      regular user. The /admin server guard stays the real protection. */
+  isPlatformAdmin: boolean;
   onOpenProfileModal?: () => void;
   onOpenHelp?: () => void;
 }) {
@@ -159,6 +165,14 @@ export function Topbar({
           <DropdownLink href="/settings/billing" icon={<NexusIcon icon={IconCreditCard} />}>
             Billing
           </DropdownLink>
+          {isPlatformAdmin ? (
+            <>
+              <DropdownSeparator />
+              <DropdownLink href="/admin" icon={<NexusIcon icon={IconShield} />}>
+                Admin
+              </DropdownLink>
+            </>
+          ) : null}
           <DropdownSeparator />
           <DropdownItem icon={<NexusIcon icon={IconLogout} />} onSelect={() => void handleLogout()}>
             Sign out

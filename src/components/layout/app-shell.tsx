@@ -7,6 +7,7 @@ import {
   IconLogout,
   IconMenu,
   IconSearch,
+  IconShield,
   IconUser,
   IconX,
 } from "@tabler/icons-react";
@@ -45,6 +46,7 @@ function AppShellInner({
   plan,
   userId,
   workspaceId,
+  isPlatformAdmin,
   children,
 }: {
   user: ShellUser;
@@ -53,6 +55,9 @@ function AppShellInner({
   plan: ShellPlan;
   userId: string;
   workspaceId: string | null;
+  /** Verified server-side from platform_admin_context(). When false the
+      "Admin" entry simply does not exist in the rendered HTML. */
+  isPlatformAdmin: boolean;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -120,10 +125,14 @@ function AppShellInner({
   return (
     <ToastProvider>
       <div className="relative flex h-dvh overflow-hidden bg-bg-base">
-        {/* LAYER 0 — the spatial field. Fixed, behind everything, and
-            pointer-events-none: it never intercepts clicks, scrolling,
-            selection or dialogs. */}
-        <NexusSpatialField />
+        {/* LAYER 0 — the spatial field. Fixed, behind everything
+            (negative z-index), and pointer-events-none: it never
+            intercepts clicks, scrolling, selection or dialogs.
+            `subtle` on the product pages: the lines and dots are a
+            quiet substrate for the data, not a wallpaper. The public
+            site keeps the full expression (NexusGrid on the landing
+            hero is a separate component and is untouched). */}
+        <NexusSpatialField subtle />
         <CommandMenu />
         <KeyboardShortcuts />
 
@@ -194,6 +203,7 @@ function AppShellInner({
               unreadCount={counts.unreadNotifications}
               userId={userId}
               workspaceId={workspaceId}
+              isPlatformAdmin={isPlatformAdmin}
               onOpenProfileModal={openProfileModal}
               onOpenHelp={openHelp}
             />
@@ -345,6 +355,20 @@ function AppShellInner({
                     </span>
                     <span>Help & Guide</span>
                   </button>
+                  {isPlatformAdmin ? (
+                    <a
+                      href="/admin"
+                      onClick={() => {
+                        closeNav();
+                      }}
+                      className="inline-flex min-h-[40px] items-center gap-2.5 rounded-nav px-2.5 text-caption text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.97]"
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center text-text-tertiary">
+                        <NexusIcon icon={IconShield} />
+                      </span>
+                      <span>Admin</span>
+                    </a>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
@@ -372,6 +396,7 @@ export function AppShell({
   plan,
   userId,
   workspaceId,
+  isPlatformAdmin,
   children,
 }: {
   user: ShellUser;
@@ -380,6 +405,9 @@ export function AppShell({
   plan: ShellPlan;
   userId: string;
   workspaceId: string | null;
+  /** Verified server-side; false means the "Admin" entry is absent from
+      the rendered markup entirely. */
+  isPlatformAdmin: boolean;
   children: ReactNode;
 }) {
   return (
@@ -397,6 +425,7 @@ export function AppShell({
         plan={plan}
         userId={userId}
         workspaceId={workspaceId}
+        isPlatformAdmin={isPlatformAdmin}
       >
         {children}
       </AppShellInner>
