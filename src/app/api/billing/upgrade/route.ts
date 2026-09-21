@@ -1,3 +1,5 @@
+import { getBillingProviderStatus } from "@/lib/billing/provider";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +14,9 @@ function isPlanName(value: unknown): value is PlanName {
 }
 
 export async function POST(request: Request) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ ok: false, code: "SERVICE_UNAVAILABLE", message: "Billing is temporarily unavailable", error: "Billing is temporarily unavailable" }, { status: 503 });
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,7 +47,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (membershipError) {
-    return NextResponse.json({ error: membershipError.message }, { status: 500 });
+    return NextResponse.json({ ok: false, code: "BILLING_UNAVAILABLE", message: "Unable to verify billing access", error: "Unable to verify billing access" }, { status: 500 });
   }
 
   if (!membership) {
@@ -53,10 +58,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only workspace owners and admins can upgrade billing" }, { status: 403 });
   }
 
+  const provider = getBillingProviderStatus();
   return NextResponse.json(
     {
-      error: "PAYMENT_PROVIDER_NOT_CONFIGURED",
-      provider: "fedapay",
+      ok: false,
+      code: provider.code,
+      message: provider.message,
+      error: provider.code,
+      provider: provider.provider,
       targetPlan: body.targetPlan,
       workspaceId: membership.workspace_id,
     },
