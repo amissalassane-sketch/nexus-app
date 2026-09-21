@@ -98,11 +98,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         note: "No payment provider is connected — there is no revenue to show.",
       },
       {
+        // READY (PR 6). One row per workspace, read from workspace_subscriptions
+        // by admin_subscriptions_list(). No provider is connected, so the
+        // screen shows plans, raw statuses and usage — never money.
         label: "Subscriptions",
         href: "/admin/subscriptions",
         icon: "creditCard",
-        status: "planned",
-        note: "workspace_subscriptions exists but no provider writes to it.",
+        status: "ready",
       },
       {
         label: "Payments",

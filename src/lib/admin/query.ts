@@ -19,6 +19,8 @@
 
 import type {
   AdminAccountStatus,
+  AdminSubscriptionsListPayload,
+  AdminSubscriptionStatus,
   AdminUserDetail,
   AdminUsersListPayload,
   AdminWorkspaceDetail,
@@ -65,6 +67,34 @@ export type UserStatusFilter = (typeof USER_STATUS_FILTERS)[number];
 export const WORKSPACE_VIEWS = ["all", "attention", "FREE", "PRO", "TEAM"] as const;
 export type WorkspaceView = (typeof WORKSPACE_VIEWS)[number];
 
+/** Whitelists for admin_subscriptions_list (migration 029). Unknown
+ *  values fall back to the default, mirroring the SQL CASE blocks. */
+export const SUBSCRIPTIONS_SORT_KEYS = [
+  "name",
+  "plan",
+  "status",
+  "period_end",
+  "projects",
+  "tasks",
+  "updated_at",
+] as const;
+export type SubscriptionsSortKey = (typeof SUBSCRIPTIONS_SORT_KEYS)[number];
+
+export const SUBSCRIPTION_PLAN_FILTERS = ["all", "FREE", "PRO", "TEAM"] as const;
+export type SubscriptionPlanFilter = (typeof SUBSCRIPTION_PLAN_FILTERS)[number];
+
+export const SUBSCRIPTION_STATUS_FILTERS = [
+  "all",
+  "active",
+  "trialing",
+  "past_due",
+  "cancelled",
+  "expired",
+  "implicit_free",
+] as const;
+export type SubscriptionStatusFilter =
+  (typeof SUBSCRIPTION_STATUS_FILTERS)[number];
+
 export const ADMIN_PAGE_SIZES = [10, 25, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 25;
 /** Upper bound on the page number. Deeper pages are refused by clamping,
@@ -91,6 +121,23 @@ export type WorkspacesListQuery = {
   page: number;
   pageSize: number;
 };
+
+export type SubscriptionsListQuery = {
+  search: string | null;
+  plan: SubscriptionPlanFilter;
+  status: SubscriptionStatusFilter;
+  sort: SubscriptionsSortKey;
+  direction: SortDirection;
+  page: number;
+  pageSize: number;
+};
+
+/** Any normalized admin list query. Extended as new list screens land;
+ *  helpers below only touch the keys they understand. */
+export type AdminListQuery =
+  | UsersListQuery
+  | WorkspacesListQuery
+  | SubscriptionsListQuery;
 
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
@@ -172,20 +219,37 @@ export function parseWorkspacesListQuery(sp: RawSearchParams): WorkspacesListQue
   };
 }
 
+export function parseSubscriptionsListQuery(sp: RawSearchParams): SubscriptionsListQuery {
+  const sort = parseSort(sp.sort, SUBSCRIPTIONS_SORT_KEYS, "plan");
+  return {
+    search: parseSearch(sp.q),
+    plan: parseSort(sp.plan, SUBSCRIPTION_PLAN_FILTERS, "all"),
+    status: parseSort(sp.status, SUBSCRIPTION_STATUS_FILTERS, "all"),
+    sort,
+    direction: parseDirectionFor(sp.dir, sort),
+    page: parsePage(sp.page),
+    pageSize: parsePageSize(sp.size),
+  };
+}
+
 /** True when a list query is doing anything beyond "show me page 1".
  *  Drives the Clear-filters affordance. */
-export function hasActiveListFilters(
-  q: UsersListQuery | WorkspacesListQuery
-): boolean {
+export function hasActiveListFilters(q: AdminListQuery): boolean {
   const defaults: Record<string, unknown> = {
     search: null,
+    // Default sorts differ per screen; "created_at" and "plan" are both
+    // canonical — a query is unfiltered when its sort is its own default.
     sort: "created_at",
     direction: "desc",
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
     status: "all",
     view: "all",
+    plan: "all",
   };
+  if ("plan" in q && q.sort === "plan") {
+    defaults.sort = "plan";
+  }
   return Object.keys(defaults).some(
     (key) =>
       key in (q as Record<string, unknown>) &&
@@ -207,7 +271,7 @@ export function defaultDirectionFor(sortKey: string): SortDirection {
  *  key. Used by sort headers, pagination and the toolbar alike. */
 export function listHref(
   pathname: string,
-  current: UsersListQuery | WorkspacesListQuery,
+  current: AdminListQuery,
   overrides: Record<string, string | number | null> = {}
 ): string {
   const params = new URLSearchParams();
@@ -218,6 +282,7 @@ export function listHref(
   params.set("size", String(current.pageSize));
   if ("status" in current) params.set("status", current.status);
   if ("view" in current) params.set("view", current.view);
+  if ("plan" in current) params.set("plan", current.plan);
   // PR3 read-only feeds carry one additional server-validated filter.
   // Keeping it here makes pagination and sort links preserve the active
   // activity/audit filter just like the directory filters above.
@@ -237,12 +302,16 @@ export function listHref(
     if (params.get(key) === canonical) params.delete(key);
   };
   const activeSort = params.get("sort") ?? "created_at";
-  dropIfCanonical("sort", "created_at");
+  // Canonical sorts differ per screen: the directory defaults to
+  // created_at, subscriptions to plan. Either collapses to the bare path.
+  const defaultSort = "plan" in current ? "plan" : "created_at";
+  dropIfCanonical("sort", defaultSort);
   dropIfCanonical("dir", defaultDirectionFor(activeSort));
   dropIfCanonical("page", "1");
   dropIfCanonical("size", String(DEFAULT_PAGE_SIZE));
   dropIfCanonical("status", "all");
   dropIfCanonical("view", "all");
+  dropIfCanonical("plan", "all");
 
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
@@ -252,7 +321,7 @@ export function listHref(
  *  direction flipped only when that column is already the active sort. */
 export function nextSortHref(
   pathname: string,
-  current: UsersListQuery | WorkspacesListQuery,
+  current: AdminListQuery,
   sortKey: string
 ): { href: string; state: "none" | "asc" | "desc" } {
   const isActive = current.sort === sortKey;
@@ -585,4 +654,82 @@ export function isWorkspaceDetailPayload(
 export function shortId(id: string, keep = 8): string {
   if (id.length <= keep * 2 + 1) return id;
   return `${id.slice(0, keep)}…${id.slice(-4)}`;
+}
+
+// ------------------------------------------------------------
+// Subscriptions payload guard (migration 029)
+// ------------------------------------------------------------
+
+const SUBSCRIPTION_STATUSES: AdminSubscriptionStatus[] = [
+  "active",
+  "trialing",
+  "past_due",
+  "cancelled",
+  "expired",
+];
+
+function isSubscriptionRow(
+  value: unknown
+): value is AdminSubscriptionsListPayload["items"][number] {
+  if (!isObj(value)) return false;
+  const owner = value.owner;
+  const usage = value.usage;
+  const limits = value.limits;
+  return (
+    isStr(value.workspace_id) &&
+    isStr(value.name) &&
+    isStr(value.slug) &&
+    ["FREE", "PRO", "TEAM"].includes(String(value.plan)) &&
+    isBool(value.has_subscription) &&
+    (value.subscription_status === null ||
+      SUBSCRIPTION_STATUSES.includes(
+        value.subscription_status as AdminSubscriptionStatus
+      )) &&
+    isStrOrNull(value.current_period_end) &&
+    isStrOrNull(value.trial_ends_at) &&
+    isStrOrNull(value.subscription_updated_at) &&
+    isBool(value.billing_wired) &&
+    isNum(value.previous_rows) &&
+    isObj(owner) &&
+    isStr(owner.user_id) &&
+    isStrOrNull(owner.email) &&
+    isStrOrNull(owner.display_name) &&
+    isObj(usage) &&
+    isNum(usage.projects) &&
+    isNum(usage.active_tasks) &&
+    isNum(usage.goals) &&
+    isNum(usage.members) &&
+    isObj(limits) &&
+    isNum(limits.projects) &&
+    isNum(limits.active_tasks) &&
+    isNum(limits.goals) &&
+    isBool(value.has_active_owner)
+  );
+}
+
+export function isSubscriptionsListPayload(
+  value: unknown
+): value is AdminSubscriptionsListPayload {
+  if (!isObj(value) || !hasListEnvelope(value)) return false;
+  if (!isStr(value.plan) || !isStr(value.status)) return false;
+  const summary = value.summary;
+  if (!isObj(summary)) return false;
+  const plans = summary.plans;
+  const statuses = summary.statuses;
+  const summaryOk =
+    isNum(summary.workspaces) &&
+    isNum(summary.attention) &&
+    isObj(plans) &&
+    isNum(plans.free) &&
+    isNum(plans.pro) &&
+    isNum(plans.team) &&
+    isObj(statuses) &&
+    isNum(statuses.active) &&
+    isNum(statuses.trialing) &&
+    isNum(statuses.past_due) &&
+    isNum(statuses.cancelled) &&
+    isNum(statuses.expired) &&
+    isNum(statuses.implicit_free);
+  if (!summaryOk) return false;
+  return (value.items as unknown[]).every(isSubscriptionRow);
 }

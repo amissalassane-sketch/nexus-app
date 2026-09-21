@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { AdminIcon } from "./admin-icons";
-import { listHref, type UsersListQuery, type WorkspacesListQuery } from "@/lib/admin/query";
+import { listHref, type AdminListQuery } from "@/lib/admin/query";
 import { formatCount } from "@/lib/admin/format";
 
 // ============================================================
@@ -28,7 +28,7 @@ export function AdminListToolbar({
   hasActiveFilters,
 }: {
   pathname: string;
-  query: UsersListQuery | WorkspacesListQuery;
+  query: AdminListQuery;
   /** Select controls rendered inside the form (status / view). */
   children?: ReactNode;
   hasActiveFilters: boolean;
@@ -139,7 +139,7 @@ export function AdminPagination({
   unitLabel,
 }: {
   pathname: string;
-  query: UsersListQuery | WorkspacesListQuery;
+  query: AdminListQuery;
   page: number;
   total: number;
   pageSize: number;

@@ -388,9 +388,13 @@ check(
     read(`components/landing/${file}`).includes("framer-motion")
   )
 );
+// The sign-in canvas used to live in components/ui/sign-in-flow-1.tsx; the
+// auth shell was consolidated and it now lazy-loads from the shared auth
+// layout (components/auth/auth-layout.tsx). The invariant is unchanged:
+// the canvas must never render on the server.
 check(
-  "login: the sign-in WebGL canvas stays lazy-loaded (ssr: false)",
-  read("components/ui/sign-in-flow-1.tsx").includes("ssr: false")
+  "login: the sign-in canvas stays lazy-loaded (ssr: false)",
+  read("components/auth/auth-layout.tsx").includes("ssr: false")
 );
 check(
   "landing: the hero field is still lazy-loaded (ssr: false)",

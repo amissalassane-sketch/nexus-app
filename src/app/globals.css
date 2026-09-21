@@ -1064,6 +1064,61 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
 }
 
 /* ============================================================
+   LANDING — INTEGRATIONS ICON RAILS
+   Pure-CSS infinite marquee for the integration icon rows. A 24s
+   linear loop needs no JavaScript and, above all, no animation
+   library: Framer Motion must never leak into the public landing
+   bundle (see scripts/test-landing-design.mjs). GPU-friendly
+   (transform only), gated by `prefers-reduced-motion`, static
+   without scripting.
+   ============================================================ */
+
+.nexus-icon-rail {
+  animation-duration: 24s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.nexus-icon-rail-left {
+  animation-name: nexus-icon-rail-left;
+}
+
+.nexus-icon-rail-right {
+  animation-name: nexus-icon-rail-right;
+}
+
+@keyframes nexus-icon-rail-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+@keyframes nexus-icon-rail-right {
+  from {
+    transform: translateX(-25%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-icon-rail {
+    animation: none;
+  }
+}
+
+@media (scripting: none) {
+  .nexus-icon-rail {
+    animation: none;
+  }
+}
+
+/* ============================================================
    LANDING — HERO TYPED HEADLINE
    The line is written, erased and rewritten by the client, with a
    soft caret at the end. The slot reserves the line-box and the
@@ -3896,4 +3951,92 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   select {
     padding-right: 2rem;
   }
+}
+
+/* ============================================================
+   DASHBOARD — PURE BLACK BACKGROUND SYSTEM
+   The /dashboard route rests on ONE continuous pure-black
+   surface. No gradient, no texture, no grain, no pattern, no mesh,
+   no glow, no light effect, no background-image, no decorative
+   pseudo-element, no glassmorphism, no blur/backdrop-filter on the
+   background, no per-section color shift — #000000 everywhere, at
+   every structural level, including while scrolling.
+
+   SCOPE — strictly the dashboard route. Everything below is keyed
+   off [data-dashboard-root="true"], which the app shell sets only
+   when the pathname is exactly /dashboard (see
+   src/components/layout/app-shell.tsx). All other routes — the
+   landing page, auth, admin, and the rest of the product — keep
+   their existing backgrounds pixel-identical.
+
+   What this covers:
+     html / body ................... pure black, no image
+     body::before (global dot grid) . disabled on the dashboard
+     shell root .................... #000000
+     sidebar (desktop aside) ....... #000000
+     topbar / mobile header ........ #000000
+     main scroll zone .............. #000000
+     intermediate containers ....... #000000
+     mobile nav / drawer ........... #000000
+
+   NOT covered on purpose: cards and functional components keep
+   their own styles (Panel, KpiGrid, BriefingPanel, dropdowns,
+   command palette, toasts, modals, scrims...). The content floats
+   directly above the uniform black surface.
+
+   Written unlayered on purpose: Tailwind v4 emits utilities inside
+   `@layer utilities`, and unlayered author rules win the cascade
+   over layered ones, so these declarations hold without
+   `!important` even where a utility sets a background.
+   ============================================================ */
+
+/* ---------- html / body — pure black, no image ---------- */
+html:has([data-dashboard-root="true"]) {
+  background: #000000;
+  background-color: #000000;
+  background-image: none;
+}
+
+html:has([data-dashboard-root="true"]) body {
+  background: #000000;
+  background-color: #000000;
+  background-image: none;
+}
+
+/* ---------- Global dot-grid substrate — off on the dashboard ----------
+   The signature `body::before` dot grid is a decorative background
+   layer. The dashboard must show none of it. (Defense in depth: the
+   opaque black shell already paints above it, since the pseudo sits
+   at a negative z-index; this rule removes it entirely.) */
+body:has([data-dashboard-root="true"])::before {
+  content: none;
+  display: none;
+  background: none;
+  background-image: none;
+}
+
+/* ---------- Every structural level of the dashboard shell ----------
+   Shell root, sidebar, topbar, headers, main scroll zone,
+   intermediate containers, mobile nav and drawer: one single
+   #000000 surface. No background-image of any kind, and no
+   backdrop blur decorating the background. */
+[data-dashboard-root="true"],
+[data-dashboard-root="true"] [data-dashboard-chrome] {
+  background: #000000;
+  background-color: #000000;
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ---------- No decorative pseudo-element behind the content ----------
+   The structural chrome carries no ::before / ::after decoration on
+   the dashboard. (None of these nodes uses functional pseudo
+   content, so removing them cannot affect behavior.) */
+[data-dashboard-root="true"] [data-dashboard-chrome]::before,
+[data-dashboard-root="true"] [data-dashboard-chrome]::after {
+  content: none;
+  display: none;
+  background: none;
+  background-image: none;
 }

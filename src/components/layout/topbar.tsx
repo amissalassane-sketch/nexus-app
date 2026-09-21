@@ -34,6 +34,7 @@ export function Topbar({
   userId,
   workspaceId,
   isPlatformAdmin,
+  solidBackground,
   onOpenProfileModal,
   onOpenHelp,
 }: {
@@ -46,6 +47,8 @@ export function Topbar({
       entry is not rendered at all — it never appears in the HTML for a
       regular user. The /admin server guard stays the real protection. */
   isPlatformAdmin: boolean;
+  /** Dashboard route only: opaque pure-black bar, no translucency. */
+  solidBackground?: boolean;
   onOpenProfileModal?: () => void;
   onOpenHelp?: () => void;
 }) {
@@ -68,7 +71,13 @@ export function Topbar({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border-subtle px-4 sm:px-6 transition-[border-color,background-color] duration-200 ease-nexus sticky-nav">
+    <header
+      data-dashboard-chrome="topbar"
+      className={cn(
+        "flex h-14 shrink-0 items-center gap-3 border-b border-border-subtle px-4 sm:px-6 transition-[border-color,background-color] duration-200 ease-nexus sticky-nav",
+        solidBackground && "bg-[#000000]"
+      )}
+    >
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
         <ol className="flex min-w-0 items-center gap-1.5">
           {crumbs.map((crumb, index) => {

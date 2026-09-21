@@ -453,3 +453,88 @@ export type AdminWorkspaceDetail = {
   recent_tasks: AdminWorkspaceTaskRow[];
   recent_activity: AdminWorkspaceActivityRef[];
 };
+
+// ------------------------------------------------------------
+// Subscriptions payloads — the exact JSONB shapes of migration 029
+// ------------------------------------------------------------
+// One row per workspace (subscriptions are workspace-scoped, never
+// user-scoped). Same null contract as the directory: `null` means
+// "no measurement exists" and renders as NOT_AVAILABLE.
+
+/** Raw workspace_subscriptions.status of the LIVE row (029): the active
+ *  row when one exists, else the most recently updated row. There is no
+ *  'implicit_free' value in the database — the UI derives that label
+ *  from a null status. 'expired' comes from the subscription contract's
+ *  lapse sweep; only 'active' with a live period grants capacity. */
+export type AdminSubscriptionStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "cancelled"
+  | "expired";
+
+export type AdminSubscriptionRow = {
+  workspace_id: string;
+  name: string;
+  slug: string;
+  /** Effective plan: the active row's plan, or the documented default
+   *  FREE when has_subscription is false. */
+  plan: "FREE" | "PRO" | "TEAM";
+  has_subscription: boolean;
+  subscription_status: AdminSubscriptionStatus | null;
+  current_period_end: string | null;
+  trial_ends_at: string | null;
+  subscription_updated_at: string | null;
+  /** Either billing id present. Normally false everywhere: no payment
+   *  provider is connected. */
+  billing_wired: boolean;
+  /** Every row except the displayed live one: the history the live
+   *  row does not show. */
+  previous_rows: number;
+  owner: {
+    user_id: string;
+    email: string | null;
+    display_name: string | null;
+  };
+  usage: {
+    projects: number;
+    active_tasks: number;
+    goals: number;
+    members: number;
+  };
+  limits: {
+    projects: number;
+    active_tasks: number;
+    goals: number;
+  };
+  has_active_owner: boolean;
+};
+
+export type AdminSubscriptionsSummary = {
+  workspaces: number;
+  plans: { free: number; pro: number; team: number };
+  statuses: {
+    active: number;
+    trialing: number;
+    past_due: number;
+    cancelled: number;
+    expired: number;
+    implicit_free: number;
+  };
+  /** past_due + cancelled + no active owner, over the filtered set. */
+  attention: number;
+};
+
+export type AdminSubscriptionsListPayload = {
+  generated_at: string;
+  page: number;
+  page_size: number;
+  sort: string;
+  direction: "asc" | "desc";
+  search: string | null;
+  plan: string;
+  status: string;
+  total: number;
+  summary: AdminSubscriptionsSummary;
+  items: AdminSubscriptionRow[];
+};

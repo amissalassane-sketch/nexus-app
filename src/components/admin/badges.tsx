@@ -67,6 +67,33 @@ export function AdminPlanBadge({ plan }: { plan: string }) {
   return <AdminStatusPill tone={meta.tone}>{meta.label}</AdminStatusPill>;
 }
 
+/** Raw workspace_subscriptions.status vocabulary of the LIVE row (029).
+ *  `null` (no row at all) renders as "Implicit free" — the documented
+ *  default, not a row. Expired is danger, like past due: the guards
+ *  are failing closed on a paid plan until it is renewed or swept. */
+const SUBSCRIPTION_STATUS: Record<string, { label: string; tone: AdminTone }> = {
+  active: { label: "Active", tone: "success" },
+  trialing: { label: "Trialing", tone: "info" },
+  past_due: { label: "Past due", tone: "danger" },
+  cancelled: { label: "Cancelled", tone: "warning" },
+  expired: { label: "Expired", tone: "danger" },
+};
+
+export function AdminSubscriptionStatusBadge({
+  status,
+}: {
+  status: string | null;
+}) {
+  if (status === null) {
+    return <AdminStatusPill tone="neutral">Implicit free</AdminStatusPill>;
+  }
+  const meta = SUBSCRIPTION_STATUS[status] ?? {
+    label: status.replace(/_/g, " "),
+    tone: "neutral" as const,
+  };
+  return <AdminStatusPill tone={meta.tone}>{meta.label}</AdminStatusPill>;
+}
+
 const TASK_STATUS: Record<string, { label: string; tone: AdminTone }> = {
   todo: { label: "To do", tone: "neutral" },
   in_progress: { label: "In progress", tone: "accent" },
