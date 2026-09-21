@@ -53,7 +53,15 @@ const DETAIL_TIMEOUT_TAG = "ADMIN_DIRECTORY_DETAIL_TIMEOUT";
 
 type RpcResult = {
   data: unknown;
-  error: { code?: string | null; message?: string | null } | null;
+  /** PostgrestError shape: `hint`/`details` carry the database's own error
+   *  context (SQLSTATE) — kept so classify() can surface it to the
+   *  operator without inventing anything. */
+  error: {
+    code?: string | null;
+    message?: string | null;
+    hint?: string | null;
+    details?: string | null;
+  } | null;
 };
 
 /** Calls an admin RPC with the timeout + abort discipline established by
@@ -140,7 +148,7 @@ async function readUsersListRpc(
     LIST_TIMEOUT_TAG
   );
 
-  if (result.error) return { state: "unavailable", error: classify(result.error) };
+  if (result.error) return { state: "unavailable", error: classify(result.error, "admin_users_list()") };
   if (!isUsersListPayload(result.data)) {
     return {
       state: "unavailable",
@@ -178,7 +186,7 @@ async function readWorkspacesListRpc(
     LIST_TIMEOUT_TAG
   );
 
-  if (result.error) return { state: "unavailable", error: classify(result.error) };
+  if (result.error) return { state: "unavailable", error: classify(result.error, "admin_workspaces_list()") };
   if (!isWorkspacesListPayload(result.data)) {
     return {
       state: "unavailable",
@@ -206,7 +214,7 @@ async function readUserDetailRpc(
     DETAIL_TIMEOUT_TAG
   );
 
-  if (result.error) return { state: "unavailable", error: classify(result.error) };
+  if (result.error) return { state: "unavailable", error: classify(result.error, "admin_user_detail()") };
   // NULL from the RPC is the designed "no such account" answer. It is
   // not_found, never unavailable, because the database did answer.
   if (result.data === null) return { state: "not_found" };
@@ -234,7 +242,7 @@ async function readWorkspaceDetailRpc(
     DETAIL_TIMEOUT_TAG
   );
 
-  if (result.error) return { state: "unavailable", error: classify(result.error) };
+  if (result.error) return { state: "unavailable", error: classify(result.error, "admin_workspace_detail()") };
   if (result.data === null) return { state: "not_found" };
   if (!isWorkspaceDetailPayload(result.data)) {
     return {

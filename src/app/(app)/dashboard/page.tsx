@@ -38,6 +38,7 @@ import { readActiveMissions } from "@/lib/intelligence/mission";
 import type { IntelligenceMission } from "@/lib/intelligence/types";
 import { withTimeout } from "@/lib/auth-flow";
 import { getActiveMembership } from "@/lib/workspace";
+import { logDataReadFailure } from "@/lib/server-logs";
 
 // ============================================================
 // NEXUS — OVERVIEW
@@ -115,6 +116,13 @@ export default async function DashboardPage() {
             .select("id, title, status, progress, target_date, updated_at")
             .eq("workspace_id", workspaceId),
         ]);
+        // A failed read degrades to an empty slice (the dashboard renders
+        // an honest "nothing to show" state), but it is never silent: the
+        // real code/message/hint goes to the runtime logs, where an
+        // operator can distinguish "no data" from "could not read data".
+        logDataReadFailure("dashboard.snapshot.tasks", tasks.error);
+        logDataReadFailure("dashboard.snapshot.projects", projects.error);
+        logDataReadFailure("dashboard.snapshot.goals", goals.error);
         return {
           tasks: (tasks.data ?? []) as WorkspaceSnapshot["tasks"],
           projects: (projects.data ?? []) as WorkspaceSnapshot["projects"],
@@ -168,6 +176,11 @@ export default async function DashboardPage() {
     recentActivitiesPromise,
     missionPromise,
   ]);
+
+  // The recent lists are decorative: a failure degrades to an empty list,
+  // but is logged so a schema drift is visible before it is reported.
+  logDataReadFailure("dashboard.recent_goals", recentGoalsResult.error);
+  logDataReadFailure("dashboard.recent_activities", recentActivitiesResult.error);
 
   const context = describeWorkspace(snapshot);
   const activeMission = missions.length > 0 ? missions[0] : null;
