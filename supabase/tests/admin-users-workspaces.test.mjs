@@ -124,8 +124,25 @@ await db.exec(`
 
 await db.exec(readFileSync(join(here, "00_base_schema_fixture.sql"), "utf8"));
 
+// 002–005 are skipped exactly like in the freemium and subscription
+// suites: 002 inserts into storage.buckets (a Supabase-platform schema
+// PGlite does not provide — 42P01), 003 needs the pgvector extension,
+// and 004/005 build on the 003 AI tables. They apply on a real
+// provisioned project; none of those four is owned by this test.
+const SKIPPED = new Set([
+  "002_nexus_storage.sql",
+  "003_nexus_ai.sql",
+  "004_nexus_automations.sql",
+  "005_nexus_worker.sql",
+]);
+
 const migrations = readdirSync(migrationsDir)
-  .filter((file) => file.endsWith(".sql") && !file.startsWith("001_"))
+  .filter(
+    (file) =>
+      file.endsWith(".sql") &&
+      !file.startsWith("001_") &&
+      !SKIPPED.has(file)
+  )
   .sort();
 
 let migration027Applied = false;

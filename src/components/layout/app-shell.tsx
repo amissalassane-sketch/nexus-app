@@ -67,6 +67,12 @@ function AppShellInner({
   const pathname = usePathname();
   const router = useRouter();
 
+  // DASHBOARD PURE-BLACK BACKGROUND — the /dashboard route rests on one
+  // continuous #000000 surface with no decorative background layer (no
+  // spatial field, no dot grid, no translucency, no blur on the chrome).
+  // Every other route keeps its existing background untouched.
+  const isDashboard = pathname === "/dashboard";
+
   const openProfileModal = useCallback(() => setProfileModalOpen(true), []);
   const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
 
@@ -124,15 +130,23 @@ function AppShellInner({
 
   return (
     <ToastProvider>
-      <div className="relative flex h-dvh overflow-hidden bg-bg-base">
+      <div
+        data-dashboard-root={isDashboard ? "true" : undefined}
+        className={cn(
+          "relative flex h-dvh overflow-hidden",
+          isDashboard ? "bg-[#000000]" : "bg-bg-base"
+        )}
+      >
         {/* LAYER 0 — the spatial field. Fixed, behind everything
             (negative z-index), and pointer-events-none: it never
             intercepts clicks, scrolling, selection or dialogs.
             `subtle` on the product pages: the lines and dots are a
             quiet substrate for the data, not a wallpaper. The public
             site keeps the full expression (NexusGrid on the landing
-            hero is a separate component and is untouched). */}
-        <NexusSpatialField subtle />
+            hero is a separate component and is untouched).
+            The dashboard never mounts it: pure #000000, nothing behind
+            the content. */}
+        {isDashboard ? null : <NexusSpatialField subtle />}
         <CommandMenu />
         <KeyboardShortcuts />
 
@@ -145,7 +159,11 @@ function AppShellInner({
 
         <aside
           aria-label="Workspace navigation"
-          className="relative hidden w-[248px] shrink-0 border-r border-border-subtle bg-bg-subtle/60 lg:block"
+          data-dashboard-chrome="sidebar"
+          className={cn(
+            "relative hidden w-[248px] shrink-0 border-r border-border-subtle lg:block",
+            isDashboard ? "bg-[#000000]" : "bg-bg-subtle/60"
+          )}
         >
           <WorkspaceSidebar
             user={user}
@@ -155,9 +173,19 @@ function AppShellInner({
           />
         </aside>
 
-        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+          data-dashboard-chrome="column"
+          className={cn(
+            "relative flex min-w-0 flex-1 flex-col overflow-hidden",
+            isDashboard && "bg-[#000000]"
+          )}
+        >
           <header
-            className="shrink-0 border-b border-border-subtle bg-bg-base transition-[border-color,background-color] duration-200 ease-nexus lg:hidden sticky-nav"
+            data-dashboard-chrome="mobile-header"
+            className={cn(
+              "shrink-0 border-b border-border-subtle transition-[border-color,background-color] duration-200 ease-nexus lg:hidden sticky-nav",
+              isDashboard ? "bg-[#000000]" : "bg-bg-base"
+            )}
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <div className="flex h-14 items-center gap-1.5 px-2 sm:px-3">
@@ -196,7 +224,7 @@ function AppShellInner({
             </div>
           </header>
 
-          <div className="hidden lg:block">
+          <div className={cn("hidden lg:block", isDashboard && "bg-[#000000]")}>
             <Topbar
               user={user}
               workspace={workspace}
@@ -204,14 +232,28 @@ function AppShellInner({
               userId={userId}
               workspaceId={workspaceId}
               isPlatformAdmin={isPlatformAdmin}
+              solidBackground={isDashboard}
               onOpenProfileModal={openProfileModal}
               onOpenHelp={openHelp}
             />
           </div>
 
-          <main id="nexus-main" className="min-w-0 flex-1 overflow-y-auto scroll-smooth">
+          <main
+            id="nexus-main"
+            data-dashboard-chrome="main"
+            className={cn(
+              "min-w-0 flex-1 overflow-y-auto scroll-smooth",
+              isDashboard && "bg-[#000000]"
+            )}
+          >
             <PageTransition>
-              <div className="mx-auto w-full max-w-page px-4 pb-24 pt-6 sm:px-6 sm:pb-10 sm:pt-8">
+              <div
+                data-dashboard-chrome="content"
+                className={cn(
+                  "mx-auto w-full max-w-page px-4 pb-24 pt-6 sm:px-6 sm:pb-10 sm:pt-8",
+                  isDashboard && "bg-[#000000]"
+                )}
+              >
                 {!user.profileComplete && !tourActive && pathname !== "/dashboard" ? (
                   <div className="animate-[intelligence-state-in_320ms_var(--ease-nexus)_both]">
                     <ProfileCompletionPrompt
@@ -227,7 +269,11 @@ function AppShellInner({
 
           <nav
             aria-label="Primary navigation"
-            className="flex shrink-0 items-stretch gap-1 border-t border-border-subtle bg-bg-subtle/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden mobile-nav"
+            data-dashboard-chrome="mobile-nav"
+            className={cn(
+              "flex shrink-0 items-stretch gap-1 border-t border-border-subtle px-2 pb-[env(safe-area-inset-bottom)] lg:hidden mobile-nav",
+              isDashboard ? "bg-[#000000]" : "bg-bg-subtle/95 backdrop-blur-sm"
+            )}
           >
             {MOBILE_NAV.map((item) => (
               <MobileNavItem
@@ -295,8 +341,10 @@ function AppShellInner({
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
+              data-dashboard-chrome="drawer"
               className={cn(
-                "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default bg-bg-subtle shadow-overlay will-change-transform",
+                "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default shadow-overlay will-change-transform",
+                isDashboard ? "bg-[#000000]" : "bg-bg-subtle",
                 navClosing
                   ? "animate-[panel-out_200ms_var(--ease-nexus)_both]"
                   : "animate-[panel-in_320ms_var(--ease-nexus)_both]"

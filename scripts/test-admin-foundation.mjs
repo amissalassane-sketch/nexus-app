@@ -111,8 +111,8 @@ check(
   "no refusal branch found"
 );
 check(
-  "the admin layout redirects an unauthenticated visitor to /login",
-  layout.includes('redirect("/login")')
+  "the admin layout redirects an unauthenticated visitor to /admin/login",
+  layout.includes('redirect("/admin/login")')
 );
 check(
   "the admin layout is never prerendered (identity is the input)",
@@ -166,23 +166,48 @@ check(
 );
 
 // Every admin route must be a server component: a "use client" page could
-// render before the server gate had run.
-const clientAdminRoutes = ADMIN_ROUTES.filter((file) =>
-  readFileSync(file, "utf8").includes('"use client"')
+// render before the server gate had run. The only exception is the
+// dedicated auth surface (/admin/login, /admin/forgot-password,
+// /admin/reset-password): those pages render through the layout's auth
+// exemption — outside the gated shell — exactly like the public auth
+// forms, because they ARE the login surface.
+const ADMIN_AUTH_EXEMPT_ROUTES = new Set([
+  "src/app/admin/login/page.tsx",
+  "src/app/admin/forgot-password/page.tsx",
+  "src/app/admin/reset-password/page.tsx",
+]);
+const clientAdminRoutes = ADMIN_ROUTES.filter(
+  (file) =>
+    readFileSync(file, "utf8").includes('"use client"') &&
+    !ADMIN_AUTH_EXEMPT_ROUTES.has(file.replace(ROOT, ""))
 );
 check(
-  "no admin route is a client component",
+  "no gated admin route is a client component (auth surfaces exempt)",
   clientAdminRoutes.length === 0,
   clientAdminRoutes.map((f) => f.replace(ROOT, "")).join(", ")
 );
 
 // The proxy keeps /admin out of its public list, so an anonymous visitor
-// is redirected before the layout ever runs.
+// is redirected before the layout ever runs. The ONLY /admin paths that
+// may be public are the three auth surfaces — without them an operator
+// could never sign in (infinite redirect loop).
 const middleware = read("lib/supabase/middleware.ts");
+const publicRouteBlock = middleware.slice(
+  middleware.indexOf("const isPublicRoute"),
+  middleware.indexOf("const isAuthForm")
+);
 check(
-  "the proxy does not treat /admin as a public route",
-  !/pathname === "\/admin"/.test(middleware) &&
-    !/pathname\.startsWith\("\/admin"\)/.test(middleware)
+  "the proxy treats only the admin auth surfaces as public",
+  ["/admin/login", "/admin/forgot-password", "/admin/reset-password"].every(
+    (route) => publicRouteBlock.includes(route)
+  ) &&
+    !/startsWith\("\/admin"\)/.test(publicRouteBlock) &&
+    !/===\s*"\/admin"/.test(publicRouteBlock)
+);
+check(
+  "the proxy redirects anonymous /admin visitors to /admin/login",
+  middleware.includes('pathname.startsWith("/admin")') &&
+    middleware.includes('redirect(new URL("/admin/login"')
 );
 
 // ------------------------------------------------------------------
