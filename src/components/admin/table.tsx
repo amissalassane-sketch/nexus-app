@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { AdminIcon } from "./admin-icons";
-import { nextSortHref, type UsersListQuery, type WorkspacesListQuery } from "@/lib/admin/query";
+import { nextSortHref, type AdminListQuery } from "@/lib/admin/query";
 
 // ============================================================
 // NEXUS ADMIN — DATA TABLE (PR 2: USERS / WORKSPACES)
@@ -79,7 +79,7 @@ export function AdminSortTh({
   label: string;
   sortKey: string;
   pathname: string;
-  query: UsersListQuery | WorkspacesListQuery;
+  query: AdminListQuery;
   className?: string;
 }) {
   const { href, state } = nextSortHref(pathname, query, sortKey);

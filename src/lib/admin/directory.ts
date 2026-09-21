@@ -272,7 +272,7 @@ export const __internals = {
 /** A read path shared by all four entry points: no session → FORBIDDEN
  *  (the layout normally catches this first); no Supabase → NOT_INSTALLED.
  *  Failures here are reported, never swallowed into an empty list. */
-async function resolveReadClient(): Promise<
+export async function resolveReadClient(): Promise<
   { supabase: SupabaseClient } | { error: AdminDataError }
 > {
   const user = await getAuthenticatedUser();

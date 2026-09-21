@@ -115,8 +115,25 @@ await db.exec(`
 
 await db.exec(readFileSync(join(here, "00_base_schema_fixture.sql"), "utf8"));
 
+// 002–005 are skipped exactly like in the freemium and subscription
+// suites: 002 inserts into storage.buckets (a Supabase-platform schema
+// PGlite does not provide — 42P01), 003 needs the pgvector extension,
+// and 004/005 build on the 003 AI tables. They apply on a real
+// provisioned project; none of those four is owned by this test.
+const SKIPPED = new Set([
+  "002_nexus_storage.sql",
+  "003_nexus_ai.sql",
+  "004_nexus_automations.sql",
+  "005_nexus_worker.sql",
+]);
+
 const migrations = readdirSync(migrationsDir)
-  .filter((file) => file.endsWith(".sql") && !file.startsWith("001_"))
+  .filter(
+    (file) =>
+      file.endsWith(".sql") &&
+      !file.startsWith("001_") &&
+      !SKIPPED.has(file)
+  )
   .sort();
 
 let adminMigrationApplied = false;
@@ -283,18 +300,23 @@ const grantedFunctions = await db.query(`
 `);
 const granted = grantedFunctions.rows.map((r) => r.proname);
 // Closed-world assertion: the list below is the COMPLETE authenticated
-// surface across 026 (PR 1) and 027 (PR 2). Any new admin function that
-// forgets to revoke, and any accidental grant, fails here. The query
-// matches the whole admin_/platform_admin_ namespace rather than an
-// explicit IN list so the test cannot be widened by a forgotten entry.
+// surface across 026 (PR 1), 027 (PR 2), 028 (PR 3) and 029 (PR 6). Any
+// new admin function that forgets to revoke, and any accidental grant,
+// fails here. The query matches the whole admin_/platform_admin_
+// namespace rather than an explicit IN list so the test cannot be
+// widened by a forgotten entry.
 //
 // PR 2 added the four directory reads (admin_users_list,
 // admin_user_detail, admin_workspaces_list, admin_workspace_detail) —
 // reads over real tables, each gated by admin_assert_access('viewer').
 // No write RPCs exist for the directory; nothing here may change that
 // without a permission model + audit (PR 3).
+//
+// PR 6 adds the single subscriptions reader
+// (admin_subscriptions_list) — one row per workspace over
+// workspace_subscriptions, same viewer gate, same revoke pattern.
 assert(
-  "only the intended RPCs are executable by authenticated (PR 1 + PR 2 + PR 3)",
+  "only the intended RPCs are executable by authenticated (PR 1 + PR 2 + PR 3 + PR 6)",
   JSON.stringify(granted) ===
     JSON.stringify([
       "admin_activity_list",
@@ -304,6 +326,7 @@ assert(
       "admin_overview",
       "admin_recent_activity",
       "admin_security_overview",
+      "admin_subscriptions_list",
       "admin_user_detail",
       "admin_users_list",
       "admin_workspace_detail",

@@ -24,6 +24,7 @@ const SKIPPED = new Set([
   "026_admin_control_plane.sql",
   "027_admin_directory.sql",
   "028_admin_activity_security.sql",
+  "029_admin_subscriptions.sql",
   "20260915130000_nexus_core_contract.sql",
   "20260915130500_nexus_lineage_reconciliation.sql",
   "20260915131000_nexus_auth_workspace_bootstrap.sql",

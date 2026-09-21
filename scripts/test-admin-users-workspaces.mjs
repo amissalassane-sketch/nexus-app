@@ -201,10 +201,21 @@ const serverOnly = ADMIN_DIR_FILES.filter((file) => {
   if (rel.includes(join("components", "admin", "copy-button.tsx"))) return false;
   if (rel.includes(join("components", "admin", "admin-shell.tsx"))) return false;
   if (rel.includes(join("components", "admin", "admin-refresh-button.tsx"))) return false;
+  // Navigation chrome: keyboard palette over the ready nav items only.
+  // Zero data access (no rpc/from/fetch) — it only routes inside the
+  // already-gated shell.
+  if (rel.includes(join("components", "admin", "admin-command-menu.tsx"))) return false;
+  // Dedicated auth surface: the login form and the recovery forms render
+  // outside the gated shell (layout exemption) exactly like the public
+  // auth forms, because they ARE the login surface. The login form only
+  // POSTs to /api/auth/signin, the documented auth entry point.
+  if (rel.includes(join("components", "admin", "admin-login-form.tsx"))) return false;
+  if (rel.includes(join("app", "admin", "forgot-password", "page.tsx"))) return false;
+  if (rel.includes(join("app", "admin", "reset-password", "page.tsx"))) return false;
   return readFileSync(file, "utf8").includes('"use client"');
 });
 check(
-  "client components inside the admin surface are only chrome (shell, refresh, copy)",
+  "client components inside the admin surface are only chrome or the auth surface",
   serverOnly.length === 0,
   serverOnly.map((f) => f.replace(ROOT, "")).join(", ")
 );
@@ -388,8 +399,12 @@ const nav = read("lib/admin/nav.ts");
 check("Users and Workspaces are marked ready",
   /href: "\/admin\/users",[\s\S]{0,80}status: "ready"/.test(nav) &&
   /href: "\/admin\/workspaces",[\s\S]{0,80}status: "ready"/.test(nav));
+// PR 6 shipped /admin/subscriptions (migration 029), so the planned floor
+// dropped by exactly one: 14 → 13. If this number moves again, a PR
+// either shipped a screen (update the floor here, same as this) or
+// silently un-shipped one (do not accept that).
 check("the planned entries that are NOT PR 2 remain planned with notes",
-  nav.includes("PR 5") && nav.includes("PR 3") && (nav.match(/status: "planned"/g) ?? []).length >= 14);
+  nav.includes("PR 5") && nav.includes("PR 3") && (nav.match(/status: "planned"/g) ?? []).length >= 13);
 check("Billing / Revenue / Flags pages were NOT created",
   !existsSync(src("app/admin/billing")) && !existsSync(src("app/admin/revenue")) &&
   !existsSync(src("app/admin/feature-flags")) && !existsSync(src("app/admin/intelligence")));
