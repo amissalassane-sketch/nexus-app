@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import type { DataErrorDetail } from "@/lib/data-errors";
 
 // ============================================================
 // NEXUS — STATE COMPONENTS
@@ -206,6 +207,37 @@ export function Alert({
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
+  );
+}
+
+/**
+ * Diagnostic line under a friendly error: the real SQLSTATE / PGRST code,
+ * the bounded raw message and the hint the database answered with (see
+ * describeDataError). It exists so an operator can read and copy the
+ * cause from the screen instead of opening the devtools — `select-all`
+ * makes one click select the whole line. Renders nothing when there is
+ * no diagnostic (validation copy, plain product messages).
+ */
+export function ErrorDiagnostic({
+  detail,
+  className,
+}: {
+  detail: DataErrorDetail | null | undefined;
+  className?: string;
+}) {
+  if (!detail) return null;
+  return (
+    <p
+      data-error-code={detail.code}
+      className={cn(
+        "mt-1.5 select-all break-words font-mono text-caption text-text-tertiary",
+        className
+      )}
+    >
+      <span className="text-text-secondary">code {detail.code}</span>
+      {detail.message ? ` — ${detail.message}` : null}
+      {detail.hint ? <span className="block">hint: {detail.hint}</span> : null}
+    </p>
   );
 }
 

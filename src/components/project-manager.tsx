@@ -15,7 +15,7 @@ import { canCreateProject } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
 import { cn } from "@/lib/cn";
-import { humanizeDataError } from "@/lib/data-errors";
+import { useDataError } from "@/hooks/use-data-error";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
+import { Alert, EmptyState, ErrorDiagnostic, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 
 type Project = {
@@ -117,7 +117,11 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
-  const [error, setError] = useState("");
+  // Friendly sentence + database diagnostic (code/message/hint) in one
+  // slot — see useDataError. The diagnostic is rendered under the
+  // sentence and logged with console.error so a failed read/write can
+  // be reported from the screen, without the devtools.
+  const { error, errorDetail, setError, reportDataError } = useDataError();
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -188,7 +192,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       .order("due_date", { ascending: true });
 
     if (loadError) {
-      setError(humanizeDataError(loadError));
+      reportDataError("projects.load", loadError);
       setProjects([]);
       setLoading(false);
       return;
@@ -359,7 +363,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         setFormOpen(false);
         return;
       }
-      setError(humanizeDataError(createError));
+      reportDataError("projects.create", createError);
       return;
     }
 
@@ -418,7 +422,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
     setSaving(false);
 
     if (updateError) {
-      setError(humanizeDataError(updateError));
+      reportDataError("projects.update", updateError);
       return;
     }
 
@@ -479,7 +483,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         .eq("workspace_id", workspaceId ?? "");
 
       if (updateError) {
-        setError(humanizeDataError(updateError));
+        reportDataError("projects.progress", updateError);
         await fetchProjects(workspaceId);
         return;
       }
@@ -502,7 +506,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
 
     if (deleteError) {
       setProjects(previous);
-      setError(humanizeDataError(deleteError));
+      reportDataError("projects.delete", deleteError);
       return;
     }
 
@@ -562,7 +566,12 @@ function ProjectManagerInner({ userId }: { userId: string }) {
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {error && !formOpen ? (
+        <Alert tone="danger">
+          {error}
+          <ErrorDiagnostic detail={errorDetail} />
+        </Alert>
+      ) : null}
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
       <Panel
@@ -873,7 +882,12 @@ function ProjectManagerInner({ userId }: { userId: string }) {
             />
           </Field>
 
-          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {error ? (
+            <Alert tone="danger">
+              {error}
+              <ErrorDiagnostic detail={errorDetail} />
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 

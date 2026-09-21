@@ -16,7 +16,8 @@ import { canCreateTask } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
 import { cn } from "@/lib/cn";
-import { humanizeDataError } from "@/lib/data-errors";
+import { humanizeDataError, logDataError, type DataErrorLike } from "@/lib/data-errors";
+import { useDataError } from "@/hooks/use-data-error";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,7 @@ import { Metric, Panel } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
-import { Alert, EmptyState, Skeleton, SkeletonRows } from "@/components/ui/feedback";
+import { Alert, EmptyState, ErrorDiagnostic, Skeleton, SkeletonRows } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { PillTabs } from "@/components/ui/tabs";
@@ -90,7 +91,9 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  // Friendly sentence + database diagnostic (code/message/hint) in one
+  // slot — see useDataError (same contract as the project manager).
+  const { error, errorDetail, setError, reportDataError } = useDataError();
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ status: "all", priority: "all" });
   // Saved views. Intelligence signals deep-link here (?filter=overdue etc.),
@@ -137,6 +140,27 @@ function TaskManagerInner({ userId }: { userId: string }) {
   const { toast } = useToast();
   const showToast = (tone: "success" | "danger", message: string) =>
     toast(tone, message);
+  /**
+   * Toast counterpart of reportDataError for the inline mutations
+   * (kanban move, quick add, inline rename, completion toggle): the same
+   * console.error line, and the code — plus the bounded raw message when
+   * the toast text is friendly copy — as the toast's small description.
+   * The toast text itself is unchanged.
+   */
+  const toastDataError = (
+    context: string,
+    cause: DataErrorLike,
+    message: string,
+    { withMessage = false }: { withMessage?: boolean } = {}
+  ) => {
+    const detail = logDataError(context, cause);
+    const description = detail
+      ? `code ${detail.code}${withMessage && detail.message ? ` — ${detail.message}` : ""}${
+          detail.hint ? ` · hint: ${detail.hint}` : ""
+        }`
+      : undefined;
+    toast("danger", message, description ? { description } : undefined);
+  };
 
   const activeTaskCount = useMemo(
     () => tasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length,
@@ -163,7 +187,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
       .order("due_at", { ascending: true });
 
     if (loadError) {
-      setError(humanizeDataError(loadError));
+      reportDataError("tasks.load", loadError);
       setTasks([]);
       setLoading(false);
       return;
@@ -327,7 +351,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
         setFormOpen(false);
         return;
       }
-      setError(humanizeDataError(createError));
+      reportDataError("tasks.create", createError);
       return;
     }
 
@@ -367,7 +391,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
     if (updateError) {
       if (await handleMutationError(updateError.message)) return;
-      setError(humanizeDataError(updateError));
+      reportDataError("tasks.update", updateError);
       return;
     }
 
@@ -473,7 +497,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
           item.id === task.id ? { ...item, status: previousStatus } : item
         )
       );
-      showToast("danger", `Could not update task: ${updateError.message}`);
+      toastDataError(
+        "tasks.toggle",
+        updateError,
+        `Could not update task: ${updateError.message}`
+      );
       return;
     }
 
@@ -514,7 +542,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
         )
       );
       if (!(await handleMutationError(updateError.message))) {
-        showToast("danger", `Could not move task: ${humanizeDataError(updateError)}`);
+        toastDataError(
+          "tasks.move",
+          updateError,
+          `Could not move task: ${humanizeDataError(updateError)}`,
+          { withMessage: true }
+        );
       }
       return;
     }
@@ -544,7 +577,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
     if (deleteError) {
       setTasks(previous);
-      setError(humanizeDataError(deleteError));
+      reportDataError("tasks.delete", deleteError);
       return;
     }
 
@@ -582,7 +615,7 @@ function TaskManagerInner({ userId }: { userId: string }) {
         setQuickTitle("");
         return;
       }
-      showToast("danger", createError.message);
+      toastDataError("tasks.quickCreate", createError, createError.message);
       return;
     }
 
@@ -626,7 +659,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
       setTasks((current) =>
         current.map((task) => (task.id === taskId ? { ...task, title: previous } : task))
       );
-      showToast("danger", `Could not rename task: ${updateError.message}`);
+      toastDataError(
+        "tasks.rename",
+        updateError,
+        `Could not rename task: ${updateError.message}`
+      );
       return;
     }
 
@@ -825,7 +862,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {error && !formOpen ? (
+        <Alert tone="danger">
+          {error}
+          <ErrorDiagnostic detail={errorDetail} />
+        </Alert>
+      ) : null}
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
       <PillTabs
@@ -1148,7 +1190,12 @@ function TaskManagerInner({ userId }: { userId: string }) {
             />
           </Field>
 
-          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {error ? (
+            <Alert tone="danger">
+              {error}
+              <ErrorDiagnostic detail={errorDetail} />
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 

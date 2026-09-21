@@ -14,14 +14,14 @@ import { canCreateGoal } from "@/lib/access";
 import { FeatureGate } from "@/components/feature-gate";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
 import { cn } from "@/lib/cn";
-import { humanizeDataError } from "@/lib/data-errors";
+import { useDataError } from "@/hooks/use-data-error";
 import { Button } from "@/components/ui/button";
 import { CreateButton } from "@/components/ui/create-button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { Alert, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
+import { Alert, EmptyState, ErrorDiagnostic, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { Metric } from "@/components/ui/card";
 
@@ -86,7 +86,9 @@ function GoalManagerInner({ userId }: { userId: string }) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  // Friendly sentence + database diagnostic (code/message/hint) in one
+  // slot — see useDataError (same contract as the project manager).
+  const { error, errorDetail, setError, reportDataError } = useDataError();
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState<GoalForm>(blankGoalForm());
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -129,7 +131,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
       .order("target_date", { ascending: true });
 
     if (loadError) {
-      setError(humanizeDataError(loadError));
+      reportDataError("goals.load", loadError);
       setGoals([]);
       setLoading(false);
       return;
@@ -232,7 +234,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
         setFormOpen(false);
         return;
       }
-      setError(humanizeDataError(createError));
+      reportDataError("goals.create", createError);
       return;
     }
 
@@ -271,7 +273,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
     setSaving(false);
 
     if (updateError) {
-      setError(humanizeDataError(updateError));
+      reportDataError("goals.update", updateError);
       return;
     }
 
@@ -319,7 +321,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
       .eq("workspace_id", workspaceId ?? "");
 
     if (updateError) {
-      setError(humanizeDataError(updateError));
+      reportDataError("goals.progress", updateError);
       return;
     }
 
@@ -342,7 +344,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
 
     if (deleteError) {
       setGoals(previous);
-      setError(humanizeDataError(deleteError));
+      reportDataError("goals.delete", deleteError);
       return;
     }
 
@@ -381,7 +383,12 @@ function GoalManagerInner({ userId }: { userId: string }) {
         <FeatureGate limitResult={limitResult} onDismiss={dismiss} />
       ) : null}
 
-      {error && !formOpen ? <Alert tone="danger">{error}</Alert> : null}
+      {error && !formOpen ? (
+        <Alert tone="danger">
+          {error}
+          <ErrorDiagnostic detail={errorDetail} />
+        </Alert>
+      ) : null}
       {success && !formOpen ? <Alert tone="success">{success}</Alert> : null}
 
       {loading ? (
@@ -600,7 +607,12 @@ function GoalManagerInner({ userId }: { userId: string }) {
             />
           </Field>
 
-          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {error ? (
+            <Alert tone="danger">
+              {error}
+              <ErrorDiagnostic detail={errorDetail} />
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 
