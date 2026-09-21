@@ -24,7 +24,9 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   let errorMsg = "";
-  if (params.error === "forbidden" || state.status === "not_admin") {
+  if (state.status === "unavailable") {
+    errorMsg = "Administrator access is temporarily unavailable. Contact the platform operator.";
+  } else if (params.error === "forbidden" || state.status === "not_admin") {
     errorMsg = "Authenticated account is not a registered Platform Administrator.";
   } else if (typeof params.error === "string") {
     errorMsg = params.error;

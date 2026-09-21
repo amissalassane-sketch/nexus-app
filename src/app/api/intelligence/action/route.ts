@@ -1,3 +1,4 @@
+import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -71,9 +72,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonObject(request).catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
     const actionType = body.type as IntelligenceActionType | undefined;
-    const payload = body.payload && typeof body.payload === "object" ? { ...body.payload } : {};
+    const payload: Record<string, unknown> = body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
+      ? { ...body.payload as Record<string, unknown> } : {};
     // Optional: when the action came from a proactive signal, mark the
     // signal as "acted" after the VERIFIED mutation (observability).
     const signalId = typeof body.signalId === "string" ? body.signalId : null;
@@ -82,7 +87,7 @@ export async function POST(request: Request) {
     const missionId = typeof body.missionId === "string" ? body.missionId : null;
     const missionStepId = typeof body.missionStepId === "string" ? body.missionStepId : null;
 
-    if (!actionType) {
+    if (typeof actionType !== "string" || !actionType) {
       return NextResponse.json({ error: "Action type is required" }, { status: 400 });
     }
 

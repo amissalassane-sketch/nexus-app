@@ -79,12 +79,14 @@ export function classifyGuardError(error: {
  *  `cache()` means the layout, the page and any nested component can all
  *  call this without paying for more than one round trip. */
 export const getPlatformAdminState = cache(async (): Promise<PlatformAdminState> => {
-  const user = await getAuthenticatedUser();
-  if (!user) return { status: "unauthenticated" };
-
+  // Check configuration before constructing the server client. Missing
+  // configuration must fail closed, not crash the public admin login.
   if (!isSupabaseConfigured()) {
     return { status: "unavailable", reason: "SUPABASE_NOT_CONFIGURED" };
   }
+
+  const user = await getAuthenticatedUser();
+  if (!user) return { status: "unauthenticated" };
 
   const supabase = await createClient();
   const controller = new AbortController();

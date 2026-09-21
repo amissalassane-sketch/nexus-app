@@ -105,8 +105,8 @@
        * Volt Lime (--color-admin-accent) is reserved for active state,
          live indicators, progress and focus. It is never a background,
          never body text, and never decorative. */
-  --color-admin-base: #0c0c0e;
-  --color-admin-sidebar: #111114;
+  --color-admin-base: #000000;
+  --color-admin-sidebar: #000000;
   --color-admin-surface: #17171a;
   --color-admin-surface-2: #1e1e22;
   --color-admin-surface-3: #27272c;
@@ -3955,19 +3955,15 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 
 /* ============================================================
    DASHBOARD — PURE BLACK BACKGROUND SYSTEM
-   The /dashboard route rests on ONE continuous pure-black
+   All product routes and the admin shell rest on ONE continuous pure-black
    surface. No gradient, no texture, no grain, no pattern, no mesh,
    no glow, no light effect, no background-image, no decorative
    pseudo-element, no glassmorphism, no blur/backdrop-filter on the
    background, no per-section color shift — #000000 everywhere, at
    every structural level, including while scrolling.
 
-   SCOPE — strictly the dashboard route. Everything below is keyed
-   off [data-dashboard-root="true"], which the app shell sets only
-   when the pathname is exactly /dashboard (see
-   src/components/layout/app-shell.tsx). All other routes — the
-   landing page, auth, admin, and the rest of the product — keep
-   their existing backgrounds pixel-identical.
+   SCOPE — product and admin shells marked [data-dashboard-root="true"].
+   Public marketing and authentication pages retain their existing design.
 
    What this covers:
      html / body ................... pure black, no image

@@ -26,6 +26,8 @@ export function getRequestOrigin(request: Request): string {
 /** Only allow in-app relative paths as post-auth redirects. */
 export function safeNextPath(value: string | null | undefined, fallback = "/dashboard"): string {
   if (!value) return fallback;
+  // WHATWG URL parsing strips tabs/newlines; /\t/host would become //host.
+  if (/[\u0000-\u0020\u007f]/.test(value)) return fallback;
   if (!value.startsWith("/")) return fallback;
   if (value.startsWith("//")) return fallback;
   if (value.includes("\\")) return fallback;

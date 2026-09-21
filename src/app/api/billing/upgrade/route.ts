@@ -1,3 +1,4 @@
+import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { PLAN_NAMES, type PlanName } from "@/lib/plan-limits";
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
   let body: UpgradeRequestBody;
   try {
-    body = (await request.json()) as UpgradeRequestBody;
+    body = (await readJsonObject(request)) as UpgradeRequestBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }

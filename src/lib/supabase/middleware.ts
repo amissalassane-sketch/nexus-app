@@ -1,3 +1,4 @@
+import { redirectWithCookies } from "@/lib/auth-flow";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/supabase/config";
@@ -61,7 +62,7 @@ export async function updateSession(request: NextRequest) {
       pathname === "/sitemap.xml";
     return publicWithoutAuth
       ? response
-      : NextResponse.redirect(new URL("/login", request.url));
+      : redirectWithCookies(response, new URL("/login", request.url).href);
   }
 
   // Intercept stray auth codes on non-auth routes
@@ -159,16 +160,16 @@ export async function updateSession(request: NextRequest) {
   // Unauthenticated users on private routes → /login (or /admin/login for admin paths)
   if (!user && !isPublicRoute) {
     if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return redirectWithCookies(response, new URL("/admin/login", request.url).href);
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectWithCookies(response, new URL("/login", request.url).href);
   }
 
   // Authenticated users on auth forms → straight into the product.
   // /app is the canonical destination for every account; the (app) layout
   // ensures the workspace exists before rendering (idempotent bootstrap).
   if (user && isAuthForm) {
-    return NextResponse.redirect(new URL("/app", request.url));
+    return redirectWithCookies(response, new URL("/app", request.url).href);
   }
 
   return response;
