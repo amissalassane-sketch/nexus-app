@@ -69,7 +69,7 @@ Toutes les couleurs sémantiques sont volontairement désaturées (pas de vert/r
 
 ## Typographie
 
-Police : **Inter Variable** (`--font-sans`, via `var(--font-inter)`, auto-hébergée en `woff2`), fallback système. Mono : **Geist Mono Variable** (`--font-mono`), utilisé pour les chiffres/dates/labels techniques.
+Police UI : **Instrument Sans Variable** (`--font-sans`, via `var(--font-instrument)`, auto-hébergée en `woff2` — voir `src/app/layout.tsx`), fallback système. C'est la voix unique de l'interface : navigation, titres, labels, corps de texte. Mono : **Geist Mono Variable** (`--font-mono`), réservé aux données techniques — chiffres, dates, identifiants, horodatages, code — et jamais employé comme identité générale de l'application (Admin compris).
 
 | Token | Taille | Line-height | Letter-spacing | Poids | Usage |
 |---|---|---|---|---|---|

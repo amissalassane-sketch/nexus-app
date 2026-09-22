@@ -140,6 +140,33 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     risk: "none",
     args: [],
   },
+  get_notes: {
+    name: "get_notes",
+    description: "List workspace notes (decisions, meetings, research) newest first, with type and project link.",
+    permission: "read",
+    risk: "none",
+    args: [
+      { name: "limit", type: "number", description: "Max notes (default 5)" },
+      { name: "query", type: "string", description: "Optional title filter" },
+    ],
+  },
+  get_events: {
+    name: "get_events",
+    description: "Upcoming calendar events (NEXUS events, plus external calendar when connected).",
+    permission: "read",
+    risk: "none",
+    args: [{ name: "limit", type: "number", description: "Max events (default 5)" }],
+  },
+  find_free_time: {
+    name: "find_free_time",
+    description: "Free working-hour windows (08:00–18:00) in the coming days, computed from real events.",
+    permission: "read",
+    risk: "none",
+    args: [
+      { name: "days", type: "number", description: "How many days to scan (default 3)" },
+      { name: "min_minutes", type: "number", description: "Minimum window length (default 30)" },
+    ],
+  },
   get_activity: {
     name: "get_activity",
     description: "Recent audited workspace activity (created/updated/deleted events).",
@@ -562,6 +589,33 @@ function projectMap(snapshot: WorkspaceSnapshot): Map<string, string> {
   return new Map(snapshot.projects.map((p) => [p.id, p.name]));
 }
 
+const DAY_MS_LOCAL = 86_400_000;
+
+/** Start (midnight) of `dayOffset` days from `now`, in local time. */
+function startOfLocalDay(now: Date, dayOffset: number): number {
+  const date = new Date(now);
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function pushLocalWindow(
+  windows: { date: string; start: string; minutes: number }[],
+  start: number,
+  end: number,
+  minMinutes: number
+): void {
+  const minutes = Math.round((end - start) / 60_000);
+  if (minutes >= minMinutes && end > start) {
+    const startDate = new Date(start);
+    windows.push({
+      date: new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(startDate),
+      start: new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(startDate),
+      minutes,
+    });
+  }
+}
+
 export function executeReadTool(
   name: string,
   args: Record<string, unknown>,
@@ -742,6 +796,85 @@ export function executeReadTool(
         list.length === 0 ? "Aucun objectif actif" : `${list.length} objectif(s) actif(s)`,
         list.length,
         list
+      );
+    }
+
+    case "get_notes": {
+      const limit = Math.min(Math.max(Number(args.limit ?? 5) || 5, 1), 20);
+      const needle = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
+      const notes = (snapshot.notes ?? [])
+        .filter((note) => !needle || note.title.toLowerCase().includes(needle))
+        .slice(0, limit)
+        .map((note) => ({
+          id: note.id,
+          title: note.title,
+          type: note.note_type ?? "standard",
+          project: note.project_id ? projectsById.get(note.project_id) ?? null : null,
+          updatedAt: note.updated_at ?? null,
+        }));
+      return done(
+        notes.length === 0
+          ? needle
+            ? `Aucune note ne correspond à “${needle}”`
+            : "Aucune note dans cet espace de travail"
+          : `${notes.length} note(s)${notes[0] ? ` (ex: “${notes[0].title}”)` : ""}`,
+        notes.length,
+        notes
+      );
+    }
+
+    case "get_events": {
+      const limit = Math.min(Math.max(Number(args.limit ?? 5) || 5, 1), 20);
+      const events = (snapshot.events ?? [])
+        .filter((event) => new Date(event.start_at).getTime() >= now.getTime() - 3_600_000)
+        .sort((a, b) => a.start_at.localeCompare(b.start_at))
+        .slice(0, limit)
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          startsAt: event.start_at,
+          location: event.location ?? null,
+          project: event.project_id ? projectsById.get(event.project_id) ?? null : null,
+        }));
+      return done(
+        events.length === 0
+          ? "Aucun événement à venir"
+          : `${events.length} événement(s) à venir (prochain : “${events[0].title}”)`,
+        events.length,
+        events
+      );
+    }
+
+    case "find_free_time": {
+      const days = Math.min(Math.max(Number(args.days ?? 3) || 3, 1), 14);
+      const minMinutes = Math.min(Math.max(Number(args.min_minutes ?? 30) || 30, 15), 480);
+      const busy = (snapshot.events ?? [])
+        .filter((event) => new Date(event.start_at).getTime() >= now.getTime() - DAY_MS_LOCAL && new Date(event.start_at).getTime() <= now.getTime() + days * DAY_MS_LOCAL)
+        .map((event) => ({
+          start: new Date(event.start_at).getTime(),
+          end: new Date(event.end_at ?? event.start_at).getTime() + (event.end_at ? 0 : 3_600_000),
+        }))
+        .sort((a, b) => a.start - b.start);
+
+      const windows: { date: string; start: string; minutes: number }[] = [];
+      for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
+        const dayStart = startOfLocalDay(now, dayIndex) + 8 * 3_600_000; // 08:00
+        const dayEnd = startOfLocalDay(now, dayIndex) + 18 * 3_600_000; // 18:00
+        let cursor = dayStart;
+        for (const interval of busy) {
+          if (interval.start > cursor) {
+            pushLocalWindow(windows, cursor, Math.min(interval.start, dayEnd), minMinutes);
+          }
+          if (interval.end > cursor) cursor = interval.end;
+        }
+        pushLocalWindow(windows, cursor, dayEnd, minMinutes);
+      }
+      return done(
+        windows.length === 0
+          ? "Aucun créneau libre de la longueur demandée dans les prochains jours"
+          : `${windows.length} créneau(x) libre(s) d'au moins ${minMinutes} min (premier : ${windows[0].date} ${windows[0].start})`,
+        windows.length,
+        windows
       );
     }
 

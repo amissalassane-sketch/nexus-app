@@ -88,10 +88,33 @@ export type GoalLike = {
   updated_at?: string | null;
 };
 
+/** Lightweight note shape for context (context-graph model). */
+export type NoteLike = {
+  id: string;
+  title: string;
+  note_type?: string | null;
+  project_id?: string | null;
+  updated_at?: string | null;
+};
+
+/** Lightweight event shape for context (context-graph model). */
+export type EventLike = {
+  id: string;
+  title: string;
+  start_at: string;
+  end_at?: string | null;
+  location?: string | null;
+  project_id?: string | null;
+};
+
 export type WorkspaceSnapshot = {
   tasks: TaskLike[];
   projects: ProjectLike[];
   goals: GoalLike[];
+  /** Notes are optional so legacy snapshots keep compiling. */
+  notes?: NoteLike[];
+  /** Calendar events are optional so legacy snapshots keep compiling. */
+  events?: EventLike[];
   now?: Date;
 };
 

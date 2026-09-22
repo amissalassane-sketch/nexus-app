@@ -28,7 +28,16 @@ import {
   runMissionLoop,
   saveMission,
 } from "@/lib/intelligence/mission";
-import { computeInsights, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
+import {
+  buildRecoveryView,
+  detectRecoveryRequest,
+  renderRecoveryNarrative,
+} from "@/lib/intelligence/recovery";
+import {
+  describeSources,
+  nexusSourceRefs,
+} from "@/lib/intelligence/context-graph";
+import { computeInsights, isActiveTask, type WorkspaceSnapshot } from "@/lib/intelligence/engine";
 import type {
   ActivityContextItem,
   IntelligenceMemoryState,
@@ -129,8 +138,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Scoped queries strictly isolated by workspace_id
-    const [tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes] = await Promise.all([
+    // Scoped queries strictly isolated by workspace_id. Notes and events
+    // are part of the unified context model; a failing optional read
+    // degrades that source honestly instead of failing the whole answer.
+    const [tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes, notesRes, eventsRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at")
@@ -155,6 +166,24 @@ export async function POST(request: Request) {
         .from("task_dependencies")
         .select("task_id, depends_on_task_id")
         .eq("workspace_id", workspaceId),
+      // Notes: bounded, non-archived, newest first.
+      supabase
+        .from("notes")
+        .select("id, title, note_type, project_id, updated_at")
+        .eq("workspace_id", workspaceId)
+        .is("archived_at", null)
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      // Events: a 14-day window around now — enough for availability
+      // questions without an unbounded read.
+      supabase
+        .from("events")
+        .select("id, title, start_at, end_at, location, project_id")
+        .eq("workspace_id", workspaceId)
+        .gte("start_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+        .lte("start_at", new Date(Date.now() + 7 * 86_400_000).toISOString())
+        .order("start_at", { ascending: true })
+        .limit(100),
     ]);
 
     assertIntelligenceData(tasksRes, projectsRes, goalsRes, activitiesRes, dependenciesRes);
@@ -163,6 +192,8 @@ export async function POST(request: Request) {
       tasks: (tasksRes.data ?? []) as WorkspaceSnapshot["tasks"],
       projects: (projectsRes.data ?? []) as WorkspaceSnapshot["projects"],
       goals: (goalsRes.data ?? []) as WorkspaceSnapshot["goals"],
+      notes: (notesRes.data ?? []) as WorkspaceSnapshot["notes"],
+      events: (eventsRes.data ?? []) as WorkspaceSnapshot["events"],
     };
 
     const recentActivities: ActivityContextItem[] = (activitiesRes.data ?? []).map((row) => ({
@@ -237,10 +268,24 @@ export async function POST(request: Request) {
       }
     }
 
+    // ---- WORK RECOVERY (mandatory acceptance scenario) ----------------
+    // "J'ai quoi à faire ?" / "Rattrape mon retard" builds the
+    // cross-source recovery view: collect, dedupe, detect, rank,
+    // explain, propose. Deterministic — useful with or without a model.
+    const recoveryRequest = detectRecoveryRequest(query);
+    const recovery = recoveryRequest
+      ? buildRecoveryView({
+          snapshot,
+          notes: snapshot.notes ?? [],
+          events: snapshot.events ?? [],
+        })
+      : null;
+
     // ---- AGENT LOOP ------------------------------------------------
     // Memory retrieval -> reference resolution -> intent -> read tools
     // -> (model proposes extra tools -> server validates -> executes)
     // -> plan -> response. Proactive signals feed the context.
+    const agentStartedAt = performance.now();
     const { response: structuredResponse, agent } = await runAgent({
       workspaceId,
       query,
@@ -256,11 +301,76 @@ export async function POST(request: Request) {
       mission: mission ?? undefined,
     });
 
+    // A recovery request replaces the narrative with the recovery view
+    // (the agent still ran; its tool calls remain visible as evidence).
+    if (recovery) {
+      structuredResponse.narrative = renderRecoveryNarrative(recovery);
+      structuredResponse.headline = recovery.headline;
+      structuredResponse.items = recovery.items.slice(0, 10).map((item) => ({
+        id: item.key,
+        title: item.title,
+        subtitle: [
+          item.sourceLabel,
+          item.dueAt ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(item.dueAt)) : null,
+          item.reasons[0]?.label ?? null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        badge:
+          item.reasons.some((r) => r.kind === "overdue" || r.kind === "blocked")
+            ? { label: item.reasons[0].label, tone: "danger" as const }
+            : { label: item.reasons[0]?.label ?? "Attention", tone: "warning" as const },
+        href: item.href,
+        reasons: item.reasons.map((reason) => reason.label),
+      }));
+      structuredResponse.sources = describeSources(recovery.sources);
+      structuredResponse.evidence.sources = structuredResponse.sources;
+    }
+
+    // ---- SOURCES (unified context attribution) -----------------------
+    // Every answer states which sources were actually loaded for it.
+    if (!structuredResponse.sources || structuredResponse.sources.length === 0) {
+      const sourceLines = describeSources(
+        nexusSourceRefs({
+          tasks: snapshot.tasks.filter(isActiveTask).length,
+          projects: snapshot.projects.length,
+          goals: snapshot.goals.length,
+          notes: (snapshot.notes ?? []).length,
+          events: (snapshot.events ?? []).length,
+          latestNoteAt: snapshot.notes?.[0]?.updated_at ?? null,
+          latestTaskAt: snapshot.tasks[0]?.updated_at ?? null,
+          latestEventAt: snapshot.events?.[0]?.start_at ?? null,
+        })
+      );
+      structuredResponse.sources = sourceLines;
+      structuredResponse.evidence.sources = sourceLines;
+    }
+
     // ---- MEMORY UPDATE ---------------------------------------------
     // Reflect the real state of this turn (proposed actions stay
     // proposed; executed actions only via the verified action route).
     const updatedMemory = updateMemoryAfterTurn(memoryState, structuredResponse, snapshot);
     await saveMemory(supabase, workspaceId, user.id, updatedMemory, preferences);
+
+    // ---- AI REQUEST LOG (observability) ------------------------------
+    // One row per request: provider, latency, outcome. Failure to log
+    // must never fail the answer — the log is a measurement, not a
+    // dependency.
+    const latencyMs = Math.round(performance.now() - agentStartedAt);
+    const providerUsed = structuredResponse.provider;
+    void supabase
+      .from("intelligence_request_log")
+      .insert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        surface: "query",
+        provider: providerUsed,
+        model: null,
+        intent_id: structuredResponse.intentId ?? null,
+        latency_ms: latencyMs,
+        status: "ok",
+      })
+      .then(() => undefined, () => undefined);
 
     const legacyAnswer = askWorkspace(snapshot, query, sessionHistory);
     const insights = computeInsights(snapshot);
@@ -284,6 +394,15 @@ export async function POST(request: Request) {
       agent,
       intent: classified,
       mission,
+      recovery: recovery
+        ? {
+            headline: recovery.headline,
+            counts: recovery.counts,
+            proposal: recovery.proposal,
+            sources: recovery.sources,
+            items: recovery.items.slice(0, 10),
+          }
+        : null,
       // The client caches this to survive refresh and other tabs while
       // the server row remains the source of truth.
       memory: {

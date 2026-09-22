@@ -87,6 +87,11 @@ Columns: Capability | UI | API | DB | Persistence | Security | Test | Status | E
 - Error handling & provider fallback | src/lib/intelligence/ai-provider.ts (`callAIProvider`): reads `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` from env, AbortController-based timeout (default 10s), one controlled retry on transient 5xx/network errors, invalid-JSON responses caught and treated as failure (never crash the request) | No LLM API key is configured in this sandbox's `.env.example` — behavior in this environment is deterministic-fallback-only | Test: intelligence-agent.test.mjs ("Provider invalid JSON returns null (fallback)"), intelligence-signals.test.mjs ("network failure → null (fallback)", "provider unavailable (5xx) → null (fallback)") — all PASS | **COMPLETE** for the fallback/error-handling contract; **UNVERIFIED** for actual third-party LLM call success (no live API key present, never exercised end-to-end with a real provider in this audit) | Evidence: src/lib/intelligence/ai-provider.ts:46-320
 - Deterministic fallback engine | src/lib/intelligence/engine.ts (`computeInsights`, `reasonWorkspace`) used whenever the AI provider is unavailable/fails, and to compute the "attention" summary returned by /api/intelligence/query independent of the LLM | Test: intelligence-agent.test.mjs ("Fallback is honest nexus-engine", "Fallback exposes structured intentId/action risk") PASS | **COMPLETE** | Evidence: src/lib/intelligence/engine.ts:1-762
 - UI mounting / route | Page src/app/(app)/app/intelligence/page.tsx fetches the workspace-scoped snapshot server-side and renders `IntelligenceView` (which composes intelligence-ask, mission-panel, proactive-signals-panel) | Not a mock/demo page — wired into the real authenticated app shell (`requireUser`, `getActiveMembership`) | **COMPLETE** | Evidence: src/app/(app)/app/intelligence/page.tsx:1-60
+- Unified context model (context graph) | src/lib/intelligence/context-graph.ts: ContextProvider, ContextEntityKind (Person, Message, Conversation, Task, Project, Goal, Event, Deadline, Document, File, Issue, Comment, Meeting, Commitment, Signal, Mission, Note), SourceRef (provider/kind/count/latestAt/freshness/status), ExternalObjectRef (provider_id/URL/timestamp/permissions/freshness/sync state/confidence) | API:/api/intelligence/query attaches `sources` to every answer via describeSources/nexusSourceRefs | Test: scripts/test-intelligence-context.mjs (freshness boundaries, citation rendering, stale labelling, unavailable-source labelling, partial-availability sentence) | **COMPLETE** | Evidence: src/lib/intelligence/context-graph.ts:1-260; every Intelligence answer now states which sources were actually loaded
+- Work recovery (mandatory acceptance scenario) | src/lib/intelligence/recovery.ts: "J'ai quoi a faire ?" / "Rattrape mon retard" / "What do I have to do?" triggers buildRecoveryView — collect (overdue, blocked, due-soon, upcoming events) -> dedupe (one item per entity) -> detect -> rank (explainable weights: overdue 40, blocked 30, due_soon 22, meeting_soon 18, high_priority 18) -> explain (per-item reasons) -> propose (plan requiring confirmation, never auto-executed) | API:/api/intelligence/query returns `recovery` payload + rewrites response narrative/items/sources when triggered | Deterministic — no model required | Test: scripts/test-intelligence-context.mjs (trigger detection FR+EN, overdue-urgent ranks first, done tasks excluded, past events excluded, blocked reason, dateless high-priority reason, ranking monotonic, counts, source attribution, external-calendar dedupe, empty-workspace honesty, determinism) | **COMPLETE** | Evidence: src/lib/intelligence/recovery.ts:1-330, src/app/api/intelligence/query/route.ts (recovery block)
+- Notes / events as Intelligence context | API:/api/intelligence/query loads notes (50 newest, non-archived) and events (+/-7d window) into the workspace snapshot alongside tasks/projects/goals | Test: scripts/test-intelligence-context.mjs (get_notes, get_events, legacy-snapshot compatibility) | **COMPLETE** | Evidence: query route Promise.all additions; WorkspaceSnapshot optional notes/events fields keep legacy snapshots compiling
+- New read tools (get_notes, get_events, find_free_time) | src/lib/intelligence/tools.ts registry + executeReadTool implementations; find_free_time computes 08:00-18:00 working-hour windows from real events | Test: scripts/test-intelligence-context.mjs (filtering, honest empty summaries, busy-block windows 240+300 min, full-day 600 min, read permission + zero risk, legacy snapshots) | **COMPLETE** | Evidence: src/lib/intelligence/tools.ts (TOOL_REGISTRY entries + cases)
+- AI request logging (observability) | API:/api/intelligence/query inserts one row per request into intelligence_request_log (user, workspace, surface, provider, intent, latency, status) after answering | DB: table intelligence_request_log (migration 20260922130000, RLS enabled, workspace-scoped policies) | Logging failure never fails the answer (fire-and-forget with swallowed rejection) | Test: migration inspected (check constraints on surface/provider/status); logging is a measurement, not a dependency | **PARTIAL** | Evidence: query route insert; no dedicated log-readback test yet and error-path requests are not logged (success path only)
 
 ## Notifications
 - Creation |  |  |  |  |  |  | UNVERIFIED |
@@ -97,33 +102,43 @@ Columns: Capability | UI | API | DB | Persistence | Security | Test | Status | E
 - Real event generation |  |  |  |  |  |  | UNVERIFIED |
 
 ## Search
-- Workspace search |  |  |  |  |  |  | UNVERIFIED |
-- Tasks |  |  |  |  |  |  | UNVERIFIED |
-- Projects |  |  |  |  |  |  | UNVERIFIED |
-- Goals |  |  |  |  |  |  | UNVERIFIED |
-- Activity |  |  |  |  |  |  | UNVERIFIED |
-- Relevance |  |  |  |  |  |  | UNVERIFIED |
-- Empty states |  |  |  |  |  |  | UNVERIFIED |
+- Unified search (7 sources) | UI:command palette + search page | API:/api/search | DB:tasks, projects, goals, notes, events, files, activities | Persistence:- | Security:workspace-scoped queries, RLS | Test: scripts/test-p0-domains.mjs | REAL | Evidence: /api/search queries 7 sources in parallel, returns source-labelled results + counts + `unavailable` list; test-p0-domains.mjs asserts the contract
+- Source attribution | UI:result subtitle shows source | API:results[].source | Test: scripts/test-p0-domains.mjs | REAL | Evidence: every result carries id/source/title/subtitle/href/at
+- Relevance | API:scored per source (title > content) | Test: scripts/test-p0-domains.mjs | REAL | Evidence: /api/search ranks title matches above content matches
+- Partial degradation | API:unavailable[] lists failing sources | Test: scripts/test-p0-domains.mjs | REAL | Evidence: contract includes `unavailable` sources so the UI can say which source did not answer
+- Empty states | UI:search page | Test: scripts/test-p0-domains.mjs | REAL | Evidence: search page renders an explicit empty state
+
+## Notes
+- Create / edit | UI:src/components/notes/notes-manager.tsx | API:supabase-js (RLS) | DB:notes table (migration 20260922130000) | Persistence:notes | Security:RLS + workspace_id scoping | Test: scripts/test-p0-domains.mjs | REAL | Evidence: insert/update with workspace scoping; migration creates notes + policies
+- Archive | UI:notes-manager | DB:notes.archived_at | Test: scripts/test-p0-domains.mjs | REAL | Evidence: soft archive (archived_at set), never a hard delete
+- Types (standard/decision/meeting/research) | UI:type selector | DB:notes.note_type check constraint | Test: scripts/test-p0-domains.mjs | REAL | Evidence: migration constraint
+- Project/task link | UI:link pickers | DB:notes.project_id, notes.task_id FKs | Test: scripts/test-p0-domains.mjs | REAL | Evidence: FKs in migration
+- Intelligence context | API:/api/intelligence/query loads notes into snapshot | Test: scripts/test-intelligence-context.mjs (get_notes tool) | REAL | Evidence: get_notes read tool returns notes with project names
 
 ## Files
-- Upload |  |  |  |  |  |  | UNVERIFIED |
-- Storage |  |  |  |  |  |  | UNVERIFIED |
-- Retrieval |  |  |  |  |  |  | UNVERIFIED |
-- Metadata |  |  |  |  |  |  | UNVERIFIED |
-- Delete |  |  |  |  |  |  | UNVERIFIED |
-- Permissions |  |  |  |  |  |  | UNVERIFIED |
+- Upload | UI:src/components/files/files-manager.tsx | API:Supabase Storage | DB:files metadata table | Persistence:storage bucket + files | Security:RLS + bucket policies + plan limits (20/200/1000) | Test: scripts/test-p0-domains.mjs | REAL | Evidence: upload writes storage_path + metadata insert; plan-limit trigger in migration 20260922130000
+- Storage | Supabase Storage bucket (nexus-files) | Test: scripts/test-p0-domains.mjs | REAL | Evidence: storage.from(BUCKET).upload
+- Retrieval | UI:files list with signed URL download | DB:files | Test: scripts/test-p0-domains.mjs | REAL | Evidence: metadata read + createSignedUrl
+- Metadata | DB:files (name, mime_type, size_bytes, project_id, storage_path) | Test: scripts/test-p0-domains.mjs | REAL | Evidence: migration
+- Delete | UI:files-manager | DB:files + storage object | Security:confirmation required | Test: scripts/test-p0-domains.mjs | REAL | Evidence: metadata + storage object removal
+- Permissions | RLS on files, workspace-scoped | Test: scripts/test-p0-domains.mjs | REAL | Evidence: policies in migration; workspace_id required
 
 ## Calendar
-- Events |  |  |  |  |  |  | UNVERIFIED |
-- Persistence |  |  |  |  |  |  | UNVERIFIED |
-- Creation |  |  |  |  |  |  | UNVERIFIED |
-- Modification |  |  |  |  |  |  | UNVERIFIED |
-- Deletion |  |  |  |  |  |  | UNVERIFIED |
-- External integration (if implemented) |  |  |  |  |  |  | UNVERIFIED |
+- Events CRUD | UI:src/components/calendar/calendar-manager.tsx | API:supabase-js (RLS) | DB:events table (migration 20260922130000) | Persistence:events | Security:RLS | Test: scripts/test-p0-domains.mjs | REAL | Evidence: insert/update/delete with workspace scoping
+- Month + day views | UI:calendar-manager | Test: scripts/test-p0-domains.mjs | REAL | Evidence: month grid + day agenda
+- Free-time detection | API:/api/intelligence/query (find_free_time tool) | Test: scripts/test-intelligence-context.mjs | REAL | Evidence: 08:00-18:00 working windows computed from real events (240/300 min case verified)
+- Intelligence context | API:/api/intelligence/query loads +/-7d events into snapshot | Test: scripts/test-intelligence-context.mjs (get_events) | REAL | Evidence: get_events read tool, upcoming-only, soonest first
+
+## Capture
+- Universal capture entry | UI:command palette (action:"capture") | API:/api/capture | DB:tasks/notes/events via parsed payload | Test: supabase/tests/capture-parser.test.mjs (33 checks), scripts/test-p0-domains.mjs | REAL | Evidence: command palette dispatches capture; /api/capture returns {task, understood, dueExpression, priority}
+- NL parsing FR+EN | API:/api/capture -> src/lib/capture.ts (deterministic, no model) | Test: supabase/tests/capture-parser.test.mjs | REAL | Evidence: 33/33 checks - dates ("demain", "24 sept", "next Friday"), priorities, note/event detection, verb kept as typed (never re-conjugated)
+- Honest failure | API:{error, code} when nothing understood | Test: scripts/test-p0-domains.mjs | REAL | Evidence: contract test asserts error shape
 
 ## Integrations
-- Audit every integration actually advertised by NEXUS. Mark each integration as UNVERIFIED until evidence collected.
-
+- OAuth platform (connect/disconnect/sync/callback) | UI:src/app/(app)/integrations + IntegrationPlatform | API:/api/integrations/{status,connect,callback,disconnect,sync} | DB:integration_connections (encrypted tokens) | Security:OAuth only, server-side AES-256-GCM encryption, state CSRF, min scopes | Test: supabase/tests/integrations-contract.test.mjs (54 checks) | REAL | Evidence: provider registry (phases, scopes, capabilities), token round-trip + tamper detection, toConnectionView strips tokens
+- Google Calendar adapter | API:src/lib/integrations/adapters/google-calendar.ts | Test: supabase/tests/integrations-contract.test.mjs | REAL (code) - runtime NOT CONFIGURED until Google OAuth credentials are set | Evidence: listEvents, detectConflicts (overlap minutes), findFreeWindows, normalizeEvent; 401->REAUTH_REQUIRED, 429->rate-limit error mapping
+- Gmail / Slack / Notion / GitHub / Linear connectors | UI:catalog cards | API:- | Test: catalog registry only | STUB | Evidence: catalog entries + capability metadata exist; no server adapter yet - the UI labels them "Phase 1" and never claims connected
+- Connection state machine | UI:IntegrationPlatform | Test: supabase/tests/integrations-contract.test.mjs | REAL | Evidence: DISCONNECTED/CONNECTING/CONNECTED/SYNCING/STALE/ERROR/REAUTH_REQUIRED states rendered per card
 ---
 
 Instructions / next steps
