@@ -70,15 +70,21 @@ export function AdminStatusPill({
 export const SERVICE_STATUS_LABEL: Record<ServiceStatus, string> = {
   operational: "Operational",
   degraded: "Degraded",
-  down: "Down",
-  unknown: "Unknown",
+  error: "Error",
+  not_configured: "Not configured",
+  not_measured: "Not measured",
+  stale: "Stale",
+  blocked: "Blocked",
 };
 
 export const SERVICE_STATUS_TONE: Record<ServiceStatus, AdminTone> = {
   operational: "success",
   degraded: "warning",
-  down: "danger",
-  unknown: "neutral",
+  error: "danger",
+  not_configured: "info",
+  not_measured: "neutral",
+  stale: "warning",
+  blocked: "neutral",
 };
 
 export function AdminServiceStatus({ status }: { status: ServiceStatus }) {

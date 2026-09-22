@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // NEXUS — PLAN LIMITS
 // Single source of truth for all workspace-scoped entitlements.
 // Change only here to propagate everywhere (app + SQL migration).
@@ -14,6 +14,8 @@ export interface PlanLimits {
   activeTasks: number;
   goals: number;
   members: number;
+  /** file metadata rows per workspace (enforced by trigger, migration 20260922130000) */
+  files: number;
 }
 
 export interface PlanFeatures {
@@ -29,6 +31,7 @@ export const PLAN_LIMITS: Record<PlanName, PlanLimits> = {
     activeTasks: 100,
     goals: 3,
     members: 1,
+    files: 20,
   },
   PRO: {
     workspaces: 5,
@@ -36,6 +39,7 @@ export const PLAN_LIMITS: Record<PlanName, PlanLimits> = {
     activeTasks: 1000,
     goals: 20,
     members: 5,
+    files: 200,
   },
   TEAM: {
     workspaces: 20,
@@ -43,6 +47,7 @@ export const PLAN_LIMITS: Record<PlanName, PlanLimits> = {
     activeTasks: 5000,
     goals: 100,
     members: 20,
+    files: 1000,
   },
 };
 
@@ -105,5 +110,6 @@ export const RESOURCE_DB_KEYS: Record<keyof PlanLimits, string> = {
   activeTasks: "active_tasks",
   goals: "goals",
   members: "members",
+  files: "files",
 };
 

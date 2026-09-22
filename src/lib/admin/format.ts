@@ -88,3 +88,55 @@ export function formatShare(
   if (!hasValue(part) || !hasValue(total) || total === 0) return null;
   return `${Math.round((part / total) * 100)}%`;
 }
+
+/** Milliseconds with unit, or the explicit not-available marker. */
+export function formatMs(value: number | null | undefined): string {
+  return typeof value === "number" ? `${formatCount(value)} ms` : NOT_AVAILABLE;
+}
+
+/** "N succeeded · N failed" — NOT_AVAILABLE only when neither side was
+ *  measured. Zero is a real value and must never become "not available". */
+export function formatSucceededFailed(
+  succeeded: number | null | undefined,
+  failed: number | null | undefined
+): string {
+  if (
+    (succeeded === null || succeeded === undefined) &&
+    (failed === null || failed === undefined)
+  ) {
+    return NOT_AVAILABLE;
+  }
+  return `${formatCount(succeeded ?? 0)} succeeded · ${formatCount(failed ?? 0)} failed`;
+}
+
+/** Relative time with an explicit "nothing yet" label — an absence of
+ *  events reads differently from an absence of measurement. */
+export function formatRelativeOr(
+  value: string | null | undefined,
+  nothingYet: string
+): string {
+  return value ? formatRelativeTime(value) : nothingYet;
+}
+
+/** Boolean with named labels, or not-available when unmeasured. */
+export function formatBoolean(
+  value: boolean | null | undefined,
+  labels: { yes: string; no: string }
+): string {
+  if (value === null || value === undefined) return NOT_AVAILABLE;
+  return value ? labels.yes : labels.no;
+}
+
+/** "N in · N out" token pair, or not-available when unmeasured. */
+export function formatTokens(
+  input: number | null | undefined,
+  output: number | null | undefined
+): string {
+  if (
+    (input === null || input === undefined) &&
+    (output === null || output === undefined)
+  ) {
+    return NOT_AVAILABLE;
+  }
+  return `${formatCompact(input ?? 0)} in · ${formatCompact(output ?? 0)} out`;
+}

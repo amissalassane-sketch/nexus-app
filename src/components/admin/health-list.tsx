@@ -7,10 +7,11 @@ import { AdminServiceStatus } from "./status";
 // ============================================================
 // NEXUS ADMIN — PLATFORM HEALTH LIST
 // ============================================================
-// One row per service: status, what was actually observed, and when it
-// was checked. A row with no measurement says "Unknown" and explains why
-// there is nothing to measure — which is more useful than a green dot
-// nobody verified.
+// One row per service: status, what was actually observed, and when
+// it was checked. A row with no measurement says "Not measured" and
+// explains why there is nothing to measure — which is more useful
+// than a green dot nobody verified. When a probe knows the next
+// action (configure, reconnect, inspect), the row links to it.
 // ============================================================
 
 export function HealthList({ services }: { services: ServiceHealth[] }) {
@@ -28,11 +29,13 @@ export function HealthList({ services }: { services: ServiceHealth[] }) {
                 "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
                 service.status === "operational"
                   ? "bg-admin-success"
-                  : service.status === "degraded"
+                  : service.status === "degraded" || service.status === "stale"
                     ? "bg-admin-warning"
-                    : service.status === "down"
+                    : service.status === "error"
                       ? "bg-admin-danger"
-                      : "bg-admin-text-3"
+                      : service.status === "not_configured"
+                        ? "bg-admin-info"
+                        : "bg-admin-text-3"
               )}
             />
             <div className="min-w-0">
@@ -45,6 +48,14 @@ export function HealthList({ services }: { services: ServiceHealth[] }) {
               <p className="mt-1 max-w-[76ch] text-[12.5px] leading-[18px] text-admin-text-2">
                 {service.detail}
               </p>
+              {service.action ? (
+                <a
+                  href={service.action.href}
+                  className="mt-1.5 inline-flex min-h-[24px] items-center text-[12px] font-medium text-admin-accent hover:underline"
+                >
+                  {service.action.label}
+                </a>
+              ) : null}
             </div>
           </div>
 

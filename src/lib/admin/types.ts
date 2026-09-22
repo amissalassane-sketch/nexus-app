@@ -128,6 +128,65 @@ export type AdminOverview = {
   needs_attention: AdminAttentionItem[];
 };
 
+// ------------------------------------------------------------
+// Intelligence health — exact JSONB shape of admin_intelligence_health()
+// (migration 20260922130000). null means "not measured yet".
+// ------------------------------------------------------------
+export type AdminIntelligenceHealth = {
+  generated_at: string;
+  requests_24h: number | null;
+  requests_30d: number | null;
+  errors_24h: number | null;
+  fallbacks_24h: number | null;
+  avg_latency_ms_24h: number | null;
+  distinct_users_7d: number | null;
+  input_tokens_30d: number | null;
+  output_tokens_30d: number | null;
+  first_request_at: string | null;
+  last_request_at: string | null;
+};
+
+// ------------------------------------------------------------
+// Integration health — exact JSONB shape of admin_integration_health()
+// ------------------------------------------------------------
+export type AdminIntegrationHealth = {
+  generated_at: string;
+  connections: {
+    total: number | null;
+    connected: number | null;
+    syncing: number | null;
+    stale: number | null;
+    error: number | null;
+    reauth_required: number | null;
+  };
+  last_sync_at: string | null;
+  failed_sync_runs_7d: number | null;
+};
+
+// ------------------------------------------------------------
+// Automation health — exact JSONB shape of admin_automation_health()
+// ------------------------------------------------------------
+export type AdminAutomationHealth = {
+  generated_at: string;
+  /** False when the automations tables (migration 004) are absent. */
+  installed?: boolean;
+  automations: {
+    total: number | null;
+    active: number | null;
+    paused: number | null;
+    disabled: number | null;
+  };
+  executions: {
+    total: number | null;
+    success_24h: number | null;
+    failed_24h: number | null;
+    success_7d: number | null;
+    failed_7d: number | null;
+    queued: number | null;
+    last_execution_at: string | null;
+  };
+};
+
 export type AdminAttentionSeverity = "danger" | "warning" | "info";
 
 export type AdminAttentionItem = {
@@ -136,6 +195,21 @@ export type AdminAttentionItem = {
   title: string;
   detail: string;
   count: number;
+};
+
+/**
+ * The operator-facing companion of an attention item: what to do, and
+ * where to do it. The SQL layer reports *conditions*; this layer (kept
+ * in code so it can link real routes and evolve without a migration)
+ * maps each known condition to a recommended action.
+ */
+export type AdminAttentionAction = {
+  /** Short imperative, e.g. "Inspect failed runs". */
+  label: string;
+  /** Where the action happens. */
+  href: string;
+  /** One-line explanation of why this helps. */
+  rationale: string;
 };
 
 export type AdminActivityKind =
@@ -158,7 +232,30 @@ export type AdminActivityEntry = {
 // ------------------------------------------------------------
 // Platform health
 // ------------------------------------------------------------
-export type ServiceStatus = "operational" | "degraded" | "down" | "unknown";
+// A control-plane status must say WHY, not just that, something is
+// not green. The seven states below are exhaustive by design; each
+// one has exactly one cause, so the UI can offer the right next
+// action instead of a shrug:
+//
+//   operational     — measured (or verified by construction) and fine
+//   degraded        — measured and slow (above the latency threshold)
+//   error           — measured and failing (probe error, provider 5xx)
+//   not_configured  — the subsystem is deliberately absent (no API
+//                     key, no provider client) — not a failure
+//   not_measured    — nothing can be checked from here, and the panel
+//                     says so instead of showing a green dot
+//   stale           — the newest observation is too old to trust
+//   blocked         — the check exists but a dependency or policy
+//                     prevents running it (e.g. needs a key the app
+//                     deliberately does not hold)
+export type ServiceStatus =
+  | "operational"
+  | "degraded"
+  | "error"
+  | "not_configured"
+  | "not_measured"
+  | "stale"
+  | "blocked";
 
 export type ServiceHealth = {
   id: string;
@@ -166,9 +263,14 @@ export type ServiceHealth = {
   status: ServiceStatus;
   /** Only present when something was actually measured. Never estimated. */
   latencyMs?: number;
-  /** Honest reason for a non-operational or unknown status. */
+  /** Honest reason for the status — always states the cause. */
   detail: string;
   checkedAt: string;
+  /** Where the operator goes to act on this status, when one exists. */
+  action?: {
+    label: string;
+    href: string;
+  };
 };
 
 /**

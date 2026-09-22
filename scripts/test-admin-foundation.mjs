@@ -214,18 +214,23 @@ check(
 console.log("\nADMIN-04 — the overview answers its question");
 // ------------------------------------------------------------------
 const overview = read("app/admin/overview/page.tsx");
-has("app/admin/overview/page.tsx", "Platform performance and business health");
+has("app/admin/overview/page.tsx", "Platform status, business health and product usage");
 for (const kpi of ["Total Users", "Active Users", "Workspaces", "MRR"]) {
   check(`overview: KPI “${kpi}” is present`, overview.includes(`label="${kpi}"`));
 }
 for (const section of [
-  "Platform Health",
+  "Platform Status",
+  "Business health",
+  "Product Usage",
+  "Intelligence Health",
+  "Integration Health",
+  "Data Integrity",
+  "Background Jobs & Automations",
   "Needs Attention",
   "Growth",
-  "Product Usage",
   "Recent Activity",
 ]) {
-  check(`overview: section “${section}” is present`, overview.includes(`"${section}"`));
+  check(`overview: section “${section}” is present`, overview.includes(section));
 }
 check(
   "overview: the header states when the data was read",
@@ -253,20 +258,39 @@ check(
 console.log("\nADMIN-09 — health never invents a status");
 // ------------------------------------------------------------------
 const health = read("lib/admin/health.ts");
-for (const status of ['"operational"', '"degraded"', '"down"', '"unknown"']) {
+// The seven-state model: every state has exactly one cause.
+for (const status of [
+  '"operational"',
+  '"degraded"',
+  '"error"',
+  '"not_configured"',
+  '"not_measured"',
+  '"stale"',
+  '"blocked"',
+]) {
   check(`health: status ${status} is modelled`, health.includes(status));
 }
 check(
-  "health: payments report Unknown, because no provider is connected",
-  /id: "payments"[\s\S]{0,200}status: "unknown"/.test(health)
+  "health: the legacy ambiguous states (down / unknown) are gone",
+  !health.includes('"down"') && !health.includes(': "unknown"')
 );
 check(
-  "health: storage reports Unknown, because no bucket is used",
-  /id: "storage"[\s\S]{0,200}status: "unknown"/.test(health)
+  "health: payments report Not configured — a declared absence, not a failure",
+  /id: "payments"[\s\S]{0,200}status: "not_configured"/.test(health)
 );
 check(
-  "health: background jobs report Unknown, because none are deployed",
-  /id: "jobs"[\s\S]{0,200}status: "unknown"/.test(health)
+  "health: storage is really probed (bucket listing), not guessed",
+  health.includes("probeStorage") && health.includes('from("nexus-files")') === false
+    ? health.includes("supabase.storage.from(\"nexus-files\")")
+    : health.includes("supabase.storage.from")
+);
+check(
+  "health: background jobs report Not configured, because no scheduler is deployed",
+  /id: "jobs"[\s\S]{0,200}status: "not_configured"/.test(health)
+);
+check(
+  "health: an unconfigured AI provider reports Not configured, with the exact env vars",
+  /function probeIntelligence[\s\S]{0,600}not_configured[\s\S]{0,400}OPENAI_API_KEY/.test(health)
 );
 check(
   "health: degraded is derived from a real latency threshold",
@@ -282,8 +306,8 @@ check(
   healthCode.includes("supabase.auth.getUser()") && !healthCode.includes("getSession()")
 );
 check(
-  "health: a failed probe degrades to Unknown, never to Operational",
-  health.includes('status: "unknown" as ServiceStatus')
+  "health: a failed probe degrades to Not measured, never to Operational",
+  health.includes('status: "not_measured" as ServiceStatus')
 );
 lacks("lib/admin/health.ts", "99.9", "no hardcoded uptime percentage");
 
