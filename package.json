@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing && npm run test:creation && npm run test:guide && npm run test:type && npm run test:icon && npm run test:lineage",
+    "test": "npm run test:unit && npm run test:freemium && npm run test:subscription && npm run test:admin && npm run test:mobile && npm run test:landing && npm run test:creation && npm run test:guide && npm run test:type && npm run test:icon && npm run test:lineage && npm run test:domains",
     "test:freemium": "node --import tsx supabase/tests/freemium-contract.test.mjs",
     "test:subscription": "node --import tsx supabase/tests/subscription-contract.test.mjs",
     "test:unit": "node --import tsx supabase/tests/intelligence-agent.test.mjs && node --import tsx supabase/tests/intelligence-agent-v2.test.mjs && node --import tsx supabase/tests/intelligence-memory.test.mjs && node --import tsx supabase/tests/intelligence-proactive.test.mjs && node --import tsx supabase/tests/intelligence-signals.test.mjs && node --import tsx supabase/tests/intelligence-mission.test.mjs && node --import tsx supabase/tests/intelligence-experience.test.mjs && node --import tsx supabase/tests/onboarding-product.test.mjs && node --import tsx supabase/tests/schema-errors.test.mjs && node --import tsx supabase/tests/data-errors.test.mjs && node --import tsx supabase/tests/mobile-experience.test.mjs && node --import tsx supabase/tests/request-json.test.mjs && node --import tsx supabase/tests/request-origin.test.mjs && node --import tsx supabase/tests/session-proxy.test.mjs && node supabase/tests/product-background.test.mjs && node --import tsx supabase/tests/intelligence-data-contract.test.mjs && node --import tsx supabase/tests/billing-provider.test.mjs && node --import tsx supabase/tests/activity-action-trigger.test.mjs",
@@ -22,7 +22,8 @@
     "test:type": "node scripts/test-typography.mjs",
     "test:icon": "node scripts/test-icons.mjs",
     "test:mobile-experience": "node --import tsx supabase/tests/mobile-experience.test.mjs",
-    "test:lineage": "node supabase/tests/bridge-lineage-hermetic.test.mjs"
+    "test:lineage": "node supabase/tests/bridge-lineage-hermetic.test.mjs",
+    "test:domains": "node scripts/test-p0-domains.mjs && node --import tsx supabase/tests/capture-parser.test.mjs && node --import tsx supabase/tests/integrations-contract.test.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
