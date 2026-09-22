@@ -1,4 +1,5 @@
 "use client";
+import { localDateTimeToUtc } from "@/lib/global/timezone";
 
 // ============================================================
 // NEXUS — CALENDAR MANAGER
@@ -67,7 +68,12 @@ const blankForm = (): EventForm => ({
   project_id: "",
 });
 
-const DAY_MS = 86_400_000;
+/** Calendar arithmetic must preserve local civil days across DST. */
+const addDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
 
 const startOfDay = (date: Date) => {
   const copy = new Date(date);
@@ -131,8 +137,8 @@ export function CalendarManager({ userId }: { userId: string }) {
     // A 60-day window around today: enough for the week view and the
     // agenda without an unbounded read.
     const now = new Date();
-    const from = new Date(now.getTime() - 7 * DAY_MS).toISOString();
-    const to = new Date(now.getTime() + 53 * DAY_MS).toISOString();
+    const from = addDays(now, -7).toISOString();
+    const to = addDays(now, 53).toISOString();
 
     const { data, error: readError } = await supabase
       .from("events")
@@ -174,10 +180,10 @@ export function CalendarManager({ userId }: { userId: string }) {
 
   const now = new Date();
   const todayStart = startOfDay(now).getTime();
-  const todayEnd = todayStart + DAY_MS;
+  const todayEnd = addDays(new Date(todayStart), 1).getTime();
 
-  const weekStart = startOfDay(new Date(now.getTime() - now.getDay() * DAY_MS));
-  const weekEnd = weekStart.getTime() + 7 * DAY_MS;
+  const weekStart = startOfDay(addDays(now, -now.getDay()));
+  const weekEnd = addDays(weekStart, 7).getTime();
 
   const visible = useMemo(() => {
     if (view === "today") {
@@ -270,10 +276,17 @@ export function CalendarManager({ userId }: { userId: string }) {
 
   const submit = async () => {
     if (!workspaceId || !form.title.trim() || !form.start_at) return;
+    const sourceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let startIso: string;
+    let endIso: string | null;
+    try {
+      startIso = localDateTimeToUtc(form.start_at, sourceTimezone);
+      endIso = form.end_at ? localDateTimeToUtc(form.end_at, sourceTimezone) : null;
+    } catch {
+      setError(`This time is invalid or ambiguous in ${sourceTimezone} (daylight-saving transition). Choose an unambiguous time.`);
+      return;
+    }
     setSaving(true);
-
-    const startIso = new Date(form.start_at).toISOString();
-    const endIso = form.end_at ? new Date(form.end_at).toISOString() : null;
 
     if (endIso && new Date(endIso).getTime() < new Date(startIso).getTime()) {
       setSaving(false);
@@ -286,6 +299,7 @@ export function CalendarManager({ userId }: { userId: string }) {
       title: form.title.trim(),
       description: form.description.trim() || null,
       start_at: startIso,
+      source_timezone: sourceTimezone,
       end_at: endIso,
       location: form.location.trim() || null,
       project_id: form.project_id || null,
@@ -332,7 +346,7 @@ export function CalendarManager({ userId }: { userId: string }) {
   const weekDays = useMemo(() => {
     const days: Date[] = [];
     for (let i = 0; i < 7; i += 1) {
-      days.push(new Date(weekStart.getTime() + i * DAY_MS));
+      days.push(addDays(weekStart, i));
     }
     return days;
   }, [weekStart]);
@@ -395,7 +409,7 @@ export function CalendarManager({ userId }: { userId: string }) {
             const dayStart = startOfDay(day).getTime();
             const dayEvents = events.filter((event) => {
               const start = new Date(event.start_at).getTime();
-              return start >= dayStart && start < dayStart + DAY_MS;
+              return start >= dayStart && start < addDays(new Date(dayStart), 1).getTime();
             });
             const isToday = dayStart === todayStart;
             return (
@@ -548,7 +562,7 @@ export function CalendarManager({ userId }: { userId: string }) {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Starts" htmlFor="event-start">
+            <Field label="Starts (browser timezone)" htmlFor="event-start">
               <Input
                 id="event-start"
                 type="datetime-local"
@@ -556,7 +570,7 @@ export function CalendarManager({ userId }: { userId: string }) {
                 onChange={(event) => setForm((f) => ({ ...f, start_at: event.target.value }))}
               />
             </Field>
-            <Field label="Ends (optional)" htmlFor="event-end">
+            <Field label="Ends (same timezone, optional)" htmlFor="event-end">
               <Input
                 id="event-end"
                 type="datetime-local"

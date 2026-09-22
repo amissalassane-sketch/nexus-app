@@ -40,7 +40,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentId, LegalDocumentMeta> = {
       "PostgreSQL Row-Level Security (RLS)",
       "Zero cross-site or third-party ad tracking",
       "Workspace context isolated per tenant",
-      "Clear data retention & self-deletion rights",
+      "Limited memory controls; full rights workflow pending",
     ],
   },
   cookies: {

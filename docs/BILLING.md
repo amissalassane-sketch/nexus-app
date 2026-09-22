@@ -39,3 +39,6 @@ Limites actuelles (workspaces / projects / active tasks / goals / members) : FRE
 7. Remboursement, chargeback, dunning, expiration : table de transitions documentée, tests de concurrence/rejeu, réconciliation planifiée et audit. Secrets webhook dans environnement serveur sécurisé.
 
 Un provider réel nécessite une décision commerciale et des accès secrets sécurisés. Aucune simple variable d'environnement ne rend le paiement opérationnel dans le code présent.
+
+## Addendum — global mission 2026-09-22
+The international transport contract and server-only Stripe adapter now exist; checkout remains deliberately unavailable. See `docs/legal/BILLING_COMPLIANCE.md` and `docs/GLOBAL_AUDIT_FINAL_2026-09-22.md` for draft catalog, routes, state machine, tested scope and missing durable ledger/webhook processor. Setting a provider key does not activate paid access.

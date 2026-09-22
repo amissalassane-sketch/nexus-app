@@ -1,0 +1,68 @@
+[
+  {
+    "suite": "auth-workspace-bootstrap",
+    "exitCode": 1,
+    "durationSeconds": 3.34,
+    "evidence": [
+      "        extension \"pgcrypto\" is not available",
+      "        relation \"storage.buckets\" does not exist",
+      "        relation \"public.workspaces\" does not exist",
+      "        type \"public.automation_action_type\" does not exist"
+    ]
+  },
+  {
+    "suite": "core-contract",
+    "exitCode": 1,
+    "durationSeconds": 3.23,
+    "evidence": [
+      "        extension \"pgcrypto\" is not available",
+      "error: function \"public.is_active_workspace_member(uuid, uuid)\" does not exist"
+    ]
+  },
+  {
+    "suite": "lineage-reconciliation",
+    "exitCode": 1,
+    "durationSeconds": 5.09,
+    "evidence": [
+      "        001_nexus_core.sql: extension \"pgcrypto\" is not available",
+      "        002_nexus_storage.sql: relation \"storage.buckets\" does not exist",
+      "        004_nexus_automations.sql: relation \"public.workspaces\" does not exist",
+      "        005_nexus_worker.sql: type \"public.automation_action_type\" does not exist"
+    ]
+  },
+  {
+    "suite": "migration-logic",
+    "exitCode": 1,
+    "durationSeconds": 3.23,
+    "evidence": [
+      "        relation \"storage.buckets\" does not exist",
+      "        function public.handle_updated_at() does not exist",
+      "        type \"public.automation_action_type\" does not exist",
+      "        role \"anon\" does not exist"
+    ]
+  },
+  {
+    "suite": "onboarding-rls",
+    "exitCode": 1,
+    "durationSeconds": 2.98,
+    "evidence": [
+      "FAIL 001_nexus_core.sql: extension \"pgcrypto\" is not available"
+    ]
+  },
+  {
+    "suite": "workspace-bootstrap",
+    "exitCode": 1,
+    "durationSeconds": 2.88,
+    "evidence": [
+      "FAIL 001_nexus_core.sql: extension \"pgcrypto\" is not available"
+    ]
+  },
+  {
+    "suite": "admin-auth-contract",
+    "exitCode": 0,
+    "durationSeconds": 13.22,
+    "evidence": [
+      "Results: 25 passed, 0 failed"
+    ]
+  }
+]

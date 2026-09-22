@@ -128,11 +128,11 @@ console.log("-- hallucination prevention -------------------------");
 
 console.log("-- action risk classification -----------------------");
 {
-  ok("create_task low risk", riskForAction("create_task") === "low");
-  ok("update_task medium risk", riskForAction("update_task") === "medium");
-  ok("complete_task low risk", riskForAction("complete_task") === "low");
+  ok("create_task medium risk", riskForAction("create_task") === "medium");
+  ok("update_task high risk", riskForAction("update_task") === "high");
+  ok("complete_task high risk", riskForAction("complete_task") === "high");
   ok("delete_task high risk", riskForAction("delete_task") === "high");
-  ok("create_goal low risk", riskForIntelligenceAction("create_goal") === "low");
+  ok("create_goal medium risk", riskForIntelligenceAction("create_goal") === "medium");
   ok("legacy action maps to CREATE", mapLegacyIntentToId("action", "create_task") === "CREATE");
 }
 

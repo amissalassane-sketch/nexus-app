@@ -1,0 +1,12 @@
+{
+  "environment": "unconfigured local development, no real account",
+  "results": [
+    "explicit Light applies",
+    "Light persists reload",
+    "System follows dark OS",
+    "System follows live OS change to light",
+    "theme select visible keyboard focus",
+    "unapproved annual offer absent",
+    "privacy page redirects without auth/config"
+  ]
+}

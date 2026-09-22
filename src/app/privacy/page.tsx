@@ -56,8 +56,8 @@ export default function PrivacyPage() {
             deliver workspace collaboration, operational signals, and intelligence capabilities.
           </LegalListItem>
           <LegalListItem>
-            <strong>Tenant Isolation:</strong> Data belonging to one workspace is cryptographically
-            and logically segregated from other workspaces using PostgreSQL Row-Level Security (RLS).
+            <strong>Tenant Isolation:</strong> Workspace isolation relies on PostgreSQL Row-Level Security (RLS)
+            and application scoping. RLS is not cryptographic segregation and deployed policies need verification.
           </LegalListItem>
           <LegalListItem>
             <strong>Purpose Limitation:</strong> Workspace records and user content are never sold,
@@ -194,14 +194,15 @@ export default function PrivacyPage() {
         <LegalSubsectionTitle>5.2 Privacy Commitments Regarding AI</LegalSubsectionTitle>
         <LegalList>
           <LegalListItem>
-            <strong>No Public Model Training:</strong> Workspace data transmitted to external LLM
-            providers via enterprise API agreements is not used to train or refine public foundation
-            models without your explicit, separate authorization.
+            <strong>Provider agreements:</strong> Model-training use, provider retention, hosting regions
+            and data-processing terms must be verified for the actual provider account before activation.
+            This audit does not establish an enterprise agreement or zero-data-retention setting.
           </LegalListItem>
           <LegalListItem>
             <strong>Deterministic Fallback:</strong> If no external AI provider is configured, or in
             the event of network timeouts, NEXUS automatically falls back to its built-in deterministic
-            reasoning engine without sending data externally.
+            reasoning engine. A timeout can occur after a prompt has already reached a provider;
+            fallback does not erase that transfer.
           </LegalListItem>
           <LegalListItem>
             <strong>Read-Only Analysis:</strong> The AI provider can only propose read queries or
@@ -219,8 +220,10 @@ export default function PrivacyPage() {
       <LegalSection id="6-legal-bases">
         <LegalSectionTitle>6. Legal Bases for Processing</LegalSectionTitle>
         <LegalParagraph>
-          Under European data protection laws (including the GDPR) and comparable international
-          standards, we process your personal data under the following legal bases:
+          The operator must assess the Benin Code du numérique and applicable APDP formalities.
+          GDPR applicability depends on establishment, targeting or monitoring in its territorial scope;
+          it is not established merely by publishing this page. If applicable, the following are
+          candidate bases requiring a processing-by-processing legal review:
         </LegalParagraph>
         <LegalList>
           <LegalListItem>
@@ -291,8 +294,8 @@ export default function PrivacyPage() {
           </LegalListItem>
         </LegalList>
         <LegalParagraph>
-          All sub-processors are bound by strict Data Processing Agreements (DPAs) requiring
-          confidentiality, robust security standards, and processing solely under our instructions.
+          Signed processor agreements, subprocessors, regions and transfer safeguards were not verified.
+          The operator must document them before processing production personal data.
         </LegalParagraph>
       </LegalSection>
 
@@ -304,15 +307,16 @@ export default function PrivacyPage() {
           active, or as needed to provide you with the Service.
         </LegalParagraph>
         <LegalParagraph>
-          <strong>Account Deletion:</strong> When you delete your account or workspace through the
-          settings interface, your profile, workspaces, projects, tasks, goals, signals, and working
-          memory are deleted immediately from active production databases via database cascade
-          triggers.
+          <strong>Available controls:</strong> Settings / Privacy supports viewing, exporting and deleting
+          only your AI memory in the active workspace. It does not delete the whole account or workspace.
+          Full deletion/export and rights handling require an operator process that is not yet available
+          through this interface. New or in-flight AI queries can recreate memory.
         </LegalParagraph>
         <LegalParagraph>
-          <strong>Backup Cycles:</strong> Encrypted automated database backups are maintained for
-          disaster recovery purposes for a rolling period of up to 30 days, after which they are
-          permanently purged.
+          <strong>Retention:</strong> Inactive AI memory is excluded from new query context after 90 days.
+          A bounded purge function is provided, but remote installation and scheduling are unverified.
+          Backup retention and physical deletion timelines depend on actual deployment settings and
+          have not been verified. No 30-day backup deletion guarantee is made.
         </LegalParagraph>
       </LegalSection>
 
@@ -373,9 +377,10 @@ export default function PrivacyPage() {
           </LegalListItem>
         </LegalList>
         <LegalParagraph>
-          To exercise any of these rights, you may utilize the built-in self-service controls in your
-          workspace settings or submit a written request to <strong>[LEGAL CONTACT EMAIL]</strong>. We
-          respond to all verified requests within thirty (30) days.
+          Profile correction and limited AI memory controls are available in Settings. A verified
+          controller contact and operator process for other rights must be published before launch.
+          Response deadlines and identity checks must follow the applicable law; this page does not
+          establish an operational request channel.
         </LegalParagraph>
       </LegalSection>
 
@@ -388,10 +393,9 @@ export default function PrivacyPage() {
           protection laws may differ.
         </LegalParagraph>
         <LegalParagraph>
-          Whenever we transfer personal data across international borders, we ensure adequate
-          safeguards are implemented, including standard contractual clauses (SCCs) approved by the
-          European Commission, adherence to international adequacy decisions, or equivalent legal
-          mechanisms.
+          Cross-border transfers require a documented legal basis and safeguards appropriate to the
+          applicable jurisdiction. APDP formalities and, where applicable, GDPR transfer mechanisms
+          must be assessed. Executed SCCs, adequacy reliance and APDP authorizations were not verified.
         </LegalParagraph>
       </LegalSection>
 

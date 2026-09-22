@@ -148,7 +148,7 @@ const PR3_ZONE = [
   "components/dashboard/priority-queue.tsx",
   "components/dashboard/upcoming-panel.tsx",
   "components/goal-manager.tsx",
-  "components/integrations/integration-hub.tsx",
+  "components/integrations/integration-platform.tsx",
   "components/integrations/integration-icon.tsx",
   "components/intelligence-panel.tsx",
   "components/intelligence/briefing-panel.tsx",

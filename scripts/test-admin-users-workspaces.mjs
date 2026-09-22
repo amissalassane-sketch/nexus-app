@@ -399,15 +399,16 @@ const nav = read("lib/admin/nav.ts");
 check("Users and Workspaces are marked ready",
   /href: "\/admin\/users",[\s\S]{0,80}status: "ready"/.test(nav) &&
   /href: "\/admin\/workspaces",[\s\S]{0,80}status: "ready"/.test(nav));
+// The audit adds the guarded Intelligence inspector: planned floor = 12.
 // PR 6 shipped /admin/subscriptions (migration 029), so the planned floor
 // dropped by exactly one: 14 → 13. If this number moves again, a PR
 // either shipped a screen (update the floor here, same as this) or
 // silently un-shipped one (do not accept that).
 check("the planned entries that are NOT PR 2 remain planned with notes",
-  nav.includes("PR 5") && nav.includes("PR 3") && (nav.match(/status: "planned"/g) ?? []).length >= 13);
+  nav.includes("PR 5") && nav.includes("PR 3") && (nav.match(/status: "planned"/g) ?? []).length >= 12);
 check("Billing / Revenue / Flags pages were NOT created",
   !existsSync(src("app/admin/billing")) && !existsSync(src("app/admin/revenue")) &&
-  !existsSync(src("app/admin/feature-flags")) && !existsSync(src("app/admin/intelligence")));
+  !existsSync(src("app/admin/feature-flags")));
 check("no impersonation route exists",
   !walk(src("app/admin")).some((f) => /impersonat/i.test(f)));
 const impersonationContext = ADMIN_DIR_FILES

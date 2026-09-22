@@ -1,0 +1,38 @@
+[
+  {
+    "command": "npm ci",
+    "exitCode": 0,
+    "durationSeconds": 20.85,
+    "log": "/tmp/nexus-global-final-npm-ci.log"
+  },
+  {
+    "command": "npm run lint",
+    "exitCode": 0,
+    "durationSeconds": 28.09,
+    "log": "/tmp/nexus-global-final-lint.log"
+  },
+  {
+    "command": "npx tsc --noEmit",
+    "exitCode": 0,
+    "durationSeconds": 16.92,
+    "log": "/tmp/nexus-global-final-tsc.log"
+  },
+  {
+    "command": "npm run build",
+    "exitCode": 0,
+    "durationSeconds": 24.69,
+    "log": "/tmp/nexus-global-final-build.log"
+  },
+  {
+    "command": "npm test",
+    "exitCode": 0,
+    "durationSeconds": 77.78,
+    "log": "/tmp/nexus-global-final-test.log"
+  },
+  {
+    "command": "git diff --check",
+    "exitCode": 0,
+    "durationSeconds": 0.02,
+    "log": "/tmp/nexus-global-final-diff-check.log"
+  }
+]

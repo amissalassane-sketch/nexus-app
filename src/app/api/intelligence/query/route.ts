@@ -1,3 +1,4 @@
+import { detectAIProvider } from "@/lib/intelligence/ai-provider";
 import { IntelligenceDataError, assertIntelligenceData } from "@/lib/intelligence/data-error";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
@@ -107,24 +108,12 @@ export async function POST(request: Request) {
     );
 
     // ---- Phase 2: structured working memory ----------------------
-    // Server-persisted memory is the source of truth. When the user
-    // never used Intelligence in this workspace before, the client's
-    // cached state (same workspace) is restored as a starting point.
+    // Only the user/workspace-scoped server row is trusted. A stale or deleted
+    // browser cache must never recreate server memory.
     const stored = await readMemory(supabase, workspaceId, user.id);
-    const clientMemoryRaw =
-      body.memory && typeof body.memory === "object"
-        ? (body.memory as { state?: unknown; preferences?: unknown })
-        : undefined;
-    const clientMemory: IntelligenceMemoryState | undefined =
-      clientMemoryRaw?.state && typeof clientMemoryRaw.state === "object"
-        ? (clientMemoryRaw.state as IntelligenceMemoryState)
-        : undefined;
-
     const memoryState: IntelligenceMemoryState = stored
       ? scrubDeletedIds(stored.state, stored.state.deletedEntityIds)
-      : clientMemory
-        ? clientMemory
-        : emptyMemoryState();
+      : emptyMemoryState();
 
     const preferences: IntelligencePreference[] = stored?.preferences ?? [];
 
@@ -329,7 +318,7 @@ export async function POST(request: Request) {
 
     // ---- SOURCES (unified context attribution) -----------------------
     // Every answer states which sources were actually loaded for it.
-    if (!structuredResponse.sources || structuredResponse.sources.length === 0) {
+    if (!recovery) {
       const sourceLines = describeSources(
         nexusSourceRefs({
           tasks: snapshot.tasks.filter(isActiveTask).length,
@@ -358,17 +347,18 @@ export async function POST(request: Request) {
     // dependency.
     const latencyMs = Math.round(performance.now() - agentStartedAt);
     const providerUsed = structuredResponse.provider;
-    void supabase
+    const configuredAI = detectAIProvider();
+    await supabase
       .from("intelligence_request_log")
       .insert({
         user_id: user.id,
         workspace_id: workspaceId,
         surface: "query",
         provider: providerUsed,
-        model: null,
+        model: providerUsed === configuredAI.provider ? configuredAI.model ?? null : null,
         intent_id: structuredResponse.intentId ?? null,
         latency_ms: latencyMs,
-        status: "ok",
+        status: providerUsed === "nexus-engine" && configuredAI.provider !== "nexus-engine" ? "fallback" : "ok",
       })
       .then(() => undefined, () => undefined);
 
@@ -423,7 +413,7 @@ export async function POST(request: Request) {
     if (error instanceof IntelligenceDataError) {
       return NextResponse.json({ ok: false, code: error.code, message: error.message, error: error.message }, { status: error.status });
     }
-    console.error("Intelligence query error:", error);
+    console.error("[nexus-ai] query failed", { category: error instanceof IntelligenceDataError ? "context_read" : "request_failure" });
     return NextResponse.json(
       { error: "Failed to process intelligence query" },
       { status: 500 }

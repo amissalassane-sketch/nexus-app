@@ -237,7 +237,7 @@ export function classifyIntent(
       intent: "COMPLETE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
       actionType: "complete_task",
-      risk: "low",
+      risk: riskForAction("complete_task"),
       confidence: 0.9,
     };
   }
@@ -296,7 +296,7 @@ export function classifyIntent(
       intent: "MOVE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
       actionType: "move_task",
-      risk: "low",
+      risk: riskForAction("move_task"),
       confidence: hasDayFollowUp ? 0.9 : 0.85,
     };
   }
@@ -320,7 +320,7 @@ export function classifyIntent(
       intent: "UPDATE",
       target: { type: "task", id: target?.id, label: target?.label, query: strippedTarget(normalized) },
       actionType: "update_task",
-      risk: "medium",
+      risk: riskForAction("update_task"),
       confidence: 0.9,
     };
   }
@@ -343,7 +343,7 @@ export function classifyIntent(
       intent: "CREATE",
       target: { type: "project", query: strippedTarget(normalized) },
       actionType: "create_project",
-      risk: "low",
+      risk: riskForAction("create_project"),
       confidence: 0.95,
     };
   }
@@ -367,7 +367,7 @@ export function classifyIntent(
       intent: "CREATE",
       target: { type: "task", query: strippedTarget(normalized) },
       actionType: "create_task",
-      risk: "low",
+      risk: riskForAction("create_task"),
       confidence: 0.95,
     };
   }
@@ -377,7 +377,7 @@ export function classifyIntent(
       intent: "CREATE",
       target: { type: "goal", query: strippedTarget(normalized) },
       actionType: "create_goal",
-      risk: "low",
+      risk: riskForAction("create_goal"),
       confidence: 0.9,
     };
   }
@@ -499,28 +499,17 @@ function strippedTarget(normalized: string): string | undefined {
 
 export function riskForAction(type: IntelligenceActionType): "low" | "medium" | "high" | "none" {
   switch (type) {
-    case "delete_task":
-    case "delete_project":
-    case "delete_goal":
+    case "delete_task": case "delete_project": case "delete_goal":
+    case "update_project": case "update_task": case "update_goal":
+    case "complete_task": case "move_task":
       return "high";
-    case "update_project":
-    case "update_task":
-    case "update_goal":
+    case "create_task": case "create_project": case "create_goal":
       return "medium";
-    case "create_task":
-    case "create_project":
-    case "create_goal":
-    case "complete_task":
-    case "move_task":
-    case "open_project":
-    case "open_task":
-    case "view_blocked_tasks":
-    case "view_overdue_tasks":
-    case "view_risky_projects":
-    case "navigate":
+    case "open_project": case "open_task": case "view_blocked_tasks":
+    case "view_overdue_tasks": case "view_risky_projects": case "navigate":
       return "low";
     default:
-      return "low";
+      return "none";
   }
 }
 

@@ -389,7 +389,7 @@ export default async function AdminOverviewPage() {
       <AdminPanel>
         <AdminSectionTitle
           title="Integration Health"
-          description="Real connections from integration_connections. A provider with no connection row is absent by user choice, not by failure."
+          description="Stored connection states from integration_connections. These member-writable rows are not an independent verification of provider access."
         />
         <div className="mt-3">
           {integrations?.state === "ok" ? (
@@ -425,9 +425,7 @@ export default async function AdminOverviewPage() {
               </AdminFieldList>
               <AdminDivider className="my-3" />
               <p className="text-[12px] leading-[17px] text-admin-text-2">
-                Tokens are sealed at rest (AES-256-GCM) and never leave the
-                server. A connection that loses provider access is reported
-                here the moment a sync fails, never silently.
+                Plaintext tokens are encrypted at rest (AES-256-GCM). Provider access is checked only during an explicit sync; no background verification is deployed.
               </p>
             </>
           ) : integrations?.state === "unavailable" ? (

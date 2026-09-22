@@ -86,36 +86,9 @@ interface CachedMemory {
   preferences: IntelligencePreference[];
 }
 
-/** Local mirror of the server-persisted working memory. It survives
- *  refresh and other tabs of the same workspace; the server row stays
- *  the source of truth (the cache only bootstraps the offline/fallback
- *  path and quick UI continuity). */
-const MEMORY_CACHE_KEY = "nexus.intelligence.memory.v1";
-
-function loadCachedMemory(): CachedMemory | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(MEMORY_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as CachedMemory;
-    if (parsed && typeof parsed === "object" && parsed.state && typeof parsed.state === "object") {
-      return parsed;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function cacheMemory(memory: CachedMemory | null) {
-  if (typeof window === "undefined") return;
-  try {
-    if (memory) window.localStorage.setItem(MEMORY_CACHE_KEY, JSON.stringify(memory));
-    else window.localStorage.removeItem(MEMORY_CACHE_KEY);
-  } catch {
-    // Storage unavailable (private mode / quota) — non-blocking.
-  }
-}
+/** Sensitive working memory stays in this mounted session only. Never restore
+ * the legacy cross-account localStorage cache or send it back to the server. */
+const LEGACY_MEMORY_CACHE_KEY = "nexus.intelligence.memory.v1";
 
 function sessionHistoryPayload(history: HistoryEntry[]) {
   return history.map((h) => ({
@@ -148,7 +121,13 @@ export function IntelligenceAsk({
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cachedMemory, setCachedMemory] = useState<CachedMemory | null>(() => loadCachedMemory());
+  const abortRef = useRef<AbortController | null>(null);
+  const [cachedMemory, setCachedMemory] = useState<CachedMemory | null>(null);
+  useEffect(() => {
+    try { window.localStorage.removeItem(LEGACY_MEMORY_CACHE_KEY); } catch { /* storage disabled */ }
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
 
   // Agentic trace — the real steps the server ran (tools, plan).
   const [agentRun, setAgentRun] = useState<AgentRunResult | null>(null);
@@ -198,7 +177,6 @@ export function IntelligenceAsk({
       .slice(0, 3);
   }, [snapshot]);
 
-  const abortRef = useRef<AbortController | null>(null);
 
   const send = async (textToSend?: string) => {
     const value = (textToSend ?? query).trim();
@@ -229,7 +207,6 @@ export function IntelligenceAsk({
         body: JSON.stringify({
           query: value,
           sessionHistory: sessionHistoryPayload(history),
-          memory: cachedMemory ?? undefined,
         }),
         signal: controller.signal,
       });
@@ -250,7 +227,7 @@ export function IntelligenceAsk({
               preferences: data.memory.preferences ?? [],
             };
             setCachedMemory(next);
-            cacheMemory(next);
+
           }
           setHistory((prev) => [
             {
@@ -298,7 +275,7 @@ export function IntelligenceAsk({
       preferences: cachedMemory?.preferences ?? [],
     };
     setCachedMemory(nextCache);
-    cacheMemory(nextCache);
+
     setHistory((prev) => [
       {
         id: `hist-${Date.now()}`,
@@ -350,7 +327,7 @@ export function IntelligenceAsk({
             preferences: data.memory.preferences ?? cachedMemory?.preferences ?? [],
           };
           setCachedMemory(next);
-          cacheMemory(next);
+
         } else if (cachedMemory?.state) {
           const entityType =
             action.type.includes("project") ? "project" : action.type.includes("goal") ? "goal" : "task";
@@ -364,7 +341,7 @@ export function IntelligenceAsk({
           );
           const next: CachedMemory = { state: nextState, preferences: cachedMemory.preferences };
           setCachedMemory(next);
-          cacheMemory(next);
+
         }
 
         // Notify app shell of creation event
@@ -402,6 +379,12 @@ export function IntelligenceAsk({
         aria-hidden="true"
       />
 
+      <p className="px-3 pt-3 text-small text-text-secondary" id="ai-transparency">
+        You are interacting with an AI assistant. Responses can be wrong. When configured,
+        OpenAI or Anthropic may receive your question and workspace context; otherwise NEXUS
+        uses its rules engine. Review sources and confirm changes before execution.
+        {" "}<Link className="underline" href="/settings/privacy">Memory & privacy controls</Link>.
+      </p>
       {/* Query Bar */}
       <div className="flex flex-col gap-2 p-3 sm:flex-row">
         <div className="relative min-w-0 flex-1">
@@ -411,6 +394,7 @@ export function IntelligenceAsk({
           />
           <textarea
             ref={composerRef}
+            aria-describedby="ai-transparency"
             data-guide="intelligence-input"
             disabled={loading}
             value={query}

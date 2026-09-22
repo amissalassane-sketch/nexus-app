@@ -136,7 +136,7 @@ export default function AdminResetPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 text-[13px]"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-admin-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 text-[13px]"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />

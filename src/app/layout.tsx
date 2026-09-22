@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import "./globals.css";
+import { THEME_BOOTSTRAP } from "@/lib/theme/theme";
+import { ThemeSync } from "@/components/theme-control";
 
 /**
  * NEXUS typography.
@@ -78,7 +80,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#000000",
-  colorScheme: "dark",
+  colorScheme: "dark light",
   // Required for `env(safe-area-inset-*)` to resolve on iOS: without
   // `viewport-fit=cover` the browser letterboxes the layout and the safe
   // area insets are always 0. The shell uses the insets to keep the mobile
@@ -95,9 +97,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="dark"
+      suppressHydrationWarning
       className={`${instrumentSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -133,6 +138,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-bg-base font-sans text-body text-text-primary">
+        <ThemeSync />
         {children}
       </body>
     </html>

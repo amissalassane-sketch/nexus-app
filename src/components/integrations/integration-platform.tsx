@@ -76,7 +76,7 @@ export function IntegrationPlatform({
   const [pendingDisconnect, setPendingDisconnect] = useState<ProviderStatusView | null>(null);
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [refreshing, startTransition] = useTransition();
   const router = useRouter();
 
   const sync = async (provider: ProviderStatusView) => {
@@ -97,6 +97,7 @@ export function IntegrationPlatform({
     } catch {
       setActionError(`${provider.name} sync failed — the server did not answer. Try again.`);
     } finally {
+      startTransition(() => router.refresh());
       setBusyProvider(null);
     }
   };
@@ -140,8 +141,7 @@ export function IntegrationPlatform({
           <NexusIcon icon={IconCheck} className="mt-0.5 shrink-0 text-lavender-text" />
           <p>
             <span className="font-medium text-text-primary">{connectedNotice} is connected.</span>{" "}
-            Its data stays at the provider — NEXUS reads it through the adapter and always shows
-            where information comes from.
+            OAuth credentials have been saved. This does not verify data sync or Intelligence access.
           </p>
         </div>
       ) : null}
@@ -161,7 +161,7 @@ export function IntegrationPlatform({
           <ProviderCard
             key={provider.id}
             provider={provider}
-            busy={busyProvider === provider.id}
+            busy={busyProvider === provider.id || refreshing}
             onSync={() => sync(provider)}
             onDisconnect={() => setPendingDisconnect(provider)}
           />
@@ -180,7 +180,8 @@ export function IntegrationPlatform({
         onConfirm={() => {
           if (pendingDisconnect) void disconnect(pendingDisconnect);
         }}
-        onClose={() => setPendingDisconnect(null)}
+        loading={busyProvider !== null}
+        onClose={() => { if (!busyProvider) setPendingDisconnect(null); }}
       />
     </div>
   );
@@ -203,7 +204,7 @@ function ProviderCard({
   const implemented = provider.capabilities.filter((c) => c.adapter === "implemented");
   const planned = provider.capabilities.filter((c) => c.adapter === "planned");
 
-  const connectHref = provider.oauthConfigured
+  const connectHref = provider.connectionAvailable
     ? `/api/integrations/${provider.id}/connect`
     : null;
 
@@ -232,7 +233,7 @@ function ProviderCard({
               {CONNECTION_STATE_LABEL[state]}
             </Badge>
           </div>
-          <p className="mt-2.5 text-small text-text-secondary">{provider.description}</p>
+          <p className="mt-2.5 text-small text-text-secondary">{implemented.length === 0 ? "Planned integration. " : ""}{provider.description}</p>
         </div>
       </div>
 
@@ -244,7 +245,7 @@ function ProviderCard({
         ) : null}
         {connection.lastSyncAt ? (
           <p className="font-mono text-caption text-text-tertiary">
-            Last sync · {relativeTime(connection.lastSyncAt)}
+            Last complete sync · {relativeTime(connection.lastSyncAt)}
           </p>
         ) : connection.connectionId ? (
           <p className="font-mono text-caption text-text-tertiary">Never synced</p>
@@ -262,10 +263,14 @@ function ProviderCard({
         ) : null}
       </div>
 
+      {connection.connectionId ? <p className="mt-2 text-caption text-text-secondary">
+        Granted permissions reported by provider: {connection.scopes.length ? connection.scopes.join(", ") : "Not reported. Review access in provider settings."}
+      </p> : null}
+      {connection.connectionId && connectHref ? <a className="mt-2 inline-flex min-h-11 items-center text-small underline focus-visible:outline-2" href={connectHref}>Reconnect {provider.name}</a> : null}
       {/* Permissions, shown before connecting */}
       {provider.scopes.length > 0 ? (
         <details className="group mt-3">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-caption text-text-tertiary transition-colors hover:text-text-secondary">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-caption text-text-tertiary transition-colors hover:text-text-secondary">
             <NexusIcon icon={IconShieldCheck} className="h-3.5 w-3.5" />
             Permissions NEXUS will request
           </summary>
@@ -305,11 +310,12 @@ function ProviderCard({
         </div>
       ) : null}
 
+      {connection.connectionId ? <p className="mt-2 text-caption text-text-secondary">Manage or revoke permissions in your provider’s connected-app settings. Reconnect here to grant access again.</p> : null}
       {/* Actions */}
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
         <span className="text-caption text-text-quaternary">
           {connection.connectionId
-            ? "Reading stays at the provider. Writing always asks first."
+            ? "OAuth saved ≠ sync verified. External writes are not implemented."
             : provider.oauthConfigured
               ? "You choose what to connect. Nothing is read before that."
               : "Server connection required"}
@@ -321,11 +327,11 @@ function ProviderCard({
                 size="sm"
                 variant="secondary"
                 onClick={onSync}
-                disabled={busy || state === "syncing"}
+                disabled={busy || state === "syncing" || implemented.length === 0}
                 title={`Read the latest ${provider.name} data`}
               >
                 <NexusIcon icon={IconRefresh} className={busy ? "animate-spin" : undefined} />
-                Sync now
+                {implemented.length ? "Sync now" : "Sync not implemented"}
               </Button>
               <Button
                 size="sm"

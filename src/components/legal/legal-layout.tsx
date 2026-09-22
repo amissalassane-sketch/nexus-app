@@ -32,6 +32,11 @@ export function LegalDocumentLayout({
         <div className="mx-auto w-full max-w-page px-4 pb-20 sm:px-6">
           {/* Document Header */}
           <LegalDocumentHeader document={document} />
+          <p className="mt-5 rounded-card border border-warning-border bg-warning-bg p-4 text-warning">
+            Draft legal information — human legal review required. Controller identity, contact,
+            applicable rights deadlines, processor agreements and deployment safeguards are not
+            verified. This document is not a compliance certificate.
+          </p>
 
           {/* Document Grid (Sidebar TOC + Content) */}
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr] lg:gap-12 xl:grid-cols-[300px_1fr]">
