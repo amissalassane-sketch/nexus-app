@@ -143,8 +143,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: "Intelligence",
         href: "/admin/intelligence",
         icon: "sparkles",
-        status: "planned",
-        note: "Signal and mission tables exist; the inspector lands in PR 5.",
+        status: "ready",
       },
     ],
   },
@@ -216,7 +215,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/integrations",
         icon: "plug",
         status: "planned",
-        note: "The catalogue is code-side only; no per-tenant state to inspect.",
+        note: "Connection aggregates are on Overview; a per-workspace inspector is not implemented.",
       },
       {
         label: "Settings",

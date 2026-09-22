@@ -348,6 +348,11 @@ export function UserSettingsPanel({
         description="Your profile, this workspace, and what NEXUS is allowed to read."
       />
 
+      <nav aria-label="Data and appearance settings" className="flex flex-wrap gap-4 text-small">
+        <Link className="min-h-11 underline inline-flex items-center" href="/settings/privacy">Privacy & data controls</Link>
+        <Link className="min-h-11 underline inline-flex items-center" href="/settings/regional">Language, region & appearance</Link>
+      </nav>
+
       <div className="grid gap-5 lg:grid-cols-[188px_minmax(0,1fr)]">
         {/* Desktop: a settings sidebar. Mobile: a scrollable row. */}
         <nav

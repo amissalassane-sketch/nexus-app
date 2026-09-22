@@ -81,8 +81,8 @@ console.log("-- tool registry -------------------------------------");
   ok("delete_task is high risk", TOOL_REGISTRY.delete_task.risk === "high");
   ok("delete_project is high risk", TOOL_REGISTRY.delete_project.risk === "high");
   ok("delete_goal is high risk", TOOL_REGISTRY.delete_goal.risk === "high");
-  ok("update_task is medium risk", TOOL_REGISTRY.update_task.risk === "medium");
-  ok("create_task is low risk", TOOL_REGISTRY.create_task.risk === "low");
+  ok("update_task is high risk", TOOL_REGISTRY.update_task.risk === "high");
+  ok("create_task is medium risk", TOOL_REGISTRY.create_task.risk === "medium");
   ok("Every mutate tool maps to a server action", [...MUTATE_TOOL_NAMES].every((n) => TOOL_REGISTRY[n].actionType));
   ok("Every navigate tool maps to a route", [...NAVIGATE_TOOL_NAMES].every((n) => TOOL_REGISTRY[n].navigateTo));
 }

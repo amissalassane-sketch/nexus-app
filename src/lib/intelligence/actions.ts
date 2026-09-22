@@ -222,7 +222,7 @@ export async function executeIntelligenceAction(
   if (rawPayload.confirmed !== true) {
     throw new ActionError("Confirmation is required before executing this action", 409);
   }
-  if (risk === "high" && rawPayload.confirmDeletion !== true) {
+  if (actionType.startsWith("delete_") && rawPayload.confirmDeletion !== true) {
     throw new ActionError("This destructive action requires an explicit confirmation", 409);
   }
 

@@ -38,7 +38,7 @@ const STORAGE_TABLE_ROWS = [
     <code key="1" className="font-mono text-text-primary text-[12px]">sb-*-auth-token</code>,
     "HTTP Cookie (First-party / Supabase SSR)",
     <span key="1c" className="text-success font-medium">Strictly Necessary</span>,
-    "Session / 7 to 30 days (auto-refreshed)",
+    "Deployment-dependent; verify Supabase session configuration",
     "Maintains authenticated session state between Server Components, proxy middleware, and client API requests.",
   ],
   [
@@ -49,18 +49,18 @@ const STORAGE_TABLE_ROWS = [
     "PKCE security code verifier used to prevent auth interception during OAuth and OTP verification.",
   ],
   [
-    <code key="3" className="font-mono text-text-primary text-[12px]">nexus:recent-commands</code>,
+    <code key="3" className="font-mono text-text-primary text-[12px]">nexus.command-recents</code>,
     "Browser LocalStorage",
     <span key="3c" className="text-info font-medium">Functional</span>,
     "Persistent (Until cleared by user)",
     "Caches recent search targets in the Command Menu (⌘K) for instant keyboard navigation.",
   ],
   [
-    <code key="4" className="font-mono text-text-primary text-[12px]">nexus:intelligence-ask:memory</code>,
+    <code key="4" className="font-mono text-text-primary text-[12px]">nexus.theme.v1</code>,
     "Browser LocalStorage",
     <span key="4c" className="text-info font-medium">Functional</span>,
     "Persistent (Until cleared by user)",
-    "Stores client-side working memory cache for the active intelligence session to reduce interface flicker.",
+    "Stores the selected dark, light or system appearance. No AI memory is stored in this preference.",
   ],
   [
     <code key="5" className="font-mono text-text-primary text-[12px]">nexus:onboarding:[userId]</code>,
@@ -70,7 +70,7 @@ const STORAGE_TABLE_ROWS = [
     "Tracks progressive completion of the non-blocking workspace activation checklist.",
   ],
   [
-    <code key="6" className="font-mono text-text-primary text-[12px]">nexus:launch:seen</code>,
+    <code key="6" className="font-mono text-text-primary text-[12px]">nexus:launch-seen</code>,
     "Browser SessionStorage",
     <span key="6c" className="text-info font-medium">Functional</span>,
     "Browser Tab Session",
@@ -121,9 +121,10 @@ export default function CookiesPage() {
           </LegalListItem>
         </LegalList>
         <LegalCallout icon="info" title="Privacy by Default">
-          Because NEXUS uses only strictly necessary authentication cookies and client-side functional
-          state, you will not encounter disruptive advertising cookie consent banners designed to
-          extract consent for marketing trackers.
+          No external analytics or marketing transport was identified in the code audit. Necessary,
+          preference, analytics and marketing categories must be reassessed before adding trackers.
+          Any consent-required tracking must remain blocked until valid consent; no production consent
+          management platform has been verified.
         </LegalCallout>
       </LegalSection>
 
@@ -138,7 +139,8 @@ export default function CookiesPage() {
         <LegalList>
           <LegalListItem>
             <strong>Supabase SSR Authentication Tokens (<code>sb-*-auth-token</code>):</strong> Stored
-            securely via HTTP cookies with <code>SameSite=Lax</code> and <code>Secure</code> flags.
+            via first-party cookies. Effective <code>SameSite</code>, <code>Secure</code>, expiry and
+            browser visibility must be verified against the deployed Supabase SSR configuration.
             These cookies carry cryptographically signed session tokens that allow the Next.js server
             runtime and edge middleware to verify your authenticated identity on every request.
           </LegalListItem>
@@ -161,14 +163,14 @@ export default function CookiesPage() {
         </LegalParagraph>
         <LegalList>
           <LegalListItem>
-            <strong>Command Palette History (<code>nexus:recent-commands</code>):</strong> Stores
+            <strong>Command Palette History (<code>nexus.command-recents</code>):</strong> Stores
             recently opened projects, tasks, and commands within the ⌘K navigation menu for instant
             autocomplete.
           </LegalListItem>
           <LegalListItem>
-            <strong>Assistant Working Memory (<code>nexus:intelligence-ask:memory</code>):</strong> Caches
-            recent conversational state in the Intelligence assistant panel to prevent UI layout
-            flicker during page transitions.
+            <strong>Appearance (<code>nexus.theme.v1</code>):</strong> Stores your dark, light or system
+            preference. The former unscoped AI memory cache is removed when Intelligence opens;
+            new working memory is kept in the mounted session and on the scoped server row.
           </LegalListItem>
           <LegalListItem>
             <strong>Onboarding Checklist Progress (<code>nexus:onboarding:[userId]</code>):</strong> Stores
@@ -186,7 +188,7 @@ export default function CookiesPage() {
         </LegalParagraph>
         <LegalList>
           <LegalListItem>
-            <strong>Launch Intro State (<code>nexus:launch:seen</code>):</strong> Flags whether the
+            <strong>Launch Intro State (<code>nexus:launch-seen</code>):</strong> Flags whether the
             cinematic workspace entrance animation has already played in the current browser session,
             ensuring you are not interrupted by repeated animations when navigating between pages.
           </LegalListItem>

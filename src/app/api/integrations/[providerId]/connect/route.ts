@@ -7,6 +7,7 @@
 // callback refuses any code that does not come with the matching
 // state.
 
+import { createOAuthAttempt, integrationOrigin } from "@/lib/integrations/oauth-state";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -52,7 +53,8 @@ export async function GET(
     );
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = integrationOrigin(request.url);
+  if (!origin) return NextResponse.json({ error: "Configure NEXT_PUBLIC_SITE_URL with the public HTTPS origin before connecting." }, { status: 503 });
   const result = beginConnect({ providerId, origin });
 
   if ("error" in result) {
@@ -69,8 +71,16 @@ export async function GET(
     return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
   }
 
+  const attempt = createOAuthAttempt({ state: result.state, providerId: provider.id, userId: user.id,
+    workspaceId: membership.workspaceId, redirectUri: `${origin}/api/integrations/callback/${provider.id}` },
+    ["gmail", "google-calendar", "google-drive", "linear"].includes(provider.id));
+  const authorizeUrl = new URL(result.url);
+  if (attempt.codeChallenge) {
+    authorizeUrl.searchParams.set("code_challenge", attempt.codeChallenge);
+    authorizeUrl.searchParams.set("code_challenge_method", "S256");
+  }
   const cookieStore = await cookies();
-  cookieStore.set(OAUTH_STATE_COOKIE, result.state, {
+  cookieStore.set(OAUTH_STATE_COOKIE, attempt.cookie, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -78,5 +88,5 @@ export async function GET(
     path: "/",
   });
 
-  return NextResponse.redirect(result.url);
+  return NextResponse.redirect(authorizeUrl);
 }

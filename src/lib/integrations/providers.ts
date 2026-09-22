@@ -5,7 +5,7 @@
 // scopes NEXUS asks for, and the capability model (what the connector
 // can do once connected).
 //
-// REALITY RULES (enforced by scripts/test-integrations.mjs):
+// REALITY RULES (tested in supabase/tests/integrations-contract.test.mjs):
 //   * A capability is only listed as `adapter: "implemented"` when a
 //     server-side adapter exists in this repository.
 //   * `adapter: "planned"` is the honest state for everything the
@@ -66,7 +66,7 @@ export type OAuthFlow = {
   /** Notion returns a different content type on the token endpoint. */
   tokenAcceptHeader?: string;
   /** Where the access token lives in the token response body. */
-  accessTokenPath?: "access_token" | "bot_access_token";
+  accessTokenPath?: "access_token";
 };
 
 export type ProviderDefinition = {
@@ -106,8 +106,6 @@ export const PROVIDERS: ProviderDefinition[] = [
       tokenUrl: "https://oauth2.googleapis.com/token",
       scopes: [
         "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send",
-        "https://www.googleapis.com/auth/gmail.modify",
       ],
       scopeNotes: {
         "https://www.googleapis.com/auth/gmail.readonly":
@@ -165,7 +163,6 @@ export const PROVIDERS: ProviderDefinition[] = [
       tokenUrl: "https://oauth2.googleapis.com/token",
       scopes: [
         "https://www.googleapis.com/auth/calendar.readonly",
-        "https://www.googleapis.com/auth/calendar.events",
       ],
       scopeNotes: {
         "https://www.googleapis.com/auth/calendar.readonly":
@@ -227,13 +224,11 @@ export const PROVIDERS: ProviderDefinition[] = [
       authorizationUrl: "https://slack.com/oauth/v2/authorize",
       tokenUrl: "https://slack.com/api/oauth.v2.access",
       scopes: [
-        "search:read",
         "channels:history",
         "groups:history",
         "im:history",
         "mpim:history",
         "users:read",
-        "chat:write",
       ],
       scopeNotes: {
         "search:read": "Search across messages — recovery context.",
@@ -247,7 +242,7 @@ export const PROVIDERS: ProviderDefinition[] = [
       clientIdEnv: "SLACK_CLIENT_ID",
       clientSecretEnv: "SLACK_CLIENT_SECRET",
       tokenErrorInBody: true,
-      accessTokenPath: "bot_access_token",
+      accessTokenPath: "access_token",
     },
     capabilities: [
       { id: "slack-search", label: "Search messages", verb: "search", adapter: "planned" },
@@ -279,7 +274,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     oauth: {
       authorizationUrl: "https://api.notion.com/v1/oauth/authorize",
       tokenUrl: "https://api.notion.com/v1/oauth/token",
-      scopes: ["read_content", "insert_content", "update_content"],
+      scopes: ["read_content"],
       scopeNotes: {
         read_content: "Search and read pages shared with the integration.",
         insert_content: "Create pages, only after confirmation.",
@@ -321,7 +316,7 @@ export const PROVIDERS: ProviderDefinition[] = [
       scopes: ["repo", "read:user", "notifications"],
       scopeNotes: {
         repo:
-          "Read issues, pull requests and reviews on repositories you already have access to; comment after confirmation.",
+          "Broad repository access, including write permissions at GitHub. No NEXUS data adapter is implemented; review this grant carefully.",
         "read:user": "Identify the connected account.",
         notifications: "Detect PRs and issues waiting on you.",
       },
@@ -359,22 +354,8 @@ export const PROVIDERS: ProviderDefinition[] = [
     oauth: {
       authorizationUrl: "https://linear.app/oauth/authorize",
       tokenUrl: "https://api.linear.app/oauth/token",
-      scopes: [
-        "issues:read",
-        "issues:create",
-        "issues:update",
-        "comments:read",
-        "comments:create",
-        "projects:read",
-      ],
-      scopeNotes: {
-        "issues:read": "Read issues assigned to you or on your projects.",
-        "issues:create": "Create issues, only after confirmation.",
-        "issues:update": "Update status/priority, only after confirmation.",
-        "comments:read": "Read issue discussions.",
-        "comments:create": "Comment, only after confirmation.",
-        "projects:read": "Read project state for context.",
-      },
+      scopes: ["read"],
+      scopeNotes: { read: "Read issues, projects and comments accessible to the authorized account." },
       clientIdEnv: "LINEAR_CLIENT_ID",
       clientSecretEnv: "LINEAR_CLIENT_SECRET",
       tokenAcceptHeader: "application/json",
@@ -616,9 +597,9 @@ export const CONNECTION_STATE_LABEL: Record<ConnectionLifecycleState, string> = 
 export const CONNECTION_STATE_DESCRIPTION: Record<ConnectionLifecycleState, string> = {
   disconnected: "No account is connected. Connect to bring this source into NEXUS.",
   connecting: "The provider handshake is in progress.",
-  connected: "Connected and available to Intelligence.",
+  connected: "OAuth credentials saved. Data access and Intelligence support must be verified separately.",
   syncing: "Fetching the latest data from the provider.",
-  stale: "The last sync is old. Refresh to bring context up to date.",
+  stale: "The last complete sync is old or incomplete. Run a sync to verify access.",
   error: "The last sync failed. Check the error and retry.",
   reauth_required:
     "The provider rejected the stored token. Reconnect to restore access.",
@@ -629,7 +610,7 @@ export function isConnectionLifecycleState(
 ): value is ConnectionLifecycleState {
   return (
     typeof value === "string" &&
-    value in CONNECTION_STATE_LABEL
+    Object.prototype.hasOwnProperty.call(CONNECTION_STATE_LABEL, value)
   );
 }
 
@@ -659,7 +640,11 @@ export function buildAuthorizeUrl(options: {
   url.searchParams.set("client_id", configuration.clientId);
   url.searchParams.set("redirect_uri", options.redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", options.provider.oauth.scopes.join(" "));
+  // Notion capabilities are configured in its developer console, not URL scopes.
+  if (options.provider.id === "notion") url.searchParams.set("owner", "user");
+  else url.searchParams.set("scope", options.provider.oauth.scopes.join(
+    ["linear", "slack"].includes(options.provider.id) ? "," : " "
+  ));
   url.searchParams.set("state", options.state);
 
   for (const [key, value] of Object.entries(

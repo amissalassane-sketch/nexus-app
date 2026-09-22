@@ -111,7 +111,7 @@ export function IntelligenceView({
         {workspaceId ? <ProactiveSignalsPanel workspaceId={workspaceId} /> : null}
       </div>
       <div className="animate-[intelligence-state-in_280ms_var(--ease-nexus)_120ms_both]">
-        <IntelligenceAsk snapshot={snapshot} autoFocus={autoFocusAsk} initialQuery={initialAskQuery} />
+        <IntelligenceAsk key={workspaceId ?? "no-workspace"} snapshot={snapshot} autoFocus={autoFocusAsk} initialQuery={initialAskQuery} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

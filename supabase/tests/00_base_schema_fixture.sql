@@ -235,3 +235,13 @@ create trigger trg_test_bootstrap_owner_membership
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = public
 as $$ begin new.updated_at = now(); return new; end $$;
+
+-- Event relation from 001, previously omitted by this minimal fixture. Needed
+-- by the additive input-timezone migration; actual lineage is separately tested.
+create table if not exists public.events (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  title text not null,
+  start_at timestamptz not null,
+  end_at timestamptz
+);

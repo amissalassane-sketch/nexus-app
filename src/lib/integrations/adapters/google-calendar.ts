@@ -1,10 +1,9 @@
 // ============================================================
 // NEXUS INTEGRATIONS — GOOGLE CALENDAR ADAPTER (reference)
 // ============================================================
-// The reference server-side adapter. It proves the platform pattern
-// end to end: a connected provider's data flows through the unified
-// context model with source attribution, permission awareness and
-// honest error states.
+// The read-only reference adapter, tested with provider mocks. It
+// normalizes events but is NOT wired into the Intelligence query path.
+// A live account is required to verify actual data access.
 //
 // Contract (tested with a fake transport in
 // supabase/tests/integrations-contract.test.mjs):
@@ -41,6 +40,8 @@ export type AdapterOk = {
 export type AdapterFailure = {
   ok: false;
   errorCode:
+    | "TIMEOUT"
+    | "INCOMPLETE"
     | "NETWORK"
     | "UNAUTHORIZED"
     | "RATE_LIMITED"
@@ -67,14 +68,14 @@ type GoogleCalendarEvent = {
 };
 
 export function normalizeEvent(
-  raw: GoogleCalendarEvent
+  raw: GoogleCalendarEvent | null
 ): ExternalEventRef | null {
-  if (!raw.id || !raw.start) return null;
+  if (!raw || typeof raw.id !== "string" || !raw.start) return null;
   if (raw.status && raw.status !== "confirmed") return null;
 
   const isAllDay = Boolean(raw.start.date) && !raw.start.dateTime;
   const startAt = raw.start.dateTime ?? raw.start.date;
-  if (!startAt) return null;
+  if (typeof startAt !== "string" || !Number.isFinite(Date.parse(startAt))) return null;
 
   const endAt = raw.end?.dateTime ?? raw.end?.date ?? null;
 
@@ -101,6 +102,7 @@ export async function listEventsInRange(options: {
   calendarId?: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  timeoutMs?: number;
 }): Promise<AdapterResult> {
   const doFetch = options.fetchImpl ?? fetch;
   const calendarId = encodeURIComponent(options.calendarId ?? "primary");
@@ -113,16 +115,20 @@ export async function listEventsInRange(options: {
   url.searchParams.set("maxResults", String(MAX_RESULTS));
   url.searchParams.set("orderBy", "startTime");
   url.searchParams.set("singleEvents", "true");
-  url.searchParams.set("fields", "items(id,summary,htmlLink,location,start,end,status)");
+  url.searchParams.set("fields", "nextPageToken,items(id,summary,htmlLink,location,start,end,status)");
 
   const startedAt = (options.now ?? Date.now)();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), LIST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? LIST_TIMEOUT_MS);
 
   try {
+    const byId = new Map<string, ExternalEventRef>();
+    const pageTokens = new Set<string>();
+    for (let page = 0; page < 10; page += 1) {
     const response = await doFetch(url.toString(), {
       headers: { authorization: `Bearer ${options.accessToken}` },
       signal: controller.signal,
+      redirect: "error",
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -153,8 +159,8 @@ export async function listEventsInRange(options: {
       };
     }
 
-    const payload = (await response.json()) as { items?: GoogleCalendarEvent[] };
-    if (!Array.isArray(payload.items)) {
+    const payload = (await response.json()) as { items?: GoogleCalendarEvent[]; nextPageToken?: string } | null;
+    if (!payload || !Array.isArray(payload.items)) {
       return {
         ok: false,
         errorCode: "INVALID_RESPONSE",
@@ -166,19 +172,23 @@ export async function listEventsInRange(options: {
     const events = payload.items
       .map(normalizeEvent)
       .filter((event): event is ExternalEventRef => event !== null)
-      .sort((a, b) => a.startAt.localeCompare(b.startAt));
+      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
 
-    return { ok: true, events };
+    for (const event of events) byId.set(event.externalId, event);
+    if (!payload.nextPageToken) return { ok: true, events: [...byId.values()].sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt)) };
+    if (typeof payload.nextPageToken !== "string" || pageTokens.has(payload.nextPageToken)) break;
+    pageTokens.add(payload.nextPageToken);
+    url.searchParams.set("pageToken", payload.nextPageToken);
+    }
+    return { ok: false, errorCode: "INCOMPLETE", message: "Calendar read exceeded its page limit or repeated a cursor. No complete sync was recorded.", retryable: false };
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";
     return {
       ok: false,
-      errorCode: aborted ? "RATE_LIMITED" : "NETWORK",
+      errorCode: aborted ? "TIMEOUT" : "NETWORK",
       message: aborted
         ? `Google Calendar did not answer within ${LIST_TIMEOUT_MS}ms.`
-        : error instanceof Error
-          ? error.message
-          : "Network failure while calling Google Calendar.",
+        : "Network or response failure while calling Google Calendar.",
       retryable: true,
     };
   } finally {
@@ -204,6 +214,7 @@ export function findFreeWindows(options: {
   const windows: { startIso: string; endIso: string; minutes: number }[] = [];
   const from = new Date(options.fromIso);
   const to = new Date(options.toIso);
+  if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || to < from || to.getTime() - from.getTime() > 366 * 86_400_000) return [];
 
   for (let day = new Date(from); day <= to; day.setUTCDate(day.getUTCDate() + 1)) {
     const dayStart = new Date(day);
@@ -211,15 +222,17 @@ export function findFreeWindows(options: {
     const dayEnd = new Date(day);
     dayEnd.setUTCHours(options.dayEndHour, 0, 0, 0);
 
-    // Busy intervals for this day (clipped to working hours).
+    if (dayEnd <= dayStart) continue;
+    // Busy intervals intersecting this day, including overnight/all-day events.
     const busy = options.events
       .filter((event) => {
         const start = new Date(event.startAt);
-        return start >= dayStart && start < dayEnd && !event.isAllDay;
+        const end = new Date(event.endAt ?? event.startAt);
+        return start < dayEnd && end > dayStart;
       })
       .map((event) => ({
-        start: new Date(event.startAt),
-        end: event.endAt ? new Date(event.endAt) : new Date(event.startAt),
+        start: new Date(Math.max(Date.parse(event.startAt), dayStart.getTime())),
+        end: new Date(Math.min(Date.parse(event.endAt ?? event.startAt), dayEnd.getTime())),
       }))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
 
@@ -262,7 +275,7 @@ export function detectConflicts(events: ExternalEventRef[]): {
 }[] {
   const busy = events
     .filter((event) => !event.isAllDay && event.endAt)
-    .sort((a, b) => a.startAt.localeCompare(b.startAt));
+    .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
 
   const conflicts: { a: ExternalEventRef; b: ExternalEventRef; overlapMinutes: number }[] = [];
   for (let i = 0; i < busy.length; i += 1) {

@@ -42,11 +42,11 @@ export default async function IntegrationsPage({
   const workspaceId = membership?.workspaceId ?? null;
 
   const snapshot = workspaceId
-    ? await buildIntegrationsSnapshot(supabase, workspaceId)
+    ? await buildIntegrationsSnapshot(supabase, workspaceId).catch(() => null)
     : null;
 
   const connectedCount =
-    snapshot?.providers.filter((p) => p.connection.connectionId !== null).length ?? 0;
+    snapshot?.providers.filter((p) => p.connection.lifecycle === "connected").length ?? 0;
   const anyConfigured = anyProviderConfigured();
 
   return (
@@ -54,7 +54,7 @@ export default async function IntegrationsPage({
       <PageHeader
         title="Integrations"
         count={connectedCount > 0 ? `${connectedCount} connected` : undefined}
-        description="Sources NEXUS can read for context, and the actions they unlock for Intelligence. Every connection states exactly what it can do — nothing is advertised before its server path exists."
+        description="Manage OAuth accounts and check available adapters. Connecting an account does not verify sync or make it available to Intelligence."
       />
 
       {!anyConfigured ? (
@@ -62,8 +62,7 @@ export default async function IntegrationsPage({
           tone="info"
           title="No provider is configured on this server yet"
         >
-          Connections are built and secure (OAuth, minimum permissions, tokens sealed at
-          rest), but this deployment has no provider client registered. An operator must
+          OAuth routes and encrypted storage are implemented, but no provider client is configured in this deployment. An operator must
           set the provider environment variables (for example{" "}
           <span className="font-mono text-caption">GOOGLE_CLIENT_ID</span> and{" "}
           <span className="font-mono text-caption">GOOGLE_CLIENT_SECRET</span>) to turn
@@ -71,21 +70,23 @@ export default async function IntegrationsPage({
         </Alert>
       ) : null}
 
+      {workspaceId && !snapshot ? <Alert tone="danger" title="Connection status could not be read">Check the database configuration and integration migrations, then refresh. No connection status has been inferred.</Alert> : null}
+      {snapshot && !snapshot.encryptionConfigured ? <Alert tone="warning" title="Secure credential storage is not configured">Set NEXUS_INTEGRATION_ENCRYPTION_KEY on the server before connecting accounts.</Alert> : null}
       {snapshot ? (
         <IntegrationPlatform
           providers={snapshot.providers}
-          connectedNotice={connectedNotice}
+          connectedNotice={snapshot.providers.find((p) => p.id === connectedNotice && p.connection.lifecycle === "connected")?.name ?? null}
           connectError={connectError}
           connectMessage={connectMessage}
         />
-      ) : (
+      ) : !workspaceId ? (
         <Panel>
           <EmptyState
             title="No active workspace"
             description="Integrations are connected per workspace. Open a workspace to manage its sources."
           />
         </Panel>
-      )}
+      ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Panel title="What NEXUS already understands" description="No external connection required">
@@ -94,9 +95,7 @@ export default async function IntegrationsPage({
               <NexusIcon icon={IconPlugConnected} />
             </span>
             <p className="max-w-[62ch] text-small text-text-secondary">
-              Projects, tasks, goals, notes, events, files, activity, notifications and
-              Intelligence are already connected inside your workspace. External
-              integrations extend that context; they never replace the NEXUS core.
+              Intelligence reads workspace tasks, projects, goals and activity, with bounded note and event metadata. File content and external provider data are not yet included in its answers.
             </p>
           </div>
         </Panel>
@@ -108,10 +107,10 @@ export default async function IntegrationsPage({
             </span>
             <ul className="max-w-[62ch] space-y-1.5 text-small text-text-secondary">
               <li>OAuth only — NEXUS never asks for an API key when OAuth exists.</li>
-              <li>Minimum permissions, listed before you connect.</li>
-              <li>Tokens are sealed at rest and never sent to your browser.</li>
-              <li>Reading is automatic once connected. Writing always asks first.</li>
-              <li>External data stays at the provider — NEXUS references it, cites it, and drops it when access ends.</li>
+              <li>Requested permissions are listed before connection. Provider restrictions still apply.</li>
+              <li>Tokens are encrypted at rest. Plaintext tokens are not returned by NEXUS routes.</li>
+              <li>Only Google Calendar has a data adapter, invoked by Sync now. External write actions are not implemented.</li>
+              <li>Disconnect removes the stored connection and credentials. Revoke the OAuth grant separately in provider settings.</li>
             </ul>
           </div>
         </Panel>

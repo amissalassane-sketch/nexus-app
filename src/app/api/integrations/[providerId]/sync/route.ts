@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 // ============================================================
 // NEXUS — INTEGRATION SYNC
 // POST /api/integrations/[providerId]/sync
@@ -25,6 +26,9 @@ export async function POST(
   _request: Request,
   context: { params: Promise<{ providerId: string }> }
 ) {
+  const requestId = randomUUID();
+  const startedAt = new Date().toISOString();
+  try {
   const { providerId } = await context.params;
 
   if (!isSupabaseConfigured()) {
@@ -81,29 +85,33 @@ export async function POST(
   }
 
   // ---- Mark syncing -------------------------------------------------
-  await supabase
-    .from("integration_connections")
-    .update({ state: "syncing" })
-    .eq("id", connection.id);
+  if (connection.state === "syncing") return NextResponse.json({ error: "A sync is already running. Wait for its result.", code: "SYNC_IN_PROGRESS" }, { status: 409 });
+  const { data: claimed, error: claimError } = await supabase
+    .from("integration_connections").update({ state: "syncing" })
+    .eq("id", connection.id).eq("workspace_id", workspaceId).eq("state", connection.state)
+    .select("id").maybeSingle();
+  if (claimError) throw new Error("SYNC_STATE_WRITE_FAILED");
+  if (!claimed) return NextResponse.json({ error: "The connection changed. Refresh before syncing again." }, { status: 409 });
 
   // ---- Read credential (server-only) --------------------------------
-  const accessToken = await readCredential(supabase, connection.id);
+  const accessToken = await readCredential(supabase, connection);
   if (!accessToken) {
     await recordSyncRun({
       supabase,
       workspaceId,
       connectionId: connection.id,
       providerId: provider.id,
+      requestId, startedAt,
       status: "failed",
       itemsRead: 0,
       itemsCreated: 0,
       errorCode: "CREDENTIAL_UNREADABLE",
       error:
-        "The stored credential could not be opened. Reconnect to restore access.",
+        "The stored credential is expired or cannot be opened. Reconnect to restore access.",
     });
     return NextResponse.json(
       {
-        error: "The stored credential could not be opened. Reconnect to restore access.",
+        error: "The stored credential is expired or cannot be opened. Reconnect to restore access.",
         code: "REAUTH_REQUIRED",
       },
       { status: 409 }
@@ -126,6 +134,7 @@ export async function POST(
       workspaceId,
       connectionId: connection.id,
       providerId: provider.id,
+      requestId, startedAt,
       status: "failed",
       itemsRead: 0,
       itemsCreated: 0,
@@ -150,12 +159,13 @@ export async function POST(
   // ---- Success --------------------------------------------------------
   // The adapter reads; it does not copy. Events stay provider-owned
   // (referenced by externalId + URL); NEXUS keeps only normalized
-  // metadata. itemsCreated is 0 by design — no blind import.
+  // run counts only. itemsCreated is 0 by design — no blind import.
   await recordSyncRun({
     supabase,
     workspaceId,
     connectionId: connection.id,
     providerId: provider.id,
+    requestId, startedAt,
     status: "success",
     itemsRead: result.events.length,
     itemsCreated: 0,
@@ -163,8 +173,12 @@ export async function POST(
 
   return NextResponse.json({
     provider: provider.id,
+    requestId,
     itemsRead: result.events.length,
     windowDays: SYNC_WINDOW_DAYS,
-    note: "Events are referenced, not copied. Intelligence reads them through the adapter at query time.",
+    note: "Calendar read completed. Events are not stored or supplied to Intelligence by this route.",
   });
+  } catch {
+    return NextResponse.json({ error: "Sync could not be recorded or connection state could not be read. Refresh and retry; if syncing persists, reconnect.", code: "SYNC_STORAGE_UNAVAILABLE" }, { status: 503 });
+  }
 }

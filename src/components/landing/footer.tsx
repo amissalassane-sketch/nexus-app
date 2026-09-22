@@ -1,3 +1,4 @@
+import { ThemeControl } from "@/components/theme-control";
 import Link from "next/link";
 import { NexusWordmark } from "@/components/nexus-logo";
 
@@ -98,6 +99,7 @@ export function LandingFooter({
 
       <div className="mx-auto mt-14 flex w-full max-w-page flex-col gap-2 border-t border-border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between">
         <span className="nexus-eyebrow">© 2026 NEXUS</span>
+        <ThemeControl />
         <span className="nexus-meta">Built with Next.js · Supabase · Postgres</span>
       </div>
     </footer>

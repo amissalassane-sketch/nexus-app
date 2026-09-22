@@ -5,7 +5,8 @@ import type { NextConfig } from "next";
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  // Keep production clickjacking protection; allow Arena's iframe in development.
+  ...(process.env.NODE_ENV === "development" ? [] : [{ key: "X-Frame-Options", value: "SAMEORIGIN" }]),
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
@@ -16,7 +17,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Development only: allow the sandboxed preview host to load /_next dev
   // assets (Next 16 blocks cross-origin dev resources by default).
-  allowedDevOrigins: ["*.e2b.app", "*.run.app"],
+  allowedDevOrigins: ["localhost", "127.0.0.1", "*.e2b.app", "*.run.app"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

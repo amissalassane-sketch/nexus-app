@@ -1,0 +1,350 @@
+[
+  {
+    "theme": "dark",
+    "route": "/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "passes": 26
+  },
+  {
+    "theme": "dark",
+    "route": "/pricing",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 55
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "dark",
+    "route": "/privacy",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 28
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "dark",
+    "route": "/admin/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  },
+  {
+    "theme": "dark",
+    "route": "/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "passes": 26
+  },
+  {
+    "theme": "dark",
+    "route": "/pricing",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 14
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "theme": "dark",
+    "route": "/privacy",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 3
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "dark",
+    "route": "/admin/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "computed": {
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(242, 242, 242)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  },
+  {
+    "theme": "light",
+    "route": "/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "passes": 26
+  },
+  {
+    "theme": "light",
+    "route": "/pricing",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 55
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "light",
+    "route": "/privacy",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 27
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "light",
+    "route": "/admin/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  },
+  {
+    "theme": "light",
+    "route": "/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "passes": 26
+  },
+  {
+    "theme": "light",
+    "route": "/pricing",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 14
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "theme": "light",
+    "route": "/privacy",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 2
+      }
+    ],
+    "passes": 29
+  },
+  {
+    "theme": "light",
+    "route": "/admin/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "computed": {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(23, 25, 35)"
+    },
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  }
+]

@@ -21,6 +21,7 @@ import { readConnections, toConnectionView } from "@/lib/integrations/connection
 import { isCredentialStorageConfigured } from "@/lib/integrations/crypto";
 
 export async function GET() {
+  try {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { error: "Supabase is not configured in this environment" },
@@ -75,4 +76,7 @@ export async function GET() {
       };
     }),
   });
+  } catch {
+    return NextResponse.json({ code: "INTEGRATION_STATE_UNAVAILABLE", error: "Connection status could not be read. Check the database and integration migrations, then retry." }, { status: 503 });
+  }
 }

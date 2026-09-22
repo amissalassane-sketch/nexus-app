@@ -1,0 +1,53 @@
+// Actual SQL policies and bounded purge in PGlite. Not hosted Supabase verification.
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+const migration=n=>readFileSync(new URL('../migrations/'+n,import.meta.url),'utf8');
+const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-222222222222', W='33333333-3333-4333-8333-333333333333';
+test('regional + memory SQL: cross-user isolation, delete ownership, revocation, purge ACL and batch bound',async()=>{
+ const db=await PGlite.create();
+ try{
+  await db.exec(`create role authenticated;create role anon;create role service_role;create schema auth;
+    create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+    grant usage on schema auth,public to authenticated,anon,service_role;
+    alter default privileges in schema public grant all on tables to authenticated,anon,service_role;
+    create table workspaces(id uuid primary key);create table events(id uuid primary key);
+    create table workspace_members(user_id uuid,workspace_id uuid,status text);
+    create function is_active_workspace_member(w uuid) returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from workspace_members where workspace_id=w and user_id=auth.uid() and status='active') $$;
+    insert into auth.users values('${A}'),('${B}');insert into workspaces values('${W}');
+    insert into workspace_members values('${A}','${W}','active'),('${B}','${W}','active');`);
+  await db.exec(migration('023_intelligence_memory.sql'));
+  await db.exec(migration('20260922220000_global_preferences_retention.sql'));
+  const asUser=async id=>db.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${id}',false);`);
+  await asUser(A);
+  await db.exec(`insert into user_regional_preferences values('${A}','{"country":"BJ"}',now());insert into intelligence_memory(user_id,workspace_id,state) values('${A}','${W}','{"lastQuery":"owned"}');`);
+  await assert.rejects(db.exec(`insert into user_regional_preferences values('${B}','{}',now())`),/row-level security/);
+  await assert.rejects(db.exec(`update user_regional_preferences set user_id='${B}'`),/row-level security/);
+  await assert.rejects(db.query('update user_regional_preferences set context=$1 where user_id=$2',[JSON.stringify({data:'x'.repeat(5000)}),A]),/regional_context_object/);
+  await asUser(B);
+  assert.equal((await db.query('select * from user_regional_preferences')).rows.length,0);
+  assert.equal((await db.query('select * from intelligence_memory')).rows.length,0);
+  assert.equal((await db.query(`delete from intelligence_memory where user_id='${A}' returning id`)).rows.length,0);
+  await db.exec(`insert into intelligence_memory(user_id,workspace_id) values('${B}','${W}');`);
+  await asUser(A);
+  assert.equal((await db.query('delete from intelligence_memory returning id')).rows.length,1);
+  await db.exec(`reset role;update workspace_members set status='suspended' where user_id='${B}';`);
+  await asUser(B);
+  assert.equal((await db.query('select * from intelligence_memory')).rows.length,0);
+  await assert.rejects(db.query('select purge_inactive_intelligence_memory()'),/permission denied/);
+  await db.exec('reset role;set role anon;');
+  await assert.rejects(db.query('select * from user_regional_preferences'),/permission denied/);
+  await assert.rejects(db.query('select purge_inactive_intelligence_memory()'),/permission denied/);
+  await db.exec(`reset role;insert into auth.users select gen_random_uuid() from generate_series(1,1002);
+    insert into intelligence_memory(user_id,workspace_id,updated_at) select id,'${W}',now()-interval '91 days' from auth.users where id not in ('${A}','${B}');
+    set role service_role;`);
+  assert.equal((await db.query('select purge_inactive_intelligence_memory() n')).rows[0].n,1000);
+  assert.equal((await db.query('select purge_inactive_intelligence_memory() n')).rows[0].n,2);
+  assert.equal((await db.query('select purge_inactive_intelligence_memory() n')).rows[0].n,0);
+  await db.exec('reset role;');
+  assert.equal((await db.query('select count(*) n from intelligence_memory')).rows[0].n,1);
+  assert.equal((await db.query("select column_name from information_schema.columns where table_name='events' and column_name='source_timezone'")).rows.length,1);
+ }finally{await db.close()}
+});

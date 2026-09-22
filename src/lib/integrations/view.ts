@@ -28,6 +28,7 @@ export type ProviderStatusView = {
   phase: 1 | 2;
   /** True when the OAuth client env vars exist on the server. */
   oauthConfigured: boolean;
+  connectionAvailable: boolean;
   missingEnvVars: string[];
   /** Scopes NEXUS will request — shown BEFORE connecting. */
   scopes: string[];
@@ -64,6 +65,7 @@ export async function buildIntegrationsSnapshot(
         description: provider.description,
         phase: provider.phase,
         oauthConfigured: configuration.configured,
+        connectionAvailable: configuration.configured && isCredentialStorageConfigured(),
         missingEnvVars: configuration.configured ? [] : configuration.missing,
         scopes: provider.oauth.scopes,
         scopeNotes: provider.oauth.scopeNotes,

@@ -1,0 +1,58 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/settings/privacy",
+    "origin": null,
+    "status": 503,
+    "body": "{\"error\":\"SERVICE_UNAVAILABLE\"}",
+    "cache": "private, no-store"
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings/regional",
+    "origin": null,
+    "status": 503,
+    "body": "{\"error\":\"SERVICE_UNAVAILABLE\"}",
+    "cache": "private, no-store"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/settings/privacy",
+    "origin": "https://evil.invalid",
+    "status": 403,
+    "body": "{\"error\":\"ORIGIN_NOT_ALLOWED\"}",
+    "cache": "private, no-store"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/settings/privacy",
+    "origin": "http://127.0.0.1:3000",
+    "status": 503,
+    "body": "{\"error\":\"SERVICE_UNAVAILABLE\"}",
+    "cache": "private, no-store"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/settings/regional",
+    "origin": "http://127.0.0.1:3000",
+    "status": 400,
+    "body": "{\"error\":\"INVALID_REGIONAL_CONTEXT\"}",
+    "cache": "private, no-store"
+  },
+  {
+    "method": "POST",
+    "path": "/api/billing/upgrade",
+    "origin": "http://127.0.0.1:3000",
+    "status": 503,
+    "body": "{\"ok\":false,\"code\":\"SERVICE_UNAVAILABLE\",\"message\":\"Billing is temporarily unavailable\",\"error\":\"Billing is temporarily unavailable\"}",
+    "cache": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/health",
+    "origin": null,
+    "status": 200,
+    "body": "{\"ok\":true,\"service\":\"nexus\",\"time\":\"2026-09-22T21:23:07.058Z\",\"deployment\":{\"commit\":null,\"environment\":null},\"configuration\":{\"supabaseConfigured\":false,\"supabaseHost\":null,\"siteOrigin\":null,\"error\":\"missing_or_invalid_public_configuration\"}}",
+    "cache": "no-store"
+  }
+]

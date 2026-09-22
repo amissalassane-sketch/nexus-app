@@ -23,7 +23,7 @@ import {
   getProvider,
   type ProviderDefinition,
 } from "./providers";
-import { encryptSecret } from "./crypto";
+import { encryptSecret, isCredentialStorageConfigured } from "./crypto";
 
 export type ConnectionRow = {
   id: string;
@@ -66,6 +66,7 @@ export function beginConnect(options: {
   const provider = getProvider(options.providerId);
   if (!provider) return { error: "UNKNOWN_PROVIDER" };
 
+  if (!isCredentialStorageConfigured()) return { error: "NOT_CONFIGURED", missing: ["NEXUS_INTEGRATION_ENCRYPTION_KEY"] };
   const redirectUri = `${options.origin}${callbackPathFor(provider.id)}`;
   const state = randomBytes(24).toString("base64url");
 
@@ -88,6 +89,7 @@ export type TokenExchangeResult =
       refreshToken: string | null;
       expiresAt: string | null;
       accountLabel: string | null;
+      grantedScopes: string[];
     }
   | { ok: false; errorCode: string; message: string };
 
@@ -96,6 +98,9 @@ export async function exchangeCodeForTokens(options: {
   provider: ProviderDefinition;
   code: string;
   redirectUri: string;
+  codeVerifier?: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): Promise<TokenExchangeResult> {
   const { provider } = options;
   const credentials = process.env[provider.oauth.clientIdEnv]?.trim();
@@ -117,17 +122,21 @@ export async function exchangeCodeForTokens(options: {
     client_secret: clientSecret,
   });
 
+  if (options.codeVerifier) body.set("code_verifier", options.codeVerifier);
+  const notion = provider.id === "notion";
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TOKEN_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? TOKEN_TIMEOUT_MS);
 
   try {
-    const response = await fetch(provider.oauth.tokenUrl, {
+    const response = await (options.fetchImpl ?? fetch)(provider.oauth.tokenUrl, {
       method: "POST",
       headers: {
-        "content-type": "application/x-www-form-urlencoded",
+        "content-type": notion ? "application/json" : "application/x-www-form-urlencoded",
+        ...(notion ? { authorization: `Basic ${Buffer.from(`${credentials}:${clientSecret}`).toString("base64")}`, "Notion-Version": "2022-06-28" } : {}),
         accept: provider.oauth.tokenAcceptHeader ?? "application/json",
       },
-      body,
+      body: notion ? JSON.stringify({ grant_type: "authorization_code", code: options.code, redirect_uri: options.redirectUri }) : body,
+      redirect: "error",
       signal: controller.signal,
     });
 
@@ -142,12 +151,15 @@ export async function exchangeCodeForTokens(options: {
       }
     }
 
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return { ok: false, errorCode: "INVALID_RESPONSE", message: "The provider returned an invalid token response." };
+    }
     // Slack answers 200 with {"ok": false} on failure.
     if (provider.oauth.tokenErrorInBody && payload.ok === false) {
       return {
         ok: false,
         errorCode: "PROVIDER_REJECTED",
-        message: String(payload.error ?? "slack rejected the exchange"),
+        message: `${provider.name} refused the token exchange. Restart the connection and review the app permissions.`,
       };
     }
 
@@ -155,9 +167,7 @@ export async function exchangeCodeForTokens(options: {
       return {
         ok: false,
         errorCode: `PROVIDER_HTTP_${response.status}`,
-        message: String(
-          payload.error_description ?? payload.error ?? `HTTP ${response.status}`
-        ),
+        message: `${provider.name} token exchange returned HTTP ${response.status}. Check the OAuth app configuration and retry.`,
       };
     }
 
@@ -181,10 +191,15 @@ export async function exchangeCodeForTokens(options: {
     // Best-effort account label per provider (display only).
     const accountLabel = describeAccount(provider.id, payload);
 
-    return { ok: true, accessToken, refreshToken, expiresAt, accountLabel };
+    const grantedScopes = typeof payload.scope === "string"
+      ? payload.scope.split(/[ ,]+/).filter(Boolean)
+      : Array.isArray(payload.scope) ? payload.scope.filter((s): s is string => typeof s === "string") : [];
+    // Missing scope metadata means unknown, never the requested scopes.
+    return { ok: true, accessToken, refreshToken, expiresAt, accountLabel, grantedScopes };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "network failure";
-    return { ok: false, errorCode: "EXCHANGE_FAILED", message };
+    const timedOut = error instanceof Error && error.name === "AbortError";
+    return { ok: false, errorCode: timedOut ? "TIMEOUT" : "EXCHANGE_FAILED",
+      message: timedOut ? "The provider token exchange timed out. Restart the connection." : "The provider token exchange could not be reached. Retry the connection." };
   } finally {
     clearTimeout(timer);
   }
@@ -229,10 +244,12 @@ export async function persistConnection(options: {
   refreshToken: string | null;
   expiresAt: string | null;
   accountLabel: string | null;
+  grantedScopes?: string[];
 }): Promise<PersistResult> {
-  const sealedAccess = encryptSecret(options.accessToken);
+  const binding = credentialBinding(options.workspaceId, options.provider.id, options.userId);
+  const sealedAccess = encryptSecret(options.accessToken, binding);
   const sealedRefresh = options.refreshToken
-    ? encryptSecret(options.refreshToken)
+    ? encryptSecret(options.refreshToken, binding)
     : null;
 
   if (!sealedAccess) {
@@ -251,9 +268,10 @@ export async function persistConnection(options: {
       {
         workspace_id: options.workspaceId,
         provider_id: options.provider.id,
-        state: "connected",
+        state: "connecting",
+        last_sync_at: null,
         account_label: options.accountLabel,
-        scopes: options.provider.oauth.scopes,
+        scopes: options.grantedScopes ?? [],
         last_error: null,
         last_error_code: null,
         last_error_at: null,
@@ -305,6 +323,9 @@ export async function persistConnection(options: {
     };
   }
 
+  const { error: finalizeError } = await options.supabase.from("integration_connections")
+    .update({ state: "connected" }).eq("id", connection.id).eq("workspace_id", options.workspaceId);
+  if (finalizeError) return { ok: false, errorCode: "PERSIST_FAILED", message: "Credentials were stored but the connection could not be finalized. Reconnect." };
   return { ok: true, connectionId: connection.id };
 }
 
@@ -339,7 +360,7 @@ export async function readConnections(
     .select("*")
     .eq("workspace_id", workspaceId);
 
-  if (error) return [];
+  if (error) throw new Error("INTEGRATION_STATE_UNAVAILABLE");
   return (data ?? []) as ConnectionRow[];
 }
 
@@ -360,7 +381,8 @@ export function toConnectionView(row: ConnectionRow | undefined, providerId: str
   return {
     providerId: row.provider_id,
     connectionId: row.id,
-    lifecycle: row.state,
+    lifecycle: row.state === "connected" && row.last_sync_at && Date.now() - Date.parse(row.last_sync_at) > 86_400_000
+      ? "stale" : row.state,
     accountLabel: row.account_label,
     scopes: row.scopes ?? [],
     lastSyncAt: row.last_sync_at,
@@ -376,18 +398,20 @@ export function toConnectionView(row: ConnectionRow | undefined, providerId: str
  */
 export async function readCredential(
   supabase: SupabaseClient,
-  connectionId: string
+  connection: ConnectionRow
 ): Promise<string | null> {
   const { data } = await supabase
     .from("integration_credentials")
-    .select("encrypted_token")
-    .eq("connection_id", connectionId)
+    .select("encrypted_token, token_expires_at")
+    .eq("workspace_id", connection.workspace_id)
+    .eq("connection_id", connection.id)
     .maybeSingle();
 
   if (!data) return null;
+  if (data.token_expires_at && (!Number.isFinite(Date.parse(data.token_expires_at)) || Date.parse(data.token_expires_at) <= Date.now())) return null;
   // decryptSecret is imported lazily to keep the crypto boundary obvious.
   const { decryptSecret } = await import("./crypto");
-  return decryptSecret(data.encrypted_token as string);
+  return decryptSecret(data.encrypted_token as string, credentialBinding(connection.workspace_id, connection.provider_id, connection.connected_by));
 }
 
 /** Record a sync run + update connection state. Server-only. */
@@ -401,10 +425,12 @@ export async function recordSyncRun(options: {
   itemsCreated: number;
   errorCode?: string;
   error?: string;
+  requestId?: string;
+  startedAt?: string;
 }): Promise<void> {
   const finishedAt = new Date().toISOString();
 
-  await options.supabase.from("integration_sync_runs").insert({
+  const { error: runError } = await options.supabase.from("integration_sync_runs").insert({
     connection_id: options.connectionId,
     workspace_id: options.workspaceId,
     provider_id: options.providerId,
@@ -414,25 +440,31 @@ export async function recordSyncRun(options: {
     error_code: options.errorCode ?? null,
     error: options.error ?? null,
     finished_at: finishedAt,
+    started_at: options.startedAt ?? finishedAt,
+    request_id: options.requestId,
+    duration_ms: options.startedAt ? Math.max(0, Date.parse(finishedAt) - Date.parse(options.startedAt)) : null,
+    retry_count: 0,
   });
 
-  const nextState =
-    options.status === "success" ? "connected" : options.status === "partial" ? "stale" : "error";
+  if (runError) throw new Error("SYNC_AUDIT_WRITE_FAILED");
+  const reauth = ["UNAUTHORIZED", "CREDENTIAL_UNREADABLE", "REAUTH_REQUIRED"].includes(options.errorCode ?? "");
+  const nextState = options.status === "success" ? "connected" : reauth ? "reauth_required" : options.status === "partial" ? "stale" : "error";
 
-  await options.supabase
+  const { error: stateError } = await options.supabase
     .from("integration_connections")
     .update({
       state: nextState,
-      last_sync_at: finishedAt,
+      ...(options.status === "success" ? { last_sync_at: finishedAt } : {}),
       ...(options.status === "failed"
         ? {
             last_error: options.error ?? "Sync failed",
             last_error_code: options.errorCode ?? "SYNC_FAILED",
             last_error_at: finishedAt,
           }
-        : {}),
+        : { last_error: null, last_error_code: null, last_error_at: null }),
     })
-    .eq("id", options.connectionId);
+    .eq("id", options.connectionId).eq("workspace_id", options.workspaceId);
+  if (stateError) throw new Error("SYNC_STATE_WRITE_FAILED");
 }
 
 // ------------------------------------------------------------
@@ -443,3 +475,8 @@ export async function recordSyncRun(options: {
  *  route) so the connect and callback routes share exactly one value. */
 export const OAUTH_STATE_COOKIE = "nexus_oauth_state";
 export const OAUTH_STATE_MAX_AGE_SECONDS = 600;
+
+/** Changing workspace/provider/authorizer invalidates ciphertext, including legacy unbound tokens. */
+export function credentialBinding(workspaceId: string, providerId: string, userId: string | null): string {
+  return JSON.stringify(["nexus-credential-v1", workspaceId, providerId, userId]);
+}

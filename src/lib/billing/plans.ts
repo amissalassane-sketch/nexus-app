@@ -10,6 +10,7 @@
 // neutral "pricing announced at launch" state instead of a fake amount.
 // ============================================================
 
+import { formatMoney } from "@/lib/global/currency";
 import { PLAN_FEATURES, PLAN_LIMITS, type PlanName } from "@/lib/plan-limits";
 
 export interface PlanPresentation {
@@ -47,7 +48,7 @@ export const PLAN_PRESENTATION: Record<PlanName, PlanPresentation> = {
     name: "FREE",
     tagline: "Start",
     description: "Run your personal system and learn how NEXUS thinks.",
-    priceLabel: "$0",
+    priceLabel: formatMoney({ amountMinor: 0, currency: "USD" }, "en-US"),
     pricePeriod: "forever",
     featured: false,
     highlights: limitLines("FREE"),

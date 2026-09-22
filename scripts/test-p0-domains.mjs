@@ -53,7 +53,7 @@ check("calendar: today / week / agenda views exist", ["today", "week", "agenda"]
 check("calendar: reads are workspace-scoped", calendar.includes('.eq("workspace_id"'));
 check("calendar: conflicts are detected, not implied", calendar.includes("overlapMinutes"));
 check("calendar: free windows are computed from real events", calendar.includes("freeWindowsToday"));
-check("calendar: window read is bounded (60-day window)", calendar.includes("53 * DAY_MS"));
+check("calendar: window read is bounded (60-day window)", calendar.includes("addDays(now, 53)") && calendar.includes("addDays(now, -7)"));
 check("calendar: end-before-start is rejected client-side too", calendar.includes("before the start time"));
 
 // The adapter's pure functions are the shared conflict math.

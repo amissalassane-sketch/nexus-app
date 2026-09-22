@@ -440,13 +440,15 @@ export async function readMemory(
 ): Promise<StoredMemory | null> {
   const { data, error } = await db
     .from("intelligence_memory")
-    .select("state, preferences")
+    .select("state, preferences, updated_at")
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId)
     .maybeSingle();
 
   assertIntelligenceData({ error });
   if (!data) return null;
+  // Stop using inactive memory after 90 days even if the purge worker is delayed.
+  if (data.updated_at && Date.parse(data.updated_at) <= Date.now() - 90 * 86400000) return null;
   return {
     state: {
       ...emptyMemoryState(),

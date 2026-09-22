@@ -1,0 +1,118 @@
+[
+  {
+    "route": "/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  },
+  {
+    "route": "/pricing",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 57
+      }
+    ],
+    "passes": 26
+  },
+  {
+    "route": "/privacy",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 32
+      }
+    ],
+    "passes": 24
+  },
+  {
+    "route": "/admin/login",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 24
+  },
+  {
+    "route": "/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/login",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 25
+  },
+  {
+    "route": "/pricing",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/pricing",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 15
+      }
+    ],
+    "passes": 27
+  },
+  {
+    "route": "/privacy",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/privacy",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 3
+      }
+    ],
+    "passes": 24
+  },
+  {
+    "route": "/admin/login",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "overflow": false,
+    "violations": [],
+    "incomplete": [],
+    "passes": 24
+  }
+]

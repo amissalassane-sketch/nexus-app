@@ -186,7 +186,7 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent text-[13px]"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-admin-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent text-[13px]"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />

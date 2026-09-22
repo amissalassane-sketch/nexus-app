@@ -313,7 +313,7 @@ export async function callAIProvider(
 
     return null;
   } catch (error) {
-    console.warn("AI Provider call failed or timed out, falling back to deterministic reasoning:", error);
+    console.warn("[nexus-ai] provider request failed; using deterministic fallback", { category: error instanceof Error && error.name === "AbortError" ? "timeout" : "provider_failure" });
     return null;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { IconX } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
@@ -31,6 +31,7 @@ export function Modal({
   size?: "md" | "lg";
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const descriptionId = useId();
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [shouldRender, setShouldRender] = useState(open);
@@ -68,6 +69,19 @@ export function Modal({
     previouslyFocused.current = document.activeElement as HTMLElement | null;
 
     const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Tab" && panelRef.current) {
+        const nodes = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])"
+        )).filter((node) => node.getClientRects().length > 0 && node.tabIndex >= 0);
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (!first) { event.preventDefault(); panelRef.current.focus(); }
+        else if (event.shiftKey && (document.activeElement === first || !panelRef.current.contains(document.activeElement))) {
+          event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !panelRef.current.contains(document.activeElement))) {
+          event.preventDefault(); first.focus();
+        }
+      }
       if (event.key === "Escape") {
         event.stopPropagation();
         onCloseRef.current();
@@ -124,6 +138,8 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         className={cn(
           "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface shadow-overlay will-change-transform",
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
@@ -146,7 +162,7 @@ export function Modal({
               {title}
             </h2>
             {description ? (
-              <p className="mt-1 text-small text-text-secondary animate-[intelligence-state-in_240ms_var(--ease-nexus)_80ms_both]">
+              <p id={descriptionId} className="mt-1 text-small text-text-secondary animate-[intelligence-state-in_240ms_var(--ease-nexus)_80ms_both]">
                 {description}
               </p>
             ) : null}

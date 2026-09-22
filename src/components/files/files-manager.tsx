@@ -106,6 +106,7 @@ export function FilesManager({ userId }: { userId: string }) {
       .limit(200);
     if (readError) {
       reportDataError("files.read", readError);
+      setLoading(false);
       return;
     }
     setFiles((data ?? []) as FileRow[]);
@@ -204,6 +205,12 @@ export function FilesManager({ userId }: { userId: string }) {
 
   const remove = async (file: FileRow) => {
     if (!workspaceId) return;
+    const { error: objectError } = await supabase.storage.from(BUCKET).remove([file.storage_path]);
+    if (objectError) {
+      reportDataError("files.delete-storage", objectError);
+      setDeleting(null);
+      return;
+    }
     const { error: deleteError } = await supabase
       .from("files")
       .delete()
@@ -214,8 +221,7 @@ export function FilesManager({ userId }: { userId: string }) {
       setDeleting(null);
       return;
     }
-    // Metadata row is gone; remove the object too (RLS allows members).
-    await supabase.storage.from(BUCKET).remove([file.storage_path]);
+    // Storage deletion was acknowledged before reporting successful deletion.
     setDeleting(null);
     toast("success", `Deleted ${file.name}`);
     await fetchFiles(workspaceId);
@@ -242,7 +248,7 @@ export function FilesManager({ userId }: { userId: string }) {
       <PageHeader
         title="Files"
         count={loading ? undefined : `${files.length} file${files.length === 1 ? "" : "s"}`}
-        description="Documents attached to your work. Stored in a private workspace bucket — never public, never fed to a model without you knowing."
+        description="Documents attached to your work, stored in a private workspace bucket. Content extraction and AI document analysis are not implemented."
         actions={
           <Button variant="primary" onClick={pickFiles} loading={uploading}>
             <NexusIcon icon={IconUpload} />
@@ -251,7 +257,7 @@ export function FilesManager({ userId }: { userId: string }) {
         }
       />
 
-      {error ? <Alert tone="danger" title="Files could not be saved">{error}</Alert> : null}
+      {error ? <Alert tone="danger" title="File operation could not be completed">{error}</Alert> : null}
       {planLimit ? (
         <Alert tone="warning" title="File limit reached">
           {planLimit}{" "}

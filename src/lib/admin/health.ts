@@ -244,13 +244,13 @@ function probeIntelligence(now: string): ServiceHealth {
   return {
     id: "ai",
     label: "Intelligence / AI",
-    status: external ? "operational" : "not_configured",
+    status: external ? "not_measured" : "not_configured",
     checkedAt: now,
     detail: external
-      ? `${provider.provider}${provider.model ? ` · ${provider.model}` : ""}. Reachability is not probed from here; request metrics live in the Intelligence panel.`
+      ? `${provider.provider}${provider.model ? ` · ${provider.model}` : ""}. Configured, not verified. Reachability is not probed from here; request metrics live in the Intelligence panel.`
       : "No model provider is configured — NEXUS runs on the deterministic engine. Set OPENAI_API_KEY or ANTHROPIC_API_KEY to enable model reasoning.",
     action: external
-      ? { label: "Open Intelligence metrics", href: "/admin/overview#intelligence-health" }
+      ? { label: "Open Intelligence metrics", href: "/admin/intelligence" }
       : { label: "Read the setup guide", href: "/admin/security" },
   };
 }

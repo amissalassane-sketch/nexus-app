@@ -54,7 +54,7 @@ export function readEncryptionKey(): EncryptionKeyResult {
 
   try {
     const decoded = Buffer.from(raw, "base64");
-    if (decoded.length === KEY_BYTES) {
+    if (decoded.length === KEY_BYTES && decoded.toString("base64") === raw) {
       return { key: decoded, error: null };
     }
     return {
@@ -75,12 +75,13 @@ export function isCredentialStorageConfigured(): boolean {
 }
 
 /** Seal a secret. Returns null when no valid key is configured. */
-export function encryptSecret(plaintext: string): string | null {
+export function encryptSecret(plaintext: string, associatedData?: string): string | null {
   const { key } = readEncryptionKey();
   if (!key) return null;
 
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGORITHM, key, iv);
+  if (associatedData) cipher.setAAD(Buffer.from(associatedData, "utf8"));
   const encrypted = Buffer.concat([
     cipher.update(plaintext, "utf8"),
     cipher.final(),
@@ -98,7 +99,7 @@ export function encryptSecret(plaintext: string): string | null {
  * Open a sealed secret. Returns null on any failure (wrong key,
  * tampered ciphertext, malformed input) — never a partial value.
  */
-export function decryptSecret(sealed: string | null | undefined): string | null {
+export function decryptSecret(sealed: string | null | undefined, associatedData?: string): string | null {
   if (!sealed) return null;
 
   const { key } = readEncryptionKey();
@@ -108,6 +109,7 @@ export function decryptSecret(sealed: string | null | undefined): string | null 
   if (parts.length !== 3) return null;
 
   try {
+    if (parts.some((part) => Buffer.from(part, "base64").toString("base64") !== part)) return null;
     const iv = Buffer.from(parts[0], "base64");
     const authTag = Buffer.from(parts[1], "base64");
     const ciphertext = Buffer.from(parts[2], "base64");
@@ -115,6 +117,7 @@ export function decryptSecret(sealed: string | null | undefined): string | null 
     if (iv.length !== IV_BYTES || authTag.length !== 16) return null;
 
     const decipher = createDecipheriv(ALGORITHM, key, iv);
+    if (associatedData) decipher.setAAD(Buffer.from(associatedData, "utf8"));
     decipher.setAuthTag(authTag);
     const plaintext = Buffer.concat([
       decipher.update(ciphertext),

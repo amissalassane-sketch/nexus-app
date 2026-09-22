@@ -50,3 +50,6 @@ Scan local des motifs de clés privées, sk-proj/sk-ant et sb_secret dans src/su
 | health | publique | liveness/config, pas readiness DB |
 
 Les RPC administratives ne sont pas des API REST publiques anonymes. Le front utilise les fonctions authentifiées, elles-mêmes protégées en base.
+
+## Addendum — global mission 2026-09-22
+Current measured limits and blockers: see root `SECURITY.md` and `docs/GLOBAL_AUDIT_FINAL_2026-09-22.md`. New privacy/retention and Stripe transport primitives do not establish production security or activate billing.

@@ -152,7 +152,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
   },
   get_events: {
     name: "get_events",
-    description: "Upcoming calendar events (NEXUS events, plus external calendar when connected).",
+    description: "Upcoming NEXUS calendar events. External calendar data is not wired into this tool.",
     permission: "read",
     risk: "none",
     args: [{ name: "limit", type: "number", description: "Max events (default 5)" }],
@@ -208,7 +208,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "create_task",
     description: "Propose creating a task. Executed server-side after confirmation.",
     permission: "mutate",
-    risk: "low",
+    risk: "medium",
     actionType: "create_task",
     confirmationRequired: true,
     args: [
@@ -223,7 +223,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "update_task",
     description: "Propose updating a task (priority/status/due date/title). Confirmation-gated.",
     permission: "mutate",
-    risk: "medium",
+    risk: "high",
     actionType: "update_task",
     confirmationRequired: true,
     args: [
@@ -238,7 +238,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "complete_task",
     description: "Propose marking a task done. Executed server-side after confirmation.",
     permission: "mutate",
-    risk: "low",
+    risk: "high",
     actionType: "complete_task",
     confirmationRequired: true,
     args: [
@@ -250,7 +250,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "move_task",
     description: "Propose rescheduling a task to a new due date.",
     permission: "mutate",
-    risk: "low",
+    risk: "high",
     actionType: "move_task",
     confirmationRequired: true,
     args: [
@@ -276,7 +276,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "create_project",
     description: "Propose creating a project. Executed server-side after confirmation.",
     permission: "mutate",
-    risk: "low",
+    risk: "medium",
     actionType: "create_project",
     confirmationRequired: true,
     args: [
@@ -289,7 +289,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "update_project",
     description: "Propose updating a project (name/status/progress/due date).",
     permission: "mutate",
-    risk: "medium",
+    risk: "high",
     actionType: "update_project",
     confirmationRequired: true,
     args: [
@@ -317,7 +317,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "create_goal",
     description: "Propose creating a goal. Executed server-side after confirmation.",
     permission: "mutate",
-    risk: "low",
+    risk: "medium",
     actionType: "create_goal",
     confirmationRequired: true,
     args: [
@@ -329,7 +329,7 @@ export const TOOL_REGISTRY: Record<string, IntelligenceToolDef> = {
     name: "update_goal",
     description: "Propose updating a goal (title/status/progress/target date).",
     permission: "mutate",
-    risk: "medium",
+    risk: "high",
     actionType: "update_goal",
     confirmationRequired: true,
     args: [
