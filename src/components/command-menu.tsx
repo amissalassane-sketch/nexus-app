@@ -14,11 +14,13 @@ import {
   IconCornerDownLeft,
   IconHistory,
   IconLayoutKanban,
+  IconNotebook,
   IconPlus,
   IconRadar,
   IconSearch,
   IconSparkles,
   IconTarget,
+  IconBolt,
 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { createClient } from "@/lib/supabase/client";
@@ -49,7 +51,8 @@ type CommandCategory =
   | "Pages"
   | "Projects"
   | "Tasks"
-  | "Goals";
+  | "Goals"
+  | "Notes";
 
 type Command = {
   id: string;
@@ -59,7 +62,11 @@ type Command = {
   icon: React.ReactNode;
   href: string;
   keywords: string;
+  /** When set, this command runs a built-in action instead of navigating. */
+  action?: "capture";
 };
+
+const CAPTURE_COMMANDS_MIN_LENGTH = 3;
 
 const CREATE_COMMANDS: Command[] = [
   {
@@ -144,6 +151,7 @@ const CATEGORY_ORDER: CommandCategory[] = [
   "Projects",
   "Tasks",
   "Goals",
+  "Notes",
 ];
 
 const RECENT_STORAGE_KEY = "nexus.command-recents";
@@ -254,6 +262,8 @@ export function CommandMenu() {
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">(
     "idle"
   );
+  const [notice, setNotice] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const fetchedRef = useRef(false);
@@ -299,7 +309,7 @@ export function CommandMenu() {
         return;
       }
 
-      const [tasks, projects, goals] = await Promise.all([
+      const [tasks, projects, goals, notes] = await Promise.all([
         supabase
           .from("tasks")
           .select("id, title, status")
@@ -316,9 +326,16 @@ export function CommandMenu() {
           .select("id, title, status")
           .eq("workspace_id", workspaceId)
           .limit(60),
+        supabase
+          .from("notes")
+          .select("id, title, note_type")
+          .eq("workspace_id", workspaceId)
+          .is("archived_at", null)
+          .order("updated_at", { ascending: false })
+          .limit(30),
       ]);
 
-      if (tasks.error && projects.error && goals.error) {
+      if (tasks.error && projects.error && goals.error && notes.error) {
         setState("error");
         return;
       }
@@ -355,6 +372,17 @@ export function CommandMenu() {
           icon: <NexusIcon icon={IconTarget} />,
           href: "/goals",
           keywords: (goal.title as string).toLowerCase(),
+        });
+      }
+      for (const note of notes.data ?? []) {
+        next.push({
+          id: `no-${note.id}`,
+          category: "Notes",
+          label: note.title as string,
+          hint: (note.note_type as string) ?? "note",
+          icon: <NexusIcon icon={IconNotebook} />,
+          href: "/notes",
+          keywords: `note ${(note.title as string).toLowerCase()}`,
         });
       }
       setEntities(next);
@@ -424,9 +452,61 @@ export function CommandMenu() {
     };
   }, [open]);
 
+  // Universal capture: whatever the user typed becomes a task offer at
+  // the top of the palette. Deterministic parsing happens server-side.
+  const runCapture = useCallback(
+    async (trimmed: string) => {
+      setRunning(true);
+      setNotice(null);
+      try {
+        const response = await fetch("/api/capture", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text: trimmed }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          setNotice(payload?.error ?? "Capture failed. Try again in a moment.");
+          setRunning(false);
+          return;
+        }
+        setRunning(false);
+        rememberRecent("capture-dynamic");
+        requestClose();
+        router.push("/tasks");
+      } catch {
+        setNotice("Capture failed — the server did not answer. Try again.");
+        setRunning(false);
+      }
+    },
+    [requestClose, router]
+  );
+
+  const captureCommand = useMemo<Command | null>(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < CAPTURE_COMMANDS_MIN_LENGTH) return null;
+    // Declarative by design: the memoized value stays pure data; the
+    // dispatch happens in runCommand (event time), never during render.
+    return {
+      id: "capture-dynamic",
+      category: "Actions",
+      label: `Capture: ${trimmed}`,
+      hint: "Create a task",
+      icon: <NexusIcon icon={IconBolt} />,
+      href: "/tasks",
+      keywords: "capture task quick add create note",
+      action: "capture",
+    };
+  }, [query]);
+
   const allCommands = useMemo(
-    () => [...CREATE_COMMANDS, ...PAGE_COMMANDS, ...entities],
-    [entities]
+    () => [
+      ...(captureCommand ? [captureCommand] : []),
+      ...CREATE_COMMANDS,
+      ...PAGE_COMMANDS,
+      ...entities,
+    ],
+    [captureCommand, entities]
   );
 
   const tokens = useMemo(
@@ -490,12 +570,16 @@ export function CommandMenu() {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
   const runCommand = useCallback(
-    (command: Command) => {
+    async (command: Command) => {
+      if (command.action === "capture") {
+        await runCapture(query.trim());
+        return;
+      }
       rememberRecent(command.id);
       requestClose();
       router.push(command.href);
     },
-    [requestClose, router]
+    [query, requestClose, router, runCapture]
   );
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -520,7 +604,7 @@ export function CommandMenu() {
     } else if (event.key === "Enter") {
       event.preventDefault();
       const command = flat[currentIndex];
-      if (command) runCommand(command);
+      if (command) void runCommand(command);
     }
   };
 
@@ -579,8 +663,9 @@ export function CommandMenu() {
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(0);
+              setNotice(null);
             }}
-            placeholder="Search NEXUS: pages, projects, tasks, actions…"
+            placeholder="Search NEXUS, or type a sentence to capture it…"
             aria-label="Search NEXUS"
             role="combobox"
             aria-expanded="true"
@@ -618,14 +703,15 @@ export function CommandMenu() {
                 Nothing matches “{query.trim()}”.
               </p>
               <p className="mt-1 text-caption text-text-tertiary">
-                Try a project name, a task title, or a page.
+                Try a project, task or note title — or press Enter to capture
+                it as a task.
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
                 {CREATE_COMMANDS.map((command) => (
                   <button
                     key={command.id}
                     type="button"
-                    onClick={() => runCommand(command)}
+                    onClick={() => void runCommand(command)}
                     className="inline-flex h-7 items-center gap-1.5 rounded-pill border border-border-default bg-bg-subtle px-2.5 text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary"
                   >
                     {command.icon}
@@ -659,7 +745,7 @@ export function CommandMenu() {
                       aria-selected={active}
                       data-active={active}
                       onMouseMove={() => setActiveIndex(index)}
-                      onClick={() => runCommand(command)}
+                      onClick={() => void runCommand(command)}
                       className={cn(
                         "command-row group relative flex h-10 w-full items-center gap-3 rounded-nav px-2 text-left",
                         active ? "text-text-primary" : "text-text-secondary"
@@ -730,7 +816,16 @@ export function CommandMenu() {
             <Hint keys="esc" label="Close" />
           </span>
           <span className="ml-auto flex items-center gap-3">
-            {state === "error" ? (
+            {notice ? (
+              <span className="max-w-[280px] truncate text-caption text-warning" role="status">
+                {notice}
+              </span>
+            ) : running ? (
+              <span className="flex items-center gap-1.5 text-caption text-text-tertiary" role="status">
+                <span className="size-1.5 rounded-pill bg-lavender signal-pulse" aria-hidden="true" />
+                Capturing
+              </span>
+            ) : state === "error" ? (
               <span className="flex items-center gap-1.5 text-caption text-text-tertiary">
                 <span className="size-1.5 rounded-pill bg-warning" aria-hidden="true" />
                 Workspace results unavailable

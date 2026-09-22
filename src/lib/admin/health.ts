@@ -1,15 +1,19 @@
 // ============================================================
 // NEXUS ADMIN — PLATFORM HEALTH
 // ============================================================
-// A health panel that invents statuses is worse than no health panel: it
-// teaches the operator to distrust every other number on the screen. So
-// every service here is either
+// A health panel that invents statuses is worse than no health panel:
+// it teaches the operator to distrust every other number on the
+// screen. Every service here resolves to one of seven states, each
+// with exactly one cause:
 //
-//   * MEASURED   — a real call was made and timed, or
-//   * DECLARED   — the environment says whether the subsystem is wired up
-//                  at all (AI provider, payment provider), or
-//   * UNKNOWN    — nothing can be checked from here, and the panel says
-//                  exactly that instead of showing a green dot.
+//   operational     — measured (or verified by construction), fine
+//   degraded        — measured, above the latency threshold
+//   error           — measured, failing
+//   not_configured  — the subsystem is absent on purpose (no key)
+//   not_measured    — nothing can be checked from here
+//   stale           — newest observation too old to trust
+//   blocked         — the check needs something this app deliberately
+//                     does not hold (e.g. service-role key)
 //
 // Nothing is simulated. There is no uptime percentage, because this
 // application does not record history: computing one would require a
@@ -42,8 +46,10 @@ async function probeDatabase(now: string): Promise<ServiceHealth> {
   if (!isSupabaseConfigured()) {
     return {
       ...base,
-      status: "down",
-      detail: "Supabase is not configured on this deployment.",
+      status: "not_configured",
+      detail:
+        "Supabase is not configured on this deployment — set the public URL and key to bring the database online.",
+      action: { label: "Open deployment settings", href: "/admin/security" },
     };
   }
 
@@ -70,9 +76,9 @@ async function probeDatabase(now: string): Promise<ServiceHealth> {
     if (error) {
       return {
         ...base,
-        status: "down",
+        status: "error",
         latencyMs,
-        detail: "PostgREST rejected a minimal read.",
+        detail: `PostgREST rejected a minimal read (${error.code ?? "unknown code"}).`,
       };
     }
 
@@ -88,9 +94,9 @@ async function probeDatabase(now: string): Promise<ServiceHealth> {
   } catch {
     return {
       ...base,
-      status: "down",
+      status: "error",
       latencyMs: Math.round(performance.now() - started),
-      detail: `No answer within ${PROBE_TIMEOUT_MS}ms.`,
+      detail: `No answer within ${PROBE_TIMEOUT_MS}ms — the database probe timed out.`,
     };
   }
 }
@@ -99,7 +105,11 @@ async function probeAuthentication(now: string): Promise<ServiceHealth> {
   const base = { id: "authentication", label: "Authentication", checkedAt: now };
 
   if (!isSupabaseConfigured()) {
-    return { ...base, status: "down", detail: "Supabase is not configured." };
+    return {
+      ...base,
+      status: "not_configured",
+      detail: "Supabase is not configured, so GoTrue is not reachable.",
+    };
   }
 
   const supabase = await createClient();
@@ -121,7 +131,7 @@ async function probeAuthentication(now: string): Promise<ServiceHealth> {
     if (error) {
       return {
         ...base,
-        status: "down",
+        status: "error",
         latencyMs,
         detail: "GoTrue rejected the session lookup.",
       };
@@ -130,14 +140,68 @@ async function probeAuthentication(now: string): Promise<ServiceHealth> {
       ...base,
       status: statusFromLatency(latencyMs),
       latencyMs,
-      detail: data.user ? "Session verified against GoTrue." : "GoTrue answered; no session.",
+      detail: data.user
+        ? "Session verified against GoTrue."
+        : "GoTrue answered; no session on this request.",
     };
   } catch {
     return {
       ...base,
-      status: "down",
+      status: "error",
       latencyMs: Math.round(performance.now() - started),
-      detail: `No answer within ${PROBE_TIMEOUT_MS}ms.`,
+      detail: `No answer within ${PROBE_TIMEOUT_MS}ms — the auth probe timed out.`,
+    };
+  }
+}
+
+/**
+ * Storage is a real bucket (migration 002, used by the Files domain).
+ * The probe lists the bucket root through the member-scoped client: a
+ * response (even an empty listing) proves the bucket exists and
+ * answers; a "bucket not found" or RLS rejection is an error.
+ */
+async function probeStorage(now: string): Promise<ServiceHealth> {
+  const base = { id: "storage", label: "Storage", checkedAt: now };
+
+  if (!isSupabaseConfigured()) {
+    return {
+      ...base,
+      status: "not_configured",
+      detail: "Supabase is not configured, so the storage bucket is not reachable.",
+    };
+  }
+
+  const supabase = await createClient();
+  const started = performance.now();
+
+  try {
+    const { error } = await withTimeout(
+      Promise.resolve(supabase.storage.from("nexus-files").list("", { limit: 1 })),
+      PROBE_TIMEOUT_MS,
+      "ADMIN_PROBE_STORAGE_TIMEOUT"
+    );
+
+    const latencyMs = Math.round(performance.now() - started);
+    if (error) {
+      return {
+        ...base,
+        status: "error",
+        latencyMs,
+        detail: `The nexus-files bucket rejected a listing (${error.message}).`,
+      };
+    }
+    return {
+      ...base,
+      status: statusFromLatency(latencyMs),
+      latencyMs,
+      detail: "The nexus-files bucket answered a listing request.",
+    };
+  } catch {
+    return {
+      ...base,
+      status: "error",
+      latencyMs: Math.round(performance.now() - started),
+      detail: `No answer within ${PROBE_TIMEOUT_MS}ms — the storage probe timed out.`,
     };
   }
 }
@@ -174,47 +238,49 @@ function probeIntelligence(now: string): ServiceHealth {
   const provider = detectAIProvider();
   const external = provider.provider === "openai" || provider.provider === "anthropic";
 
+  // The provider state is DECLARED by the environment, and that is the
+  // correct semantics: no key means "not configured" (a deployment
+  // decision), never "error" and never a fake green.
   return {
     id: "ai",
     label: "Intelligence / AI",
-    status: external ? "operational" : "unknown",
+    status: external ? "operational" : "not_configured",
     checkedAt: now,
     detail: external
-      ? `${provider.provider}${provider.model ? ` · ${provider.model}` : ""}. Reachability is not probed from here.`
-      : "No model provider configured — NEXUS falls back to the deterministic engine.",
+      ? `${provider.provider}${provider.model ? ` · ${provider.model}` : ""}. Reachability is not probed from here; request metrics live in the Intelligence panel.`
+      : "No model provider is configured — NEXUS runs on the deterministic engine. Set OPENAI_API_KEY or ANTHROPIC_API_KEY to enable model reasoning.",
+    action: external
+      ? { label: "Open Intelligence metrics", href: "/admin/overview#intelligence-health" }
+      : { label: "Read the setup guide", href: "/admin/security" },
   };
 }
 
 function probePayments(now: string): ServiceHealth {
   // There is no payment provider in this codebase: /api/billing/upgrade
-  // answers PAYMENT_PROVIDER_NOT_CONFIGURED. Reporting "operational"
-  // would be a lie, and reporting "down" would imply a failure.
+  // answers PAYMENT_PROVIDER_NOT_CONFIGURED. That is a declared
+  // absence, not a failure — the state says which one it is.
   return {
     id: "payments",
     label: "Payments",
-    status: "unknown",
+    status: "not_configured",
     checkedAt: now,
-    detail: "No payment provider is connected, so there is nothing to check and no revenue to report.",
-  };
-}
-
-function probeStorage(now: string): ServiceHealth {
-  return {
-    id: "storage",
-    label: "Storage",
-    status: "unknown",
-    checkedAt: now,
-    detail: "No storage bucket is used by the application yet.",
+    detail:
+      "No payment provider is connected, so there is nothing to check and no revenue to report. Billing answers honestly (PAYMENT_PROVIDER_NOT_CONFIGURED) instead of pretending.",
   };
 }
 
 function probeBackgroundJobs(now: string): ServiceHealth {
+  // No queue or scheduler is deployed: automated work happens in
+  // database triggers. Execution metrics for automations live in the
+  // Background jobs panel; this row is about the *infrastructure*,
+  // which does not exist yet — a declared absence.
   return {
     id: "jobs",
     label: "Background jobs",
-    status: "unknown",
+    status: "not_configured",
     checkedAt: now,
-    detail: "No queue or scheduler is deployed. Database triggers do the automated work.",
+    detail:
+      "No queue or scheduler is deployed. Database triggers do the automated work; automation executions are measured in the Background jobs panel below.",
   };
 }
 
@@ -223,25 +289,32 @@ function probeBackgroundJobs(now: string): ServiceHealth {
 export async function getPlatformHealth(): Promise<ServiceHealth[]> {
   const now = new Date().toISOString();
 
-  const [database, authentication, api] = await Promise.all([
+  const [database, authentication, api, storage] = await Promise.all([
     probeDatabase(now).catch(() => ({
       id: "database",
       label: "Database",
-      status: "unknown" as ServiceStatus,
+      status: "not_measured" as ServiceStatus,
       detail: "The probe failed before reporting a result.",
       checkedAt: now,
     })),
     probeAuthentication(now).catch(() => ({
       id: "authentication",
       label: "Authentication",
-      status: "unknown" as ServiceStatus,
+      status: "not_measured" as ServiceStatus,
       detail: "The probe failed before reporting a result.",
       checkedAt: now,
     })),
     probeApi(now).catch(() => ({
       id: "api",
       label: "Application API",
-      status: "unknown" as ServiceStatus,
+      status: "not_measured" as ServiceStatus,
+      detail: "The probe failed before reporting a result.",
+      checkedAt: now,
+    })),
+    probeStorage(now).catch(() => ({
+      id: "storage",
+      label: "Storage",
+      status: "not_measured" as ServiceStatus,
       detail: "The probe failed before reporting a result.",
       checkedAt: now,
     })),
@@ -251,26 +324,43 @@ export async function getPlatformHealth(): Promise<ServiceHealth[]> {
     api,
     authentication,
     database,
-    probeStorage(now),
+    storage,
     probeIntelligence(now),
     probePayments(now),
     probeBackgroundJobs(now),
   ];
 }
 
+const STATUS_RANK: Record<ServiceStatus, number> = {
+  "error": 0,
+  "degraded": 1,
+  "blocked": 2,
+  "stale": 3,
+  "not_configured": 4,
+  "not_measured": 5,
+  "operational": 6,
+};
+
 /** One line for the header: the worst status currently on the panel. */
 export function summariseHealth(services: ServiceHealth[]): {
   status: ServiceStatus;
   label: string;
 } {
-  if (services.some((s) => s.status === "down")) {
-    return { status: "down", label: "A service is down" };
-  }
-  if (services.some((s) => s.status === "degraded")) {
-    return { status: "degraded", label: "Degraded" };
-  }
-  if (services.every((s) => s.status === "unknown")) {
-    return { status: "unknown", label: "Not measured" };
-  }
-  return { status: "operational", label: "Operational" };
+  const worst = services.reduce<ServiceStatus>((current, service) => {
+    return STATUS_RANK[service.status] < STATUS_RANK[current]
+      ? service.status
+      : current;
+  }, "operational");
+
+  const label: Record<ServiceStatus, string> = {
+    "error": "A service is failing",
+    "degraded": "Degraded",
+    "blocked": "A check is blocked",
+    "stale": "Data is stale",
+    "not_configured": "Not fully configured",
+    "not_measured": "Not measured",
+    "operational": "Operational",
+  };
+
+  return { status: worst, label: label[worst] };
 }

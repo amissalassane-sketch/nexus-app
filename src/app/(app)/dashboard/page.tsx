@@ -34,6 +34,7 @@ import { PriorityQueuePanel } from "@/components/dashboard/priority-queue";
 import { ActiveProjectsPanel } from "@/components/dashboard/active-projects";
 import { UpcomingPanel, type UpcomingItem } from "@/components/dashboard/upcoming-panel";
 import { MobileOverview } from "@/components/mobile-home/mobile-overview";
+import { CaptureBar } from "@/components/capture/capture-bar";
 import { readActiveMissions } from "@/lib/intelligence/mission";
 import type { IntelligenceMission } from "@/lib/intelligence/types";
 import { withTimeout } from "@/lib/auth-flow";
@@ -324,6 +325,11 @@ export default async function DashboardPage() {
             <span className="text-text-tertiary">
               {needsAttention.length} {needsAttention.length === 1 ? "signal" : "signals"} · {context.dueThisWeek} approaching {context.dueThisWeek === 1 ? "deadline" : "deadlines"} · {context.blockedTasks} {context.blockedTasks === 1 ? "blocker" : "blockers"}
             </span>
+          </div>
+
+          {/* UNIVERSAL CAPTURE — one sentence in, one structured task out. */}
+          <div className="mt-4 max-w-2xl">
+            <CaptureBar />
           </div>
         </div>
 

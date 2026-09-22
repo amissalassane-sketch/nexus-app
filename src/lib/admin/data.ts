@@ -20,7 +20,10 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type {
   AdminActivityEntry,
   AdminActivityResult,
+  AdminAutomationHealth,
   AdminDataError,
+  AdminIntegrationHealth,
+  AdminIntelligenceHealth,
   AdminOverview,
   AdminOverviewResult,
 } from "./types";
@@ -269,4 +272,150 @@ export async function getAdminOverview(): Promise<AdminOverviewResult> {
 
   const activity = await readActivity(supabase);
   return { ok: true, overview: base.overview, activity };
+}
+
+// ------------------------------------------------------------
+// Health companion panels (migration 20260922130000)
+// ------------------------------------------------------------
+// Each panel is an independent read: one failing must never blank the
+// others, and a missing RPC (migration not applied) is reported as
+// not-installed rather than crashing the Overview.
+
+export type HealthPanelResult<T> =
+  | { state: "ok"; data: T }
+  | { state: "unavailable"; error: AdminDataError };
+
+async function readHealthPanel<T>(
+  supabase: SupabaseClient,
+  fn: string,
+  validate: (value: unknown) => value is T,
+  timeoutMs: number,
+  timeoutCode: string
+): Promise<HealthPanelResult<T>> {
+  const controller = new AbortController();
+  const result = await withTimeout(
+    Promise.resolve(supabase.rpc(fn).abortSignal(controller.signal)),
+    timeoutMs,
+    timeoutCode,
+    controller
+  ).catch((cause) => ({
+    data: null,
+    error:
+      cause instanceof Error && cause.message.includes(timeoutCode)
+        ? { code: null, message: "timed out" }
+        : { code: null, message: cause instanceof Error ? cause.message : "unknown" },
+  }));
+
+  if (result.error) {
+    return { state: "unavailable", error: classify(result.error, `${fn}()`) };
+  }
+  if (!validate(result.data)) {
+    return {
+      state: "unavailable",
+      error: {
+        code: "INVALID_PAYLOAD",
+        message: `${fn}() returned an unexpected shape.`,
+      },
+    };
+  }
+  return { state: "ok", data: result.data };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isIntelligenceHealth(value: unknown): value is AdminIntelligenceHealth {
+  return isRecord(value) && typeof value.generated_at === "string";
+}
+
+function isIntegrationHealth(value: unknown): value is AdminIntegrationHealth {
+  return isRecord(value) && typeof value.generated_at === "string" && isRecord(value.connections);
+}
+
+function isAutomationHealth(value: unknown): value is AdminAutomationHealth {
+  return (
+    isRecord(value) &&
+    typeof value.generated_at === "string" &&
+    isRecord(value.automations) &&
+    isRecord(value.executions)
+  );
+}
+
+export async function getIntelligenceHealth(): Promise<
+  HealthPanelResult<AdminIntelligenceHealth>
+> {
+  if (!isSupabaseConfigured()) {
+    return {
+      state: "unavailable",
+      error: {
+        code: "NOT_INSTALLED",
+        message: "Supabase is not configured, so Intelligence metrics cannot be read.",
+      },
+    };
+  }
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return { state: "unavailable", error: { code: "FORBIDDEN", message: "Not signed in." } };
+  }
+  const supabase = await createClient();
+  return readHealthPanel(
+    supabase,
+    "admin_intelligence_health",
+    isIntelligenceHealth,
+    8_000,
+    "ADMIN_INTELLIGENCE_HEALTH_TIMEOUT"
+  );
+}
+
+export async function getIntegrationHealth(): Promise<
+  HealthPanelResult<AdminIntegrationHealth>
+> {
+  if (!isSupabaseConfigured()) {
+    return {
+      state: "unavailable",
+      error: {
+        code: "NOT_INSTALLED",
+        message: "Supabase is not configured, so integration metrics cannot be read.",
+      },
+    };
+  }
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return { state: "unavailable", error: { code: "FORBIDDEN", message: "Not signed in." } };
+  }
+  const supabase = await createClient();
+  return readHealthPanel(
+    supabase,
+    "admin_integration_health",
+    isIntegrationHealth,
+    8_000,
+    "ADMIN_INTEGRATION_HEALTH_TIMEOUT"
+  );
+}
+
+export async function getAutomationHealth(): Promise<
+  HealthPanelResult<AdminAutomationHealth>
+> {
+  if (!isSupabaseConfigured()) {
+    return {
+      state: "unavailable",
+      error: {
+        code: "NOT_INSTALLED",
+        message: "Supabase is not configured, so automation metrics cannot be read.",
+      },
+    };
+  }
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return { state: "unavailable", error: { code: "FORBIDDEN", message: "Not signed in." } };
+  }
+  const supabase = await createClient();
+  return readHealthPanel(
+    supabase,
+    "admin_automation_health",
+    isAutomationHealth,
+    8_000,
+    "ADMIN_AUTOMATION_HEALTH_TIMEOUT"
+  );
 }
