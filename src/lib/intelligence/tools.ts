@@ -591,12 +591,9 @@ function projectMap(snapshot: WorkspaceSnapshot): Map<string, string> {
 
 const DAY_MS_LOCAL = 86_400_000;
 
-/** Start (midnight) of `dayOffset` days from `now`, in local time. */
+/** Start (midnight) of `dayOffset` days from `now`, computed in UTC. */
 function startOfLocalDay(now: Date, dayOffset: number): number {
-  const date = new Date(now);
-  date.setDate(date.getDate() + dayOffset);
-  date.setHours(0, 0, 0, 0);
-  return date.getTime();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + dayOffset, 0, 0, 0, 0);
 }
 
 function pushLocalWindow(
@@ -609,8 +606,8 @@ function pushLocalWindow(
   if (minutes >= minMinutes && end > start) {
     const startDate = new Date(start);
     windows.push({
-      date: new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(startDate),
-      start: new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(startDate),
+      date: new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(startDate),
+      start: new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(startDate),
       minutes,
     });
   }
