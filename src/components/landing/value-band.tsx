@@ -25,7 +25,7 @@ export function ValueBand() {
           <span className="nexus-eyebrow">The problem</span>
           <p className="mt-5 max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
             The status of your work sits in everything you already manage.
-            The signals are there — they are just hard to see until it is
+            The signals are there: they are just hard to see until it is
             late.
           </p>
 
@@ -52,7 +52,7 @@ export function ValueBand() {
               NEXUS reads it continuously.
             </p>
             <p className="nexus-lead mt-6 max-w-[520px]">
-              Your work changes constantly. NEXUS keeps up — it sees what is
+              Your work changes constantly. NEXUS keeps up: it sees what is
               drifting, blocked or getting risky, and tells you what deserves
               attention now.
             </p>

@@ -151,7 +151,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface shadow-overlay will-change-transform",
+          "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface-3 shadow-overlay will-change-transform",
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
           isClosing
             ? "animate-[sheet-out_220ms_var(--ease-nexus)_both] sm:animate-[scale-out_180ms_var(--ease-nexus)_both]"
@@ -163,7 +163,7 @@ export function Modal({
           aria-hidden="true"
           className="flex shrink-0 justify-center pt-2.5 sm:hidden"
         >
-          <span className="h-1 w-9 rounded-pill bg-white/15 transition-colors duration-200" />
+          <span className="h-1 w-9 rounded-pill bg-border-strong transition-colors duration-200" />
         </div>
 
         <div className="mb-4 flex shrink-0 items-start justify-between gap-4 px-5 pt-3 sm:px-6 sm:pt-6">

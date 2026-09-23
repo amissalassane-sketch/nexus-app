@@ -664,7 +664,7 @@ export function CommandMenu() {
 
       <div
         className={cn(
-          "command-panel relative w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface shadow-overlay ring-1 ring-inset ring-white/[0.03]",
+          "command-panel relative w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface-3 shadow-overlay",
           closing ? "animate-command-out" : "animate-command-in"
         )}
       >
@@ -743,7 +743,7 @@ export function CommandMenu() {
           ) : (
             groups.map((group) => (
               <div key={group.category} className="pb-1.5 last:pb-0">
-                <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 bg-bg-surface/95 px-4 pb-1 pt-2 backdrop-blur-sm">
+                <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 bg-bg-surface-3/95 px-4 pb-1 pt-2 backdrop-blur-sm">
                   <p className="eyebrow text-text-quaternary">
                     {group.category}
                   </p>

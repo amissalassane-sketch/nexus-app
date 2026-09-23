@@ -72,7 +72,7 @@ export default async function Home({
   // visitors who choose Sign in or Get started are routed to /app by proxy.
 
   return (
-    <div className="nexus-landing min-h-dvh bg-transparent text-text-primary">
+    <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
       <LaunchExperience />
       <LandingNav />
 

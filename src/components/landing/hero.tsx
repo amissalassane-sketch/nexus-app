@@ -77,8 +77,8 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item nexus-lead mt-6 max-w-[640px] sm:mt-7"
           style={delay(140)}
         >
-          NEXUS reads the work already in your workspace — goals, projects,
-          tasks and activity — and keeps what is drifting, blocked or getting
+          NEXUS reads the work already in your workspace (goals, projects,
+          tasks and activity) and keeps what is drifting, blocked or getting
           risky visible, so you always know what deserves your attention now.
         </p>
 

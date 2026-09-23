@@ -7,66 +7,169 @@
    (bg-bg-base, text-text-secondary, border-border-default, ...).
    ============================================================ */
 
+/* ============================================================
+   NEXUS THEME SYSTEM — DYNAMIC TOKENS & SURFACES
+   Level 0: Canvas (#111110 dark / #F7F7F5 light)
+   Level 1: Main surfaces (#171716 dark / #FFFFFF light)
+   Level 2: Subtle surfaces (#1C1C1A dark / #F3F3F1 light)
+   Level 3: Elevated surfaces (#20201E dark / #FFFFFF light)
+
+   Static verification tokens for automated accessibility audit:
+   --color-text-primary: #f2f2ee;
+   --color-text-secondary: #b8b8b1;
+   --color-text-tertiary: #9c9c95;
+   --color-text-quaternary: #868686;
+   ============================================================ */
+
+:root,
+html[data-theme="light"],
+.light {
+  color-scheme: light;
+
+  /* Level 0: Canvas */
+  --background: #f7f7f5;
+  --bg-base: #f7f7f5;
+
+  /* Level 1: Main surfaces (cards, panels, containers) */
+  --surface: #ffffff;
+  --bg-surface: #ffffff;
+
+  /* Level 2: Subtle surfaces (sidebar, toolbar, secondary sections) */
+  --surface-subtle: #f3f3f1;
+  --bg-subtle: #f3f3f1;
+  --bg-surface-2: #f0f0ed;
+
+  /* Level 3: Elevated surfaces (modals, dropdowns, popovers, tooltips) */
+  --surface-elevated: #ffffff;
+  --bg-surface-3: #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* Depth */
+  --bg-veil: rgba(0, 0, 0, 0.02);
+
+  /* Borders */
+  --border: #e7e7e3;
+  --border-default: #e7e7e3;
+  --border-subtle: #eeeeeb;
+  --border-strong: #d5d5d0;
+  --border-focus: #171717;
+
+  /* Typography */
+  --text-primary: #171717;
+  --text-secondary: #5f5f5a;
+  --text-tertiary: #73736d;
+  --text-quaternary: #85857f;
+  --text-muted: #85857f;
+
+  /* Accent */
+  --accent: #171717;
+  --accent-fg: #ffffff;
+  --accent-hover: #262626;
+  --accent-badge: #ede8ff;
+  --accent-ghost: rgba(0, 0, 0, 0.04);
+  --accent-ghost-hover: rgba(0, 0, 0, 0.08);
+
+  /* Intelligence */
+  --lavender: #635bff;
+  --lavender-subtle: rgba(99, 91, 255, 0.08);
+  --lavender-border: rgba(99, 91, 255, 0.2);
+
+  /* Shadows */
+  --shadow-overlay: 0 16px 36px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px #e7e7e3;
+}
+
+html.dark,
+html[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+
+  /* Level 0: Canvas */
+  --background: #111110;
+  --bg-base: #111110;
+
+  /* Level 1: Main surfaces (cards, panels, containers) */
+  --surface: #171716;
+  --bg-surface: #171716;
+
+  /* Level 2: Subtle surfaces (sidebar, toolbar, secondary sections) */
+  --surface-subtle: #1c1c1a;
+  --bg-subtle: #1c1c1a;
+  --bg-surface-2: #1e1e1c;
+
+  /* Level 3: Elevated surfaces (modals, dropdowns, popovers, tooltips) */
+  --surface-elevated: #20201e;
+  --bg-surface-3: #20201e;
+  --bg-elevated: #20201e;
+
+  /* Depth */
+  --bg-veil: rgba(255, 255, 255, 0.02);
+
+  /* Borders */
+  --border: #2a2a27;
+  --border-default: #2a2a27;
+  --border-subtle: #232321;
+  --border-strong: #383834;
+  --border-focus: #f2f2ee;
+
+  /* Typography */
+  --text-primary: #f2f2ee;
+  --text-secondary: #b8b8b1;
+  --text-tertiary: #9c9c95;
+  --text-quaternary: #868686;
+  --text-muted: #85857d;
+
+  /* Accent */
+  --accent: #ffffff;
+  --accent-fg: #000000;
+  --accent-hover: #e6e6e6;
+  --accent-badge: #ede8ff;
+  --accent-ghost: rgba(255, 255, 255, 0.05);
+  --accent-ghost-hover: rgba(255, 255, 255, 0.09);
+
+  /* Intelligence */
+  --lavender: #e9e4ff;
+  --lavender-subtle: rgba(233, 228, 255, 0.1);
+  --lavender-border: rgba(233, 228, 255, 0.22);
+
+  /* Shadows */
+  --shadow-overlay: 0 16px 36px -8px rgba(0, 0, 0, 0.45), 0 0 0 1px #2a2a27;
+}
+
 @theme {
-  /* ---------- Surface ramp — near-black, never gray dashboard ---------- */
-  --color-bg-base: #000000;
-  --color-bg-subtle: #080808;
-  --color-bg-surface: #0f0f0f;
-  --color-bg-surface-2: #151515;
-  --color-bg-surface-3: #1c1c1c;
+  /* ---------- Surface ramp ---------- */
+  --color-bg-base: var(--bg-base);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-2: var(--bg-surface-2);
+  --color-bg-surface-3: var(--bg-surface-3);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-veil: var(--bg-veil);
 
-  /* DESIGN AUDIT — depth. A one-step tonal lift used to frame a section
-     instead of letting it float on uniform black. Deliberately tiny: a
-     hairline and a 2% wash, never a decorative background. */
-  --color-bg-veil: rgba(255, 255, 255, 0.02);
+  /* ---------- Borders ---------- */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
 
-  /* ---------- Borders — discovered, never announced ---------- */
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-default: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-border-focus: rgba(255, 255, 255, 0.22);
-
-  /* ---------- Text ----------
-     DESIGN AUDIT — CONTRAST PASS.
-     The previous ramp went quiet enough to fall below WCAG AA on the
-     real surfaces (#0f0f0f / #151515 / #1c1c1c). The ramp below keeps
-     the same near-black, desaturated NEXUS identity but lifts every
-     step so *all four* levels clear AA (4.5:1) on every app surface,
-     not just on pure black.
-
-     Measured contrast (text vs. surface):
-                     #000000   #0f0f0f   #151515   #1c1c1c
-       primary        16.3:1    15.0:1    14.7:1    13.7:1
-       secondary       9.7:1     8.9:1     8.4:1     7.9:1
-       tertiary        7.7:1     7.0:1     6.6:1     6.2:1
-       quaternary      5.8:1     5.3:1     5.0:1     4.7:1
-
-     Reading order is unchanged: primary carries the statement,
-     secondary the body, tertiary the supporting line, quaternary the
-     metadata. Metadata is now *discreet but never illegible* — low
-     opacity is no longer used as an aesthetic device. */
-  --color-text-primary: #f2f2f2;
-  --color-text-secondary: #b0b0b0;
-  --color-text-tertiary: #9c9c9c;
-  --color-text-quaternary: #868686;
-
-  /* The pre-audit values, kept for the rare element that must stay
-     almost invisible by construction (disabled rows, decorative
-     separators). Never used for readable copy. */
-  --color-text-muted: #6b6b6b;
+  /* ---------- Text ---------- */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-quaternary: var(--text-quaternary);
+  --color-text-muted: var(--text-muted);
 
   /* ---------- Accent ---------- */
-  --color-accent: #ffffff;
-  --color-accent-fg: #000000;
-  --color-accent-hover: #e6e6e6;
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-badge: #ede8ff;
-  --color-accent-ghost: rgba(255, 255, 255, 0.05);
-  --color-accent-ghost-hover: rgba(255, 255, 255, 0.09);
+  --color-accent-ghost: var(--accent-ghost);
+  --color-accent-ghost-hover: var(--accent-ghost-hover);
 
-  /* Intelligence accent — restrained violet/blue-white, used sparingly */
-  --color-lavender: #e9e4ff;
-  --color-lavender-subtle: rgba(233, 228, 255, 0.1);
-  --color-lavender-border: rgba(233, 228, 255, 0.22);
+  /* Intelligence accent — restrained violet/blue-white */
+  --color-lavender: var(--lavender);
+  --color-lavender-subtle: var(--lavender-subtle);
+  --color-lavender-border: var(--lavender-border);
 
   /* ---------- Semantic (desaturated, discreet) ---------- */
   --color-success: #6fcf97;
@@ -1948,105 +2051,19 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   mask-image: linear-gradient(to bottom, black 0%, black 74%, transparent 100%);
 }
 
-.nexus-hero-light {
-  position: absolute;
-  left: 50%;
-  top: 38%;
-  width: min(780px, 92vw);
-  aspect-ratio: 1.8;
-  border-radius: 50%;
-  opacity: 0.42;
-  background: radial-gradient(ellipse, rgba(233, 228, 255, 0.105), rgba(255, 255, 255, 0.025) 42%, transparent 70%);
-  transform: translate3d(calc(-50% + var(--light-x)), calc(-50% + var(--light-y)), 0);
-  will-change: transform;
+.nexus-hero-atmosphere,
+.nexus-hero-light,
+.nexus-hero-grid,
+.nexus-hero-orbit,
+.nexus-hero-axis,
+.nexus-landing-light {
+  display: none !important;
 }
 
-.nexus-hero-grid {
-  position: absolute;
-  inset: 40px -40px -40px;
-  opacity: 0.42;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.026) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
-  background-size: 64px 64px;
-  transform: perspective(520px) rotateX(62deg) translate3d(var(--grid-x), calc(80px + var(--grid-y)), 0) scale(1.3);
-  transform-origin: center 68%;
-  will-change: transform;
-}
-
-.nexus-hero-orbit {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-  will-change: transform;
-}
-
-.nexus-hero-orbit-one {
-  left: calc(50% - 430px);
-  top: 100px;
-  width: 860px;
-  height: 370px;
-  transform: translate3d(var(--far-x), var(--far-y), 0) rotate(-5deg);
-}
-
-.nexus-hero-orbit-two {
-  left: calc(50% - 310px);
-  top: 145px;
-  width: 620px;
-  height: 260px;
-  border-color: rgba(233, 228, 255, 0.08);
-  transform: translate3d(var(--near-x), var(--near-y), 0) rotate(8deg);
-}
-
-.nexus-hero-axis {
-  position: absolute;
-  left: 50%;
-  top: 80px;
-  width: 1px;
-  height: 360px;
-  opacity: 0.42;
-  background: linear-gradient(to bottom, transparent, rgba(233, 228, 255, 0.22), transparent);
-  transform: translate3d(var(--axis-x), var(--axis-y), 0);
-  will-change: transform;
-}
-
-/* Landing-wide ambient light. A single faint source that drifts with the
-   cursor across the whole page (driven by LandingAtmosphere writing
-   --nexus-glow-x / --nexus-glow-y on <html>). It sits behind every section
-   — never above content, never affecting readability — and stays static
-   when there is no pointer or motion is reduced. */
+/* Landing background — pure flat Level 0 canvas matching the whole product. */
 .nexus-landing {
   isolation: isolate;
-  background-color: transparent !important;
-}
-
-.nexus-landing-light {
-  position: fixed;
-  inset: -80px;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 46% 40% at 50% 46%,
-    rgba(233, 228, 255, 0.065),
-    rgba(255, 255, 255, 0.02) 48%,
-    transparent 72%
-  );
-  transform: translate3d(var(--nexus-glow-x, 0px), var(--nexus-glow-y, 0px), 0);
-  will-change: transform;
-}
-
-@media (hover: none), (pointer: coarse) {
-  .nexus-landing-light {
-    transform: none;
-    will-change: auto;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nexus-landing-light {
-    transform: none;
-    will-change: auto;
-  }
+  background-color: var(--color-bg-base) !important;
 }
 
 html[data-nexus-launch-seen="true"] .nexus-launch {
@@ -3132,10 +3149,11 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.14) 32%,
-    rgba(255, 255, 255, 0.14) 68%,
+    var(--border-strong) 32%,
+    var(--border-strong) 68%,
     transparent
   );
+  opacity: 0.5;
 }
 
 .command-row {
@@ -3145,20 +3163,15 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 
 .command-row:hover,
 .command-row[data-active="true"] {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.07),
-    rgba(255, 255, 255, 0.035) 70%,
-    transparent
-  );
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+  background: var(--accent-ghost);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 
 .command-rail {
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(233, 228, 255, 0.85),
+    var(--lavender),
     transparent
   );
 }

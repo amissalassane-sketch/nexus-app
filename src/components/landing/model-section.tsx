@@ -86,7 +86,7 @@ export function ModelSection() {
                 for your work.
               </>
             }
-            sub="A todo list keeps tasks. NEXUS keeps the relationships between them: a goal sets the direction, a project moves it, a task is the next concrete step, and activity records what actually happened — which is exactly what makes risk detectable."
+            sub="A todo list keeps tasks. NEXUS keeps the relationships between them: a goal sets the direction, a project moves it, a task is the next concrete step, and activity records what actually happened, which is exactly what makes risk detectable."
           />
 
           <ul className="mt-7 flex flex-col gap-3">

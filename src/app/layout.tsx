@@ -79,7 +79,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F7F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#111110" },
+  ],
   colorScheme: "dark light",
   // Required for `env(safe-area-inset-*)` to resolve on iOS: without
   // `viewport-fit=cover` the browser letterboxes the layout and the safe
@@ -88,8 +91,6 @@ export const viewport: Viewport = {
   // home indicator.
   viewportFit: "cover",
 };
-
-import { NexusBackground } from "@/components/layout/nexus-background";
 
 export default function RootLayout({
   children,
@@ -139,9 +140,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="relative isolate min-h-full bg-bg-base font-sans text-body text-text-primary">
+      <body className="min-h-full bg-bg-base font-sans text-body text-text-primary transition-colors duration-150">
         <ThemeSync />
-        <NexusBackground />
         {children}
       </body>
     </html>

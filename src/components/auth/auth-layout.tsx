@@ -73,7 +73,7 @@ export function AuthLayout({
   canvasVariant?: "forward" | "reverse";
 }) {
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-transparent px-4 py-12">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-bg-base px-4 py-12">
       {/* Persistent animated environment */}
       <NexusAuthBackground variant={canvasVariant} />
 
@@ -103,11 +103,11 @@ export function AuthLayout({
           </Link>
 
           {/* Title — large, cinematic, confident */}
-          <h1 className="text-[2rem] font-bold leading-[1.15] tracking-tight text-white sm:text-[2.25rem]">
+          <h1 className="text-[2rem] font-bold leading-[1.15] tracking-tight text-text-primary sm:text-[2.25rem]">
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 max-w-[36ch] text-[0.95rem] leading-relaxed text-white/50 font-light">
+            <p className="mt-2 max-w-[36ch] text-[0.95rem] leading-relaxed text-text-secondary font-light">
               {description}
             </p>
           ) : null}
@@ -120,7 +120,7 @@ export function AuthLayout({
         {footer ? (
           <motion.div
             variants={itemVariants}
-            className="mt-6 text-center text-xs text-white/40"
+            className="mt-6 text-center text-xs text-text-tertiary"
           >
             {footer}
           </motion.div>
@@ -144,7 +144,7 @@ export function AuthLayout({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6, duration: 0.6 }}
-        className="relative z-10 mt-10 font-mono text-[10.5px] uppercase tracking-[0.1em] text-white/25"
+        className="relative z-10 mt-10 font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-quaternary"
       >
         Operational intelligence for modern teams
       </motion.p>

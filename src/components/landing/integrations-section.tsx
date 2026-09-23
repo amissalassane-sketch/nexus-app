@@ -22,13 +22,12 @@ export function IntegrationsSection() {
           <SectionHeading
             eyebrow="Connected context"
             title="Your tools. One intelligent workspace."
-            sub="NEXUS is designed to bring the work you already do into one place — so context can become signal, and signal can become the next action."
+            sub="NEXUS is designed to bring the work you already do into one place so context can become signal, and signal can become the next action."
           />
         </LandingReveal>
 
         <LandingReveal delay={80}>
-          <div className="relative mt-12 overflow-hidden rounded-panel border border-border-subtle bg-bg-subtle/60 px-4 py-10 sm:px-8 sm:py-14">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(233,228,255,0.08),transparent_42%)]" aria-hidden="true" />
+          <div className="relative mt-12 overflow-hidden rounded-panel border border-border-subtle bg-bg-subtle px-4 py-10 sm:px-8 sm:py-14">
             <div className="relative space-y-4 opacity-70" aria-hidden="true">
               <IconRail items={[...firstRow, ...firstRow]} direction={-1} />
               <IconRail items={[...secondRow, ...secondRow, ...secondRow]} direction={1} />

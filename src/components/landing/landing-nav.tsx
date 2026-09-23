@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { IconMenu2, IconX } from "@tabler/icons-react";
+import { IconMenu2, IconMoon, IconSun, IconX } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { NexusWordmark } from "@/components/nexus-logo";
 import { ButtonLink } from "@/components/ui/button";
@@ -171,6 +171,7 @@ export function LandingNav({
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <NavThemeToggle />
           <ButtonLink href="/login" variant="ghost" size="sm">
             Sign in
           </ButtonLink>
@@ -179,8 +180,9 @@ export function LandingNav({
           </ButtonLink>
         </div>
 
-        {/* Mobile: primary CTA stays visible next to the menu trigger. */}
+        {/* Mobile: primary CTA and theme toggle stay visible next to the menu trigger. */}
         <div className="flex items-center gap-2 md:hidden">
+          <NavThemeToggle />
           <ButtonLink href="/signup" size="md" className="!h-11">
             Get started
           </ButtonLink>
@@ -246,5 +248,46 @@ export function LandingNav({
         </div>
       ) : null}
     </header>
+  );
+}
+
+function NavThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const update = () => {
+      const isDark = document.documentElement.classList.contains("dark");
+      setTheme(isDark ? "dark" : "light");
+    };
+    update();
+    window.addEventListener("nexus:theme", update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener("nexus:theme", update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
+
+  const toggle = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    try {
+      localStorage.setItem("nexus.theme.v1", next);
+      window.dispatchEvent(new Event("nexus:theme"));
+    } catch {}
+    document.documentElement.dataset.theme = next;
+    document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.style.colorScheme = next;
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      className="flex h-11 w-11 items-center justify-center rounded-pill text-text-secondary transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary sm:h-9 sm:w-9"
+    >
+      <NexusIcon icon={theme === "dark" ? IconSun : IconMoon} size="nav" />
+    </button>
   );
 }
