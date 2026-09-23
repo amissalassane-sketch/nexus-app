@@ -89,6 +89,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import { NexusBackground } from "@/components/layout/nexus-background";
+
 export default function RootLayout({
   children,
 }: {
@@ -137,8 +139,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full bg-bg-base font-sans text-body text-text-primary">
+      <body className="relative isolate min-h-full bg-bg-base font-sans text-body text-text-primary">
         <ThemeSync />
+        <NexusBackground />
         {children}
       </body>
     </html>

@@ -16,7 +16,7 @@ import { FaqSection } from "@/components/landing/faq";
 import { FinalCtaSection } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/footer";
 import { LaunchExperience } from "@/components/landing/launch-experience";
-import { SonarGrid } from "@/components/ui/sonar-grid";
+
 
 // ============================================================
 // NEXUS — PUBLIC LANDING PAGE
@@ -72,28 +72,8 @@ export default async function Home({
   // visitors who choose Sign in or Get started are routed to /app by proxy.
 
   return (
-    <div className="nexus-landing min-h-dvh bg-bg-base text-text-primary">
+    <div className="nexus-landing min-h-dvh bg-transparent text-text-primary">
       <LaunchExperience />
-      {/* BACKGROUND — SonarGrid: decorative dot field answering taps with expanding rings across the entire landing page */}
-      <SonarGrid
-        id="nexus-sonar-grid"
-        ringWidth={90}
-        speed={260}
-        amplitude={2.2}
-        pingEvery={2.4}
-        interactive={true}
-        spacing={26}
-        baseOpacity={0.28}
-        color="#6366f1"
-        seedPing={true}
-        pingArea={[0.22, 0.18, 0.78, 0.82]}
-        className="pointer-events-none fixed inset-0 -z-[1] h-screen w-screen overflow-hidden"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(0,0,0,0.65)_0%,transparent_100%)]"
-        />
-      </SonarGrid>
       <LandingNav />
 
       <main id="main">

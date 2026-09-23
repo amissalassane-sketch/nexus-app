@@ -73,7 +73,7 @@ export function AuthLayout({
   canvasVariant?: "forward" | "reverse";
 }) {
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-black px-4 py-12">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-transparent px-4 py-12">
       {/* Persistent animated environment */}
       <NexusAuthBackground variant={canvasVariant} />
 

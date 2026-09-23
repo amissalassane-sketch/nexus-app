@@ -61,6 +61,7 @@ export function SonarGrid({
   className,
   children,
   ref,
+  style,
   ...rest
 }: SonarGridProps) {
   const hostRef = React.useRef<HTMLDivElement | null>(null)
@@ -277,11 +278,22 @@ export function SonarGrid({
     refreshRef.current()
   }, [spacing, dotRadius, baseOpacity, color, pingEvery, speed, ringWidth, amplitude, interactive, maxRings, pingArea])
 
+  const isFixed = className?.includes("fixed")
+
   return (
     <div
       ref={setHost}
       data-slot="sonar-grid"
-      className={cn("relative isolate overflow-hidden", interactive && "cursor-crosshair", className)}
+      className={cn(
+        !isFixed && "relative",
+        "isolate overflow-hidden",
+        interactive && !isFixed && "cursor-crosshair",
+        className
+      )}
+      style={{
+        ...(isFixed ? { position: "fixed", inset: 0, pointerEvents: "none" } : {}),
+        ...style,
+      }}
       {...rest}
     >
       <canvas

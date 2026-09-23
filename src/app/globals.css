@@ -2017,6 +2017,7 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
    when there is no pointer or motion is reduced. */
 .nexus-landing {
   isolation: isolate;
+  background-color: transparent !important;
 }
 
 .nexus-landing-light {
