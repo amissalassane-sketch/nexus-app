@@ -9,16 +9,24 @@ import { cn } from "@/lib/cn";
 const field =
   "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-[border-color,background-color,box-shadow,transform] duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.14)] disabled:cursor-not-allowed disabled:opacity-50 will-change-transform";
 
+const pillField =
+  "w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35";
+
 export function Input({
   className,
   size = "md",
+  shape = "default",
   ...props
 }: Omit<ComponentPropsWithRef<"input">, "size"> & {
   size?: "md" | "lg";
+  shape?: "default" | "pill";
 }) {
   return (
     <input
-      className={cn(field, size === "lg" ? "h-11" : "h-10", className)}
+      className={cn(
+        shape === "pill" ? pillField : cn(field, size === "lg" ? "h-11" : "h-10"),
+        className
+      )}
       {...props}
     />
   );

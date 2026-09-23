@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { IconArrowRight, IconClock, IconX } from "@tabler/icons-react";
+import { IconArrowRight, IconClock, IconSparkles, IconX } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
@@ -189,6 +189,18 @@ export function SignalDetail({
           className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-3"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >
+          <button
+            type="button"
+            onClick={() => {
+              const query = `Que faire pour résoudre : ${insight.title} (${recommendation(insight)}) ?`;
+              window.dispatchEvent(new CustomEvent("nexus:intelligence-ask", { detail: { query } }));
+              onClose();
+            }}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-input bg-lavender/10 border border-lavender-border/40 px-3 text-caption font-medium text-lavender hover:bg-lavender/20 transition-colors"
+          >
+            <NexusIcon icon={IconSparkles} px={14} />
+            <span>{"Résoudre avec l'IA"}</span>
+          </button>
           <Link
             href={insight.href}
             className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:translate-y-px"

@@ -4,12 +4,14 @@ import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { createClientSafe } from "@/lib/supabase/client";
 import { humanizeAuthError } from "@/lib/auth-errors";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 // ============================================================
 // NEXUS — SIGN UP (email + password + confirm password)
@@ -175,10 +177,11 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
             <label htmlFor="signup-email" className="sr-only">
               Email id
             </label>
-            <input
+            <Input
               id="signup-email"
               name="email"
               type="email"
+              shape="pill"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Email id"
@@ -186,7 +189,6 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
               spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35"
             />
           </div>
 
@@ -194,45 +196,32 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
             <label htmlFor="signup-password" className="sr-only">
               Password
             </label>
-            <div className="relative">
-              <input
-                id="signup-password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Password"
-                autoComplete="new-password"
-                spellCheck={false}
-                disabled={loading}
-                required
-                className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 pl-4 pr-11 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((value) => !value)}
-                disabled={loading}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white/70 disabled:pointer-events-none disabled:opacity-40"
-              >
-                {showPassword ? (
-                  <NexusIcon icon={IconEyeOff} />
-                ) : (
-                  <NexusIcon icon={IconEye} />
-                )}
-              </button>
-            </div>
+            <PasswordInput
+              id="signup-password"
+              name="password"
+              shape="pill"
+              visible={showPassword}
+              onVisibleChange={setShowPassword}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Password"
+              autoComplete="new-password"
+              spellCheck={false}
+              disabled={loading}
+              required
+            />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="signup-confirm-password" className="sr-only">
               Confirm Password
             </label>
-            <input
+            <PasswordInput
               id="signup-confirm-password"
               name="confirm-password"
-              type={showPassword ? "text" : "password"}
+              shape="pill"
+              visible={showPassword}
+              onVisibleChange={setShowPassword}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Confirm Password"
@@ -240,7 +229,6 @@ export function SignupForm({ initialError = "" }: { initialError?: string }) {
               spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35"
             />
           </div>
 

@@ -24,6 +24,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, ErrorDiagnostic, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
 import { Metric } from "@/components/ui/card";
+import { useWorkspaceRealtime } from "@/hooks/use-workspace-realtime";
 
 type Goal = {
   id: string;
@@ -137,8 +138,12 @@ function GoalManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setGoals((data as Goal[]) ?? []);
+    const nextGoals = (data as Goal[]) ?? [];
+    setGoals(nextGoals);
     setLoading(false);
+    window.dispatchEvent(
+      new CustomEvent("nexus:counts", { detail: { goals: nextGoals.length } })
+    );
   };
 
   useEffect(() => {
@@ -172,6 +177,37 @@ function GoalManagerInner({ userId }: { userId: string }) {
   }, [supabase, userId]);
 
   const syncServerViews = () => router.refresh();
+
+  useWorkspaceRealtime<Goal>({
+    supabase,
+    workspaceId,
+    table: "goals",
+    onInsert: (newGoal) => {
+      setGoals((current) => {
+        if (current.some((g) => g.id === newGoal.id)) return current;
+        const next = [newGoal, ...current];
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { goals: next.length } })
+        );
+        return next;
+      });
+    },
+    onUpdate: (updatedGoal) => {
+      setGoals((current) =>
+        current.map((g) => (g.id === updatedGoal.id ? { ...g, ...updatedGoal } : g))
+      );
+    },
+    onDelete: (deletedGoal) => {
+      if (!deletedGoal.id) return;
+      setGoals((current) => {
+        const next = current.filter((g) => g.id !== deletedGoal.id);
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { goals: next.length } })
+        );
+        return next;
+      });
+    },
+  });
 
   const resetForm = () => {
     setForm(blankGoalForm());
@@ -310,23 +346,36 @@ function GoalManagerInner({ userId }: { userId: string }) {
     });
   };
 
-  const handleProgress = async (goalId: string, progress: number) => {
-    const { error: updateError } = await supabase
-      .from("goals")
-      .update({
-        progress: Math.min(100, Math.max(0, progress)),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", goalId)
-      .eq("workspace_id", workspaceId ?? "");
+  const progressDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
-    if (updateError) {
-      reportDataError("goals.progress", updateError);
-      return;
+  const handleProgress = (goalId: string, rawProgress: number) => {
+    const progress = Math.min(100, Math.max(0, rawProgress));
+    // Instant optimistic update for 60fps responsive UI
+    setGoals((current) =>
+      current.map((g) => (g.id === goalId ? { ...g, progress } : g))
+    );
+
+    if (progressDebounceTimers.current[goalId]) {
+      clearTimeout(progressDebounceTimers.current[goalId]);
     }
 
-    await fetchGoals(workspaceId);
-    syncServerViews();
+    progressDebounceTimers.current[goalId] = setTimeout(async () => {
+      const { error: updateError } = await supabase
+        .from("goals")
+        .update({
+          progress,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", goalId)
+        .eq("workspace_id", workspaceId ?? "");
+
+      if (updateError) {
+        reportDataError("goals.progress", updateError);
+        await fetchGoals(workspaceId);
+        return;
+      }
+      syncServerViews();
+    }, 280);
   };
 
   const deleteGoal = async (goalId: string) => {

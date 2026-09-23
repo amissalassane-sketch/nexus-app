@@ -8,6 +8,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { Input } from "@/components/ui/input";
 
 /**
  * Password recovery — request a reset link.
@@ -103,10 +104,11 @@ export default function ForgotPasswordPage() {
             <label htmlFor="forgot-email" className="sr-only">
               Email
             </label>
-            <input
+            <Input
               id="forgot-email"
               name="email"
               type="email"
+              shape="pill"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Email"
@@ -114,7 +116,6 @@ export default function ForgotPasswordPage() {
               spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
             />
           </div>
 

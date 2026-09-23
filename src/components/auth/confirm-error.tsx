@@ -8,6 +8,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { Input } from "@/components/ui/input";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -216,17 +217,18 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
               <label htmlFor="confirm-error-email" className="text-caption font-medium text-white/50">
                 Email address
               </label>
-              <input
+              <Input
                 id="confirm-error-email"
                 name="email"
                 type="email"
+                shape="pill"
                 autoComplete="email"
+                spellCheck={false}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@company.com"
                 disabled={loading}
                 required
-                className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
               />
             </div>
 

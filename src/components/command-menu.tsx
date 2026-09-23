@@ -28,6 +28,7 @@ import { getActiveMembership } from "@/lib/workspace";
 import { cn } from "@/lib/cn";
 import { isTypingTarget } from "@/lib/is-typing-target";
 import { ALL_NAV_ENTRIES } from "@/components/layout/nav-config";
+import { enqueueOfflineCapture } from "@/lib/offline-queue";
 
 // ============================================================
 // NEXUS — COMMAND PALETTE (⌘K / Ctrl+K)
@@ -456,6 +457,14 @@ export function CommandMenu() {
   // the top of the palette. Deterministic parsing happens server-side.
   const runCapture = useCallback(
     async (trimmed: string) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        enqueueOfflineCapture(trimmed);
+        rememberRecent("capture-dynamic");
+        requestClose();
+        router.push("/tasks");
+        return;
+      }
+
       setRunning(true);
       setNotice(null);
       try {
@@ -466,6 +475,14 @@ export function CommandMenu() {
         });
         const payload = await response.json().catch(() => null);
         if (!response.ok) {
+          if (response.status >= 500) {
+            enqueueOfflineCapture(trimmed);
+            setRunning(false);
+            rememberRecent("capture-dynamic");
+            requestClose();
+            router.push("/tasks");
+            return;
+          }
           setNotice(payload?.error ?? "Capture failed. Try again in a moment.");
           setRunning(false);
           return;
@@ -475,8 +492,11 @@ export function CommandMenu() {
         requestClose();
         router.push("/tasks");
       } catch {
-        setNotice("Capture failed — the server did not answer. Try again.");
+        enqueueOfflineCapture(trimmed);
         setRunning(false);
+        rememberRecent("capture-dynamic");
+        requestClose();
+        router.push("/tasks");
       }
     },
     [requestClose, router]

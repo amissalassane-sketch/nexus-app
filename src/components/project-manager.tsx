@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, ErrorDiagnostic, Progress, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page-header";
+import { useWorkspaceRealtime } from "@/hooks/use-workspace-realtime";
 
 type Project = {
   id: string;
@@ -270,6 +271,37 @@ function ProjectManagerInner({ userId }: { userId: string }) {
   }, [supabase, userId]);
 
   const syncServerViews = () => router.refresh();
+
+  useWorkspaceRealtime<Project>({
+    supabase,
+    workspaceId,
+    table: "projects",
+    onInsert: (newProject) => {
+      setProjects((current) => {
+        if (current.some((p) => p.id === newProject.id)) return current;
+        const next = [newProject, ...current];
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { projects: next.length } })
+        );
+        return next;
+      });
+    },
+    onUpdate: (updatedProject) => {
+      setProjects((current) =>
+        current.map((p) => (p.id === updatedProject.id ? { ...p, ...updatedProject } : p))
+      );
+    },
+    onDelete: (deletedProject) => {
+      if (!deletedProject.id) return;
+      setProjects((current) => {
+        const next = current.filter((p) => p.id !== deletedProject.id);
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { projects: next.length } })
+        );
+        return next;
+      });
+    },
+  });
 
   const resetForm = () => {
     setForm(blankProjectForm());

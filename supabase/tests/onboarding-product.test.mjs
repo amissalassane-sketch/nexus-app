@@ -307,8 +307,10 @@ ok(
 // hatches and live counts that keep a step from dead-ending must exist in
 // the components, not just in the model.
 const { readFileSync } = await import("node:fs");
-const root = new URL("../..", import.meta.url).pathname;
-const src = (rel) => readFileSync(`${root}src/${rel}`, "utf8");
+const { fileURLToPath } = await import("node:url");
+const { join } = await import("node:path");
+const root = fileURLToPath(new URL("../..", import.meta.url));
+const src = (rel) => readFileSync(join(root, "src", rel), "utf8");
 const tourSrc = src("components/onboarding/guided-tour.tsx");
 const providerSrc = src("components/onboarding/onboarding-provider.tsx");
 const spotlightSrc = src("components/onboarding/spotlight.tsx");

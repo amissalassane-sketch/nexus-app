@@ -8,6 +8,7 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { readSupabaseConfig } from "@/lib/supabase/config";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /**
  * Password reset — set a new password after following a reset link.
@@ -108,17 +109,17 @@ export default function ResetPasswordPage() {
             <label htmlFor="reset-password" className="sr-only">
               New password
             </label>
-            <input
+            <PasswordInput
               id="reset-password"
               name="password"
-              type="password"
+              shape="pill"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="New password"
               autoComplete="new-password"
+              spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
             />
           </div>
 
@@ -126,17 +127,17 @@ export default function ResetPasswordPage() {
             <label htmlFor="reset-confirm" className="sr-only">
               Confirm password
             </label>
-            <input
+            <PasswordInput
               id="reset-confirm"
               name="confirm-password"
-              type="password"
+              shape="pill"
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
               placeholder="Confirm password"
               autoComplete="new-password"
+              spellCheck={false}
               disabled={loading}
               required
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
             />
           </div>
 

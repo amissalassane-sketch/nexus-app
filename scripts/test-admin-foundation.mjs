@@ -28,8 +28,9 @@
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const src = (rel) => join(ROOT, "src", rel);
 const read = (rel) => readFileSync(src(rel), "utf8");
 
@@ -179,12 +180,12 @@ const ADMIN_AUTH_EXEMPT_ROUTES = new Set([
 const clientAdminRoutes = ADMIN_ROUTES.filter(
   (file) =>
     readFileSync(file, "utf8").includes('"use client"') &&
-    !ADMIN_AUTH_EXEMPT_ROUTES.has(file.replace(ROOT, ""))
+    !ADMIN_AUTH_EXEMPT_ROUTES.has(file.slice(ROOT.length).replace(/^[\\/]/, "").replace(/\\/g, "/"))
 );
 check(
   "no gated admin route is a client component (auth surfaces exempt)",
   clientAdminRoutes.length === 0,
-  clientAdminRoutes.map((f) => f.replace(ROOT, "")).join(", ")
+  clientAdminRoutes.map((f) => f.slice(ROOT.length).replace(/^[\\/]/, "").replace(/\\/g, "/")).join(", ")
 );
 
 // The proxy keeps /admin out of its public list, so an anonymous visitor

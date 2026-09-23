@@ -6,23 +6,68 @@
 // The one-input front door: type a sentence, NEXUS understands the
 // action, the date and the urgency, and creates the task. The parse
 // runs on the server (deterministic, both French and English); this
-// component only submits and reports exactly what was understood.
+// component submits and reports exactly what was understood.
+// Fully resilient: enqueues to the offline queue on network drop.
+// ============================================================
 
-import { useState } from "react";
-import { IconBolt, IconCornerDownLeft } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { IconBolt, IconCloudCheck, IconCloudOff, IconCornerDownLeft } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
+import {
+  enqueueOfflineCapture,
+  flushOfflineQueue,
+  getOfflineQueue,
+} from "@/lib/offline-queue";
 
 export function CaptureBar({ compact = false }: { compact?: boolean }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [understood, setUnderstood] = useState<string | null>(null);
+  const [offlineCount, setOfflineCount] = useState(() =>
+    typeof window !== "undefined" ? getOfflineQueue().length : 0
+  );
   const { toast } = useToast();
+
+  useEffect(() => {
+    const onQueueChange = (event: Event) => {
+      const custom = event as CustomEvent<{ count: number }>;
+      setOfflineCount(custom.detail?.count ?? getOfflineQueue().length);
+    };
+
+    const onSynced = (event: Event) => {
+      const custom = event as CustomEvent<{ synced: number; failed: number }>;
+      if (custom.detail?.synced > 0) {
+        toast("success", "Synchronisé", {
+          description: `${custom.detail.synced} tâche${custom.detail.synced > 1 ? "s" : ""} synchronisée${custom.detail.synced > 1 ? "s" : ""} avec le serveur.`,
+        });
+      }
+      setOfflineCount(getOfflineQueue().length);
+    };
+
+    window.addEventListener("nexus:offline-queue-changed", onQueueChange);
+    window.addEventListener("nexus:offline-synced", onSynced);
+    return () => {
+      window.removeEventListener("nexus:offline-queue-changed", onQueueChange);
+      window.removeEventListener("nexus:offline-synced", onSynced);
+    };
+  }, [toast]);
 
   const submit = async () => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
+
+    // Check if browser is definitely offline
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueOfflineCapture(trimmed);
+      setText("");
+      toast("info", "Enregistré hors-ligne", {
+        description: "Votre tâche sera synchronisée automatiquement dès le retour du réseau.",
+      });
+      return;
+    }
+
     setBusy(true);
     setUnderstood(null);
     try {
@@ -33,14 +78,31 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
+        if (response.status >= 500) {
+          // Server error or proxy drop: save to queue rather than losing the idea
+          enqueueOfflineCapture(trimmed);
+          setText("");
+          toast("info", "Enregistré hors-ligne", {
+            description: "Le serveur est temporairement inaccessible. Tâche mise en attente de synchronisation.",
+          });
+          return;
+        }
         toast("danger", "Capture failed", payload?.error ? { description: payload.error } : undefined);
         return;
       }
       setUnderstood(payload.understood ?? "Task created");
       setText("");
       toast("success", "Captured", payload.understood ?? "Task created");
+
+      // Check if any backlog can be flushed
+      void flushOfflineQueue();
     } catch {
-      toast("danger", "Capture failed", { description: "The server did not answer. Try again." });
+      // Network drop: save locally with 0ms data loss
+      enqueueOfflineCapture(trimmed);
+      setText("");
+      toast("info", "Enregistré hors-ligne", {
+        description: "Réseau indisponible. Votre tâche est sauvegardée et sera synchronisée automatiquement.",
+      });
     } finally {
       setBusy(false);
     }
@@ -76,11 +138,24 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
           <NexusIcon icon={IconCornerDownLeft} px={13} />
         </button>
       </form>
-      <p className="mt-1.5 text-caption text-text-quaternary">
-        {understood
-          ? `Created: ${understood}`
-          : "Dates and urgency are understood automatically — English and French."}
-      </p>
+      <div className="mt-1.5 flex items-center justify-between text-caption text-text-quaternary">
+        <p>
+          {understood
+            ? `Created: ${understood}`
+            : "Dates and urgency are understood automatically — English and French."}
+        </p>
+        {offlineCount > 0 ? (
+          <span className="flex items-center gap-1 font-mono text-[10.5px] text-warning">
+            <NexusIcon icon={IconCloudOff} px={12} />
+            <span>{offlineCount} en attente</span>
+          </span>
+        ) : (
+          <span className="hidden sm:flex items-center gap-1 font-mono text-[10.5px] text-text-quaternary">
+            <NexusIcon icon={IconCloudCheck} px={12} />
+            <span>Sync ready</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

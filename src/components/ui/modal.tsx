@@ -48,13 +48,11 @@ export function Modal({
       if (closeTimer.current) clearTimeout(closeTimer.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsClosing(false);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldRender(true);
       return;
     }
 
     if (shouldRender && !isClosing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsClosing(true);
       closeTimer.current = setTimeout(() => {
         setShouldRender(false);
@@ -88,7 +86,18 @@ export function Modal({
       }
     };
 
+    const handleFocusIn = (event: FocusEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        event.preventDefault();
+        const firstFocusable = panelRef.current.querySelector<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])"
+        );
+        (firstFocusable ?? panelRef.current).focus();
+      }
+    };
+
     document.addEventListener("keydown", handleKey);
+    document.addEventListener("focusin", handleFocusIn);
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
 
@@ -103,6 +112,7 @@ export function Modal({
     return () => {
       clearTimeout(timer);
       document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("focusin", handleFocusIn);
       document.body.style.overflow = overflow;
       if (!isClosing) {
         previouslyFocused.current?.focus?.();

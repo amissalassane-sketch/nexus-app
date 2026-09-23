@@ -30,6 +30,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { PillTabs } from "@/components/ui/tabs";
 import { NexusKanban, STATUS_LABELS, type KanbanTask, type Priority, type TaskStatus } from "@/components/tasks/nexus-kanban";
+import { useWorkspaceRealtime } from "@/hooks/use-workspace-realtime";
 
 type Task = KanbanTask;
 
@@ -242,6 +243,37 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
   /** Keeps the sidebar counters and the dashboard in sync after a write. */
   const syncServerViews = () => router.refresh();
+
+  useWorkspaceRealtime<Task>({
+    supabase,
+    workspaceId,
+    table: "tasks",
+    onInsert: (newTask) => {
+      setTasks((current) => {
+        if (current.some((t) => t.id === newTask.id)) return current;
+        const next = [newTask, ...current];
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { tasks: next.length } })
+        );
+        return next;
+      });
+    },
+    onUpdate: (updatedTask) => {
+      setTasks((current) =>
+        current.map((t) => (t.id === updatedTask.id ? { ...t, ...updatedTask } : t))
+      );
+    },
+    onDelete: (deletedTask) => {
+      if (!deletedTask.id) return;
+      setTasks((current) => {
+        const next = current.filter((t) => t.id !== deletedTask.id);
+        window.dispatchEvent(
+          new CustomEvent("nexus:counts", { detail: { tasks: next.length } })
+        );
+        return next;
+      });
+    },
+  });
 
 
   const filteredTasks = useMemo(() => {
@@ -586,9 +618,51 @@ function TaskManagerInner({ userId }: { userId: string }) {
     syncServerViews();
   };
 
+  const NEXT_PRIORITY: Record<Priority, Priority> = {
+    low: "medium",
+    medium: "high",
+    high: "urgent",
+    urgent: "low",
+  };
+
+  const cyclePriority = async (task: Task, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!workspaceId) return;
+    const previousPriority = task.priority;
+    const nextPriority = NEXT_PRIORITY[previousPriority];
+
+    // Optimistic update
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id ? { ...item, priority: nextPriority } : item
+      )
+    );
+
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({ priority: nextPriority, updated_at: new Date().toISOString() })
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId);
+
+    if (updateError) {
+      // Rollback
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id ? { ...item, priority: previousPriority } : item
+        )
+      );
+      toastDataError("tasks.priority", updateError, "Could not update priority.");
+      return;
+    }
+
+    showToast("success", `Priority set to ${nextPriority}.`);
+    syncServerViews();
+  };
+
   // Quick create — inline "+ Add task" at the head of the list.
   const createQuickTask = async () => {
-    if (!workspaceId || !quickTitle.trim()) return;
+    const title = quickTitle.trim();
+    if (!workspaceId || !title) return;
 
     const allowed = await guardCreate();
     if (!allowed) {
@@ -598,34 +672,65 @@ function TaskManagerInner({ userId }: { userId: string }) {
       return;
     }
 
-    setQuickSaving(true);
-    const { error: createError } = await supabase.from("tasks").insert({
-      workspace_id: workspaceId,
-      title: quickTitle.trim(),
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimisticTask: Task = {
+      id: tempId,
+      title,
+      description: null,
       status: "todo",
       priority: "medium",
-      assignee_id: userId,
-      created_by: userId,
-    });
+      due_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Optimistic insert: immediate 0ms UX
+    setTasks((current) => [optimisticTask, ...current]);
+    setNewTaskIds(new Set([tempId]));
+    setTimeout(() => setNewTaskIds(new Set()), 500);
+    setQuickTitle("");
+    setQuickOpen(false);
+
+    setQuickSaving(true);
+    const { data, error: createError } = await supabase
+      .from("tasks")
+      .insert({
+        workspace_id: workspaceId,
+        title,
+        status: "todo",
+        priority: "medium",
+        assignee_id: userId,
+        created_by: userId,
+      })
+      .select()
+      .single();
     setQuickSaving(false);
 
     if (createError) {
+      // Rollback on error
+      setTasks((current) => current.filter((t) => t.id !== tempId));
+      setQuickTitle(title);
+      setQuickOpen(true);
       if (await handleMutationError(createError.message)) {
-        setQuickOpen(false);
-        setQuickTitle("");
         return;
       }
       toastDataError("tasks.quickCreate", createError, createError.message);
       return;
     }
 
+    if (data) {
+      setTasks((current) =>
+        current.map((t) => (t.id === tempId ? (data as Task) : t))
+      );
+    }
+
     showToast("success", "Task added.");
     window.dispatchEvent(
       new CustomEvent("nexus:activation", { detail: { type: "task_created" } })
     );
-    setQuickTitle("");
-    setQuickOpen(false);
-    await fetchTasks(workspaceId);
+    window.dispatchEvent(
+      new CustomEvent("nexus:counts", { detail: { tasks: tasks.length + 1 } })
+    );
     syncServerViews();
   };
 
@@ -775,9 +880,17 @@ function TaskManagerInner({ userId }: { userId: string }) {
 
           {/* Mobile meta line */}
           <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
-            <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
-              {task.priority}
-            </Badge>
+            <button
+              type="button"
+              onClick={(e) => void cyclePriority(task, e)}
+              className="cursor-pointer transition-transform active:scale-95"
+              aria-label={`Change priority for ${task.title}, currently ${task.priority}`}
+              title="Click to cycle priority"
+            >
+              <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
+                {task.priority}
+              </Badge>
+            </button>
             <Badge tone={done ? "success" : "neutral"} className="task-status-badge task-status-badge-enter">
               {STATUS_LABELS[task.status]}
             </Badge>
@@ -793,9 +906,17 @@ function TaskManagerInner({ userId }: { userId: string }) {
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
-          <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
-            {task.priority}
-          </Badge>
+          <button
+            type="button"
+            onClick={(e) => void cyclePriority(task, e)}
+            className="cursor-pointer transition-transform active:scale-95"
+            aria-label={`Change priority for ${task.title}, currently ${task.priority}`}
+            title="Click to cycle priority"
+          >
+            <Badge tone={PRIORITY_TONE[task.priority]} className="task-priority-badge">
+              {task.priority}
+            </Badge>
+          </button>
           <Badge tone={done ? "success" : "neutral"} className="task-status-badge task-status-badge-enter">
             {STATUS_LABELS[task.status]}
           </Badge>

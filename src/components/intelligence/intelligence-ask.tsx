@@ -163,6 +163,31 @@ export function IntelligenceAsk({
   const [confirmingAction, setConfirmingAction] = useState<IntelligenceAction | null>(null);
   const [executingAction, setExecutingAction] = useState(false);
   const [verifyingAction, setVerifyingAction] = useState(false);
+
+  // Global listener for proactive signals / triggers asking questions
+  useEffect(() => {
+    const handleAskEvent = (event: Event) => {
+      const custom = event as CustomEvent<{ query: string }>;
+      if (custom.detail?.query) {
+        setQuery(custom.detail.query);
+        composerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        composerRef.current?.focus({ preventScroll: true });
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && confirmingAction && !executingAction) {
+        setConfirmingAction(null);
+      }
+    };
+
+    window.addEventListener("nexus:intelligence-ask", handleAskEvent);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("nexus:intelligence-ask", handleAskEvent);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [confirmingAction, executingAction]);
   const [executedActionResult, setExecutedActionResult] = useState<{
     success: boolean;
     message: string;
@@ -349,6 +374,8 @@ export function IntelligenceAsk({
           window.dispatchEvent(new CustomEvent("nexus:activation", { detail: { type: "task_created" } }));
         } else if (action.type === "create_project") {
           window.dispatchEvent(new CustomEvent("nexus:activation", { detail: { type: "project_created" } }));
+        } else if (action.type === "create_goal") {
+          window.dispatchEvent(new CustomEvent("nexus:activation", { detail: { type: "goal_created" } }));
         }
         return;
       } else {
@@ -958,6 +985,11 @@ export function IntelligenceAsk({
               {/* Execution Success feedback */}
               {executedActionResult?.success ? (
                 <div className="mt-3 rounded-input border border-success-border bg-success-bg/40 px-3.5 py-2.5 text-small text-success animate-fade-in">
+                  <div className="mb-2.5">
+                    <VerificationLifecycle
+                      state={executedActionResult.verification?.verified ? "verified" : "confirm"}
+                    />
+                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <NexusIcon icon={IconCheck} />
