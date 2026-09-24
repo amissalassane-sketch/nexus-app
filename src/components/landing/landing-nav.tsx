@@ -35,6 +35,7 @@ type LandingNavContext =
 
 const NAV_LINKS = [
   { id: "product", route: "/#product", label: "Product" },
+  { id: "intelligence", route: "/intelligence", label: "Intelligence" },
   { id: "how-it-works", route: "/#how-it-works", label: "How it works" },
   { id: "integrations", route: "/#integrations", label: "Integrations" },
   { id: "trust", route: "/#trust", label: "Security & Trust" },

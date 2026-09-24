@@ -19,6 +19,7 @@ import { cn } from "@/lib/cn";
 // SECTION 3 — WHAT IT SURFACES
 // The six signal types the NEXUS engine actually computes
 // (src/lib/intelligence/engine.ts). Nothing here is aspirational.
+// Badge taxonomy is aligned 1:1 with signal kinds & mockups.
 // ============================================================
 
 type SignalSeverity = "critical" | "high" | "standard" | "quiet";
@@ -33,7 +34,7 @@ const SIGNALS: {
 }[] = [
   {
     icon: IconClock,
-    state: "Critical",
+    state: "Overdue",
     severity: "critical",
     tone: "lavender",
     title: "Overdue work",
@@ -65,15 +66,15 @@ const SIGNALS: {
   },
   {
     icon: IconFolderOpen,
-    state: "Observing",
+    state: "No action",
     severity: "quiet",
     tone: "quiet",
-    title: "No next action",
+    title: "No action",
     body: "An active project with nothing open against it. The work has quietly stopped.",
   },
   {
     icon: IconTrendingUp,
-    state: "Finished",
+    state: "Momentum",
     severity: "quiet",
     tone: "quiet",
     title: "Momentum",
@@ -83,18 +84,23 @@ const SIGNALS: {
 
 export function IntelligenceSignals() {
   return (
-    <section id="signals" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+    <section id="signals" className="scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
             eyebrow="What it surfaces"
-            title="Six signals, one reading of the workspace."
+            title={
+              <>
+                Six signals, one reading of the{" "}
+                <span className="nexus-intel-accent">workspace</span>.
+              </>
+            }
             sub="A short, ranked read of what is actually happening, and what is quietly going wrong."
           />
         </LandingReveal>
 
         <LandingReveal delay={80}>
-          <ul className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-12 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {SIGNALS.map((signal, index) => {
               const Icon = signal.icon;
               const isCritical = signal.severity === "critical";
@@ -106,10 +112,10 @@ export function IntelligenceSignals() {
                   className={cn(
                     "nexus-intel-cycle rounded-card p-5 transition-[border-color,background-color,transform] duration-200",
                     isCritical
-                      ? "border border-lavender/40 bg-gradient-to-b from-lavender/[0.09] via-bg-surface/60 to-bg-surface/30 shadow-[0_0_28px_-8px_rgba(233,228,255,0.14)]"
+                      ? "border border-lavender/50 bg-bg-surface shadow-[0_4px_24px_-4px_rgba(99,91,255,0.12)] dark:bg-bg-surface/90"
                       : isHigh
-                      ? "border border-border-strong bg-bg-surface/70"
-                      : "border border-border-subtle/70 bg-white/[0.008]"
+                      ? "border border-border-strong bg-bg-surface/90"
+                      : "border border-border-subtle bg-bg-surface/60"
                   )}
                   style={{ "--cycle-delay": `${index * 2600}ms` } as CSSProperties}
                 >
@@ -121,7 +127,7 @@ export function IntelligenceSignals() {
                           ? "border-lavender/40 bg-lavender/10 text-lavender"
                           : isHigh
                           ? "border-border-strong bg-bg-surface text-text-primary"
-                          : "border-border-subtle bg-bg-surface/50 text-text-tertiary"
+                          : "border-border-subtle bg-bg-surface/50 text-text-secondary"
                       )}
                     >
                       <NexusIcon icon={Icon} />
@@ -135,20 +141,10 @@ export function IntelligenceSignals() {
                       {signal.state}
                     </Badge>
                   </div>
-                  <h3
-                    className={cn(
-                      "mt-4 text-h2 font-medium tracking-[-0.015em]",
-                      isCritical ? "text-white" : "text-text-primary"
-                    )}
-                  >
+                  <h3 className="mt-4 text-h2 font-medium tracking-[-0.015em] text-text-primary">
                     {signal.title}
                   </h3>
-                  <p
-                    className={cn(
-                      "mt-1.5 text-small",
-                      isCritical ? "text-text-primary/90" : "text-text-secondary"
-                    )}
-                  >
+                  <p className="mt-1.5 text-small text-text-secondary">
                     {signal.body}
                   </p>
                 </li>

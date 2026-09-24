@@ -18,12 +18,15 @@ import { NexusLogo } from "@/components/nexus-logo";
 // signals on the left, the ranked recommendation on the right.
 // The loop (scan → signal → severity → priority → action) runs
 // in CSS so it costs nothing and stops under reduced motion.
+//
+// All numbers align 1:1 with Explainable Intelligence:
+// 3 tasks waiting on design review = 3 tasks blocked behind it.
 // ============================================================
 
 const EXAMPLE_SIGNALS = [
   {
     icon: IconClock,
-    state: "Critical",
+    state: "Overdue",
     tone: "lavender" as const,
     title: "3 tasks are overdue.",
     reason: "Oldest: “Ship onboarding”, 4 days past due.",
@@ -33,7 +36,7 @@ const EXAMPLE_SIGNALS = [
     state: "Blocked",
     tone: "lavender" as const,
     title: "Design review is preventing progress.",
-    reason: "2 tasks in “Onboarding v2” are waiting on it.",
+    reason: "3 tasks in “Onboarding v2” are waiting on it.",
   },
   {
     icon: IconAlertTriangle,
@@ -46,21 +49,22 @@ const EXAMPLE_SIGNALS = [
     icon: IconFolderOpen,
     state: "No action",
     tone: "quiet" as const,
-    title: "“Website refresh” has no next action.",
+    title: "“Website refresh” has no action.",
     reason: "Active project, no open task for 11 days.",
   },
 ];
 
 export function NextBestAction() {
   return (
-    <section id="in-action" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32">
+    <section id="in-action" className="scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
+            eyebrow="Next best action"
             title={
               <>
                 It surfaces what matters next,{" "}
-                <span className="nexus-intel-accent">not just what is late.</span>
+                <span className="nexus-intel-accent">not just what is late</span>.
               </>
             }
             sub="Everything open is ranked against everything else. One action comes out on top, with the reasoning attached."
@@ -68,37 +72,37 @@ export function NextBestAction() {
         </LandingReveal>
 
         <LandingReveal delay={80}>
-          <div className="nexus-intel-glass relative mt-14 rounded-card">
+          <div className="nexus-intel-glass relative mt-12 rounded-card border border-border-default bg-bg-surface/90 shadow-card">
             <div className="nexus-intel-scan" aria-hidden="true" />
 
             <div className="relative flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5">
               <div className="flex items-center gap-2.5">
-                <NexusLogo size={15} />
+                <NexusLogo size={16} />
                 <span className="eyebrow text-text-secondary">
                   Nexus Intelligence
                 </span>
               </div>
-              <Badge>Product visualisation</Badge>
+              <Badge tone="lavender">Deterministic scan</Badge>
             </div>
 
             <div className="relative grid lg:grid-cols-[1.05fr_1fr]">
               <div className="border-b border-border-subtle p-5 sm:p-7 lg:border-b-0 lg:border-r">
-                <p className="eyebrow text-text-tertiary">
+                <p className="eyebrow text-text-secondary">
                   Reading the workspace
                 </p>
 
-                <ul className="mt-4 flex flex-col gap-2">
+                <ul className="mt-4 flex flex-col gap-2.5">
                   {EXAMPLE_SIGNALS.map((signal, index) => {
                     const Icon = signal.icon;
                     return (
                       <li
                         key={signal.title}
-                        className="nexus-intel-cycle flex items-start gap-3 rounded-row border border-border-subtle bg-white/[0.012] px-3.5 py-3"
+                        className="nexus-intel-cycle flex items-start gap-3 rounded-row border border-border-subtle bg-bg-subtle/50 px-3.5 py-3 transition-colors hover:border-border-default"
                         style={
                           { "--cycle-delay": `${index * 2600}ms` } as CSSProperties
                         }
                       >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface text-text-tertiary">
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface text-text-secondary">
                           <NexusIcon icon={Icon} />
                         </span>
                         <div className="min-w-0">
@@ -108,7 +112,7 @@ export function NextBestAction() {
                               {signal.title}
                             </span>
                           </div>
-                          <p className="mt-1 text-small text-text-tertiary">
+                          <p className="mt-1 text-small text-text-secondary">
                             {signal.reason}
                           </p>
                         </div>
@@ -119,7 +123,7 @@ export function NextBestAction() {
               </div>
 
               <div className="flex flex-col justify-center p-5 sm:p-7">
-                <p className="eyebrow text-lavender">
+                <p className="eyebrow text-lavender font-semibold">
                   Next best action
                 </p>
 
@@ -127,22 +131,22 @@ export function NextBestAction() {
                   Review the onboarding flow.
                 </h3>
 
-                <div className="mt-5 border-l border-border-default pl-4">
-                  <p className="eyebrow text-text-tertiary">
+                <div className="mt-5 border-l-2 border-lavender/40 pl-4">
+                  <p className="eyebrow text-text-secondary">
                     Why
                   </p>
-                  <ul className="mt-2 flex flex-col gap-1.5">
+                  <ul className="mt-2.5 flex flex-col gap-2">
                     {[
                       "3 related tasks are blocked behind it.",
                       "The “Ship v1” milestone is 9 days out.",
-                      "It is the oldest overdue item in the project.",
+                      "It is the oldest overdue item in the project (4 days past due).",
                     ].map((reason) => (
-                      <li key={reason} className="flex items-start gap-2">
+                      <li key={reason} className="flex items-start gap-2.5">
                         <span
-                          className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-text-quaternary"
+                          className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-lavender"
                           aria-hidden="true"
                         />
-                        <span className="text-small text-text-secondary">{reason}</span>
+                        <span className="text-small font-normal text-text-secondary leading-snug">{reason}</span>
                       </li>
                     ))}
                   </ul>
@@ -150,7 +154,7 @@ export function NextBestAction() {
 
                 {/* Demo state: the real action lives in the workspace. */}
                 <span
-                  className="mt-6 inline-flex h-9 items-center gap-2 self-start rounded-pill border border-border-default bg-bg-surface px-4 text-button text-text-secondary"
+                  className="mt-6 inline-flex h-9 items-center gap-2 self-start rounded-pill border border-border-default bg-bg-surface px-4 text-button font-medium text-text-primary shadow-xs"
                   aria-hidden="true"
                 >
                   Review task
@@ -160,8 +164,8 @@ export function NextBestAction() {
             </div>
           </div>
 
-          <p className="mt-4 text-center eyebrow text-text-quaternary">
-            Example signals. Your workspace produces its own.
+          <p className="mt-4 text-center eyebrow text-text-tertiary">
+            Example signals computed from workspace dependency graph. Your workspace produces its own.
           </p>
         </LandingReveal>
       </div>
