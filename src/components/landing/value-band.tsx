@@ -23,9 +23,8 @@ export function ValueBand() {
         <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
           {/* ---------- The problem ---------- */}
           <p className="max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
-            The status of your work sits in everything you already manage.
-            The signals are there: they are just hard to see until it is
-            late.
+            You shouldn&apos;t have to remember where your work lives.
+            The signals sit scattered across emails, calendars, issue trackers and documents.
           </p>
 
           {/* ---------- The connector ---------- */}
@@ -40,13 +39,13 @@ export function ValueBand() {
 
           {/* ---------- The answer ---------- */}
           <div className="mt-10 flex flex-col items-center sm:mt-12">
-            <p className="max-w-[16ch] text-[34px] font-medium leading-[1.06] tracking-[-0.038em] text-text-primary sm:max-w-[18ch] sm:text-[48px]">
-              NEXUS reads it continuously.
+            <p className="max-w-[18ch] text-[34px] font-medium leading-[1.06] tracking-[-0.038em] text-text-primary sm:max-w-[20ch] sm:text-[48px]">
+              NEXUS puts it in context.
             </p>
-            <p className="nexus-lead mt-6 max-w-[520px]">
-              Your work changes constantly. NEXUS keeps up: it sees what is
-              drifting, blocked or getting risky, and tells you what deserves
-              attention now.
+            <p className="nexus-lead mt-6 max-w-[560px]">
+              Your work changes constantly. NEXUS keeps up: it connects your tools,
+              detects what is drifting, blocked or getting risky, and shows you
+              what deserves attention now—with full evidence.
             </p>
           </div>
         </div>

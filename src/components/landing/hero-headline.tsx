@@ -25,9 +25,9 @@ import { cn } from "@/lib/cn";
 // ============================================================
 
 const VARIANTS = [
+  "Not the guesswork.",
   "Not the chat.",
   "Not the noise.",
-  "Not the guesswork.",
   "Not the busywork.",
   "Not the surface.",
 ] as const;

@@ -193,14 +193,14 @@ function PricingCard({
         <article
           aria-label={`${plan.name} plan, ${price.amount} ${price.rate}`}
           className={cn(
-            "pricing-card relative flex h-full min-h-[560px] flex-col rounded-pricing border p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-7",
+            "pricing-card relative flex h-full min-h-[560px] flex-col rounded-pricing border p-6 sm:p-7",
             plan.featured
-              ? "border-white/20 bg-white/[0.055]"
-              : "border-white/10 bg-white/[0.035]"
+              ? "border-border-strong bg-bg-surface-2 shadow-sm"
+              : "border-border-subtle bg-bg-surface"
           )}
         >
           {plan.featured ? (
-            <span className="absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-pill bg-white px-3 py-1 text-[11px] font-medium leading-4 tracking-[-0.01em] text-black shadow-[0_5px_16px_rgba(0,0,0,0.32)]">
+            <span className="absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-pill bg-accent px-3 py-1 text-[11px] font-medium leading-4 tracking-[-0.01em] text-accent-fg shadow-sm">
               {plan.badge}
             </span>
           ) : null}
@@ -211,14 +211,14 @@ function PricingCard({
           >
             <h3 className="nexus-eyebrow">{plan.name}</h3>
             {isBusiness ? (
-              <span className="rounded-pill border border-white/10 bg-white/[0.045] px-2.5 py-0.5 font-mono text-[10px] uppercase leading-4 tracking-[0.08em] text-text-secondary">
+              <span className="rounded-pill border border-border-subtle bg-bg-subtle px-2.5 py-0.5 font-mono text-[10px] uppercase leading-4 tracking-[0.08em] text-text-secondary">
                 {plan.badge}
               </span>
             ) : null}
           </div>
 
           <div
-            className="pricing-card-stage mt-5 border-t border-white/[0.07] pt-6"
+            className="pricing-card-stage mt-5 border-t border-border-subtle pt-6"
             style={stageDelay(100)}
           >
             <div className="flex items-start text-text-primary">
@@ -256,7 +256,7 @@ function PricingCard({
                 "w-full",
                 plan.featured
                   ? "pricing-primary-cta"
-                  : "border-white/10 bg-white/[0.055] text-text-primary hover:bg-white/[0.09]"
+                  : "border border-border-default bg-bg-surface text-text-primary hover:border-border-strong hover:bg-bg-subtle"
               )}
             >
               {plan.cta.label}
@@ -276,9 +276,9 @@ function PricingCard({
               {entitlements.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-start gap-3 border-t border-white/[0.055] py-3 text-small text-text-primary first:border-t-0 first:pt-0"
+                  className="flex items-start gap-3 border-t border-border-subtle py-3 text-small text-text-primary first:border-t-0 first:pt-0"
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.05]">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border-default bg-bg-subtle">
                     <NexusIcon
                       icon={IconCheck}
                       px={11}
@@ -294,7 +294,7 @@ function PricingCard({
           {/* WHY UPGRADE? */}
           {plan.delta ? (
             <p
-              className="pricing-card-stage mt-5 border-t border-white/[0.07] pt-4 text-small text-text-secondary"
+              className="pricing-card-stage mt-5 border-t border-border-subtle pt-4 text-small text-text-secondary"
               style={stageDelay(500)}
             >
               <span className="nexus-eyebrow mr-2">Why upgrade</span>

@@ -17,35 +17,38 @@ type LandingFooterContext =
   | "legal";
 
 const PRODUCT_LINKS = [
-  { href: "/#product", label: "Product" },
-  { href: "/#model", label: "The model" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/intelligence", label: "Intelligence" },
+  { href: "/#product", label: "Product demo" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#model", label: "Context layer" },
+  { href: "/#integrations", label: "Integrations" },
   { href: "/pricing", label: "Pricing" },
 ] as const;
 
 const ACCOUNT_LINKS = [
   { href: "/login", label: "Sign in" },
   { href: "/signup", label: "Get started" },
+  { href: "/#faq", label: "FAQ" },
 ] as const;
 
-const SYSTEM_LINKS = [
-  { href: "/#features", label: "Features" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/pricing", label: "Free plan" },
+const TRUST_LINKS = [
+  { href: "/#trust", label: "Trust & Security" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/settings/privacy", label: "Data Controls" },
+  { href: "/intelligence", label: "AI Transparency" },
+  { href: "/#trust", label: "System Status" },
 ] as const;
 
 const LEGAL_LINKS = [
-  { href: "/terms", label: "Terms" },
-  { href: "/privacy", label: "Privacy" },
-  { href: "/cookies", label: "Cookies" },
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/cookies", label: "Cookie Policy" },
   { href: "/acceptable-use", label: "Acceptable Use" },
 ] as const;
 
 const COLUMNS = [
   { title: "Product", links: PRODUCT_LINKS },
   { title: "Account", links: ACCOUNT_LINKS },
-  { title: "System", links: SYSTEM_LINKS },
+  { title: "Trust & Data", links: TRUST_LINKS },
   { title: "Legal", links: LEGAL_LINKS },
 ] as const;
 

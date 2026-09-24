@@ -9,42 +9,60 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 // ============================================================
 // NEXUS LANDING — FAQ
 //
-// Native <details>/<summary>: keyboard-friendly, works without
-// JavaScript. On top of that, the list keeps a single question
-// open at a time — opening one closes the previous one.
+// Audit Item #23:
+// Addresses critical user objections directly:
+//   1. How is NEXUS different from Notion / Asana?
+//   2. Does NEXUS replace my existing tools?
+//   3. What can NEXUS access, and what does it read?
+//   4. Does NEXUS train AI models on my data?
+//   5. Can I disconnect a tool and delete my data?
+//   6. What happens if NEXUS gets something wrong?
+//   7. Does NEXUS read every email?
+//   8. Can I see where an answer came from?
 //
-// Readability: questions sit one step above their answers, each
-// row is numbered, and answers stay visible at text-small/secondary
-// (7.9:1 on the dark surfaces) — never a secret to dig for.
-//
-// Every answer is factual and tied to code in this repository.
+// Native <details>/<summary>: keyboard-friendly, works without JS.
 // ============================================================
 
 const FAQ_ITEMS = [
   {
-    question: "Who owns my data?",
+    question: "How is NEXUS different from Notion, Asana or Linear?",
     answer:
-      "You do. NEXUS runs on your own Supabase Postgres database, with row-level security per workspace and plan limits enforced server-side. Fonts are self-hosted. No third-party trackers.",
+      "NEXUS is not another task manager or workspace where you have to duplicate tasks and babysit databases. It is a contextual orchestration layer that sits above your existing tools to surface what is drifting, blocked or at risk—showing you what matters now, why it matters, and where it came from.",
   },
   {
-    question: "Can I use NEXUS without AI?",
+    question: "Does NEXUS replace my existing tools?",
     answer:
-      "Yes. Signals come from a deterministic engine that reads your real tasks, projects, goals and activity. Optional model enrichment only rephrases a signal. When it is unconfigured, timed out or unavailable, NEXUS falls back to the deterministic result and says so.",
+      "No. NEXUS is designed to connect your tools, not replace them. You keep Gmail for email, Google Calendar for schedules, Notion for documentation, and GitHub or Linear for development. NEXUS continuously unifies their scattered signals into one working context.",
   },
   {
-    question: "How does NEXUS Intelligence work?",
+    question: "What can NEXUS access, and what does it read?",
     answer:
-      "It reads the workspace and flags overdue work, blocked tasks, projects without a next action and goals at risk. It tracks weekly momentum and computes a single next best action. Every signal names the evidence it was computed from. Nothing is invented.",
+      "Only what you explicitly authorize. NEXUS reads operational metadata: deadlines, task statuses, calendar commitments, and relevant client validation threads. It never scrapes unshared private folders, irrelevant personal messages, or sensitive non-work data.",
   },
   {
-    question: "What does Cmd + K do?",
+    question: "Does NEXUS train AI models on my data?",
     answer:
-      "Command K opens the palette from anywhere in the app: navigate, create, or search real tasks, projects and goals without leaving the keyboard.",
+      "Never. Your workspace data is never used to train public or proprietary models. Data is processed exclusively for transient inference, isolated in PostgreSQL with strict row-level security per workspace, and never shared across tenants.",
   },
   {
-    question: "Is NEXUS really free?",
+    question: "Can I disconnect a tool or delete my data?",
     answer:
-      "Yes. $0 forever, with one workspace, two projects, one hundred active tasks, three goals and one member. No card required. Pro and Business raise those limits and add advanced analytics, collaboration and granular permissions.",
+      "Yes. You can revoke any connected tool in one click from your settings. If you choose to delete your account or workspace, all metadata, context graphs, and history are permanently erased with zero retention.",
+  },
+  {
+    question: "What happens if NEXUS gets something wrong?",
+    answer:
+      "NEXUS is honest by construction. Every signal and recommendation declares an explicit confidence level (Confirmed, Likely, Uncertain, Unknown). When information conflicts or evidence is insufficient, NEXUS declines to guess. Consequential mutations always require your explicit review.",
+  },
+  {
+    question: "Does NEXUS read every email in my inbox?",
+    answer:
+      "No. NEXUS only scans threads tied to your active projects and verified collaborators to detect deadlines, approvals, and blockers. It never archives your full email history or accesses unrelated personal messages.",
+  },
+  {
+    question: "Can I see where an answer or recommendation came from?",
+    answer:
+      "Always. Every signal, insight, and next best action includes direct source citations—showing the exact tool, timestamp, and event it was computed from, so you never have to trust an unverified AI claim.",
   },
 ] as const;
 
@@ -55,7 +73,11 @@ export function FaqSection() {
     <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto w-full max-w-[800px]">
         <LandingReveal>
-          <SectionHeading title="Questions, answered plainly." />
+          <SectionHeading
+            eyebrow="Questions & Objections"
+            title="Questions, answered plainly."
+            sub="Honest answers to the questions that matter before connecting your work tools."
+          />
         </LandingReveal>
 
         <LandingReveal delay={90}>
@@ -68,9 +90,6 @@ export function FaqSection() {
               >
                 <summary
                   onClick={(event) => {
-                    // Controlled accordion: the component owns the open
-                    // state, so only one answer is open at a time and the
-                    // DOM never drifts from the state.
                     event.preventDefault();
                     setOpenIndex((current) => (current === index ? null : index));
                   }}
@@ -90,7 +109,7 @@ export function FaqSection() {
                   </span>
                 </summary>
                 <div className="nexus-faq-answer pb-6 pl-0 sm:pl-[38px]">
-                  <p className="max-w-[62ch] text-small leading-[21px] text-text-secondary">
+                  <p className="max-w-[62ch] text-small leading-[22px] text-text-secondary">
                     {item.answer}
                   </p>
                 </div>
@@ -99,8 +118,7 @@ export function FaqSection() {
           </div>
 
           <p className="nexus-meta mt-8 text-center">
-            Anything else? The same answers live in the workspace, next to the
-            feature they describe.
+            Anything else? The same evidence and source citations live in the workspace, right next to the work they describe.
           </p>
         </LandingReveal>
       </div>

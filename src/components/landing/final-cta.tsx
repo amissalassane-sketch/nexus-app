@@ -22,14 +22,16 @@ export function FinalCtaSection() {
             />
 
             <span className="nexus-eyebrow-pill">
-              Start
+              Get Started
             </span>
             <h2 className="mx-auto mt-4 max-w-[20ch] text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-text-primary sm:text-[44px]">
               Stop managing the work. Understand it.
             </h2>
-            <p className="nexus-lead mx-auto mt-5 max-w-[440px]">
-              Free to start, no card required. Your workspace already has
-              what NEXUS needs.
+            <p className="mx-auto mt-3 font-mono text-[13px] uppercase tracking-[0.08em] text-lavender">
+              Connect your tools. NEXUS builds the context.
+            </p>
+            <p className="nexus-lead mx-auto mt-4 max-w-[480px]">
+              Free to start, no card required. Connect your tools when you&apos;re ready and start seeing what deserves attention now.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -37,8 +39,8 @@ export function FinalCtaSection() {
                 Get started
                 <NexusIcon icon={IconArrowRight} />
               </ButtonLink>
-              <ButtonLink href="/intelligence" variant="secondary" size="lg">
-                See it in action
+              <ButtonLink href="#product" variant="secondary" size="lg">
+                See how it works
               </ButtonLink>
             </div>
           </div>

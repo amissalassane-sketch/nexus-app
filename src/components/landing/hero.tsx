@@ -26,11 +26,11 @@ const delay = (ms: number) =>
   ({ "--landing-hero-delay": `${ms}ms` }) as CSSProperties;
 
 const FLOW = [
-  "Read",
+  "Connect",
+  "Context",
   "Understand",
-  "Surface risk",
-  "Recommend",
-  "Execute",
+  "Prioritize",
+  "Act",
   "Verify",
 ];
 
@@ -57,16 +57,16 @@ export function Hero({ notice }: { notice?: ReactNode }) {
             className="h-1.5 w-1.5 rounded-full bg-lavender signal-pulse"
             aria-hidden="true"
           />
-          NEXUS Intelligence
+          Contextual Orchestration Layer
         </span>
 
         <h1
-          className="landing-hero-item mt-6 max-w-[18ch] text-[38px] font-medium leading-[1.04] tracking-[-0.04em] text-text-primary sm:mt-7 sm:text-[54px] lg:text-[62px]"
+          className="landing-hero-item mt-6 max-w-[20ch] text-[38px] font-medium leading-[1.04] tracking-[-0.04em] text-text-primary sm:mt-7 sm:text-[54px] lg:text-[62px]"
           style={delay(70)}
         >
           {/* Screen readers hear the stable proposition once. */}
           <span className="sr-only">
-            NEXUS reads the work. Not the chat.
+            NEXUS reads the work. Your work is scattered. NEXUS puts it in context.
           </span>
           <span aria-hidden="true">
             It reads the work.
@@ -79,9 +79,9 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item nexus-lead mt-6 max-w-[640px] sm:mt-7"
           style={delay(140)}
         >
-          NEXUS reads the work already in your workspace (goals, projects,
-          tasks and activity) and keeps what is drifting, blocked or getting
-          risky visible, so you always know what deserves your attention now.
+          Your work is scattered across tools. NEXUS connects your projects,
+          tasks, calendar, email and documents to show you what matters now,
+          why it matters, and where it came from.
         </p>
 
         <div
@@ -93,21 +93,26 @@ export function Hero({ notice }: { notice?: ReactNode }) {
             <NexusIcon icon={IconArrowRight} />
           </ButtonLink>
           <ButtonLink
-            href="/intelligence"
+            href="#product"
             variant="secondary"
             size="lg"
             className="sm:min-w-[190px]"
           >
-            See it in action
+            See how it works
           </ButtonLink>
         </div>
 
-        <p
-          className="landing-hero-item mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-text-quaternary"
+        <div
+          className="landing-hero-item mt-4 flex flex-col items-center gap-1.5 text-center"
           style={delay(280)}
         >
-          Free to start · No card required
-        </p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-quaternary">
+            Free to start · No card required · Connect tools when you&apos;re ready
+          </p>
+          <p className="font-mono text-[10.5px] text-text-tertiary">
+            Projects · Tasks · Gmail · Calendar · Documents
+          </p>
+        </div>
 
         {/* How it works, in one line. Numbered so the order is explicit
             and never depends on the arrows being read. */}

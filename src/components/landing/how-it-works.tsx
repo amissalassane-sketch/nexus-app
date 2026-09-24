@@ -20,32 +20,32 @@ import { LandingReveal } from "@/components/landing/landing-reveal";
 const STEPS = [
   {
     number: "01",
-    title: "Read",
-    body: "Every goal, project, task and activity event already in the workspace.",
+    title: "Connect",
+    body: "Connect your Gmail, Calendar, Notion, GitHub and Slack. NEXUS reads the work, not the chat.",
   },
   {
     number: "02",
     title: "Understand",
-    body: "Deadlines and dependencies connect. Progress and momentum come from the data.",
+    body: "Deadlines, dependencies and real progress connect into one working context without manual data entry.",
   },
   {
     number: "03",
-    title: "Decide",
-    body: "Risk is ranked and reduced to one next action.",
+    title: "Prioritize",
+    body: "Cross-tool risk is computed continuously: blockers and drift are ranked by operational consequence.",
   },
   {
     number: "04",
-    title: "Run",
-    body: "Execution asks for confirmation, then verifies the result.",
+    title: "Act",
+    body: "Recommends clear next steps with full evidence. Consequential changes always require your confirmation.",
   },
 ] as const;
 
 const LOOP = [
-  "Read",
+  "Connect",
+  "Context",
   "Understand",
-  "Surface risk",
-  "Recommend",
-  "Execute",
+  "Prioritize",
+  "Act",
   "Verify",
 ];
 
@@ -55,8 +55,9 @@ export function HowItWorksSection() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            title="Four moves. Then it keeps watching."
-            sub="A system, not a dashboard to babysit: it takes the work you already have and turns it into the decision you have to make."
+            eyebrow="The Operating Cycle"
+            title="Connect. Understand. Prioritize. Act."
+            sub="NEXUS keeps learning from what changes. It connects the tools you already use and turns their scattered activity into the one decision you need to make right now."
           />
         </LandingReveal>
 
@@ -106,7 +107,7 @@ export function HowItWorksSection() {
             <p className="nexus-chain-endcap mt-9 flex items-center justify-center gap-2 lg:mt-10">
               <span className="h-1 w-1 rounded-full bg-lavender/80" aria-hidden="true" />
               <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-tertiary">
-                And keeps reading from here
+                NEXUS keeps learning from what changes
               </span>
             </p>
           </div>

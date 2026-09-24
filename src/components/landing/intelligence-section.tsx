@@ -85,7 +85,7 @@ export function IntelligenceSection() {
                 not the chat.
               </>
             }
-            sub="Your workspace already contains the signals. NEXUS connects them: no prompts, no setup, nothing to re-type."
+            sub="ChatGPT answers what you prompt it with. NEXUS constructs operational context continuously from your connected tools—grounded with explicit evidence, so you never have to guess."
           />
 
           {/* Differentiated signal tier list — fast synthesis on the landing page */}
@@ -98,8 +98,8 @@ export function IntelligenceSection() {
                   className={cn(
                     "rounded-card p-4 transition-[border-color,background-color] duration-200",
                     tier.isUrgent
-                      ? "border border-lavender/35 bg-gradient-to-r from-lavender/[0.07] via-bg-surface/50 to-bg-surface/30"
-                      : "border border-border-subtle/80 bg-white/[0.012]"
+                      ? "border border-lavender-border bg-bg-surface-2"
+                      : "border border-border-subtle bg-bg-surface"
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -108,8 +108,8 @@ export function IntelligenceSection() {
                         className={cn(
                           "flex h-7 w-7 items-center justify-center rounded-input border",
                           tier.isUrgent
-                            ? "border-lavender/40 bg-lavender/10 text-lavender"
-                            : "border-border-default bg-bg-surface text-text-secondary"
+                            ? "border-lavender-border bg-lavender-subtle text-lavender"
+                            : "border-border-default bg-bg-subtle text-text-secondary"
                         )}
                       >
                         <NexusIcon icon={Icon} px={14} />
@@ -121,7 +121,7 @@ export function IntelligenceSection() {
                     <Badge
                       tone={tier.tone}
                       className={cn(
-                        tier.isUrgent && "border-lavender/40 bg-lavender/15 text-lavender font-semibold"
+                        tier.isUrgent && "border-lavender-border font-semibold text-lavender"
                       )}
                     >
                       {tier.badge}

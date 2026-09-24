@@ -1542,18 +1542,26 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   border-top-color: transparent;
 }
 
-/* A framed panel: hairline border + 2% wash. The default container
+/* A framed panel: hairline border + crisp surface contrast. The default container
    for anything that holds content on the public pages. */
 .nexus-panel {
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--radius-card);
-  background-color: color-mix(in srgb, var(--color-bg-surface) 45%, transparent);
+  background-color: var(--color-bg-surface);
 }
 
 .nexus-panel-quiet {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-row);
-  background-color: rgba(255, 255, 255, 0.014);
+  background-color: var(--color-bg-subtle);
+}
+
+/* Level 3: Elevated interactive card (Evidence Card, modal dialogs) */
+.nexus-card-elevated {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background-color: var(--color-bg-surface-3);
+  box-shadow: var(--shadow-overlay);
 }
 
 /* ---------- 3. Shared intelligence primitives --------------------
