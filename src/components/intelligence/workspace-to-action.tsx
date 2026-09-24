@@ -37,7 +37,6 @@ export function WorkspaceToAction() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="From workspace to action"
             title="A loop, not a conversation."
             sub="Nothing to prompt, nothing to explain, nothing to maintain. The workspace changes, the reading changes with it."
           />

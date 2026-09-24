@@ -55,7 +55,7 @@ export function FaqSection() {
     <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-24">
       <div className="mx-auto w-full max-w-[800px]">
         <LandingReveal>
-          <SectionHeading eyebrow="FAQ" title="Questions, answered plainly." />
+          <SectionHeading title="Questions, answered plainly." />
         </LandingReveal>
 
         <LandingReveal delay={90}>

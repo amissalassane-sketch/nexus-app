@@ -66,7 +66,6 @@ export function HeroAtmosphere() {
   return (
     <div ref={rootRef} className="nexus-hero-atmosphere" aria-hidden="true">
       <div className="nexus-hero-light" />
-      <div className="nexus-hero-grid" />
       <div className="nexus-hero-orbit nexus-hero-orbit-one" />
       <div className="nexus-hero-orbit nexus-hero-orbit-two" />
       <div className="nexus-hero-axis" />

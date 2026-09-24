@@ -39,7 +39,6 @@ export function ExplainableIntelligence() {
         <LandingReveal>
           <SectionHeading
             align="left"
-            eyebrow="Explainable"
             title={
               <>
                 Every signal has a{" "}
@@ -68,12 +67,12 @@ export function ExplainableIntelligence() {
         <LandingReveal delay={80}>
           <div className="nexus-intel-glass rounded-card p-5 sm:p-7">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-warning-border bg-warning-bg text-warning">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input border border-lavender/30 bg-lavender/10 text-lavender">
                 <NexusIcon icon={IconAlertTriangle} />
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="warning">At risk</Badge>
+                  <Badge tone="neutral">At risk</Badge>
                   <span className="eyebrow text-text-quaternary">
                     goal
                   </span>

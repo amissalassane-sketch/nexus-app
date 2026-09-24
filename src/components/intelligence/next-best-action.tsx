@@ -24,28 +24,28 @@ const EXAMPLE_SIGNALS = [
   {
     icon: IconClock,
     state: "Critical",
-    tone: "danger" as const,
+    tone: "lavender" as const,
     title: "3 tasks are overdue.",
     reason: "Oldest: “Ship onboarding”, 4 days past due.",
   },
   {
     icon: IconBan,
     state: "Blocked",
-    tone: "warning" as const,
+    tone: "lavender" as const,
     title: "Design review is preventing progress.",
     reason: "2 tasks in “Onboarding v2” are waiting on it.",
   },
   {
     icon: IconAlertTriangle,
     state: "At risk",
-    tone: "warning" as const,
+    tone: "neutral" as const,
     title: "“Ship v1” is at risk.",
     reason: "45% complete with 9 days to the target date.",
   },
   {
     icon: IconFolderOpen,
     state: "No action",
-    tone: "info" as const,
+    tone: "quiet" as const,
     title: "“Website refresh” has no next action.",
     reason: "Active project, no open task for 11 days.",
   },
@@ -57,7 +57,6 @@ export function NextBestAction() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="The point of it"
             title={
               <>
                 It surfaces what matters next,{" "}

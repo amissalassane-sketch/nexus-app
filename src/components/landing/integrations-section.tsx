@@ -20,7 +20,6 @@ export function IntegrationsSection() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="Connected context"
             title="Your tools. One intelligent workspace."
             sub="NEXUS is designed to bring the work you already do into one place so context can become signal, and signal can become the next action."
           />

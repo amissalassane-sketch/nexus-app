@@ -1,82 +1,59 @@
+import Link from "next/link";
 import {
   IconArrowRight,
-  IconBan,
   IconBolt,
   IconClock,
-  IconFolderOpen,
   IconSparkles,
   IconTarget,
-  IconTrendingUp,
   type TablerIcon,
 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS LANDING — IT READS THE WORK. NOT THE CHAT.
 //
-// The strongest section of the page, reinforced so it belongs to
-// the same visual system as /intelligence: the six signal types
-// carry the exact severity badges the Intelligence page uses, and
-// the panel on the right reuses its vocabulary — severity rail,
-// NEXT BEST ACTION, WHY NEXUS RECOMMENDS THIS, COMPUTED FROM.
-//
-//   CRITICAL / WARNING signal → NEXT BEST ACTION → WHY → COMPUTED FROM
-//
-// Every claim below matches src/lib/intelligence/engine.ts.
-// Nothing here is invented.
+// The landing pitch: selling the concept with speed and clarity,
+// then pointing the visitor to /intelligence for the full deep dive.
+// Palette is strictly noir / blanc / lavande.
 // ============================================================
 
-const SIGNALS: {
+const SIGNAL_TIERS: {
   icon: TablerIcon;
-  state: string;
+  category: string;
+  badge: string;
   tone: BadgeTone;
-  title: string;
-  body: string;
+  isUrgent?: boolean;
+  signals: string;
+  summary: string;
 }[] = [
   {
     icon: IconClock,
-    state: "Critical",
-    tone: "danger",
-    title: "Overdue work",
-    body: "Deadlines pass, NEXUS notices.",
-  },
-  {
-    icon: IconBan,
-    state: "Warning",
-    tone: "warning",
-    title: "Blocked tasks",
-    body: "Anything stuck that stalls the rest.",
-  },
-  {
-    icon: IconFolderOpen,
-    state: "Info",
-    tone: "info",
-    title: "No next action",
-    body: "Projects with nothing moving them forward.",
+    category: "Friction & blocks",
+    badge: "Immediate",
+    tone: "lavender",
+    isUrgent: true,
+    signals: "Overdue work · Blocked tasks",
+    summary: "Deadlines that passed and work held back by dependencies. NEXUS brings the bottleneck to the surface first.",
   },
   {
     icon: IconTarget,
-    state: "Warning",
-    tone: "warning",
-    title: "Goals at risk",
-    body: "Progress too low for the time left.",
-  },
-  {
-    icon: IconTrendingUp,
-    state: "Positive",
-    tone: "success",
-    title: "Momentum",
-    body: "What actually got done this week.",
+    category: "Trajectory drift",
+    badge: "Risk",
+    tone: "neutral",
+    signals: "Goals at risk · No next action",
+    summary: "Active projects with stalled momentum and milestones slipping behind target dates.",
   },
   {
     icon: IconBolt,
-    state: "Priority",
+    category: "Resolution",
+    badge: "Focus",
     tone: "lavender",
-    title: "Next best action",
-    body: "The one thing to do right now.",
+    signals: "Next best action · Momentum",
+    summary: "Everything open ranked continuously against everything else, distilled into one concrete next step.",
   },
 ];
 
@@ -111,35 +88,68 @@ export function IntelligenceSection() {
             sub="Your workspace already contains the signals. NEXUS connects them: no prompts, no setup, nothing to re-type."
           />
 
-          {/* Six signals — the same reading the Intelligence page gives. */}
-          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-            {SIGNALS.map((signal) => {
-              const Icon = signal.icon;
+          {/* Differentiated signal tier list — fast synthesis on the landing page */}
+          <div className="mt-8 flex flex-col gap-3">
+            {SIGNAL_TIERS.map((tier) => {
+              const Icon = tier.icon;
               return (
-                <li
-                  key={signal.title}
-                  className="nexus-panel p-4"
+                <div
+                  key={tier.category}
+                  className={cn(
+                    "rounded-card p-4 transition-[border-color,background-color] duration-200",
+                    tier.isUrgent
+                      ? "border border-lavender/35 bg-gradient-to-r from-lavender/[0.07] via-bg-surface/50 to-bg-surface/30"
+                      : "border border-border-subtle/80 bg-white/[0.012]"
+                  )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
-                      <NexusIcon icon={Icon} />
-                    </span>
-                    <Badge tone={signal.tone}>{signal.state}</Badge>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-input border",
+                          tier.isUrgent
+                            ? "border-lavender/40 bg-lavender/10 text-lavender"
+                            : "border-border-default bg-bg-surface text-text-secondary"
+                        )}
+                      >
+                        <NexusIcon icon={Icon} px={14} />
+                      </span>
+                      <span className="text-[13.5px] font-semibold text-text-primary">
+                        {tier.category}
+                      </span>
+                    </div>
+                    <Badge
+                      tone={tier.tone}
+                      className={cn(
+                        tier.isUrgent && "border-lavender/40 bg-lavender/15 text-lavender font-semibold"
+                      )}
+                    >
+                      {tier.badge}
+                    </Badge>
                   </div>
-                  <p className="mt-3.5 text-h2 text-text-primary">{signal.title}</p>
-                  <p className="mt-1 text-small text-text-secondary">
-                    {signal.body}
+                  <p className="mt-2 font-mono text-[11px] text-text-tertiary">
+                    {tier.signals}
                   </p>
-                </li>
+                  <p className="mt-1 text-small text-text-secondary">
+                    {tier.summary}
+                  </p>
+                </div>
               );
             })}
-          </ul>
+          </div>
 
-          <p className="nexus-lead mt-8 max-w-[460px]">
-            Everything NEXUS surfaces is computed from your real workspace
-            data. Never invented, never a guess. Every signal explains its own
-            reason.
-          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="nexus-lead max-w-[380px] text-[13.5px]">
+              Every signal is computed from real workspace state. Never invented.
+            </p>
+            <Link
+              href="/intelligence"
+              className="group inline-flex items-center gap-1.5 font-mono text-[11.5px] uppercase tracking-[0.08em] text-lavender hover:text-white transition-colors"
+            >
+              <span>Explore the full engine</span>
+              <NexusIcon icon={IconArrowRight} px={13} className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
         </LandingReveal>
 
         <LandingReveal delay={90}>
@@ -166,9 +176,9 @@ export function IntelligenceSection() {
                     <NexusIcon
                       icon={IconClock}
                       px={14}
-                      className="nexus-signal-icon"
+                      className="nexus-signal-icon text-lavender"
                     />
-                    <Badge tone="danger">Critical</Badge>
+                    <Badge tone="lavender">Critical</Badge>
                   </div>
                   <span className="nexus-eyebrow">Overdue · task</span>
                 </div>
@@ -197,9 +207,9 @@ export function IntelligenceSection() {
                     <NexusIcon
                       icon={IconTarget}
                       px={14}
-                      className="nexus-signal-icon"
+                      className="nexus-signal-icon text-text-secondary"
                     />
-                    <Badge tone="warning">Warning</Badge>
+                    <Badge tone="neutral">Warning</Badge>
                   </div>
                   <span className="nexus-eyebrow">At risk · goal</span>
                 </div>
@@ -239,7 +249,7 @@ export function IntelligenceSection() {
                     <NexusIcon
                       icon={IconBolt}
                       px={14}
-                      className="nexus-signal-icon"
+                      className="nexus-signal-icon text-lavender"
                     />
                     <Badge tone="lavender">Next best action</Badge>
                   </div>

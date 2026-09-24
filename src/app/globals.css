@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
 
 /* ============================================================
    NEXUS V3 — "PILL ATELIER NOIR"
@@ -1587,23 +1588,23 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
 }
 
 .nexus-signal[data-severity="critical"] {
-  --signal-color: var(--color-danger);
-  --signal-tint: var(--color-danger-bg);
+  --signal-color: var(--color-lavender);
+  --signal-tint: color-mix(in srgb, var(--color-lavender) 9%, var(--color-bg-surface));
 }
 
 .nexus-signal[data-severity="warning"] {
-  --signal-color: var(--color-warning);
-  --signal-tint: var(--color-warning-bg);
+  --signal-color: var(--color-border-focus);
+  --signal-tint: color-mix(in srgb, var(--color-bg-surface) 75%, transparent);
 }
 
 .nexus-signal[data-severity="info"] {
-  --signal-color: var(--color-info);
-  --signal-tint: var(--color-info-bg);
+  --signal-color: var(--color-border-strong);
+  --signal-tint: color-mix(in srgb, var(--color-bg-surface) 45%, transparent);
 }
 
 .nexus-signal[data-severity="positive"] {
-  --signal-color: var(--color-success);
-  --signal-tint: var(--color-success-bg);
+  --signal-color: var(--color-lavender);
+  --signal-tint: color-mix(in srgb, var(--color-lavender) 6%, var(--color-bg-surface));
 }
 
 .nexus-signal-icon {
@@ -2047,19 +2048,82 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   --axis-y: 0px;
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  mask-image: linear-gradient(to bottom, black 0%, black 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 100%);
 }
 
-.nexus-hero-atmosphere,
-.nexus-hero-light,
-.nexus-hero-grid,
-.nexus-hero-orbit,
-.nexus-hero-axis,
-.nexus-landing-light {
-  display: none !important;
+/* Sharp, controlled radial aperture — identical palette to /intelligence (lavender + white-hot core) */
+.nexus-hero-light {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(840px, 94vw);
+  height: 440px;
+  border-radius: 50%;
+  opacity: 0.9;
+  background: radial-gradient(
+    ellipse 62% 48% at 50% 50%,
+    rgba(245, 242, 255, 0.22) 0%,
+    rgba(156, 140, 255, 0.14) 22%,
+    rgba(70, 51, 140, 0.06) 48%,
+    transparent 72%
+  );
+  filter: blur(44px);
+  transform: translate3d(calc(-50% + var(--light-x)), calc(-50% + var(--light-y)), 0);
+  will-change: transform;
+}
+
+/* Outer orbital telemetry ring */
+.nexus-hero-orbit {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.nexus-hero-orbit-one {
+  left: 50%;
+  top: 55px;
+  width: min(820px, 92vw);
+  height: 360px;
+  border: 1px solid rgba(233, 228, 255, 0.14);
+  mask-image: radial-gradient(ellipse at center, black 45%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 45%, transparent 75%);
+  transform: translate3d(calc(-50% + var(--far-x)), var(--far-y), 0) rotate(-6deg);
+}
+
+.nexus-hero-orbit-two {
+  left: 50%;
+  top: 105px;
+  width: min(580px, 76vw);
+  height: 260px;
+  border: 1px dashed rgba(233, 228, 255, 0.2);
+  mask-image: radial-gradient(ellipse at center, black 50%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 80%);
+  transform: translate3d(calc(-50% + var(--near-x)), var(--near-y), 0) rotate(8deg);
+}
+
+/* Horizontal horizon telemetry line */
+.nexus-hero-axis {
+  position: absolute;
+  left: 50%;
+  top: 235px;
+  width: min(940px, 96vw);
+  height: 1px;
+  opacity: 0.6;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(233, 228, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(233, 228, 255, 0.15) 65%,
+    transparent 100%
+  );
+  transform: translate3d(calc(-50% + var(--axis-x)), var(--axis-y), 0);
+  will-change: transform;
 }
 
 /* Landing background — pure flat Level 0 canvas matching the whole product. */

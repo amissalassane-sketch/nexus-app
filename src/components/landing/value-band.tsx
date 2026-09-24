@@ -22,8 +22,7 @@ export function ValueBand() {
       <LandingReveal>
         <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
           {/* ---------- The problem ---------- */}
-          <span className="nexus-eyebrow">The problem</span>
-          <p className="mt-5 max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
+          <p className="max-w-[620px] text-[20px] font-normal leading-[1.34] tracking-[-0.02em] text-text-tertiary sm:text-[24px] sm:leading-[1.32]">
             The status of your work sits in everything you already manage.
             The signals are there: they are just hard to see until it is
             late.
@@ -40,15 +39,8 @@ export function ValueBand() {
           </div>
 
           {/* ---------- The answer ---------- */}
-          <div className="mt-12 flex flex-col items-center sm:mt-16">
-            <span className="nexus-eyebrow-pill">
-              <span
-                className="h-1.5 w-1.5 rounded-pill bg-lavender/70"
-                aria-hidden="true"
-              />
-              The answer
-            </span>
-            <p className="mt-6 max-w-[16ch] text-[34px] font-medium leading-[1.06] tracking-[-0.038em] text-text-primary sm:mt-7 sm:max-w-[18ch] sm:text-[48px]">
+          <div className="mt-10 flex flex-col items-center sm:mt-12">
+            <p className="max-w-[16ch] text-[34px] font-medium leading-[1.06] tracking-[-0.038em] text-text-primary sm:max-w-[18ch] sm:text-[48px]">
               NEXUS reads it continuously.
             </p>
             <p className="nexus-lead mt-6 max-w-[520px]">

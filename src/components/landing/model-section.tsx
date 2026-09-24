@@ -78,7 +78,6 @@ export function ModelSection() {
         <LandingReveal className="lg:sticky lg:top-24">
           <SectionHeading
             align="left"
-            eyebrow="The NEXUS model"
             title={
               <>
                 An operating layer

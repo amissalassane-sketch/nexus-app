@@ -88,7 +88,6 @@ export function TrustSection() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="Why NEXUS"
             title="Quiet, precise and honest by construction."
             sub="No invented logos or testimonials here. This is what NEXUS is, described the way it behaves."
           />

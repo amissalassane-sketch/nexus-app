@@ -55,7 +55,6 @@ export function HowItWorksSection() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="How it works"
             title="Four moves. Then it keeps watching."
             sub="A system, not a dashboard to babysit: it takes the work you already have and turns it into the decision you have to make."
           />

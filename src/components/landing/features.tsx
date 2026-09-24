@@ -11,6 +11,7 @@ import {
 import { NexusIcon } from "@/components/nexus-icon";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { LandingReveal } from "@/components/landing/landing-reveal";
+import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS LANDING — FEATURE ARCHITECTURE
@@ -85,13 +86,12 @@ export function FeaturesSection() {
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            eyebrow="Features"
             title="Built around the work, not around the tool."
             sub="Six parts make the model. Two make it fast. All of it keeps the work connected and turns it into the next action."
           />
         </LandingReveal>
 
-        {/* ---------- Core model — full weight ---------- */}
+        {/* ---------- Core model — differentiated weight ---------- */}
         <LandingReveal delay={80}>
           <div className="mt-12 lg:mt-14">
             <div className="flex items-center gap-3">
@@ -127,16 +127,38 @@ export function FeaturesSection() {
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {OPERATING_MODEL.map((feature, index) => {
                 const Icon = feature.icon;
+                const isIntelligence = feature.title === "NEXUS Intelligence";
+                const isWorkspace = feature.title === "Workspace";
+
                 return (
                   <li
                     key={feature.title}
-                    className="nexus-panel card-hover h-full p-5"
+                    className={cn(
+                      "card-hover h-full rounded-card p-5 transition-[border-color,background-color] duration-200",
+                      isIntelligence
+                        ? "border border-lavender/35 bg-gradient-to-b from-lavender/[0.06] to-bg-surface/40 shadow-[0_0_24px_-8px_rgba(233,228,255,0.08)]"
+                        : isWorkspace
+                        ? "border border-border-strong bg-bg-surface/60"
+                        : "border border-border-subtle/80 bg-white/[0.012]"
+                    )}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-secondary">
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-input border",
+                          isIntelligence
+                            ? "border-lavender/40 bg-lavender/10 text-lavender"
+                            : "border-border-default bg-bg-surface text-text-secondary"
+                        )}
+                      >
                         <NexusIcon icon={Icon} />
                       </span>
-                      <span className="nexus-meta mt-0.5">
+                      <span
+                        className={cn(
+                          "nexus-meta mt-0.5",
+                          isIntelligence ? "text-lavender/90 font-medium" : ""
+                        )}
+                      >
                         {String(index + 1).padStart(2, "0")}
                       </span>
                     </div>

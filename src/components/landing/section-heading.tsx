@@ -25,7 +25,7 @@ export function SectionHeading({
   size = "section",
   className,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: ReactNode;
   sub?: ReactNode;
   align?: "center" | "left";
@@ -40,17 +40,20 @@ export function SectionHeading({
         className
       )}
     >
-      <span className="nexus-eyebrow-pill">
-        <span
-          className="h-1.5 w-1.5 shrink-0 rounded-pill bg-lavender/70"
-          aria-hidden="true"
-        />
-        {eyebrow}
-      </span>
+      {eyebrow ? (
+        <span className="nexus-eyebrow-pill mb-4">
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-pill bg-lavender/70"
+            aria-hidden="true"
+          />
+          {eyebrow}
+        </span>
+      ) : null}
 
       <h2
         className={cn(
-          "mt-5 text-text-primary",
+          "text-text-primary",
+          eyebrow ? "mt-1" : "mt-0",
           size === "hero"
             ? "max-w-[22ch] text-[38px] font-medium leading-[1.06] tracking-[-0.04em] sm:text-[52px]"
             : "max-w-[24ch] text-[32px] font-medium leading-[1.09] tracking-[-0.035em] sm:text-[40px]",
