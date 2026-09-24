@@ -28,7 +28,8 @@ export function IntelligenceCore() {
 
       <div className="nexus-context-core-breath">
         <div className="nexus-context-core-pill" data-nx-core-pill>
-          <NexusLogo size={16} />
+          <NexusLogo size={16} variant="black" className="block dark:hidden" />
+          <NexusLogo size={16} variant="white" className="hidden dark:block" />
           <span className="eyebrow text-text-secondary">
             Nexus Intelligence
           </span>

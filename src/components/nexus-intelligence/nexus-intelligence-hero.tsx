@@ -5,6 +5,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
 import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
+import { cn } from "@/lib/cn";
 
 // ============================================================
 // NEXUS INTELLIGENCE — HERO
@@ -57,6 +58,65 @@ const FOOTNOTES = [
   { label: "Free to start. No card required" },
 ] as const;
 
+function LightIntelligenceGraphic({ narrow }: { narrow: boolean }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      {/* Atmospheric radial glow */}
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_72%_46%,rgba(99,91,255,0.08)_0%,rgba(99,91,255,0.02)_50%,transparent_75%)]"
+        aria-hidden="true"
+      />
+
+      {/* Orbital Lens System */}
+      <div
+        className={cn(
+          "absolute flex items-center justify-center pointer-events-none",
+          narrow
+            ? "bottom-10 left-1/2 -translate-x-1/2 h-[340px] w-[340px]"
+            : "right-[6%] top-[46%] -translate-y-1/2 h-[540px] w-[540px] xl:right-[10%]"
+        )}
+      >
+        {/* Soft focal glow */}
+        <div className="absolute h-72 w-72 rounded-full bg-lavender/10 blur-3xl" />
+
+        {/* Outer orbital ring */}
+        <div className="absolute h-full w-full rounded-full border border-border-default/80 motion-safe:animate-[spin_80s_linear_infinite]" />
+        <div className="absolute h-[84%] w-[84%] rounded-full border border-dashed border-border-strong/50 motion-safe:animate-[spin_56s_linear_infinite_reverse]" />
+
+        {/* Mid orbital ring with data points */}
+        <div className="absolute h-[64%] w-[64%] rounded-full border border-lavender/30 motion-safe:animate-[spin_40s_linear_infinite]">
+          <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full bg-lavender shadow-[0_0_10px_rgba(99,91,255,0.5)]" />
+          <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 h-2 w-2 rounded-full bg-text-tertiary" />
+        </div>
+
+        {/* Inner orbital ring */}
+        <div className="absolute h-[44%] w-[44%] rounded-full border border-dashed border-lavender/40 motion-safe:animate-[spin_26s_linear_infinite_reverse]" />
+
+        {/* Central Intelligence Core Pill */}
+        <div className="relative flex flex-col items-center justify-center rounded-2xl border border-border-default bg-bg-surface/90 px-6 py-5 shadow-[0_16px_36px_-8px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.9)] backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-subtle bg-bg-subtle text-text-primary shadow-xs">
+              <span className="font-mono text-[11px] font-semibold">N</span>
+            </span>
+            <div className="flex flex-col">
+              <span className="text-[12px] font-semibold tracking-[-0.01em] text-text-primary">
+                NEXUS Engine
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-lavender">
+                Active synthesis
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2 rounded-full border border-border-subtle bg-bg-subtle/80 px-3 py-1 font-mono text-[9.5px] text-text-secondary">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#10b981] animate-ping" />
+            <span>Workspace context indexed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NexusIntelligenceHero({
   notice,
   primaryCta = { label: "Get started", href: "/signup" },
@@ -67,13 +127,13 @@ export function NexusIntelligenceHero({
 
   return (
     <section
-      className={`nexus-intelligence-hero relative isolate flex flex-col overflow-hidden pt-16 ${
+      className={`nexus-intelligence-hero relative isolate flex flex-col overflow-hidden pt-16 bg-bg-base dark:bg-black ${
         dense ? "min-h-[78svh]" : "min-h-[100svh]"
       }`}
     >
-      {/* ---- Layer 0: the black hole ---- */}
+      {/* ---- Layer 0: the black hole (Dark Mode only) ---- */}
       <div
-        className="pointer-events-none absolute inset-0 z-0"
+        className="pointer-events-none absolute inset-0 z-0 hidden dark:block"
         aria-hidden="true"
       >
         <BlackHoleHeroSection
@@ -96,6 +156,14 @@ export function NexusIntelligenceHero({
           steps={narrow ? 200 : 300}
           resolution={narrow ? 0.6 : 0.7}
         />
+      </div>
+
+      {/* ---- Layer 0: the intelligence aperture (Light Mode) ---- */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0 block dark:hidden"
+        aria-hidden="true"
+      >
+        <LightIntelligenceGraphic narrow={narrow} />
       </div>
 
       {/* Bottom fade into the page — and a wash behind the footnote rule
