@@ -8,6 +8,7 @@ import { IntelligenceSignals } from "@/components/intelligence/intelligence-sign
 import { NextBestAction } from "@/components/intelligence/next-best-action";
 import { ExplainableIntelligence } from "@/components/intelligence/explainable-intelligence";
 import { WorkspaceToAction } from "@/components/intelligence/workspace-to-action";
+import { IntelligenceFaq } from "@/components/intelligence/intelligence-faq";
 import { IntelligenceClosing } from "@/components/intelligence/intelligence-closing";
 
 // ============================================================
@@ -16,9 +17,8 @@ import { IntelligenceClosing } from "@/components/intelligence/intelligence-clos
 // A plain public marketing route: it never depends on auth or onboarding
 // state. The authenticated Intelligence workspace lives at /app/intelligence.
 // Composition:
-//   NAV → HERO (the lavender black hole, copy left / hole right) → WHAT IT SEES →
-//   WHAT IT SURFACES → NEXT BEST ACTION → EXPLAINABLE →
-//   WORKSPACE TO ACTION → CTA → FOOTER
+//   NAV → HERO → WHAT IT SEES → WHAT IT SURFACES → NEXT BEST ACTION →
+//   EXPLAINABLE → THE FLOW (LOOP) → FAQ & OBJECTIONS → CTA → FOOTER
 //
 // Every claim on this page maps to src/lib/intelligence/engine.ts.
 // Every example signal is labelled as a product visualisation.
@@ -56,6 +56,7 @@ export default function IntelligenceLandingPage() {
         <NextBestAction />
         <ExplainableIntelligence />
         <WorkspaceToAction />
+        <IntelligenceFaq />
         <IntelligenceClosing />
       </main>
 

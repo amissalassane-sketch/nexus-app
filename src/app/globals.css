@@ -1542,18 +1542,26 @@ html[data-nexus-launch-reveal="true"] .landing-hero-item {
   border-top-color: transparent;
 }
 
-/* A framed panel: hairline border + 2% wash. The default container
+/* A framed panel: hairline border + crisp surface contrast. The default container
    for anything that holds content on the public pages. */
 .nexus-panel {
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--radius-card);
-  background-color: color-mix(in srgb, var(--color-bg-surface) 45%, transparent);
+  background-color: var(--color-bg-surface);
 }
 
 .nexus-panel-quiet {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-row);
-  background-color: rgba(255, 255, 255, 0.014);
+  background-color: var(--color-bg-subtle);
+}
+
+/* Level 3: Elevated interactive card (Evidence Card, modal dialogs) */
+.nexus-card-elevated {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background-color: var(--color-bg-surface-3);
+  box-shadow: var(--shadow-overlay);
 }
 
 /* ---------- 3. Shared intelligence primitives --------------------
@@ -2208,10 +2216,21 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 .nexus-intel-closing-mark {
   background: radial-gradient(
     circle at 40% 34%,
-    rgba(255, 255, 255, 0.12),
-    rgba(233, 228, 255, 0.05) 46%,
+    var(--color-lavender),
+    rgba(99, 91, 255, 0.1) 48%,
+    transparent 78%
+  );
+  opacity: 0.15;
+}
+
+.dark .nexus-intel-closing-mark {
+  background: radial-gradient(
+    circle at 40% 34%,
+    rgba(255, 255, 255, 0.14),
+    rgba(233, 228, 255, 0.06) 46%,
     rgba(255, 255, 255, 0.018) 78%
   );
+  opacity: 0.45;
 }
 
 /* Restrained glass surface, used for the demo/visualisation
@@ -2546,8 +2565,8 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 .nexus-context-line {
   fill: none;
   stroke: var(--color-lavender);
-  stroke-width: 1;
-  stroke-opacity: 0.25;
+  stroke-width: 1.25;
+  stroke-opacity: 0.5;
   vector-effect: non-scaling-stroke;
 }
 
@@ -2657,11 +2676,12 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 
 .nexus-context-node-detail {
   font-family: var(--font-mono);
-  font-size: 9px;
-  line-height: 12px;
-  letter-spacing: 0.07em;
+  font-size: 9.5px;
+  line-height: 13px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
 /* Rim light. */
@@ -2833,25 +2853,25 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 }
 
 /* ---------- Vignette ---------------------------------------------
-   Outer nodes gradually disappear into canvas edges. */
+   Soft falloff at outer perimeter that never washes out outer nodes. */
 .nexus-context-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
     radial-gradient(
-      ellipse 76% 66% at 50% 46%,
-      transparent 52%,
+      ellipse 92% 86% at 50% 46%,
+      transparent 72%,
       var(--color-bg-base) 100%
     ),
     linear-gradient(
       to bottom,
       var(--color-bg-base),
-      transparent 16%,
-      transparent 84%,
+      transparent 12%,
+      transparent 88%,
       var(--color-bg-base)
     );
-  opacity: 0.8;
+  opacity: 0.4;
 }
 
 /* ---------- Assembly gating --------------------------------------

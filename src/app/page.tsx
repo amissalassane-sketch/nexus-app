@@ -39,24 +39,24 @@ import { LaunchExperience } from "@/components/landing/launch-experience";
 export const metadata: Metadata = {
   title: {
     absolute:
-      "NEXUS. It reads the work, then tells you what matters next",
+      "NEXUS — Your work is scattered. NEXUS puts it in context.",
   },
   description:
-    "NEXUS reads the work already in your workspace and surfaces what is drifting, blocked or at risk — and what to do next. Free to start, no card required.",
+    "NEXUS connects your projects, tasks, calendar, email and documents to show you what matters now, why it matters, and where it came from. Free to start, no card required.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "NEXUS",
     url: "/",
-    title: "NEXUS. It reads the work, then tells you what matters next",
+    title: "NEXUS — Your work is scattered. NEXUS puts it in context.",
     description:
-      "It reads the work, not the chat. NEXUS turns the activity already in your workspace into signals, evidence and a clear next action.",
+      "NEXUS connects your projects, tasks, calendar, email and documents to show you what matters now, why it matters, and where it came from.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NEXUS. It reads the work, then tells you what matters next",
+    title: "NEXUS — Your work is scattered. NEXUS puts it in context.",
     description:
-      "It reads the work, not the chat. NEXUS turns workspace activity into signals and a clear next action.",
+      "NEXUS connects your projects, tasks, calendar, email and documents to show you what matters now, why it matters, and where it came from.",
   },
   robots: { index: true, follow: true },
 };
@@ -88,24 +88,22 @@ export default async function Home({
           }
         />
 
-        {/* Product preview — pulled into the opening beat so the real
-            NEXUS surface is visible almost immediately. */}
+        {/* Product demonstration — 17-day catch-up scenario */}
         <section id="product" className="scroll-mt-20 px-4 sm:px-6">
           <LandingReveal>
             <div className="mx-auto w-full max-w-page">
               <ProductPreview />
               <p className="nexus-eyebrow mt-6 text-center">
-                The workspace: goals, projects, tasks and activity, connected.
-                NEXUS reads it continuously.
+                17-day catch-up demonstration: cross-tool context reconstructed with explicit evidence and source citations.
               </p>
             </div>
           </LandingReveal>
         </section>
 
         <ValueBand />
+        <HowItWorksSection />
         <ModelSection />
         <IntelligenceSection />
-        <HowItWorksSection />
         <FeaturesSection />
         <IntegrationsSection />
         <TrustSection />

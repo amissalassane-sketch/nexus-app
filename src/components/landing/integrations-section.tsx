@@ -1,73 +1,179 @@
 "use client";
 
 import Link from "next/link";
-import { IconArrowRight } from "@tabler/icons-react";
+import {
+  IconArrowRight,
+  IconBrandGithub,
+  IconBrandSlack,
+  IconCalendar,
+  IconChecklist,
+  IconMail,
+  IconNotes,
+  IconPlus,
+} from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { SectionHeading } from "@/components/landing/section-heading";
 import { NexusLogo } from "@/components/nexus-logo";
-import { IntegrationIcon } from "@/components/integrations/integration-icon";
-import { INTEGRATION_CATALOG } from "@/lib/integrations/catalog";
 
-const featured = INTEGRATION_CATALOG.filter((integration) => ["google-calendar", "github", "slack", "notion", "webhooks"].includes(integration.id));
+// ============================================================
+// NEXUS LANDING — INTEGRATIONS (JOBS & CONVERGENCE)
+//
+// Audit Item #15 & #16:
+// "Your tools. One working context."
+// Connecting tools is not a technical flex—it solves specific jobs:
+//   Gmail     → Client requests & validation threads
+//   Calendar  → Time constraints & scheduled delivery
+//   Notion    → Specifications, PRDs & team knowledge
+//   GitHub    → Code reviews, PRs & technical blockers
+//   Slack     → Team decisions & async conversations
+//   Linear    → Issue tracking & sprint velocity
+//
+// And crucially: NEXUS combines them.
+// ============================================================
+
+const TOOL_JOBS = [
+  {
+    id: "gmail",
+    name: "Gmail",
+    job: "Client requests & validation",
+    signal: "Extracts deadlines and validation requests from relevant threads",
+    icon: IconMail,
+  },
+  {
+    id: "calendar",
+    name: "Google Calendar",
+    job: "Time constraints & commitments",
+    signal: "Maps sprint reviews, client syncs and actual working windows",
+    icon: IconCalendar,
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    job: "Specifications & team knowledge",
+    signal: "Links PRDs, meeting notes and project requirements to active work",
+    icon: IconNotes,
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    job: "Code activity & technical blockers",
+    signal: "Tracks pull requests, stalled reviews and code dependency chains",
+    icon: IconBrandGithub,
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    job: "Decisions & async discussion",
+    signal: "Surfaces unresolved questions and key decisions made in channels",
+    icon: IconBrandSlack,
+  },
+  {
+    id: "linear",
+    name: "Linear",
+    job: "Execution & issue tracking",
+    signal: "Reads task states, cycles and blockers without manual re-entry",
+    icon: IconChecklist,
+  },
+];
 
 export function IntegrationsSection() {
-  const firstRow = featured.slice(0, 3);
-  const secondRow = featured.slice(3);
-
   return (
     <section id="integrations" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
       <div className="mx-auto w-full max-w-page">
         <LandingReveal>
           <SectionHeading
-            title="Your tools. One intelligent workspace."
-            sub="NEXUS is designed to bring the work you already do into one place so context can become signal, and signal can become the next action."
+            eyebrow="Integrations & Jobs"
+            title="Your tools. One working context."
+            sub="NEXUS connects the tools you already use and turns their scattered activity into unified operational context. It does not replace them—it combines them."
           />
         </LandingReveal>
 
+        {/* Convergence Core Panel */}
         <LandingReveal delay={80}>
-          <div className="relative mt-12 overflow-hidden rounded-panel border border-border-subtle bg-bg-subtle px-4 py-10 sm:px-8 sm:py-14">
-            <div className="relative space-y-4 opacity-70" aria-hidden="true">
-              <IconRail items={[...firstRow, ...firstRow]} direction={-1} />
-              <IconRail items={[...secondRow, ...secondRow, ...secondRow]} direction={1} />
+          <div className="mt-12 overflow-hidden rounded-panel border border-border-default bg-bg-surface p-5 sm:p-8 lg:p-10">
+            {/* The 6 Tool Jobs Grid */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {TOOL_JOBS.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <div
+                    key={tool.id}
+                    className="flex flex-col rounded-card border border-border-subtle bg-bg-subtle p-4 transition-colors duration-150 ease-nexus hover:border-border-default"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-input border border-border-default bg-bg-surface text-text-primary">
+                          <NexusIcon icon={Icon} px={16} />
+                        </span>
+                        <div>
+                          <span className="block text-[13.5px] font-semibold text-text-primary">
+                            {tool.name}
+                          </span>
+                          <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                            {tool.job}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 text-small text-text-secondary">
+                      {tool.signal}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="relative mx-auto my-8 flex max-w-[460px] flex-col items-center text-center sm:my-10">
-              <div className="flex h-16 w-16 items-center justify-center rounded-panel border border-lavender-border bg-bg-surface shadow-[0_0_40px_rgba(233,228,255,0.12)]">
-                <NexusLogo size={34} />
+            {/* The Convergence Centerpiece: NEXUS Combines Them */}
+            <div className="mt-8 rounded-card border border-border-strong bg-bg-surface-2 p-5 text-center sm:p-7">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-panel border border-lavender-border bg-bg-surface shadow-sm">
+                <NexusLogo size={28} />
               </div>
-              <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.18em] text-lavender">NEXUS core</p>
-              <p className="mt-2 text-small text-text-secondary">External context converges here. Intelligence and action stay grounded in the workspace.</p>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-text-quaternary"><span>Context</span><span aria-hidden="true">·</span><span>Signals</span><span aria-hidden="true">·</span><span>Actions</span></div>
-            </div>
+              <h3 className="mt-3.5 text-[17px] font-semibold text-text-primary">
+                NEXUS combines them into one decision
+              </h3>
+              <p className="mx-auto mt-1 max-w-[560px] text-small text-text-secondary">
+                1 client validation in Gmail + 1 deadline on Calendar + 1 stalled PR in GitHub = 1 prioritized next best action.
+              </p>
 
-            <div className="relative mx-auto flex max-w-[640px] items-center justify-center gap-3 text-center text-caption text-text-quaternary" aria-hidden="true"><span className="h-px flex-1 bg-border-subtle" /><span>Connection paths are being built carefully, not simulated</span><span className="h-px flex-1 bg-border-subtle" /></div>
+              {/* Equation row */}
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 font-mono text-[11px] text-text-tertiary">
+                <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-1 text-text-primary">
+                  Gmail (Request)
+                </span>
+                <NexusIcon icon={IconPlus} px={12} className="text-text-quaternary" />
+                <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-1 text-text-primary">
+                  Calendar (Deadline)
+                </span>
+                <NexusIcon icon={IconPlus} px={12} className="text-text-quaternary" />
+                <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-1 text-text-primary">
+                  GitHub (Blocker)
+                </span>
+                <span className="text-text-primary">=</span>
+                <span className="rounded-pill border border-lavender-border bg-lavender-subtle px-3 py-1 font-semibold text-lavender">
+                  Next Best Action
+                </span>
+              </div>
+            </div>
           </div>
         </LandingReveal>
 
         <LandingReveal delay={140}>
           <div className="mt-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <p className="max-w-[52ch] text-small text-text-secondary">Connect the tools your work already lives in. When a provider is ready, NEXUS will make its permissions, capabilities and health explicit.</p>
-            <Link href="/integrations" className="inline-flex h-10 items-center gap-2 rounded-input border border-border-default px-3.5 text-button text-text-secondary transition-[background-color,color,border-color,transform] hover:border-border-strong hover:bg-bg-surface hover:text-text-primary active:scale-[0.98]">Explore integrations <NexusIcon icon={IconArrowRight} /></Link>
+            <p className="max-w-[56ch] text-small text-text-secondary">
+              Connect the tools your work already lives in. When a source is linked, NEXUS makes its permissions, data boundaries and sync freshness completely transparent.
+            </p>
+            <Link
+              href="/integrations"
+              className="inline-flex h-10 items-center gap-2 rounded-input border border-border-default bg-bg-surface px-4 text-button text-text-primary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-bg-surface-2"
+            >
+              <span>Explore all integrations</span>
+              <NexusIcon icon={IconArrowRight} px={14} />
+            </Link>
           </div>
         </LandingReveal>
       </div>
     </section>
-  );
-}
-
-// Pure-CSS infinite marquee (see .nexus-icon-rail in globals.css).
-// Framer Motion must never leak into the public landing bundle — the
-// 24s linear loop this replaces needs no JavaScript at all, and the
-// reduced-motion / no-JS fallbacks are handled in CSS.
-function IconRail({ items, direction }: { items: typeof featured; direction: -1 | 1 }) {
-  return (
-    <div className="overflow-hidden rounded-card border border-border-subtle bg-bg-base/30 py-2.5">
-      <div className={`nexus-icon-rail flex w-max gap-2.5 ${direction === -1 ? "nexus-icon-rail-left" : "nexus-icon-rail-right"}`}>
-        {items.map((integration, index) => {
-          return <div key={`${integration.id}-${index}`} className="flex min-w-[150px] items-center gap-2 rounded-input border border-border-subtle bg-bg-surface/70 px-3 py-2 text-small text-text-secondary"><IntegrationIcon id={integration.id} size={14} /><span>{integration.name}</span><span className="ml-auto font-mono text-[9px] uppercase tracking-[0.1em] text-text-quaternary">soon</span></div>;
-        })}
-      </div>
-    </div>
   );
 }
