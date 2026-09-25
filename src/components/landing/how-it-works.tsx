@@ -21,7 +21,7 @@ const STEPS = [
   {
     number: "01",
     title: "Connect",
-    body: "Connect your Gmail, Calendar, Notion, GitHub and Slack. NEXUS reads the work, not the chat.",
+    body: "Connect your Gmail, Calendar, Notion, GitHub and Slack. NEXUS reads the work so you don't have to guess what matters.",
   },
   {
     number: "02",

@@ -37,16 +37,16 @@ import { FocusPanel, InsightRow } from "@/components/intelligence-panel";
  *  user always presses send). */
 const ASK_STARTERS: { label: string; query: string }[] = [
   {
-    label: "Quels projets nécessitent mon attention ?",
-    query: "Quels projets nécessitent mon attention ?",
+    label: "Which projects need my attention?",
+    query: "Which projects need my attention?",
   },
   {
-    label: "Mes 3 prochaines tâches prioritaires",
-    query: "Quelles sont mes 3 prochaines tâches prioritaires ?",
+    label: "My top 3 priority tasks",
+    query: "What are my next 3 priority tasks?",
   },
   {
     label: "Organiser cette semaine",
-    query: "Aide-moi à organiser cette semaine.",
+    query: "Help me organize this week.",
   },
 ];
 

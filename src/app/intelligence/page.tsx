@@ -25,7 +25,7 @@ import { IntelligenceClosing } from "@/components/intelligence/intelligence-clos
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "NEXUS Intelligence. It reads the work, not the chat",
+  title: "NEXUS Intelligence. It reads the work. Not the guesswork.",
   description:
     "NEXUS Intelligence analyzes the work already happening in your workspace and surfaces what is drifting, blocked or at risk, and what deserves your attention next.",
   alternates: { canonical: "/intelligence" },
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "NEXUS",
     url: "/intelligence",
-    title: "NEXUS Intelligence. It reads the work, not the chat",
+    title: "NEXUS Intelligence. It reads the work. Not the guesswork.",
     description:
       "The intelligence layer inside NEXUS. It reads your tasks, projects, goals and activity, then tells you what deserves attention next, and why.",
   },

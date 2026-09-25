@@ -111,7 +111,7 @@ export default async function BillingPage() {
           <Card className="p-6">
             <h2 className="text-h2 text-text-primary">Usage</h2>
             <p className="mt-1 text-small text-text-secondary">
-              Counted server-side by Supabase, not by the interface.
+              Counted on the server, not just in the interface, so the limits are real.
             </p>
 
             <div className="mt-5 space-y-4">

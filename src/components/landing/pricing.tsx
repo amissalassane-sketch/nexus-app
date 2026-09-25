@@ -2,7 +2,9 @@
 
 import type { CSSProperties } from "react";
 import { draftMonthlyMajor } from "@/lib/billing/pricing-catalog";
-import { formatMoney } from "@/lib/global/currency";
+// formatMoney is used only after paid-tier prices are approved; for now
+// the cards read "Pricing announced at launch" so no amount is rendered.
+// import { formatMoney } from "@/lib/global/currency";
 import { IconCheck, IconMinus } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
@@ -25,7 +27,9 @@ import { cn } from "@/lib/cn";
 // are not purchasable offers; annual discounts need separate approval.
 // ============================================================
 
-const money = (value: number) => formatMoney({ amountMinor: Math.round(value * 100), currency: "USD" }, "en-US");
+// Price formatting helper — re-enabled with formatMoney import when paid-tier
+// prices are approved and checked out end-to-end.
+// const money = (value: number) => formatMoney({ amountMinor: Math.round(value * 100), currency: "USD" }, "en-US");
 
 interface PlanPresentationRow {
   key: PlanName;
@@ -159,11 +163,15 @@ const COMPARISON: ComparisonRow[] = [
   },
 ];
 
-/** Catalog preview only; no unapproved annual discount is synthesized. */
+/**
+ * Paid plans show "Pricing announced at launch" — the in-app /upgrade page
+ * says the same. The two sources never contradict each other. The catalog
+ * still drives the entitlement list (it matches the enforced limits).
+ */
 function priceCopy(plan: PlanPresentationRow) {
   return plan.price === 0
-    ? { amount: money(0), rate: "Free plan", note: "No card required" }
-    : { amount: money(plan.price), rate: "USD / month · indicative", note: "Draft price · tax and billing unit not approved · checkout unavailable" };
+    ? { amount: "Free", rate: "forever", note: "No card required" }
+    : { amount: "—", rate: "Pricing announced at launch", note: "Join free and upgrade when you're ready" };
 }
 
 function stageDelay(milliseconds: number) {
@@ -356,7 +364,7 @@ export function PricingSection() {
               amount={0.25}
               className="pricing-reveal w-full lg:w-auto"
             >
-              <p className="text-small text-text-secondary">Paid checkout is not enabled. Annual and regional prices are not approved.</p>
+              <p className="text-small text-text-secondary">Paid tiers are coming. Pricing will be announced publicly before checkout opens — no surprises.</p>
             </LandingReveal>
           </div>
         </div>
@@ -496,9 +504,9 @@ export function PricingSection() {
 
         <LandingReveal delay={200} amount={0.25} className="pricing-reveal">
           <p className="nexus-meta mx-auto mt-8 max-w-[560px] text-center">
-            Free requires no card. Paid figures are indicative draft prices, not checkout
-            offers. Billing units, taxes, annual terms and regional prices need approval.
-            Review your current plan in workspace billing.
+            Free requires no card. Paid tiers will open when pricing is finalised — the
+            same numbers will appear inside the app before any checkout is enabled.
+            You can review your current plan and limits in workspace billing at any time.
           </p>
         </LandingReveal>
       </div>

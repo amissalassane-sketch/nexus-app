@@ -559,9 +559,10 @@ export function UserSettingsPanel({
               <div>
                 <h2 className="text-h2 text-text-primary">Danger zone</h2>
                 <p className="mt-1 max-w-[58ch] text-small text-text-secondary">
-                  Password changes and account deletion are handled by the auth
-                  service and are not exposed here yet. Nothing is simulated in this
-                  interface: when the capability exists, the control appears.
+                  Password changes and account deletion are not yet available inside this settings screen.
+                  To change your password use the reset flow from the sign-in page. To delete your
+                  account, contact support — we handle every request within 30 days per our privacy policy.
+                  No destructive action is simulated here; controls appear only when they work.
                 </p>
               </div>
             </div>

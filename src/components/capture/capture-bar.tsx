@@ -39,8 +39,8 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
     const onSynced = (event: Event) => {
       const custom = event as CustomEvent<{ synced: number; failed: number }>;
       if (custom.detail?.synced > 0) {
-        toast("success", "Synchronisé", {
-          description: `${custom.detail.synced} tâche${custom.detail.synced > 1 ? "s" : ""} synchronisée${custom.detail.synced > 1 ? "s" : ""} avec le serveur.`,
+        toast("success", "Synced", {
+          description: `${custom.detail.synced} task${custom.detail.synced > 1 ? "s" : ""} synced with the server.`,
         });
       }
       setOfflineCount(getOfflineQueue().length);
@@ -62,8 +62,8 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       enqueueOfflineCapture(trimmed);
       setText("");
-      toast("info", "Enregistré hors-ligne", {
-        description: "Votre tâche sera synchronisée automatiquement dès le retour du réseau.",
+      toast("info", "Saved offline", {
+        description: "Your task will be synced automatically when the network returns.",
       });
       return;
     }
@@ -82,8 +82,8 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
           // Server error or proxy drop: save to queue rather than losing the idea
           enqueueOfflineCapture(trimmed);
           setText("");
-          toast("info", "Enregistré hors-ligne", {
-            description: "Le serveur est temporairement inaccessible. Tâche mise en attente de synchronisation.",
+          toast("info", "Saved offline", {
+            description: "The server is temporarily unreachable. Task queued for syncing.",
           });
           return;
         }
@@ -100,8 +100,8 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
       // Network drop: save locally with 0ms data loss
       enqueueOfflineCapture(trimmed);
       setText("");
-      toast("info", "Enregistré hors-ligne", {
-        description: "Réseau indisponible. Votre tâche est sauvegardée et sera synchronisée automatiquement.",
+      toast("info", "Saved offline", {
+        description: "Network unavailable. Your task is saved locally and will sync automatically.",
       });
     } finally {
       setBusy(false);
@@ -124,7 +124,7 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Capture anything — “call the bank tomorrow”, « préparer la réunion vendredi »…"
+          placeholder="Capture anything — “call the bank tomorrow”, “prepare Friday's meeting”…"
           aria-label="Capture a task"
           disabled={busy}
           className="h-11 w-full rounded-input border border-border-default bg-bg-surface pl-10 pr-11 text-small text-text-primary outline-none transition-colors placeholder:text-text-quaternary focus:border-border-strong disabled:opacity-50"
@@ -147,7 +147,7 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
         {offlineCount > 0 ? (
           <span className="flex items-center gap-1 font-mono text-[10.5px] text-warning">
             <NexusIcon icon={IconCloudOff} px={12} />
-            <span>{offlineCount} en attente</span>
+            <span>{offlineCount} pending</span>
           </span>
         ) : (
           <span className="hidden sm:flex items-center gap-1 font-mono text-[10.5px] text-text-quaternary">

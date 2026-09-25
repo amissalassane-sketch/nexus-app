@@ -334,6 +334,10 @@ function ProjectManagerInner({ userId }: { userId: string }) {
       setError("Please provide a project name.");
       return;
     }
+    if (name.toLowerCase() === "nexus") {
+      setError("\"Nexus\" is the product name and cannot be used as a project name — pick a name that describes the work.");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -882,7 +886,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
               />
             </Field>
 
-            <Field label="Due date" htmlFor="project-due">
+            <Field label="Due date" htmlFor="project-due" hint="Format: YYYY-MM-DD">
               {/* The default is intentionally EMPTY (null due date): a
                   project without a deadline is a valid state, and the
                   code never pre-fills a date. Browsers (Chrome in
@@ -893,6 +897,7 @@ function ProjectManagerInner({ userId }: { userId: string }) {
               <Input
                 id="project-due"
                 type="date"
+                lang="en-US"
                 autoComplete="off"
                 value={form.due_date}
                 onChange={(event) =>

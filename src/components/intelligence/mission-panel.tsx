@@ -43,18 +43,18 @@ const STATUS_ICON: Record<MissionStepStatus, TablerIcon> = {
 };
 
 const STATUS_LABEL: Record<MissionStepStatus, string> = {
-  planned: "À venir",
-  ready: "Prête",
-  in_progress: "En cours",
-  blocked: "Bloquée",
-  waiting: "En attente",
-  completed: "Terminée",
-  failed: "Échouée",
-  cancelled: "Annulée",
+  planned: "Upcoming",
+  ready: "Ready",
+  in_progress: "In progress",
+  blocked: "Blocked",
+  waiting: "Waiting",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
 };
 
 const OFFLINE_MESSAGE =
-  "Connexion perdue. Les dernières informations affichées restent disponibles.";
+  "Connection lost. The information shown is still available.";
 
 export function MissionPanel({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
@@ -165,7 +165,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           setVerificationState(data.verification?.verified ? "verified" : "failed");
           setTimeout(() => {
             setExecutedResult({
-              message: data.message ?? "Action terminée",
+              message: data.message ?? "Action completed",
               verified: data.verification?.verified === true,
             });
             setPendingAction(null);
@@ -188,13 +188,13 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           }, 400);
         } else {
           setVerificationState("failed");
-          setError(data.error ?? "Échec de l'action.");
+          setError(data.error ?? "Action failed.");
           setTimeout(() => setVerificationState(null), 1200);
         }
       } catch {
         clearTimeout(verificationTimer1);
         setVerificationState("failed");
-        setError("Erreur réseau pendant l'exécution. L'action n'a pas été appliquée.");
+        setError("Network error during execution. The action was not applied.");
         setTimeout(() => setVerificationState(null), 1200);
       } finally {
         setExecuting(false);
@@ -319,10 +319,10 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
               setPendingAction(null);
             }}
             className="flex min-h-[44px] items-center gap-1.5 rounded-input px-2 text-caption text-text-quaternary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.96]"
-            aria-label="Annuler la mission"
+            aria-label="Cancel mission"
           >
             <NexusIcon icon={IconX} />
-            <span className="hidden sm:inline">Annuler</span>
+            <span className="hidden sm:inline">Cancel</span>
           </button>
         ) : null}
       </div>
@@ -418,7 +418,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                   }}
                   className="min-h-[44px] px-5 text-button font-medium mission-next-action shadow-[0_2px_14px_rgba(255,255,255,0.12)]"
                 >
-                  {mission.status === "blocked" ? "Débloquer" : "Continuer"}
+                  {mission.status === "blocked" ? "Unblock" : "Continue"}
                 </Button>
               ) : mission.nextBestAction.href ? (
                 <Button onClick={() => router.push(mission.nextBestAction!.href!)} className="min-h-[44px] px-5 mission-next-action">
@@ -431,7 +431,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                 aria-expanded={whyOpen}
                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-input px-3 text-caption font-medium text-text-secondary transition-[color,background-color,transform] duration-150 ease-nexus hover:text-text-primary hover:bg-accent-ghost active:text-text-primary active:scale-[0.97]"
               >
-                <span>{whyOpen ? "Masquer le contexte" : "Voir pourquoi"}</span>
+                <span>{whyOpen ? "Hide context" : "Why this mission?"}</span>
                 <NexusIcon icon={IconChevronDown} px={13} className={cn("transition-transform duration-200 ease-nexus", whyOpen && "rotate-180")} />
               </button>
             </div>
@@ -448,7 +448,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         ) : null}
 
         {pendingAction?.action ? (
-          <div role="alertdialog" aria-label="Confirmer l'action" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
+          <div role="alertdialog" aria-label="Confirm action" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
             <div className="flex items-start justify-between gap-2">
               <p className="text-small font-medium text-text-primary">Confirmer « {pendingAction.action.label} » ?</p>
               <VerificationLifecycle state={verificationState ?? "confirm"} className="shrink-0 scale-90" />
@@ -464,25 +464,25 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
             ) : null}
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <Button loading={executing} onClick={() => void runAction(pendingAction)} className="min-h-[44px]">
-                {executing ? "Exécution & vérification…" : "Confirmer et exécuter"}
+                {executing ? "Executing & verifying…" : "Confirm and run"}
               </Button>
               <Button variant="ghost" disabled={executing} onClick={() => setPendingAction(null)} className="min-h-[44px]">
-                Annuler
+                Cancel
               </Button>
             </div>
           </div>
         ) : null}
 
         {confirmingCancel ? (
-          <div role="alertdialog" aria-label="Confirmer l'annulation de la mission" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
-            <p className="text-small font-medium text-text-primary">Annuler « {mission.title} » ?</p>
-            <p className="mt-0.5 text-caption text-text-secondary">La mission et ses étapes ne seront plus proposées. Cette action ne supprime aucune tâche ni aucun projet.</p>
+          <div role="alertdialog" aria-label="Confirm cancelling the mission" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
+            <p className="text-small font-medium text-text-primary">Cancel "{mission.title}"?</p>
+            <p className="mt-0.5 text-caption text-text-secondary">The mission and its steps will no longer be suggested. This does not delete any task or project.</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <Button variant="danger" loading={executing} onClick={() => void cancelMission()} className="min-h-[44px]">
-                Annuler la mission
+                Cancel mission
               </Button>
               <Button variant="ghost" disabled={executing} onClick={() => setConfirmingCancel(false)} className="min-h-[44px]">
-                Garder
+                Keep
               </Button>
             </div>
           </div>
@@ -505,7 +505,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         ) : null}
 
         {mission.steps.length > 0 ? (
-          <ol className="mt-4" aria-label="Étapes de la mission">
+          <ol className="mt-4" aria-label="Mission steps">
             {mission.steps
               .slice()
               .sort((a, b) => a.order - b.order)
@@ -587,7 +587,7 @@ function MissionStepRow({
           {step.dependencies.length > 0 ? ` · dépend de ${step.dependencies.length} étape${step.dependencies.length > 1 ? "s" : ""}` : ""}
         </p>
         {blocked && step.blockedReason ? <p className="mt-0.5 text-caption text-warning animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">Dépendance : {step.blockedReason}</p> : null}
-        {failed && step.verification ? <p className="mt-0.5 text-caption text-danger">{step.verification.summary || "Étape échouée"}</p> : null}
+        {failed && step.verification ? <p className="mt-0.5 text-caption text-danger">{step.verification.summary || "Step failed"}</p> : null}
       </div>
       {actionable && action ? (
         isNavigation && action.payload?.url ? (
@@ -596,7 +596,7 @@ function MissionStepRow({
           </button>
         ) : (
           <button type="button" disabled={executing} onClick={() => onMutate(action)} className="inline-flex min-h-[44px] shrink-0 items-center rounded-input border border-border-default px-2.5 text-caption font-medium text-text-secondary transition-[border-color,color,background-color,transform] duration-150 ease-nexus hover:border-border-strong hover:text-text-primary active:bg-accent-ghost active:scale-[0.97] disabled:opacity-40">
-            {action.risk === "high" ? "Débloquer…" : action.label}
+            {action.risk === "high" ? "Unblock…" : action.label}
           </button>
         )
       ) : null}

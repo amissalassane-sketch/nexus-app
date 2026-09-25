@@ -80,12 +80,12 @@ export function IntelligenceSection() {
             eyebrow="Nexus Intelligence"
             title={
               <>
-                It reads the work,
+                It reads the work.
                 <br />
-                not the chat.
+                Not the guesswork.
               </>
             }
-            sub="ChatGPT answers what you prompt it with. NEXUS constructs operational context continuously from your connected tools—grounded with explicit evidence, so you never have to guess."
+            sub="Chat tools answer what you prompt them with. NEXUS constructs operational context continuously from your connected tools — grounded with explicit evidence, so you never have to guess."
           />
 
           {/* Differentiated signal tier list — fast synthesis on the landing page */}

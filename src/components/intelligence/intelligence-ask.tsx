@@ -54,24 +54,24 @@ import {
 // ============================================================
 
 const CATEGORIZED_STARTERS = [
-  { label: "Analyse", query: "Quels projets nécessitent mon attention ?" },
-  { label: "Priorités", query: "Quelles sont mes 3 prochaines tâches prioritaires ?" },
-  { label: "Blocages", query: "Quels projets semblent bloqués ?" },
-  { label: "Synthèse", query: "Résume l'activité de cette semaine." },
-  { label: "Plan", query: "Aide-moi à organiser cette semaine." },
-  { label: "Action", query: "Je dois préparer ma présentation de vendredi." },
+  { label: "Analyze", query: "Which projects need my attention?" },
+  { label: "Priorities", query: "What are my next 3 priority tasks?" },
+  { label: "Blockers", query: "Which projects look blocked?" },
+  { label: "Summary", query: "Summarize this week's activity." },
+  { label: "Plan", query: "Help me organize this week." },
+  { label: "Action", query: "I need to prepare for Friday's review." },
 ];
 
 /** Agent states, rendered as short labels in the trace disclosure. */
 const AGENT_STATE_LABEL: Record<string, string> = {
-  idle: "En attente",
-  thinking: "Réflexion",
+  idle: "Idle",
+  thinking: "Thinking",
   planning: "Plan",
-  using_tools: "Outils",
-  executing: "Exécution",
-  verifying: "Vérification",
-  completed: "Terminé",
-  failed: "Échec",
+  using_tools: "Tools",
+  executing: "Executing",
+  verifying: "Verifying",
+  completed: "Done",
+  failed: "Failed",
 };
 
 interface HistoryEntry {
@@ -436,7 +436,7 @@ export function IntelligenceAsk({
             }}
             rows={1}
             enterKeyHint="send"
-            placeholder="Ask NEXUS. Try “Quels projets nécessitent mon attention ?” or “Plan my week”"
+            placeholder="Ask NEXUS. Try “Which projects need my attention?” or “Plan my week”"
             aria-label="Ask a question about this workspace"
             className="min-h-[44px] w-full resize-none overflow-y-auto rounded-input border border-border-default bg-bg-surface py-2.5 pl-9 pr-10 text-body text-[14px] text-text-primary outline-none transition-colors duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:shadow-[0_0_0_3px_rgba(233,228,255,0.1)] disabled:opacity-60"
           />
@@ -561,7 +561,7 @@ export function IntelligenceAsk({
           <div className="flex items-center gap-2">
             <NexusIcon icon={IconShieldExclamation} px={14} className="text-lavender" />
             <p className="text-caption font-medium text-text-primary">
-              {proactive.length} point{proactive.length === 1 ? "" : "s"} nécessitent votre attention
+              {proactive.length} {proactive.length === 1 ? "item needs" : "items need"} your attention
             </p>
           </div>
           <ul className="mt-2 flex flex-col gap-1">
@@ -591,15 +591,15 @@ export function IntelligenceAsk({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-lavender opacity-40" />
                   <span className="relative inline-flex h-2 w-2 rounded-pill bg-lavender" />
                 </span>
-                <span className="font-medium">NEXUS analyse</span>
-                <span className="text-text-tertiary">votre workspace réel</span>
+                <span className="font-medium">NEXUS is analysing</span>
+                <span className="text-text-tertiary">your real workspace</span>
               </div>
               <button
                 type="button"
                 onClick={() => abortRef.current?.abort()}
                 className="rounded-input px-2 py-1 text-caption text-text-tertiary transition-colors hover:bg-accent-ghost hover:text-text-primary active:scale-[0.96]"
               >
-                Annuler
+                Cancel
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2">
@@ -619,7 +619,7 @@ export function IntelligenceAsk({
             </span>
             <span className="text-text-quaternary">→</span>
             <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
-              2. CONTEXT ({currentResponse.evidence.metrics.length > 0 ? `${currentResponse.evidence.metrics.length} métriques` : "scanné"})
+              2. CONTEXT ({currentResponse.evidence.metrics.length > 0 ? `${currentResponse.evidence.metrics.length} metrics` : "scanned"})
             </span>
             <span className="text-text-quaternary">→</span>
             <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
@@ -627,7 +627,7 @@ export function IntelligenceAsk({
             </span>
             <span className="text-text-quaternary">→</span>
             <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
-              4. PLAN ({currentResponse.plan?.steps.length ?? 0} étapes)
+              4. PLAN ({currentResponse.plan?.steps.length ?? 0} steps)
             </span>
             <span className="text-text-quaternary">→</span>
             <span className="flex items-center gap-1 text-text-tertiary uppercase tracking-wider">
@@ -647,10 +647,10 @@ export function IntelligenceAsk({
               </span>
               {currentResponse.confidence !== undefined ? (
                 <span
-                  title="Confiance dans la réponse"
+                  title="Confidence in response"
                   className="inline-flex items-center rounded-[5px] border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-tertiary"
                 >
-                  {(currentResponse.confidence * 100).toFixed(0)}% confiance
+                  {(currentResponse.confidence * 100).toFixed(0)}% confidence
                 </span>
               ) : null}
               <span className="text-caption text-text-quaternary hidden sm:inline">
@@ -703,7 +703,7 @@ export function IntelligenceAsk({
                 <div className="flex items-center gap-2">
                   <NexusIcon icon={IconAlertTriangle} px={14} className="text-warning" />
                   <p className="eyebrow text-warning font-semibold">
-                    Risques & Dépendances détectés ({riskItems.length})
+                    Risks & dependencies detected ({riskItems.length})
                   </p>
                 </div>
                 <ul className="mt-2 space-y-1.5">
@@ -731,10 +731,10 @@ export function IntelligenceAsk({
           {currentResponse.plan && currentResponse.plan.steps.length > 0 ? (
             <div className="mt-4 rounded-input border border-lavender-border/40 bg-lavender/5 p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="eyebrow text-lavender">Plan recommandé</span>
+                <span className="eyebrow text-lavender">Recommended plan</span>
                 {currentResponse.plan.needsConfirmation ? (
                   <span className="rounded-[4px] border border-warning-border bg-warning-bg/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning">
-                    Confirmation requise
+                    Confirmation required
                   </span>
                 ) : null}
               </div>
@@ -761,7 +761,7 @@ export function IntelligenceAsk({
                         href={step.href}
                         className="mt-0.5 inline-flex min-h-[32px] shrink-0 items-center gap-1 text-caption font-medium text-text-tertiary hover:text-text-primary"
                       >
-                        <span>Ouvrir</span>
+                        <span>Open</span>
                         <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     ) : null}
@@ -789,7 +789,7 @@ export function IntelligenceAsk({
                   </span>
                   <span className="font-mono text-[10px] text-text-tertiary">
                     {agentRun.steps.filter((step) => step.state === "completed").length}/{agentRun.steps.length}{" "}
-                    étapes ·{" "}
+                    steps ·{" "}
                     {AGENT_STATE_LABEL[
                       agentRun.steps[agentRun.steps.length - 1]?.state ?? "completed"
                     ]}
@@ -845,7 +845,7 @@ export function IntelligenceAsk({
                 className="flex w-full items-center justify-between gap-3 text-left"
               >
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
-                  Outils consultés · {currentResponse.toolCalls.length}
+                  Tools consulted · {currentResponse.toolCalls.length}
                 </span>
                 <NexusIcon
                   icon={IconChevronDown}
@@ -1000,7 +1000,7 @@ export function IntelligenceAsk({
                         href="/tasks"
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
-                        <span>Ouvrir dans Tâches</span>
+                        <span>Open in Tasks</span>
                         <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     ) : (
@@ -1008,7 +1008,7 @@ export function IntelligenceAsk({
                         href="/projects"
                         className="inline-flex min-h-[36px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80"
                       >
-                        <span>Ouvrir dans {executedActionResult.actionType?.includes("goal") ? "Objectifs" : "Projets"}</span>
+                        <span>Open in {executedActionResult.actionType?.includes("goal") ? "Goals" : "Projects"}</span>
                         <NexusIcon icon={IconArrowRight} px={12} />
                       </Link>
                     )}

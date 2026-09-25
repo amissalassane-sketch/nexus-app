@@ -26,21 +26,21 @@ const SEVERITY_TONE: Record<ProactiveSeverity, "danger" | "warning" | "info" | "
 };
 
 const SEVERITY_LABEL: Record<ProactiveSeverity, string> = {
-  critical: "Critique",
-  warning: "Élevé",
-  attention: "Moyen",
+  critical: "Critical",
+  warning: "High",
+  attention: "Medium",
   info: "Info",
 };
 
 const ENTITY_LABEL: Record<string, string> = {
-  task: "Tâche",
-  project: "Projet",
-  goal: "Objectif",
+  task: "Task",
+  project: "Project",
+  goal: "Goal",
   workspace: "Workspace",
 };
 
 function entityLabelFor(signal: StoredSignalRow): string {
-  const kind = ENTITY_LABEL[signal.entityType ?? ""] ?? "Élément";
+  const kind = ENTITY_LABEL[signal.entityType ?? ""] ?? "Item";
   return signal.entityLabel ? `${kind}: ${signal.entityLabel}` : kind;
 }
 
@@ -81,8 +81,8 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       if (!res.ok) {
         setError(
           hasSignalsRef.current
-            ? "Connexion perdue. Les signaux affichés restent disponibles."
-            : (data.error ?? "Impossible de charger les signaux.")
+            ? "Connection lost. The signals shown are still available."
+            : (data.error ?? "Could not load signals.")
         );
         return;
       }
@@ -94,8 +94,8 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
     } catch {
       setError(
         hasSignalsRef.current
-          ? "Connexion perdue. Les signaux affichés restent disponibles."
-          : "Connexion perdue. Les signaux seront chargés dès le retour du réseau."
+          ? "Connection lost. The signals shown are still available."
+          : "Connection lost. Signals will reload when the network returns."
       );
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
         setVerificationState(data.verification?.verified ? "verified" : "failed");
         setTimeout(() => {
           setExecutedResult({
-            message: data.message ?? "Action terminée",
+            message: data.message ?? "Action completed",
             verification: data.verification,
           });
           setConfirming(null);
@@ -184,13 +184,13 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
         }, 400);
       } else {
         setVerificationState("failed");
-        setError(data.error ?? "Échec de l'action");
+        setError(data.error ?? "Action failed");
         setTimeout(() => setVerificationState(null), 1200);
       }
     } catch {
       clearTimeout(vTimer);
       setVerificationState("failed");
-      setError("Erreur réseau pendant l'exécution");
+      setError("Network error during execution");
       setTimeout(() => setVerificationState(null), 1200);
     } finally {
       setExecuting(false);
@@ -204,7 +204,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
 
   return (
     <section
-      aria-label="Signaux nécessitant votre attention"
+      aria-label="Signals needing your attention"
       className="relative overflow-hidden rounded-card border border-lavender-border/40 bg-bg-subtle/60 animate-[signal-enter_340ms_var(--ease-nexus)_both] transition-[border-color] duration-300 ease-nexus hover:border-lavender-border/60"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lavender-border to-transparent" aria-hidden="true" />
@@ -212,8 +212,8 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3.5 sm:px-5">
         <div className="flex items-center gap-2">
           <NexusIcon icon={IconShieldExclamation} className="text-lavender transition-transform duration-200 ease-nexus" />
-          <p className="eyebrow text-text-secondary">Votre attention</p>
-          {criticalCount > 0 ? <Badge tone="danger" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">{criticalCount} critique{criticalCount === 1 ? "" : "s"}</Badge> : null}
+          <p className="eyebrow text-text-secondary">Your attention</p>
+          {criticalCount > 0 ? <Badge tone="danger" className="animate-[badge-in_200ms_var(--ease-nexus)_both]">{criticalCount} critical</Badge> : null}
         </div>
         <div className="flex items-center gap-1.5">
           {loading ? (
@@ -221,15 +221,15 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               <span className="h-1 w-1 rounded-pill bg-lavender animate-[intelligence-thinking_1s_var(--ease-nexus)_infinite]" />
               <span className="h-1 w-1 rounded-pill bg-lavender animate-[intelligence-thinking_1s_var(--ease-nexus)_150ms_infinite]" />
               <span className="h-1 w-1 rounded-pill bg-lavender animate-[intelligence-thinking_1s_var(--ease-nexus)_300ms_infinite]" />
-              Analyse en cours…
+              Analysing…
             </span>
           ) : (
-            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary tabular-nums">{attentionCount} élément{attentionCount === 1 ? "" : "s"}</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary tabular-nums">{attentionCount} item{attentionCount === 1 ? "" : "s"}</span>
           )}
           <button
             type="button"
             onClick={() => void refresh()}
-            aria-label="Rafraîchir les signaux"
+            aria-label="Refresh signals"
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-input text-text-tertiary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.92]"
           >
             <NexusIcon icon={IconRefresh} className={cn(loading && "animate-spin")} />
@@ -247,7 +247,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
         <div className="mx-4 mt-2 flex items-center justify-between gap-2 rounded-input border border-danger-border bg-danger-bg/40 px-3.5 py-2.5 text-small text-danger sm:mx-5 animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
           <span>{error}</span>
           <button type="button" onClick={() => void refresh()} className="inline-flex min-h-[44px] items-center gap-1 font-medium underline underline-offset-2 hover:opacity-80">
-            <span>Réessayer</span>
+            <span>Retry</span>
           </button>
         </div>
       ) : null}
@@ -285,8 +285,8 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               <p className="mt-0.5 text-small text-text-secondary">{signal.summary}</p>
               {signal.entityLabel ? (
                 <p className="mt-1 text-caption text-text-tertiary">
-                  Concerne : {entityLabelFor(signal)}{" "}
-                  {signal.affectedCount > 1 ? <span className="font-mono text-text-quaternary tabular-nums">· {signal.affectedCount} éléments touchés</span> : null}
+                  About: {entityLabelFor(signal)}{" "}
+                  {signal.affectedCount > 1 ? <span className="font-mono text-text-quaternary tabular-nums">· {signal.affectedCount} affected items</span> : null}
                 </p>
               ) : null}
 
@@ -305,7 +305,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                 className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-caption font-medium text-text-tertiary transition-[color,transform] duration-150 ease-nexus hover:text-text-primary active:scale-[0.97]"
               >
                 <NexusIcon icon={IconChevronDown} px={12} className={cn("transition-transform duration-200 ease-nexus", isExpanded && "rotate-180")} />
-                <span>{isExpanded ? "Masquer les preuves" : "Pourquoi ?"}</span>
+                <span>{isExpanded ? "Hide evidence" : "Why?"}</span>
                 {!isExpanded ? <span className="ml-1 h-1 w-1 rounded-pill bg-lavender/50 animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]" /> : null}
               </button>
 
@@ -362,16 +362,16 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               {confirming && confirming.signal.id === signal.id ? (
                 <div className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-default bg-bg-surface p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-small font-medium text-text-primary">Confirmer « {confirming.action.label} » dans le workspace ?</p>
+                    <p className="text-small font-medium text-text-primary">Confirm "{confirming.action.label}" in the workspace?</p>
                     <VerificationLifecycle state={verificationState ?? "confirm"} className="shrink-0 scale-90" />
                   </div>
-                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Action destructive. Elle sera exécutée côté serveur puis vérifiée.</p> : null}
+                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Destructive action. It will be executed server-side and then verified.</p> : null}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <Button loading={executing} onClick={() => void executeAction(signal, confirming.action)} className="min-h-[44px]">
-                      {executing ? "Exécution & vérification…" : "Confirmer et exécuter"}
+                      {executing ? "Executing & verifying…" : "Confirm and run"}
                     </Button>
                     <Button variant="ghost" disabled={executing} onClick={() => { setConfirming(null); setVerificationState(null); }} className="min-h-[44px]">
-                      Annuler
+                      Cancel
                     </Button>
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
                   <span className="flex items-center gap-1.5">
                     <NexusIcon icon={IconCheck} px={13} className="animate-[check-pop_280ms_var(--ease-nexus)_both]" />
                     {executedResult.message}
-                    {executedResult.verification.verified ? <span className="opacity-80">· Vérifié : {executedResult.verification.matched.join(", ")}</span> : null}
+                    {executedResult.verification.verified ? <span className="opacity-80">· Verified: {executedResult.verification.matched.join(", ")}</span> : null}
                   </span>
                 </div>
               ) : null}

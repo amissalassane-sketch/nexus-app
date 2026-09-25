@@ -262,13 +262,19 @@ export function workspaceHealth(snapshot: WorkspaceSnapshot): WorkspaceHealth {
     },
   ];
 
-  const measured =
-    snapshot.tasks.length > 0 ||
-    snapshot.projects.length > 0 ||
-    snapshot.goals.length > 0;
+  // Honesty rule: never print a flattering score on an empty workspace.
+  // "Never invented — if the workspace does not say it, NEXUS does not
+  // claim it." We need at least one active task OR one active project
+  // with open work before producing a number; otherwise we surface a
+  // neutral "not enough data" state and let the UI render it as such.
+  const activeTaskCount = open.length;
+  const activeProjectCount = snapshot.projects.filter((p) =>
+    PROJECT_ACTIVE_STATUSES.has(p.status ?? "planning")
+  ).length;
+  const measured = activeTaskCount >= 3 || (activeProjectCount >= 1 && activeTaskCount >= 1);
 
   const loss = factors.reduce((sum, factor) => sum + factor.weight * factor.penalty, 0);
-  const score = measured ? Math.round(clamp(100 - loss, 0, 100)) : 100;
+  const score = measured ? Math.round(clamp(100 - loss, 0, 100)) : 0;
 
   const band: HealthBand = score >= 75 ? "steady" : score >= 50 ? "watch" : "critical";
 
@@ -277,7 +283,7 @@ export function workspaceHealth(snapshot: WorkspaceSnapshot): WorkspaceHealth {
     band,
     headline: measured
       ? BAND_COPY[band]
-      : "There is not enough tracked work to assess yet. Add tasks and dates.",
+      : "Not enough tracked work yet. Add a few tasks with dates to see your operating index.",
     measured,
     factors,
   };

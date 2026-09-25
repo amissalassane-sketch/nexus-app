@@ -1287,10 +1287,11 @@ function TaskManagerInner({ userId }: { userId: string }) {
               </Select>
             </Field>
 
-            <Field label="Due date" htmlFor="task-due">
+            <Field label="Due date" htmlFor="task-due" hint="Format: YYYY-MM-DD">
               <Input
                 id="task-due"
                 type="date"
+                lang="en-US"
                 value={form.due_at}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, due_at: event.target.value }))
