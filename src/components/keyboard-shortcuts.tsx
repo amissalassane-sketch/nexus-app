@@ -128,7 +128,7 @@ export function KeyboardShortcuts() {
 
   return (
     <div
-      className="fixed inset-0 z-[85] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[85] flex items-end justify-center overflow-y-auto overscroll-contain px-0 pb-[env(safe-area-inset-bottom)] pt-2 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard shortcuts"
@@ -138,13 +138,13 @@ export function KeyboardShortcuts() {
         aria-label="Close keyboard shortcuts"
         onClick={requestClose}
         className={cn(
-          "absolute inset-0 bg-black/70",
+          "fixed inset-0 bg-black/70",
           closing ? "animate-fade-out" : "animate-fade-in"
         )}
       />
       <div
         className={cn(
-          "relative w-full max-w-[420px] rounded-card border border-border-default bg-bg-surface p-5 shadow-overlay",
+          "relative my-0 w-full max-w-[420px] overflow-hidden rounded-t-card border border-border-default bg-bg-surface p-5 shadow-overlay sm:my-4 sm:rounded-card",
           closing ? "animate-scale-out pointer-events-none" : "animate-scale-in"
         )}
       >
@@ -152,7 +152,7 @@ export function KeyboardShortcuts() {
         <p className="mt-1 text-caption text-text-tertiary">
           NEXUS is built to be driven without a mouse.
         </p>
-        <dl className="mt-4 flex flex-col gap-2">
+        <dl className="mt-4 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)] sm:pb-0">
           {rows.map(([keys, description]) => (
             <div key={keys} className="flex items-center justify-between gap-4">
               <dt className="text-[13px] text-text-secondary">{description}</dt>

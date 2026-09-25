@@ -193,9 +193,9 @@ export default async function UpgradePage() {
         </section>
 
         <p className="mt-8 text-center text-caption text-text-tertiary">
-          Plan limits are enforced server-side by Supabase (RLS, triggers and RPC), never
-          by the interface alone. No payment provider is connected yet, so no transaction
-          is ever simulated.
+          Plan limits are enforced on the server, not only by the interface, so they cannot
+          be bypassed. Paid checkout is not connected yet — no payment card is ever charged
+          on this page.
         </p>
 
         <div className="mt-6 text-center">

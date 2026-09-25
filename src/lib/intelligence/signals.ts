@@ -339,30 +339,30 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const lateDays = Math.abs(daysUntil(due, now));
     const pName = projectName(task.project_id);
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE.critical, detail: "tâche en retard" },
-      { factor: "overdue", points: Math.min(lateDays * SCORE_FACTORS.OVERDUE_PER_DAY, SCORE_FACTORS.OVERDUE_CAP), detail: `${lateDays} jour(s) de retard` },
+      { factor: "severity", points: SEVERITY_BASE.critical, detail: "overdue task" },
+      { factor: "overdue", points: Math.min(lateDays * SCORE_FACTORS.OVERDUE_PER_DAY, SCORE_FACTORS.OVERDUE_CAP), detail: `${lateDays} day(s) overdue` },
     ];
     if (task.priority === "urgent" || task.priority === "high") {
-      breakdown.push({ factor: "priority", points: 5, detail: `priorité ${task.priority}` });
+      breakdown.push({ factor: "priority", points: 5, detail: `${task.priority} priority` });
     }
     signals.push(
       scored(
         "TASK_OVERDUE",
         "critical",
         `TASK_OVERDUE:${task.id}`,
-        `“${task.title}” est en retard`,
-        `Cette tâche devait être terminée ${lateDays === 0 ? "aujourd'hui" : `il y a ${lateDays} jour${lateDays > 1 ? "s" : ""}`} et est toujours ouverte.`,
+        `"${task.title}" is overdue`,
+        `This task was due ${lateDays === 0 ? "today" : `${lateDays} day${lateDays > 1 ? "s" : ""} ago`} and is still open.`,
         [
-          { label: "En retard de", value: `${lateDays} jour${lateDays > 1 ? "s" : ""}` },
-          { label: "Priorité", value: task.priority ?? "medium" },
-          ...(pName ? [{ label: "Projet", value: pName }] : []),
+          { label: "Overdue by", value: `${lateDays} day${lateDays > 1 ? "s" : ""}` },
+          { label: "Priority", value: task.priority ?? "medium" },
+          ...(pName ? [{ label: "Project", value: pName }] : []),
         ],
         { type: "task", id: task.id, label: task.title },
         1,
         [
-          navigateSignalAction("Ouvrir la tâche", `/tasks?focus=${task.id}`, "open_task"),
-          mutateSignalAction("Marquer comme terminée", "complete_task", { taskId: task.id }),
-          mutateSignalAction("Reporter", "move_task", { taskId: task.id }),
+          navigateSignalAction("Open task", `/tasks?focus=${task.id}`, "open_task"),
+          mutateSignalAction("Mark complete", "complete_task", { taskId: task.id }),
+          mutateSignalAction("Reschedule", "move_task", { taskId: task.id }),
         ],
         now,
         { breakdown, detectedFrom: task.due_at }
@@ -381,26 +381,26 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const severity: ProactiveSeverity = hours <= 24 ? "warning" : "attention";
     const pName = projectName(task.project_id);
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: `échéance dans ${Math.max(0, Math.ceil(hours))}h` },
-      { factor: "deadline", points: hours <= 24 ? SCORE_FACTORS.DEADLINE_TODAY : SCORE_FACTORS.DEADLINE_TOMORROW, detail: hours <= 24 ? "échéance aujourd'hui" : "échéance demain" },
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: `due in ${Math.max(0, Math.ceil(hours))}h` },
+      { factor: "deadline", points: hours <= 24 ? SCORE_FACTORS.DEADLINE_TODAY : SCORE_FACTORS.DEADLINE_TOMORROW, detail: hours <= 24 ? "due today" : "due tomorrow" },
     ];
     signals.push(
       scored(
         "TASK_DUE_SOON",
         severity,
         `TASK_DUE_SOON:${task.id}`,
-        `“${task.title}” est due ${hours <= 24 ? "aujourd'hui" : "demain"}`,
-        `L'échéance arrive dans ${Math.max(0, Math.ceil(hours))} heure(s) et la tâche est toujours ouverte.`,
+        `"${task.title}" is due ${hours <= 24 ? "today" : "tomorrow"}`,
+        `Due in ${Math.max(0, Math.ceil(hours))} hour(s) and the task is still open.`,
         [
-          { label: "Échéance", value: hours <= 24 ? "aujourd'hui" : "demain" },
-          { label: "Priorité", value: task.priority ?? "medium" },
-          ...(pName ? [{ label: "Projet", value: pName }] : []),
+          { label: "Due", value: hours <= 24 ? "today" : "tomorrow" },
+          { label: "Priority", value: task.priority ?? "medium" },
+          ...(pName ? [{ label: "Project", value: pName }] : []),
         ],
         { type: "task", id: task.id, label: task.title },
         1,
         [
-          navigateSignalAction("Ouvrir la tâche", `/tasks?focus=${task.id}`, "open_task"),
-          mutateSignalAction("Marquer comme terminée", "complete_task", { taskId: task.id }),
+          navigateSignalAction("Open task", `/tasks?focus=${task.id}`, "open_task"),
+          mutateSignalAction("Mark complete", "complete_task", { taskId: task.id }),
         ],
         now,
         { breakdown, detectedFrom: task.due_at }
@@ -426,14 +426,14 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const progress = Math.round(project.progress ?? 0);
 
     const factors: { label: string; value: string; points: number }[] = [];
-    if (pOverdue.length > 0) factors.push({ label: "Tâches en retard", value: String(pOverdue.length), points: 10 });
-    if (pBlocked.length > 0) factors.push({ label: "Tâches bloquées", value: String(pBlocked.length), points: 10 });
+    if (pOverdue.length > 0) factors.push({ label: "Overdue tasks", value: String(pOverdue.length), points: 10 });
+    if (pBlocked.length > 0) factors.push({ label: "Blocked tasks", value: String(pBlocked.length), points: 10 });
     if (pDue && daysUntil(pDue, now) >= 0 && daysUntil(pDue, now) <= 7) {
-      factors.push({ label: "Échéance dans", value: `${daysUntil(pDue, now)}j`, points: 8 });
+      factors.push({ label: "Due in", value: `${daysUntil(pDue, now)}d`, points: 8 });
     }
-    if (staleDays !== null && staleDays >= 7) factors.push({ label: "Sans activité depuis", value: `${staleDays}j`, points: 6 });
+    if (staleDays !== null && staleDays >= 7) factors.push({ label: "Inactive for", value: `${staleDays}d`, points: 6 });
     if (pDue && progress < 30 && daysUntil(pDue, now) <= 14) {
-      factors.push({ label: "Progression", value: `${progress}%`, points: 6 });
+      factors.push({ label: "Progress", value: `${progress}%`, points: 6 });
     }
 
     if (factors.length < SIGNAL_CONSTANTS.AT_RISK_MIN_FACTORS) continue;
@@ -441,7 +441,7 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const severity: ProactiveSeverity =
       factors.length >= 4 || pOverdue.length + pBlocked.length >= 3 ? "critical" : factors.length === 3 ? "warning" : "attention";
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: `${factors.length} facteurs de risque` },
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: `${factors.length} risk factors` },
       ...factors.map((factor) => ({ factor: factor.label, points: factor.points, detail: factor.value })),
     ];
     signals.push(
@@ -449,14 +449,14 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         "PROJECT_AT_RISK",
         severity,
         `PROJECT_AT_RISK:${project.id}`,
-        `« ${project.name} » a besoin d'attention`,
-        `${factors.length} signaux de risque détectés sur ce projet.`,
+        `"${project.name}" needs attention`,
+        `${factors.length} risk signals detected on this project.`,
         factors.map((factor) => ({ label: factor.label, value: factor.value })),
         { type: "project", id: project.id, label: project.name },
         pOpen.length,
         [
-          navigateSignalAction("Ouvrir le projet", `/projects?focus=${project.id}`, "open_project"),
-          navigateSignalAction("Voir les tâches bloquées", "/tasks?filter=blocked", "view_blocked_tasks"),
+          navigateSignalAction("Open project", `/projects?focus=${project.id}`, "open_project"),
+          navigateSignalAction("View blocked tasks", "/tasks?filter=blocked", "view_blocked_tasks"),
         ],
         now,
         { breakdown, detectedFrom: lastTouch?.toISOString() ?? project.updated_at ?? null }
@@ -477,11 +477,11 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     if (staleDays < SIGNAL_CONSTANTS.STALE_PROJECT_DAYS) continue;
 
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE["attention"], detail: "projet sans activité" },
+      { factor: "severity", points: SEVERITY_BASE["attention"], detail: "inactive project" },
       {
         factor: "staleness",
         points: staleDays >= 14 ? SCORE_FACTORS.STALENESS_TWO_WEEKS : SCORE_FACTORS.STALENESS_WEEK,
-        detail: `${staleDays} jours sans activité`,
+        detail: `${staleDays} days without activity`,
       },
     ];
     signals.push(
@@ -489,17 +489,17 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         "PROJECT_STALE",
         "attention",
         `PROJECT_STALE:${project.id}`,
-        `« ${project.name} » est resté sans activité`,
-        `Aucune mise à jour sur ce projet (ou ses tâches) depuis ${staleDays} jours, alors que du travail est encore ouvert.`,
+        `"${project.name}" has been inactive`,
+        `No updates on this project (or its tasks) for ${staleDays} days, while work is still open.`,
         [
-          { label: "Sans activité depuis", value: `${staleDays} jours` },
-          { label: "Tâches ouvertes", value: String(pTasks.filter(isActiveTask).length) },
+          { label: "Inactive for", value: `${staleDays} days` },
+          { label: "Open tasks", value: String(pTasks.filter(isActiveTask).length) },
         ],
         { type: "project", id: project.id, label: project.name },
         pTasks.filter(isActiveTask).length,
         [
-          navigateSignalAction("Ouvrir le projet", `/projects?focus=${project.id}`, "open_project"),
-          mutateSignalAction("Ajouter une tâche de relance", "create_task", { title: "Relancer le projet", projectId: project.id }),
+          navigateSignalAction("Open project", `/projects?focus=${project.id}`, "open_project"),
+          mutateSignalAction("Add a follow-up task", "create_task", { title: "Follow up on project", projectId: project.id }),
         ],
         now,
         { breakdown, detectedFrom: lastTouch.toISOString() }
@@ -517,11 +517,11 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const pName = projectName(task.project_id);
     const severity: ProactiveSeverity = blockedByIt.length > 0 ? "critical" : "warning";
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: "travail bloqué" },
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: "blocked work" },
       ...(blockedByIt.length > 0
-        ? [{ factor: "blocking", points: SCORE_FACTORS.BLOCKING_EFFECT, detail: `bloque ${blockedByIt.length} tâche(s) en aval` }]
+        ? [{ factor: "blocking", points: SCORE_FACTORS.BLOCKING_EFFECT, detail: `blocks ${blockedByIt.length} downstream task(s)` }]
         : []),
-      ...(dependsOn.length > 0 ? [{ factor: "dependency", points: 5, detail: `dépend de : ${dependsOn.join(", ")}` }] : []),
+      ...(dependsOn.length > 0 ? [{ factor: "dependency", points: 5, detail: `depends on: ${dependsOn.join(", ")}` }] : []),
     ];
     signals.push(
       scored(
@@ -529,23 +529,23 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         severity,
         `BLOCKED_WORK:${task.id}`,
         blockedByIt.length > 0
-          ? `« ${task.title} » bloque ${blockedByIt.length} tâche${blockedByIt.length > 1 ? "s" : ""}`
-          : `« ${task.title} » est bloquée`,
+          ? `"${task.title}" blocks ${blockedByIt.length} task${blockedByIt.length > 1 ? "s" : ""}`
+          : `"${task.title}" is blocked`,
         blockedByIt.length > 0
-          ? `${blockedByIt.slice(0, 3).map((t) => `« ${t} »`).join(", ")} ne peu${blockedByIt.length === 1 ? "t" : "vent"} pas avancer tant que cette tâche n'est pas débloquée.`
+          ? `${blockedByIt.slice(0, 3).map((t) => `"${t}"`).join(", ")} ${blockedByIt.length === 1 ? "is" : "are"} stuck until this task is unblocked.`
           : dependsOn.length > 0
-            ? `Cette tâche attend ${dependsOn.join(", ")}.`
-            : "Cette tâche est marquée bloquée et rien en aval ne peut avancer.",
+            ? `This task is waiting on ${dependsOn.join(", ")}.`
+            : "This task is marked blocked and nothing downstream can move forward.",
         [
-          ...(dependsOn.length > 0 ? [{ label: "Bloquée par", value: dependsOn.join(", ") }] : []),
-          ...(blockedByIt.length > 0 ? [{ label: "Bloque", value: `${blockedByIt.length} tâche(s)` }] : []),
-          ...(pName ? [{ label: "Projet", value: pName }] : []),
+          ...(dependsOn.length > 0 ? [{ label: "Blocked by", value: dependsOn.join(", ") }] : []),
+          ...(blockedByIt.length > 0 ? [{ label: "Blocks", value: `${blockedByIt.length} task(s)` }] : []),
+          ...(pName ? [{ label: "Project", value: pName }] : []),
         ],
         { type: "task", id: task.id, label: task.title },
         1 + blockedByIt.length,
         [
-          navigateSignalAction("Ouvrir la tâche", `/tasks?focus=${task.id}`, "open_task"),
-          navigateSignalAction("Voir les tâches bloquées", "/tasks?filter=blocked", "view_blocked_tasks"),
+          navigateSignalAction("Open task", `/tasks?focus=${task.id}`, "open_task"),
+          navigateSignalAction("View blocked tasks", "/tasks?filter=blocked", "view_blocked_tasks"),
         ],
         now,
         { breakdown, detectedFrom: task.updated_at ?? null }
@@ -565,13 +565,13 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
 
   const conflictFactors: { label: string; value: string; points: number }[] = [];
   if (urgentTasks.length >= SIGNAL_CONSTANTS.URGENT_CONFLICT_MIN) {
-    conflictFactors.push({ label: "Tâches urgentes simultanées", value: String(urgentTasks.length), points: SCORE_FACTORS.CONFLICT_OVERFLOW * urgentTasks.length });
+    conflictFactors.push({ label: "Concurrent urgent tasks", value: String(urgentTasks.length), points: SCORE_FACTORS.CONFLICT_OVERFLOW * urgentTasks.length });
   }
   if (urgentNoDate.length >= SIGNAL_CONSTANTS.URGENT_NO_DATE_MIN) {
-    conflictFactors.push({ label: "Urgentes sans échéance", value: String(urgentNoDate.length), points: 8 });
+    conflictFactors.push({ label: "Urgent without due date", value: String(urgentNoDate.length), points: 8 });
   }
   if (dueTodayCount >= SIGNAL_CONSTANTS.TODAY_CONFLICT_MIN) {
-    conflictFactors.push({ label: "Prévues aujourd'hui", value: String(dueTodayCount), points: SCORE_FACTORS.CONFLICT_OVERFLOW * dueTodayCount });
+    conflictFactors.push({ label: "Due today", value: String(dueTodayCount), points: SCORE_FACTORS.CONFLICT_OVERFLOW * dueTodayCount });
   }
   if (conflictFactors.length > 0) {
     const severity: ProactiveSeverity =
@@ -579,7 +579,7 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         ? "critical"
         : "warning";
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: "conflit de priorités" },
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: "priority conflict" },
       ...conflictFactors.map((factor) => ({ factor: factor.label, points: Math.min(factor.points, 15), detail: factor.value })),
     ];
     signals.push(
@@ -587,14 +587,14 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         "PRIORITY_CONFLICT",
         severity,
         "PRIORITY_CONFLICT:workspace",
-        "Trop de travail urgent en même temps",
-        `Le workspace compte ${urgentTasks.length} tâche${urgentTasks.length > 1 ? "s" : ""} urgente${urgentTasks.length > 1 ? "s" : ""} et ${dueTodayCount} échéance${dueTodayCount > 1 ? "s" : ""} pour aujourd'hui. À vous de choisir ce qui passe en premier.`,
+        "Too much urgent work at once",
+        `The workspace has ${urgentTasks.length} urgent task${urgentTasks.length > 1 ? "s" : ""} and ${dueTodayCount} deadline${dueTodayCount > 1 ? "s" : ""} due today. Decide what moves first.`,
         conflictFactors.map((factor) => ({ label: factor.label, value: factor.value })),
         { type: "workspace", id: "workspace", label: "Workspace" },
         Math.max(urgentTasks.length, dueTodayCount),
         [
-          navigateSignalAction("Voir les priorités", "/tasks", "navigate"),
-          navigateSignalAction("Organiser ma journée", "/app/intelligence", "navigate"),
+          navigateSignalAction("View priorities", "/tasks", "navigate"),
+          navigateSignalAction("Plan my day", "/app/intelligence", "navigate"),
         ],
         now,
         { breakdown, detectedFrom: null }
@@ -616,26 +616,26 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     const openNeeded = Math.max(0, pOpen.length);
     const severity: ProactiveSeverity = remaining === 0 ? "critical" : remaining === 1 ? "warning" : "attention";
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: `échéance dans ${remaining}j` },
-      { factor: "deadline", points: remaining === 0 ? SCORE_FACTORS.DEADLINE_TODAY : remaining === 1 ? SCORE_FACTORS.DEADLINE_TOMORROW : SCORE_FACTORS.DEADLINE_2DAYS, detail: `${openNeeded} tâche(s) encore ouvertes` },
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: `due in ${remaining}d` },
+      { factor: "deadline", points: remaining === 0 ? SCORE_FACTORS.DEADLINE_TODAY : remaining === 1 ? SCORE_FACTORS.DEADLINE_TOMORROW : SCORE_FACTORS.DEADLINE_2DAYS, detail: `${openNeeded} task(s) still open` },
     ];
     signals.push(
       scored(
         "DEADLINE_RISK",
         severity,
         `DEADLINE_RISK:${project.id}`,
-        `L'échéance de « ${project.name} » approche`,
-        `L'échéance est dans ${remaining === 0 ? "0 jour (aujourd'hui)" : `${remaining} jour${remaining > 1 ? "s" : ""}`} et ${openNeeded} tâche${openNeeded > 1 ? "s" : ""} reste${openNeeded > 1 ? "nt" : ""} ouverte${progress > 0 ? ` (progression ${progress}%)` : ""}.`,
+        `The deadline for "${project.name}" is near`,
+        `Deadline is ${remaining === 0 ? "today" : `in ${remaining} day${remaining > 1 ? "s" : ""}`} with ${openNeeded} open task${openNeeded > 1 ? "s" : ""}${progress > 0 ? ` (${progress}% progress)` : ""}.`,
         [
-          { label: "Échéance", value: remaining === 0 ? "aujourd'hui" : `dans ${remaining}j` },
-          { label: "Tâches ouvertes", value: String(openNeeded) },
-          ...(progress > 0 ? [{ label: "Progression", value: `${progress}%` }] : []),
+          { label: "Due", value: remaining === 0 ? "today" : `in ${remaining}d` },
+          { label: "Open tasks", value: String(openNeeded) },
+          ...(progress > 0 ? [{ label: "Progress", value: `${progress}%` }] : []),
         ],
         { type: "project", id: project.id, label: project.name },
         openNeeded,
         [
-          navigateSignalAction("Ouvrir le projet", `/projects?focus=${project.id}`, "open_project"),
-          mutateSignalAction("Créer une tâche de suivi", "create_task", { title: "Suivi échéance projet", projectId: project.id }),
+          navigateSignalAction("Open project", `/projects?focus=${project.id}`, "open_project"),
+          mutateSignalAction("Add a follow-up task", "create_task", { title: "Project deadline follow-up", projectId: project.id }),
         ],
         now,
         { breakdown, detectedFrom: project.due_date ?? null }
@@ -680,19 +680,19 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
 
     const evidence: SignalEvidence[] = [];
     if (hasTarget && daysLeft !== null) {
-      evidence.push({ label: "Échéance", value: daysLeft === 0 ? "aujourd'hui" : `dans ${daysLeft}j` });
+      evidence.push({ label: "Due", value: daysLeft === 0 ? "today" : `in ${daysLeft}d` });
     }
-    evidence.push({ label: "Progression", value: `${progress}%` });
-    if (linkedOpen) evidence.push({ label: "Projets liés", value: String(linkedProjects.length) });
-    if (linkedOverdue > 0) evidence.push({ label: "Tâches en retard (projets liés)", value: String(linkedOverdue) });
-    if (linkedBlocked > 0) evidence.push({ label: "Tâches bloquées (projets liés)", value: String(linkedBlocked) });
+    evidence.push({ label: "Progress", value: `${progress}%` });
+    if (linkedOpen) evidence.push({ label: "Linked projects", value: String(linkedProjects.length) });
+    if (linkedOverdue > 0) evidence.push({ label: "Overdue tasks (linked projects)", value: String(linkedOverdue) });
+    if (linkedBlocked > 0) evidence.push({ label: "Blocked tasks (linked projects)", value: String(linkedBlocked) });
 
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE[severity], detail: "objectif en danger" },
-      ...(progressTooLow ? [{ factor: "progress", points: 8, detail: `progression ${progress}%` }] : []),
-      ...(deadlineNear && hasTarget && daysLeft !== null ? [{ factor: "deadline", points: daysLeft <= 1 ? SCORE_FACTORS.DEADLINE_TODAY : SCORE_FACTORS.DEADLINE_TOMORROW, detail: `échéance dans ${daysLeft}j` }] : []),
-      ...(linkedOverdue > 0 ? [{ factor: "linked-overdue", points: 8, detail: `${linkedOverdue} tâche(s) en retard liée(s)` }] : []),
-      ...(linkedBlocked > 0 ? [{ factor: "linked-blocked", points: 8, detail: `${linkedBlocked} tâche(s) bloquée(s) liée(s)` }] : []),
+      { factor: "severity", points: SEVERITY_BASE[severity], detail: "goal at risk" },
+      ...(progressTooLow ? [{ factor: "progress", points: 8, detail: `progress ${progress}%` }] : []),
+      ...(deadlineNear && hasTarget && daysLeft !== null ? [{ factor: "deadline", points: daysLeft <= 1 ? SCORE_FACTORS.DEADLINE_TODAY : SCORE_FACTORS.DEADLINE_TOMORROW, detail: `due in ${daysLeft}d` }] : []),
+      ...(linkedOverdue > 0 ? [{ factor: "linked-overdue", points: 8, detail: `${linkedOverdue} linked overdue task(s)` }] : []),
+      ...(linkedBlocked > 0 ? [{ factor: "linked-blocked", points: 8, detail: `${linkedBlocked} linked blocked task(s)` }] : []),
     ];
 
     signals.push(
@@ -700,17 +700,17 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         "GOAL_AT_RISK",
         severity,
         `GOAL_AT_RISK:${goal.id}`,
-        `L'objectif « ${goal.title} » est en danger`,
+        `The goal "${goal.title}" is at risk`,
         progressTooLow || deadlineNear
-          ? `L'objectif arrive à échéance${daysLeft !== null && daysLeft > 0 ? ` dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}` : daysLeft === 0 ? " aujourd'hui" : ""} avec une progression de ${progress}%.`
-          : `${linkedOverdue + linkedBlocked} tâche(s) liée(s) ${linkedBlocked > 0 ? "bloquée(s)" : "en retard"} pèsent sur cet objectif.`,
+          ? `The goal is due${daysLeft !== null && daysLeft > 0 ? ` in ${daysLeft} day${daysLeft > 1 ? "s" : ""}` : daysLeft === 0 ? " today" : ""} with ${progress}% progress.`
+          : `${linkedOverdue + linkedBlocked} linked task(s) ${linkedBlocked > 0 ? "blocked" : "overdue"} weigh on this goal.`,
         evidence,
         { type: "goal", id: goal.id, label: goal.title },
         linkedOpen ? linkedProjects.length : 1,
         [
-          navigateSignalAction("Ouvrir les objectifs", "/goals", "navigate"),
+          navigateSignalAction("Open goals", "/goals", "navigate"),
           ...(linkedProjects.length > 0
-            ? [navigateSignalAction("Voir les projets liés", "/projects", "open_project")]
+            ? [navigateSignalAction("View linked projects", "/projects", "open_project")]
             : []),
         ],
         now,
@@ -735,26 +735,26 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
   const velocityUp = completedThisWeek > completedPrevWeek * SIGNAL_CONSTANTS.POSITIVE_VELOCITY_FACTOR && completedThisWeek >= 3;
   if (completedThisWeek >= SIGNAL_CONSTANTS.POSITIVE_COMPLETED_MIN || velocityUp) {
     const breakdown: SignalScoreBreakdown[] = [
-      { factor: "severity", points: SEVERITY_BASE["info"], detail: "progression positive" },
-      { factor: "impact", points: Math.min(completedThisWeek * SCORE_FACTORS.IMPACT_PER_ENTITY / 2, SCORE_FACTORS.IMPACT_CAP / 2), detail: `${completedThisWeek} tâches terminées cette semaine` },
-      ...(completedPrevWeek > 0 ? [{ factor: "velocity", points: 8, detail: `${completedThisWeek} vs ${completedPrevWeek} la semaine précédente` }] : []),
+      { factor: "severity", points: SEVERITY_BASE["info"], detail: "positive progress" },
+      { factor: "impact", points: Math.min(completedThisWeek * SCORE_FACTORS.IMPACT_PER_ENTITY / 2, SCORE_FACTORS.IMPACT_CAP / 2), detail: `${completedThisWeek} tasks completed this week` },
+      ...(completedPrevWeek > 0 ? [{ factor: "velocity", points: 8, detail: `${completedThisWeek} vs ${completedPrevWeek} the previous week` }] : []),
     ];
     signals.push(
       scored(
         "POSITIVE_PROGRESS",
         "info",
         "POSITIVE_PROGRESS:workspace",
-        "Bonne dynamique cette semaine",
+        "Strong momentum this week",
         velocityUp
-          ? `Vous avez terminé ${completedThisWeek} tâches cette semaine, contre ${completedPrevWeek} la semaine précédente.`
-          : `${completedThisWeek} tâches ont été terminées cette semaine.`,
+          ? `You completed ${completedThisWeek} tasks this week, vs ${completedPrevWeek} the prior week.`
+          : `${completedThisWeek} tasks were completed this week.`,
         [
-          { label: "Terminées cette semaine", value: String(completedThisWeek) },
-          ...(completedPrevWeek > 0 ? [{ label: "Semaine précédente", value: String(completedPrevWeek) }] : []),
+          { label: "Completed this week", value: String(completedThisWeek) },
+          ...(completedPrevWeek > 0 ? [{ label: "Previous week", value: String(completedPrevWeek) }] : []),
         ],
         { type: "workspace", id: "workspace", label: "Workspace" },
         completedThisWeek,
-        [navigateSignalAction("Voir l'activité", "/activity", "navigate")],
+        [navigateSignalAction("View activity", "/activity", "navigate")],
         now,
         { breakdown, detectedFrom: null }
       )

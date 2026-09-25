@@ -70,7 +70,7 @@ export function GetStartedChecklist({
       <button
         type="button"
         onClick={restore}
-        className="fixed bottom-[84px] left-4 lg:left-auto lg:right-5 z-40 inline-flex h-10 items-center gap-2 rounded-pill border border-border-default bg-bg-surface px-3 text-caption text-text-secondary shadow-dropdown hover:text-text-primary animate-pop-in lg:bottom-5"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+84px)] left-4 lg:left-auto lg:right-5 z-40 inline-flex h-10 items-center gap-2 rounded-pill border border-border-default bg-bg-surface px-3 text-caption text-text-secondary shadow-dropdown hover:text-text-primary animate-pop-in lg:bottom-5"
         aria-label={t("checklist.title", locale)}
       >
         <NexusIcon icon={IconHelpCircle} />
@@ -86,7 +86,7 @@ export function GetStartedChecklist({
     <section
       aria-label={t("checklist.title", locale)}
       className={cn(
-        "fixed bottom-[84px] left-4 lg:left-auto lg:right-5 z-40 w-[min(320px,calc(100vw-24px))] rounded-card border border-border-default bg-bg-surface p-3.5 shadow-dropdown lg:bottom-5",
+        "fixed bottom-[calc(env(safe-area-inset-bottom)+84px)] left-4 lg:left-auto lg:right-5 z-40 w-[min(320px,calc(100vw-24px))] rounded-card border border-border-default bg-bg-surface p-3.5 shadow-dropdown lg:bottom-5",
         closing ? "animate-pop-out pointer-events-none" : "animate-pop-in"
       )}
     >

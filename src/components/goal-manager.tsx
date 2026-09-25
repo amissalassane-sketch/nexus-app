@@ -632,10 +632,11 @@ function GoalManagerInner({ userId }: { userId: string }) {
               />
             </Field>
 
-            <Field label="Target date" htmlFor="goal-target">
+            <Field label="Target date" htmlFor="goal-target" hint="Format: YYYY-MM-DD">
               <Input
                 id="goal-target"
                 type="date"
+                lang="en-US"
                 value={form.target_date}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, target_date: event.target.value }))

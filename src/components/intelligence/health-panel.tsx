@@ -12,7 +12,7 @@ import type { WorkspaceHealth } from "@/lib/intelligence/advanced";
 // ============================================================
 
 const BAND_TONE: Record<
-  WorkspaceHealth["band"],
+  WorkspaceHealth["band"] | "empty",
   { label: string; text: string; bar: string; stroke: string }
 > = {
   steady: {
@@ -33,19 +33,33 @@ const BAND_TONE: Record<
     bar: "bg-danger",
     stroke: "stroke-danger",
   },
+  empty: {
+    label: "Awaiting data",
+    text: "text-text-tertiary",
+    bar: "bg-white/25",
+    stroke: "stroke-white/20",
+  },
 };
 
 const R = 34;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
 export function WorkspaceHealthPanel({ health }: { health: WorkspaceHealth }) {
-  const tone = BAND_TONE[health.band];
-  const loss = CIRCUMFERENCE * (1 - health.score / 100);
+  const empty = !health.measured;
+  const tone = BAND_TONE[empty ? "empty" : health.band];
+  const loss = empty
+    ? CIRCUMFERENCE
+    : CIRCUMFERENCE * (1 - health.score / 100);
 
   return (
     <section
       aria-label="Workspace health"
-      className="rounded-card border border-border-subtle bg-bg-subtle/60 p-5"
+      className={cn(
+        "rounded-card border p-5",
+        empty
+          ? "border-border-subtle bg-bg-subtle/40"
+          : "border-border-subtle bg-bg-subtle/60"
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -58,11 +72,17 @@ export function WorkspaceHealthPanel({ health }: { health: WorkspaceHealth }) {
           </p>
         </div>
 
-        {/* Score dial — arc length is the score, nothing else moves */}
+        {/* Score dial — arc length is the score, nothing else moves.
+            When there isn't enough data we render a neutral "—" instead
+            of a fabricated 100. */}
         <div
           className="relative flex size-[92px] shrink-0 items-center justify-center"
           role="img"
-          aria-label={`Operating index ${health.score} out of 100, ${tone.label}`}
+          aria-label={
+            empty
+              ? "Operating index unavailable — not enough tracked work"
+              : `Operating index ${health.score} out of 100, ${tone.label}`
+          }
         >
           <svg viewBox="0 0 80 80" className="size-full -rotate-90">
             <circle
@@ -87,47 +107,53 @@ export function WorkspaceHealthPanel({ health }: { health: WorkspaceHealth }) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="font-mono text-[22px] tabular-nums leading-none text-text-primary">
-              {health.score}
+              {empty ? "—" : health.score}
             </span>
             <span className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.1em] text-text-quaternary">
-              /100
+              {empty ? "n/a" : "/100"}
             </span>
           </div>
         </div>
       </div>
 
-      <dl className="mt-4 flex flex-col divide-y divide-border-subtle border-t border-border-subtle">
-        {health.factors.map((factor) => {
-          const intact = 1 - factor.penalty;
-          return (
-            <div key={factor.id} className="py-2.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-caption font-medium text-text-secondary">
-                  {factor.label}
-                  <span className="ml-2 font-mono text-[10px] tabular-nums text-text-quaternary">
-                    −{Math.round(factor.penalty * factor.weight)}
-                  </span>
-                </dt>
-                <dd className="min-w-0 truncate text-right text-caption text-text-tertiary">
-                  {factor.evidence}
-                </dd>
-              </div>
-              <div
-                className="mt-1.5 h-[3px] overflow-hidden rounded-pill bg-white/[0.06]"
-                aria-hidden="true"
-              >
+      {empty ? (
+        <p className="mt-4 border-t border-border-subtle pt-3 text-caption text-text-tertiary">
+          The index updates once you have a few active tasks (and at least one project) with real dates.
+        </p>
+      ) : (
+        <dl className="mt-4 flex flex-col divide-y divide-border-subtle border-t border-border-subtle">
+          {health.factors.map((factor) => {
+            const intact = 1 - factor.penalty;
+            return (
+              <div key={factor.id} className="py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-caption font-medium text-text-secondary">
+                    {factor.label}
+                    <span className="ml-2 font-mono text-[10px] tabular-nums text-text-quaternary">
+                      −{Math.round(factor.penalty * factor.weight)}
+                    </span>
+                  </dt>
+                  <dd className="min-w-0 truncate text-right text-caption text-text-tertiary">
+                    {factor.evidence}
+                  </dd>
+                </div>
                 <div
-                  className={cn(
-                    "h-full rounded-pill transition-[width] duration-700 ease-nexus",
-                    factor.penalty === 0 ? "bg-white/25" : tone.bar
-                  )}
-                  style={{ width: `${Math.max(intact * 100, 3)}%` }}
-                />
+                  className="mt-1.5 h-[3px] overflow-hidden rounded-pill bg-white/[0.06]"
+                  aria-hidden="true"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-pill transition-[width] duration-700 ease-nexus",
+                      factor.penalty === 0 ? "bg-white/25" : tone.bar
+                    )}
+                    style={{ width: `${Math.max(intact * 100, 3)}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </dl>
+            );
+          })}
+        </dl>
+      )}
     </section>
   );
 }

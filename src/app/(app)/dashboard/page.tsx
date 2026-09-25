@@ -297,30 +297,36 @@ export default async function DashboardPage() {
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-small">
             <span className="font-medium text-text-primary">
-              {health.band === "steady"
-                ? "Your workspace is steady."
-                : health.band === "watch"
-                  ? "Pressure is building in your workspace."
-                  : "Attention needed today."}
+              {!health.measured
+                ? "Add a few dated tasks to start seeing your operational picture."
+                : health.band === "steady"
+                  ? "Your workspace is steady."
+                  : health.band === "watch"
+                    ? "Pressure is building in your workspace."
+                    : "Attention needed today."}
             </span>
-            <span className="hidden sm:inline text-text-quaternary">·</span>
-            <span className="inline-flex items-center gap-1.5 text-text-secondary">
-              Operational health:
-              <span className="font-mono font-semibold text-text-primary tabular-nums">
-                {health.score}
-              </span>
-              <Badge
-                tone={
-                  health.band === "critical"
-                    ? "danger"
-                    : health.band === "watch"
-                      ? "warning"
-                      : "success"
-                }
-              >
-                {health.band.toUpperCase()}
-              </Badge>
-            </span>
+            {health.measured ? (
+              <>
+                <span className="hidden sm:inline text-text-quaternary">·</span>
+                <span className="inline-flex items-center gap-1.5 text-text-secondary">
+                  Operational health:
+                  <span className="font-mono font-semibold text-text-primary tabular-nums">
+                    {health.score}
+                  </span>
+                  <Badge
+                    tone={
+                      health.band === "critical"
+                        ? "danger"
+                        : health.band === "watch"
+                          ? "warning"
+                          : "success"
+                    }
+                  >
+                    {health.band.toUpperCase()}
+                  </Badge>
+                </span>
+              </>
+            ) : null}
             <span className="hidden sm:inline text-text-quaternary">·</span>
             <span className="text-text-tertiary">
               {needsAttention.length} {needsAttention.length === 1 ? "signal" : "signals"} · {context.dueThisWeek} approaching {context.dueThisWeek === 1 ? "deadline" : "deadlines"} · {context.blockedTasks} {context.blockedTasks === 1 ? "blocker" : "blockers"}
@@ -608,11 +614,13 @@ export default async function DashboardPage() {
                     <span
                       className={cn(
                         "h-2.5 w-2.5 rounded-pill",
-                        health.band === "critical"
-                          ? "bg-danger animate-pulse"
-                          : health.band === "watch"
-                            ? "bg-warning"
-                            : "bg-success"
+                        !health.measured
+                          ? "bg-white/20"
+                          : health.band === "critical"
+                            ? "bg-danger animate-pulse"
+                            : health.band === "watch"
+                              ? "bg-warning"
+                              : "bg-success"
                       )}
                       aria-hidden="true"
                     />
@@ -620,20 +628,28 @@ export default async function DashboardPage() {
                       SITUATION · OPERATING INDEX
                     </span>
                   </div>
-                  <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-text-primary tabular-nums">
-                    {health.score}/100
-                  </span>
-                  <Badge
-                    tone={
-                      health.band === "critical"
-                        ? "danger"
-                        : health.band === "watch"
-                          ? "warning"
-                          : "success"
-                    }
-                  >
-                    {health.band.toUpperCase()}
-                  </Badge>
+                  {health.measured ? (
+                    <>
+                      <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-text-primary tabular-nums">
+                        {health.score}/100
+                      </span>
+                      <Badge
+                        tone={
+                          health.band === "critical"
+                            ? "danger"
+                            : health.band === "watch"
+                              ? "warning"
+                              : "success"
+                        }
+                      >
+                        {health.band.toUpperCase()}
+                      </Badge>
+                    </>
+                  ) : (
+                    <span className="rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-0.5 font-mono text-[11px] font-medium text-text-tertiary">
+                      Awaiting data
+                    </span>
+                  )}
                 </div>
 
                 <span className="font-mono text-[11px] text-text-quaternary">
@@ -853,22 +869,22 @@ export default async function DashboardPage() {
                   Quick starters:
                 </span>
                 <Link
-                  href="/app/intelligence?q=Aide-moi%20%C3%A0%20organiser%20cette%20semaine"
+                  href="/app/intelligence?q=Help%20me%20organize%20this%20week"
                   className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
                 >
-                  Organiser cette semaine
+                  Plan this week
                 </Link>
                 <Link
-                  href="/app/intelligence?q=Quels%20projets%20n%C3%A9cessitent%20mon%20attention%20%3F"
+                  href="/app/intelligence?q=Which%20projects%20need%20my%20attention%3F"
                   className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
                 >
-                  Quels projets nécessitent mon attention ?
+                  Which projects need my attention?
                 </Link>
                 <Link
-                  href="/app/intelligence?q=Quelles%20sont%20mes%203%20prochaines%20t%C3%A2ches%20prioritaires%20%3F"
+                  href="/app/intelligence?q=What%20are%20my%20next%203%20priority%20tasks%3F"
                   className="inline-flex min-h-[36px] items-center rounded-pill border border-border-subtle bg-bg-surface/80 px-3 text-caption text-text-secondary transition-colors hover:border-lavender-border hover:text-text-primary"
                 >
-                  Mes 3 priorités immédiates
+                  My top 3 priorities
                 </Link>
               </div>
             </section>

@@ -199,7 +199,7 @@ export function SignalDetail({
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-input bg-lavender/10 border border-lavender-border/40 px-3 text-caption font-medium text-lavender hover:bg-lavender/20 transition-colors"
           >
             <NexusIcon icon={IconSparkles} px={14} />
-            <span>{"Résoudre avec l'IA"}</span>
+            <span>{"Resolve with AI"}</span>
           </button>
           <Link
             href={insight.href}

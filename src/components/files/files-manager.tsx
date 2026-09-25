@@ -248,7 +248,7 @@ export function FilesManager({ userId }: { userId: string }) {
       <PageHeader
         title="Files"
         count={loading ? undefined : `${files.length} file${files.length === 1 ? "" : "s"}`}
-        description="Documents attached to your work, stored in a private workspace bucket. Content extraction and AI document analysis are not implemented."
+        description="Documents attached to your work, stored privately in your workspace. Document content is stored but not yet parsed for signals — upload and attach works today; deep analysis is coming soon."
         actions={
           <Button variant="primary" onClick={pickFiles} loading={uploading}>
             <NexusIcon icon={IconUpload} />

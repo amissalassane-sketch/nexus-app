@@ -19,15 +19,15 @@ type LandingFooterContext =
 const PRODUCT_LINKS = [
   { href: "/#product", label: "Product demo" },
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/#model", label: "Context layer" },
+  { href: "/#model", label: "The model" },
   { href: "/#integrations", label: "Integrations" },
+  { href: "/#faq", label: "FAQ" },
   { href: "/pricing", label: "Pricing" },
 ] as const;
 
 const ACCOUNT_LINKS = [
   { href: "/login", label: "Sign in" },
   { href: "/signup", label: "Get started" },
-  { href: "/#faq", label: "FAQ" },
 ] as const;
 
 const TRUST_LINKS = [
@@ -70,7 +70,7 @@ export function LandingFooter({
             <NexusWordmark size={28} />
           </Link>
           <p className="mt-3 text-small text-text-secondary">
-            It reads the work, not the chat.
+            It reads the work. Not the guesswork.
           </p>
           <p className="nexus-eyebrow mt-4">
             Operational intelligence
