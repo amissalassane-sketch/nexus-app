@@ -142,7 +142,7 @@ export function AdminCommandMenu({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:pt-20"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pt-20 sm:pb-4"
     >
       {/* Backdrop */}
       <div
@@ -156,7 +156,7 @@ export function AdminCommandMenu({
         role="dialog"
         aria-modal="true"
         aria-label="NEXUS Admin command palette"
-        className="relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-[10px] border border-admin-border bg-admin-surface shadow-[0_24px_70px_-10px_rgba(0,0,0,0.85)] motion-safe:animate-[panel-in_140ms_ease-out_both]"
+        className="relative z-10 my-auto flex w-full max-w-xl flex-col overflow-hidden rounded-[10px] border border-admin-border bg-admin-surface shadow-[0_24px_70px_-10px_rgba(0,0,0,0.85)] motion-safe:animate-[panel-in_140ms_ease-out_both]"
       >
         {/* Search Input Bar */}
         <div className="flex h-12 items-center gap-3 border-b border-admin-border px-3.5">

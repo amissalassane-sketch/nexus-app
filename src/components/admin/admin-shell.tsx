@@ -283,7 +283,7 @@ export function AdminShell({
   }, [drawerOpen, close]);
 
   const identity = (
-    <div className="shrink-0 border-t border-admin-border px-4 py-3">
+    <div className="shrink-0 border-t border-admin-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
       <p className="font-mono text-[9.5px] uppercase leading-[14px] tracking-[0.14em] text-admin-text-3">
         Signed in
       </p>

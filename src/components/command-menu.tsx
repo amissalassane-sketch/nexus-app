@@ -645,7 +645,7 @@ export function CommandMenu() {
 
   return (
     <div
-      className="fixed inset-0 z-[75] flex items-start justify-center p-4 pt-[9vh] sm:pt-[12vh]"
+      className="fixed inset-0 z-[75] flex items-start justify-center overflow-y-auto overscroll-contain p-4 pt-[9vh] pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pt-[12vh] sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -664,7 +664,7 @@ export function CommandMenu() {
 
       <div
         className={cn(
-          "command-panel relative w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface-3 shadow-overlay",
+          "command-panel relative my-auto w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface-3 shadow-overlay",
           closing ? "animate-command-out" : "animate-command-in"
         )}
       >
@@ -712,7 +712,7 @@ export function CommandMenu() {
           id={listboxId}
           role="listbox"
           aria-label="Command results"
-          className="command-list max-h-[min(52vh,392px)] overflow-y-auto overscroll-contain p-2"
+          className="command-list max-h-[min(calc(100dvh-280px-env(safe-area-inset-bottom)-1rem),52vh,392px)] overflow-y-auto overscroll-contain p-2"
         >
           {flat.length === 0 ? (
             <div className="px-4 py-10 text-center">

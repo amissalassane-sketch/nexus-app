@@ -50,7 +50,7 @@ export function WelcomeScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:items-center sm:p-4">
       {/* Backdrop — cinematic dark overlay with subtle blur */}
       <motion.div
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"

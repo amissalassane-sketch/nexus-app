@@ -129,7 +129,7 @@ export function Modal({
   if (!shouldRender) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-contain px-0 pb-[env(safe-area-inset-bottom)] pt-2 sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
@@ -151,7 +151,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface-3 shadow-overlay will-change-transform",
+          "relative my-0 flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface-3 shadow-overlay will-change-transform sm:my-4 sm:max-h-[min(92dvh,800px)] sm:rounded-panel",
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
           isClosing
             ? "animate-[sheet-out_220ms_var(--ease-nexus)_both] sm:animate-[scale-out_180ms_var(--ease-nexus)_both]"
@@ -187,10 +187,10 @@ export function Modal({
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-1 sm:px-6 sm:pb-0">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 sm:px-6 sm:pb-0">
           <div
             className={cn(
-              "transition-opacity duration-200 ease-nexus",
+              "pb-2 transition-opacity duration-200 ease-nexus sm:pb-0",
               isClosing ? "opacity-0" : "opacity-100"
             )}
           >
@@ -199,10 +199,12 @@ export function Modal({
         </div>
 
         {footer ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-6 sm:pb-4">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-6 sm:py-0 sm:pb-4">
             {footer}
           </div>
-        ) : null}
+        ) : (
+          <div className="shrink-0 pb-[env(safe-area-inset-bottom)] sm:hidden" aria-hidden="true" />
+        )}
       </div>
     </div>
   );

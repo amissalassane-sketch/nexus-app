@@ -232,9 +232,9 @@ export function Dropdown({
             role="menu"
             aria-label={label}
             onKeyDown={onMenuKeyDown}
-            style={{ width }}
+            style={{ width, maxHeight: "min(calc(100dvh - 24px), 60vh)" }}
             className={cn(
-              "absolute top-[calc(100%+6px)] z-[60] max-w-[calc(100vw-24px)] rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown will-change-transform",
+              "absolute top-[calc(100%+6px)] z-[60] max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-dropdown border border-border-default bg-bg-surface p-1 shadow-dropdown will-change-transform",
               align === "end"
                 ? "right-0 origin-top-right"
                 : "left-0 origin-top-left",
