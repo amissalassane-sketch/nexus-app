@@ -128,7 +128,8 @@ export function LandingNav({
         "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-200 ease-nexus",
         scrolled || open
           ? "border-b border-border-subtle bg-bg-base/85 backdrop-blur-md"
-          : "border-b border-transparent bg-transparent"
+          : "border-b border-transparent bg-transparent",
+        !scrolled && !open && context === "intelligence" && "dark text-white"
       )}
     >
       {/* DESIGN AUDIT — a keyboard/screen-reader visitor must be able to
