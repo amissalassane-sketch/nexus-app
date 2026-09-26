@@ -49,9 +49,9 @@ export function PasswordInput({
         aria-label={visible ? "Hide password" : "Show password"}
         aria-pressed={visible}
         className={cn(
-          "absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-40",
+          "absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center transition-colors disabled:pointer-events-none disabled:text-text-muted",
           shape === "pill"
-            ? "right-2 rounded-full text-white/40 hover:bg-white/10 hover:text-white/70"
+            ? "right-2 rounded-full text-text-secondary hover:bg-bg-subtle hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-focus"
             : "right-1.5 rounded-input text-text-tertiary hover:bg-accent-ghost hover:text-text-primary"
         )}
       >

@@ -161,7 +161,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="underline text-white/50 hover:text-white/70 transition-colors"
+            className="auth-link"
           >
             Sign up
           </Link>
@@ -170,7 +170,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
     >
       <div className="space-y-4">
         {showConfigError ? (
-          <p className="text-sm text-red-400/90 text-center" role="alert">
+          <p className="auth-error" role="alert">
             {showConfigError}
           </p>
         ) : null}
@@ -192,6 +192,8 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
               spellCheck={false}
               disabled={loading}
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
             />
           </div>
 
@@ -210,11 +212,13 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
               spellCheck={false}
               disabled={loading}
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
             />
             <div className="text-right">
               <Link
                 href="/forgot-password"
-                className="text-caption text-white/40 hover:text-white/60 transition-colors"
+                className="auth-link-quiet"
               >
                 Forgot password?
               </Link>
@@ -222,7 +226,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
           </div>
 
           {error ? (
-            <p className="text-sm text-red-400/90 text-center" role="alert">
+            <p id="login-error" className="auth-error" role="alert">
               {error}
             </p>
           ) : null}
@@ -233,7 +237,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             transition={{ duration: 0.2 }}
-            className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="auth-btn-primary"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />
@@ -243,9 +247,9 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
         </form>
 
         <div className="flex items-center gap-4">
-          <div className="h-px bg-white/10 flex-1" />
-          <span className="text-white/40 text-sm">or</span>
-          <div className="h-px bg-white/10 flex-1" />
+          <div className="auth-divider" />
+          <span className="auth-divider-label">or</span>
+          <div className="auth-divider" />
         </div>
 
         <button
@@ -253,7 +257,7 @@ export function LoginForm({ initialError = "" }: { initialError?: string }) {
           onClick={handleGoogleLogin}
           disabled={googleLoading || Boolean(showConfigError)}
           aria-busy={googleLoading}
-          className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed text-white border border-white/10 rounded-full py-3 px-4 transition-colors"
+          className="auth-btn-secondary"
         >
           {googleLoading ? (
             <NexusIcon icon={IconLoader2} px={18} className="animate-spin" />
