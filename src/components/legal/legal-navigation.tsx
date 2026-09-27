@@ -29,7 +29,7 @@ export function LegalDocumentNavigation({
         {prevDoc ? (
           <Link
             href={prevDoc.href}
-            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
+            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-[background-color,border-color] duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <NexusIcon icon={IconArrowLeft} px={12} />
@@ -42,7 +42,7 @@ export function LegalDocumentNavigation({
         ) : (
           <Link
             href="/legal"
-            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
+            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 transition-[background-color,border-color] duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <NexusIcon icon={IconLayoutGrid} px={12} />
@@ -58,7 +58,7 @@ export function LegalDocumentNavigation({
         {nextDoc ? (
           <Link
             href={nextDoc.href}
-            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 text-right transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
+            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 text-right transition-[background-color,border-color] duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center justify-end gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <span>Next Document</span>
@@ -71,7 +71,7 @@ export function LegalDocumentNavigation({
         ) : (
           <Link
             href="/legal"
-            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 text-right transition-all duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
+            className="group flex flex-1 flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/50 p-4 text-right transition-[background-color,border-color] duration-200 ease-nexus hover:border-border-default hover:bg-bg-surface"
           >
             <span className="flex items-center justify-end gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-quaternary group-hover:text-text-tertiary">
               <span>Legal Center</span>

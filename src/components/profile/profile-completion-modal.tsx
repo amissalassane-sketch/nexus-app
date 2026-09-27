@@ -204,7 +204,7 @@ function ProfileCompletionForm({
             placeholder="Your name"
             autoComplete="name"
             required
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
           />
         </div>
 
@@ -218,7 +218,7 @@ function ProfileCompletionForm({
           <p className="text-[11.5px] text-white/30">
             Your NEXUS identity, not your login. 3–32 letters, numbers, dots, underscores or dashes.
           </p>
-          <div className="flex items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-[1px] transition-all duration-200 focus-within:border-white/30 focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.06)]">
+          <div className="flex items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-[1px] transition-[border-color,box-shadow] duration-200 focus-within:border-white/30 focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.06)]">
             <span className="pl-4 font-mono text-[11.5px] text-white/25" aria-hidden="true">
               @
             </span>
@@ -256,7 +256,7 @@ function ProfileCompletionForm({
               onChange={(event) => setAvatarUrl(event.target.value)}
               placeholder="https://…"
               autoComplete="off"
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 pl-9 pr-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 pl-9 pr-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
             />
           </div>
         </div>
@@ -271,7 +271,7 @@ function ProfileCompletionForm({
             onChange={(event) => setJobTitle(event.target.value)}
             placeholder="e.g. Product lead"
             autoComplete="off"
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25"
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
           />
         </div>
 
@@ -285,7 +285,7 @@ function ProfileCompletionForm({
             onChange={(event) => setBio(event.target.value.slice(0, 500))}
             rows={3}
             placeholder="A short line about what you work on"
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-2xl py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-all duration-200 disabled:opacity-50 placeholder:text-white/25 resize-none"
+            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-2xl py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25 resize-none"
           />
         </div>
 
