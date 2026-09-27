@@ -93,7 +93,7 @@ export function AuthLayout({
           <Link
             href="/"
             aria-label="NEXUS home"
-            className="group mb-6 inline-flex rounded-full outline-none"
+            className="group mb-6 inline-flex rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-border-focus"
           >
             <NexusLogo
               size={36}
@@ -107,7 +107,7 @@ export function AuthLayout({
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 max-w-[36ch] text-[0.95rem] leading-relaxed text-text-secondary font-light">
+            <p className="mt-2 max-w-[36ch] text-[15px] leading-relaxed text-text-secondary">
               {description}
             </p>
           ) : null}
@@ -120,7 +120,7 @@ export function AuthLayout({
         {footer ? (
           <motion.div
             variants={itemVariants}
-            className="mt-6 text-center text-xs text-text-tertiary"
+            className="mt-6 text-center text-[13.5px] text-text-secondary"
           >
             {footer}
           </motion.div>

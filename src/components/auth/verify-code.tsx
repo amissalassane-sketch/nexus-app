@@ -252,7 +252,7 @@ export function VerifyCodeForm({
           Wrong address?{" "}
           <Link
             href={type === "signup" ? "/signup" : "/forgot-password"}
-            className="underline text-white/50 hover:text-white/70 transition-colors"
+            className="auth-link"
           >
             Go back
           </Link>
@@ -261,13 +261,13 @@ export function VerifyCodeForm({
     >
       <div className="space-y-5">
         {showConfigError ? (
-          <p className="text-sm text-red-400/90 text-center" role="alert">
+          <p className="auth-error" role="alert">
             {showConfigError}
           </p>
         ) : null}
 
         <div
-          className="relative rounded-full py-4 px-5 border border-white/10 bg-white/[0.03]"
+          className="relative rounded-full py-4 px-5 border border-border-strong bg-bg-surface focus-within:border-border-focus focus-within:shadow-[0_0_0_3px_var(--focus-ring)]"
           role="group"
           aria-label="Enter the 6-digit verification code"
           aria-busy={verifying}
@@ -290,35 +290,35 @@ export function VerifyCodeForm({
                     disabled={verifying}
                     onChange={(e) => handleChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}
-                    className="w-8 text-center text-xl bg-transparent text-white border-none focus:outline-none focus:ring-0 appearance-none disabled:opacity-60"
+                    className="w-8 text-center text-xl bg-transparent text-text-primary border-none focus:outline-none focus:ring-0 appearance-none disabled:cursor-not-allowed disabled:text-text-secondary"
                     style={{ caretColor: "transparent" }}
                   />
                   {!digit && (
                     <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none">
-                      <span className="text-xl text-white/20">0</span>
+                      <span className="text-xl text-text-placeholder">0</span>
                     </div>
                   )}
                 </div>
-                {i < 5 && <span className="text-white/20 text-xl">|</span>}
+                {i < 5 && <span className="text-border-strong text-xl">|</span>}
               </div>
             ))}
           </div>
         </div>
 
         {error ? (
-          <p className="text-sm text-red-400/90 text-center" role="alert">
+          <p className="auth-error" role="alert">
             {error}
           </p>
         ) : null}
         {notice ? (
-          <p className="text-sm text-emerald-400/80 text-center" role="status">
+          <p className="auth-success" role="status">
             {notice}
           </p>
         ) : null}
 
         <p className="text-center">
           <motion.span
-            className="text-white/50 hover:text-white/70 transition-colors cursor-pointer text-sm underline underline-offset-4 decoration-white/20"
+            className="auth-link-quiet cursor-pointer underline underline-offset-4"
             whileHover={resendCooldown > 0 ? undefined : { scale: 1.02 }}
             transition={{ duration: 0.2 }}
             onClick={handleResend}
@@ -347,7 +347,7 @@ export function VerifyCodeForm({
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           transition={{ duration: 0.2 }}
-          className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          className="auth-btn-primary"
         >
           {verifying ? (
             <NexusIcon icon={IconLoader2} className="animate-spin" />

@@ -54,15 +54,24 @@ html[data-theme="light"],
   --border: #e7e7e3;
   --border-default: #e7e7e3;
   --border-subtle: #eeeeeb;
-  --border-strong: #d5d5d0;
-  --border-focus: #171717;
+  --border-strong: #c9c9c3;
+  --border-focus: #111111;
 
   /* Typography */
-  --text-primary: #171717;
-  --text-secondary: #5f5f5a;
-  --text-tertiary: #73736d;
-  --text-quaternary: #85857f;
-  --text-muted: #85857f;
+  /* Every step clears WCAG AA 4.5:1 on #ffffff AND on #f7f7f5. */
+  --text-primary: #111111;
+  --text-secondary: #5c5c58;
+  --text-tertiary: #666663;
+  --text-quaternary: #6e6e6a;
+  --text-muted: #6e6e6a;
+  --text-placeholder: #737370;
+
+  /* Semantic (AA on light surfaces) */
+  --success: #1f7a3d;
+  --warning: #8a5a00;
+  --danger: #c0262d;
+  --info: #2f5bd3;
+  --focus-ring: rgba(17, 17, 17, 0.18);
 
   /* Accent */
   --accent: #171717;
@@ -118,8 +127,16 @@ html[data-theme="dark"],
   --text-primary: #f2f2ee;
   --text-secondary: #b8b8b1;
   --text-tertiary: #9c9c95;
-  --text-quaternary: #868686;
-  --text-muted: #85857d;
+  --text-quaternary: #8f8f89;
+  --text-muted: #8f8f89;
+  --text-placeholder: #8f8f89;
+
+  /* Semantic (AA on dark surfaces) */
+  --success: #6fcf97;
+  --warning: #dcb463;
+  --danger: #f08a8a;
+  --info: #8faaf2;
+  --focus-ring: rgba(242, 242, 238, 0.22);
 
   /* Accent */
   --accent: #ffffff;
@@ -160,6 +177,7 @@ html[data-theme="dark"],
   --color-text-tertiary: var(--text-tertiary);
   --color-text-quaternary: var(--text-quaternary);
   --color-text-muted: var(--text-muted);
+  --color-text-placeholder: var(--text-placeholder);
 
   /* ---------- Accent ---------- */
   --color-accent: var(--accent);
@@ -175,21 +193,21 @@ html[data-theme="dark"],
   --color-lavender-border: var(--lavender-border);
 
   /* ---------- Semantic (desaturated, discreet) ---------- */
-  --color-success: #6fcf97;
-  --color-success-bg: rgba(111, 207, 151, 0.09);
-  --color-success-border: rgba(111, 207, 151, 0.2);
+  --color-success: var(--success);
+  --color-success-bg: color-mix(in srgb, var(--success) 9%, transparent);
+  --color-success-border: color-mix(in srgb, var(--success) 28%, transparent);
 
-  --color-warning: #dcb463;
-  --color-warning-bg: rgba(220, 180, 99, 0.09);
-  --color-warning-border: rgba(220, 180, 99, 0.2);
+  --color-warning: var(--warning);
+  --color-warning-bg: color-mix(in srgb, var(--warning) 9%, transparent);
+  --color-warning-border: color-mix(in srgb, var(--warning) 28%, transparent);
 
-  --color-danger: #e87b7b;
-  --color-danger-bg: rgba(232, 123, 123, 0.09);
-  --color-danger-border: rgba(232, 123, 123, 0.2);
+  --color-danger: var(--danger);
+  --color-danger-bg: color-mix(in srgb, var(--danger) 9%, transparent);
+  --color-danger-border: color-mix(in srgb, var(--danger) 28%, transparent);
 
-  --color-info: #7f9dee;
-  --color-info-bg: rgba(127, 157, 238, 0.09);
-  --color-info-border: rgba(127, 157, 238, 0.2);
+  --color-info: var(--info);
+  --color-info-bg: color-mix(in srgb, var(--info) 9%, transparent);
+  --color-info-border: color-mix(in srgb, var(--info) 28%, transparent);
 
   /* ---------- ADMIN CONTROL PLANE ----------
      The internal operator surface is a different room in the same house,
@@ -213,16 +231,16 @@ html[data-theme="dark"],
          never body text, and never decorative. */
   --color-admin-base: #000000;
   --color-admin-sidebar: #000000;
-  --color-admin-surface: #17171a;
-  --color-admin-surface-2: #1e1e22;
-  --color-admin-surface-3: #27272c;
+  --color-admin-surface: #171719;
+  --color-admin-surface-2: #1f1f22;
+  --color-admin-surface-3: #28282c;
 
-  --color-admin-border: rgba(242, 241, 237, 0.08);
-  --color-admin-border-strong: rgba(242, 241, 237, 0.16);
+  --color-admin-border: #2a2a2d;
+  --color-admin-border-strong: #3a3a3e;
 
-  --color-admin-text: #f2f1ed;
-  --color-admin-text-2: #9f9fa6;
-  --color-admin-text-3: #9999a1;
+  --color-admin-text: #ffffff;
+  --color-admin-text-2: #a1a1a6;
+  --color-admin-text-3: #8e8e94;
 
   --color-admin-success: #6eff8e;
   --color-admin-success-bg: rgba(110, 255, 142, 0.1);
@@ -4125,4 +4143,189 @@ body:has([data-dashboard-root="true"])::before {
 html[data-theme="light"] [data-dashboard-root="true"],
 html[data-theme="light"] [data-dashboard-chrome] {
   background-color: var(--color-bg-base);
+}
+
+
+/* ============================================================
+   ADMIN — TWO-ZONE SCOPING (contrast fix)
+   ------------------------------------------------------------
+   ROOT CAUSE of the unreadable Security page: the dashboard
+   background rule above paints [data-dashboard-root] with
+   --color-bg-base, which is #f7f7f5 in the (default) light theme,
+   while every admin component used the dark-only admin ramp
+   (near-white text). Result: near-white text on a light canvas.
+
+   Fix: the admin ramp is now scoped instead of global.
+     * Chrome (sidebar, top bar, drawer, command menu): dark ramp.
+     * Content canvas (.admin-canvas = <main>): light ramp, so page
+       titles/descriptions are #111 / #666.
+     * Cards inside the canvas (any element carrying the
+       bg-admin-surface utility, or .admin-dark): dark ramp again,
+       so dark cards keep white titles and #a1a1a6 secondary text.
+   Components keep using the same admin-* utilities; only the
+   custom-property values change per zone.
+   ============================================================ */
+[data-dashboard-root="true"].admin-root {
+  background-color: var(--color-admin-base);
+}
+
+.admin-canvas {
+  --color-admin-base: #f7f7f5;
+  --color-admin-surface: #ffffff;
+  --color-admin-surface-2: #efefec;
+  --color-admin-surface-3: #e6e6e2;
+  --color-admin-border: #e2e2de;
+  --color-admin-border-strong: #c9c9c3;
+  --color-admin-text: #111111;
+  --color-admin-text-2: #666666;
+  --color-admin-text-3: #6b6b6b;
+  --color-admin-success: #1f7a3d;
+  --color-admin-success-bg: rgba(31, 122, 61, 0.08);
+  --color-admin-success-border: rgba(31, 122, 61, 0.28);
+  --color-admin-warning: #8a5a00;
+  --color-admin-warning-bg: rgba(138, 90, 0, 0.08);
+  --color-admin-warning-border: rgba(138, 90, 0, 0.28);
+  --color-admin-danger: #c0262d;
+  --color-admin-danger-bg: rgba(192, 38, 45, 0.06);
+  --color-admin-danger-border: rgba(192, 38, 45, 0.28);
+  --color-admin-info: #2f5bd3;
+  --color-admin-info-bg: rgba(47, 91, 211, 0.07);
+  --color-admin-info-border: rgba(47, 91, 211, 0.26);
+  /* Volt Lime is unreadable on light; the canvas uses the deep
+     NEXUS green for focus rings and active markers. */
+  --color-admin-accent: #3f7a00;
+  --color-admin-accent-fg: #ffffff;
+  --color-admin-accent-bg: rgba(63, 122, 0, 0.1);
+  --color-admin-accent-border: rgba(63, 122, 0, 0.3);
+  background-color: #f7f7f5;
+  color: #111111;
+}
+
+.admin-canvas .admin-dark,
+.admin-canvas [class~="bg-admin-surface"] {
+  --color-admin-base: #0f0f10;
+  --color-admin-surface: #171719;
+  --color-admin-surface-2: #1f1f22;
+  --color-admin-surface-3: #28282c;
+  --color-admin-border: #2a2a2d;
+  --color-admin-border-strong: #3a3a3e;
+  --color-admin-text: #ffffff;
+  --color-admin-text-2: #a1a1a6;
+  --color-admin-text-3: #8e8e94;
+  --color-admin-success: #6eff8e;
+  --color-admin-success-bg: rgba(110, 255, 142, 0.1);
+  --color-admin-success-border: rgba(110, 255, 142, 0.24);
+  --color-admin-warning: #ffc857;
+  --color-admin-warning-bg: rgba(255, 200, 87, 0.1);
+  --color-admin-warning-border: rgba(255, 200, 87, 0.24);
+  --color-admin-danger: #ff7a7e;
+  --color-admin-danger-bg: rgba(255, 90, 95, 0.1);
+  --color-admin-danger-border: rgba(255, 90, 95, 0.28);
+  --color-admin-info: #8aa8ff;
+  --color-admin-info-bg: rgba(138, 168, 255, 0.1);
+  --color-admin-info-border: rgba(138, 168, 255, 0.24);
+  --color-admin-accent: #d2ff4d;
+  --color-admin-accent-fg: #000000;
+  --color-admin-accent-bg: rgba(210, 255, 77, 0.12);
+  --color-admin-accent-border: rgba(210, 255, 77, 0.28);
+  color: #ffffff;
+}
+
+/* ============================================================
+   AUTH — SHARED CONTROLS (token-based, theme-aware)
+   ------------------------------------------------------------
+   ROOT CAUSE of the washed-out login: auth controls hard-coded
+   white-alpha utilities (text-white/40, bg-white/5, border-white/10,
+   placeholder:text-white/35) written for the old black theme. The
+   default theme is now light, so they rendered white-on-white.
+   These classes use tokens only; they hold in light and dark.
+   No opacity is ever applied to text-bearing controls.
+   ============================================================ */
+.auth-btn-primary,
+.auth-btn-secondary {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9999px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
+}
+.auth-btn-primary {
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.auth-btn-primary:hover { background-color: var(--accent-hover); }
+.auth-btn-primary:active { transform: translateY(1px); }
+.auth-btn-secondary {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+}
+.auth-btn-secondary:hover { background-color: var(--surface-subtle); border-color: var(--text-muted); }
+.auth-btn-secondary:active { transform: translateY(1px); }
+.auth-btn-primary:focus-visible,
+.auth-btn-secondary:focus-visible,
+.auth-link:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+/* Disabled: a distinct surface + cursor, not an opacity veil. */
+.auth-btn-primary:disabled,
+.auth-btn-secondary:disabled {
+  cursor: not-allowed;
+  transform: none;
+  background-color: var(--surface-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+.auth-link {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-strong);
+  border-radius: 4px;
+  transition: text-decoration-color 150ms ease;
+}
+.auth-link:hover { text-decoration-color: currentColor; }
+.auth-link-quiet {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 18px;
+  border-radius: 4px;
+}
+.auth-link-quiet:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 3px; }
+.auth-link-quiet:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+.auth-divider { height: 1px; flex: 1 1 0%; background-color: var(--border-default); }
+.auth-divider-label { font-size: 13px; color: var(--text-tertiary); }
+.auth-error {
+  border: 1px solid var(--color-danger-border);
+  background-color: var(--color-danger-bg);
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  line-height: 20px;
+  text-align: center;
+}
+.auth-success {
+  border: 1px solid var(--color-success-border);
+  background-color: var(--color-success-bg);
+  color: var(--success);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  line-height: 20px;
+  text-align: center;
 }

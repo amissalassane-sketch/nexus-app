@@ -176,7 +176,7 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
           Already verified?{" "}
           <Link
             href="/login"
-            className="underline text-white/50 hover:text-white/70 transition-colors"
+            className="auth-link"
           >
             Sign in
           </Link>
@@ -188,7 +188,7 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="text-lg font-semibold text-white text-center"
+          className="text-lg font-semibold text-text-primary text-center"
         >
           {copy.title}
         </motion.h2>
@@ -196,25 +196,25 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
         <div className="flex flex-col gap-3">
           <Link
             href="/login"
-            className="block w-full rounded-full bg-white text-black font-medium py-3 text-center hover:bg-white/90 transition-colors"
+            className="auth-btn-primary"
           >
             Return to sign in
           </Link>
           <Link
             href="/signup"
-            className="block w-full rounded-full bg-white/[0.05] backdrop-blur-[2px] text-white/70 border border-white/10 font-medium py-3 text-center hover:bg-white/10 transition-colors"
+            className="auth-btn-secondary"
           >
             Create account
           </Link>
         </div>
 
-        <div className="pt-4 border-t border-white/[0.06]">
-          <p className="mb-3 text-center text-sm text-white/40">
+        <div className="pt-4 border-t border-border-default">
+          <p className="mb-3 text-center text-sm text-text-secondary">
             Didn&apos;t receive the email?
           </p>
           <form onSubmit={handleResend} noValidate className="flex flex-col gap-4">
             <div className="space-y-1.5">
-              <label htmlFor="confirm-error-email" className="text-caption font-medium text-white/50">
+              <label htmlFor="confirm-error-email" className="text-caption font-medium text-text-secondary">
                 Email address
               </label>
               <Input
@@ -233,16 +233,16 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
             </div>
 
             {configError ? (
-              <p className="text-sm text-red-400/90 text-center" role="alert">
+              <p className="auth-error" role="alert">
                 {configError}
               </p>
             ) : error ? (
-              <p className="text-sm text-red-400/90 text-center" role="alert">
+              <p className="auth-error" role="alert">
                 {error}
               </p>
             ) : null}
             {message ? (
-              <p className="text-sm text-emerald-400/80 text-center" role="status">
+              <p className="auth-success" role="status">
                 {message}
               </p>
             ) : null}
@@ -253,7 +253,7 @@ function ConfirmErrorInner({ initialReason }: { initialReason: string }) {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               transition={{ duration: 0.2 }}
-              className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="auth-btn-primary"
             >
               {loading ? (
                 <NexusIcon icon={IconLoader2} className="animate-spin" />

@@ -159,3 +159,48 @@ export function AdminNotMeasured({ reason }: { reason?: string }) {
     </span>
   );
 }
+
+/** "Unavailable" — the source exists in principle but this build cannot
+ *  read it (e.g. no service key). Deliberately neutral: it is a known,
+ *  explained limitation, not a failure, so it never uses danger tones.
+ *
+ *  State vocabulary across the control plane:
+ *    Loading     → skeletons (loading.tsx)
+ *    Empty       → AdminEmptyState ("No data yet")
+ *    Unavailable → AdminUnavailableState (neutral, explained)
+ *    Error       → AdminErrorState (danger, role="alert")
+ *    Success     → AdminStatusPill tone="success" */
+export function AdminUnavailableState({
+  title,
+  description,
+  icon = "info",
+  action,
+  className,
+}: {
+  title: string;
+  description: string;
+  icon?: import("./admin-icons").AdminIconProps["name"];
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      className={cn("flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4", className)}
+    >
+      <AdminIconTile name={icon} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[14px] font-semibold leading-5 text-admin-text">{title}</p>
+          <span className="rounded-[4px] border border-admin-border-strong px-1.5 py-px text-[11px] font-medium leading-4 text-admin-text-2">
+            Unavailable
+          </span>
+        </div>
+        <p className="mt-1 max-w-[72ch] text-[13px] leading-5 text-admin-text-2">
+          {description}
+        </p>
+        {action ? <div className="mt-3">{action}</div> : null}
+      </div>
+    </div>
+  );
+}

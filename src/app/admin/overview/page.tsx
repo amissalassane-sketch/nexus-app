@@ -110,7 +110,7 @@ export default async function AdminOverviewPage() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <AdminEyebrow>Control</AdminEyebrow>
-          <h1 className="mt-1.5 text-[22px] font-semibold leading-[28px] tracking-[-0.025em] text-admin-text">
+          <h1 className="mt-1.5 text-[30px] font-semibold leading-[36px] tracking-[-0.02em] text-admin-text">
             Overview
           </h1>
           <p className="mt-1.5 max-w-[70ch] text-[13px] leading-[20px] text-admin-text-2">

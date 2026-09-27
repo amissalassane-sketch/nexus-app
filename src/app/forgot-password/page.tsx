@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
           Remembered it?{" "}
           <Link
             href="/login"
-            className="underline text-white/50 hover:text-white/70 transition-colors"
+            className="auth-link"
           >
             Sign in
           </Link>
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
     >
       <div className="space-y-4">
         {configError ? (
-          <p className="text-sm text-red-400/90 text-center" role="alert">
+          <p className="auth-error" role="alert">
             {configError}
           </p>
         ) : null}
@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           {error ? (
-            <p className="text-sm text-red-400/90 text-center" role="alert">
+            <p className="auth-error" role="alert">
               {error}
             </p>
           ) : null}
@@ -131,7 +131,7 @@ export default function ForgotPasswordPage() {
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             transition={{ duration: 0.2 }}
-            className="w-full rounded-full bg-white text-black font-medium py-3 hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="auth-btn-primary"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />

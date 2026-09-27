@@ -52,8 +52,8 @@ function NavRow({
   const responsive = variant === "responsive";
   const labelClass = responsive ? "hidden lg:inline" : undefined;
   const rowShape = responsive
-    ? "justify-center px-0 lg:justify-start lg:px-2"
-    : "px-2";
+    ? "justify-center px-0 lg:justify-start lg:px-2.5"
+    : "px-2.5";
 
   // Planned entries are not links. A control plane that links to a route
   // it has not built trains the operator to expect 404s.
@@ -69,7 +69,7 @@ function NavRow({
         aria-disabled="true"
         title={`${item.label} — coming soon: ${item.note ?? "not available yet"}`}
         className={cn(
-          "flex h-8 w-full cursor-not-allowed items-center gap-2.5 rounded-[7px] text-[13px] leading-[18px] text-admin-text-3",
+          "flex h-9 w-full cursor-not-allowed items-center gap-3 rounded-[8px] text-[13.5px] leading-[18px] text-admin-text-3",
           rowShape
         )}
       >
@@ -79,7 +79,7 @@ function NavRow({
         </span>
         <span
           className={cn(
-            "font-mono text-[9.5px] uppercase tracking-[0.08em]",
+            "shrink-0 rounded-[4px] border border-admin-border px-1.5 py-px text-[10.5px] font-medium leading-[14px] tracking-[0.02em] text-admin-text-3",
             labelClass
           )}
         >
@@ -101,12 +101,12 @@ function NavRow({
       aria-current={active ? "page" : undefined}
       title={responsive ? item.label : undefined}
       className={cn(
-        "group relative flex h-8 w-full items-center gap-2.5 rounded-[7px] text-[13px] leading-[18px] transition-colors duration-150",
+        "group relative flex h-9 w-full items-center gap-3 rounded-[8px] text-[13.5px] leading-[18px] transition-colors duration-150",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent",
         rowShape,
         active
-          ? "bg-admin-surface-2 text-admin-text"
-          : "text-admin-text-2 hover:bg-admin-surface-2/60 hover:text-admin-text"
+          ? "bg-admin-surface-2 font-medium text-admin-text"
+          : "text-admin-text-2 hover:bg-admin-surface hover:text-admin-text active:bg-admin-surface-2"
       )}
     >
       {/* Volt Lime is reserved for the active marker: the only place in
@@ -114,7 +114,7 @@ function NavRow({
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-admin-accent"
+          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-admin-accent"
         />
       ) : null}
       <AdminIcon
@@ -149,14 +149,14 @@ function NavBody({
       )}
     >
       {ADMIN_NAV.map((group) => (
-        <div key={group.id} className="mb-4 last:mb-0">
+        <div key={group.id} className="mb-5 last:mb-0">
           {/* Group heading, or a hairline when the rail is too narrow for
               words. In the compact state the heading is hidden, because
               the rows themselves carry the labels. */}
           <p
             className={cn(
-              "mb-1.5 font-mono text-[9.5px] uppercase leading-[14px] tracking-[0.14em] text-admin-text-3",
-              responsive ? "hidden px-2 lg:block" : "px-2"
+              "mb-1 text-[11px] font-medium leading-4 tracking-[0.04em] text-admin-text-3",
+              responsive ? "hidden px-2.5 lg:block" : "px-2.5"
             )}
           >
             {group.label}
@@ -296,7 +296,7 @@ export function AdminShell({
   );
 
   return (
-    <div data-dashboard-root="true" className="flex h-dvh overflow-hidden bg-admin-base text-admin-text">
+    <div data-dashboard-root="true" className="admin-root flex h-dvh overflow-hidden bg-admin-base text-admin-text">
       {/* Desktop / tablet rail. One DOM tree: the compact state is CSS. */}
       <aside className="sticky top-0 hidden h-dvh w-[64px] shrink-0 flex-col border-r border-admin-border bg-admin-sidebar md:flex lg:w-[248px]">
         <BrandBlock />
@@ -361,7 +361,7 @@ export function AdminShell({
           <SignOutButton />
         </header>
 
-        <main id="admin-content" className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+        <main id="admin-content" className="admin-canvas min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
           {children}
         </main>
       </div>

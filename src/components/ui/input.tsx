@@ -7,10 +7,14 @@ import { cn } from "@/lib/cn";
 // ============================================================
 
 const field =
-  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-[border-color,background-color,box-shadow,transform] duration-150 ease-nexus placeholder:text-text-quaternary focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_rgba(233,228,255,0.14)] disabled:cursor-not-allowed disabled:opacity-50 will-change-transform";
+  "w-full rounded-input border border-border-default bg-bg-surface px-3 text-body text-text-primary transition-[border-color,background-color,box-shadow,transform] duration-150 ease-nexus placeholder:text-text-placeholder hover:border-border-strong focus:border-border-focus focus:outline-none focus:shadow-[0_0_0_3px_var(--focus-ring)] disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-text-secondary aria-[invalid=true]:border-danger will-change-transform";
 
+// Auth "pill" field. Token-based (was white-alpha, which rendered
+// white-on-white in the light theme). Disabled uses a distinct surface
+// and text colour instead of an opacity veil; invalid state is driven by
+// aria-invalid so errors are visible without relying on colour alone.
 const pillField =
-  "w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/35";
+  "w-full min-h-[48px] rounded-full border border-border-strong bg-bg-surface px-4 py-3 text-[15px] leading-5 text-text-primary placeholder:text-text-placeholder transition-[border-color,box-shadow] duration-150 hover:border-text-muted focus:outline-none focus:border-border-focus focus:shadow-[0_0_0_3px_var(--focus-ring)] disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-text-secondary aria-[invalid=true]:border-danger aria-[invalid=true]:focus:shadow-[0_0_0_3px_var(--color-danger-border)]";
 
 export function Input({
   className,
