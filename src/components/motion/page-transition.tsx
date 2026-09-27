@@ -50,10 +50,13 @@ export function PageTransition({
   return (
     <div
       className={cn(
-        "min-h-0 will-change-transform",
+        // No `will-change: transform` here: it would make this wrapper a
+        // containing block for `position: fixed` descendants (modal
+        // overlays, drawers) for the whole page lifetime.
+        "min-h-0",
         isTransitioning
           ? "animate-[fade-out_120ms_var(--ease-nexus)_both]"
-          : "animate-[page-enter_380ms_var(--ease-nexus)_both]",
+          : "animate-[page-enter_380ms_var(--ease-nexus)_backwards]",
         className
       )}
       data-transitioning={isTransitioning ? "true" : undefined}

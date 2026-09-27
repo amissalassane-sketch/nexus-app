@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { IconX } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
@@ -34,7 +35,14 @@ export function Modal({
   const descriptionId = useId();
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [isClosing, setIsClosing] = useState(false);
-  const [shouldRender, setShouldRender] = useState(open);
+  // Starts false (not `open`): the dialog renders only after mount so it
+  // can be portaled to document.body. This keeps SSR/hydration markup
+  // consistent and, more importantly, makes the overlay independent of
+  // any transformed/will-change ancestor in the page tree — those turn
+  // into containing blocks for `position: fixed` and would trap the
+  // scrim inside the content column (the modal must be a viewport-wide
+  // layer above the application).
+  const [shouldRender, setShouldRender] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
 
@@ -128,7 +136,7 @@ export function Modal({
 
   if (!shouldRender) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-contain px-0 pb-[env(safe-area-inset-bottom)] pt-2 sm:items-center sm:p-4">
       <button
         type="button"
@@ -136,7 +144,12 @@ export function Modal({
         tabIndex={-1}
         onClick={onClose}
         className={cn(
-          "fixed inset-0 bg-black/70 backdrop-blur-[3px] will-change-transform",
+          // Restrained scrim: the app shell is already a near-black
+          // surface, so 70% black crushed the interface behind the
+          // dialog into a void. 50% keeps the layer hierarchy readable
+          // (spotlight 40% < dialogs 50% < drawers 60% < command 78%),
+          // with a light blur only — no glass.
+          "fixed inset-0 bg-black/50 backdrop-blur-[2px] will-change-transform",
           isClosing
             ? "animate-[fade-out_180ms_var(--ease-nexus)_both]"
             : "animate-[fade-in_200ms_var(--ease-nexus)_both]"
@@ -206,6 +219,7 @@ export function Modal({
           <div className="shrink-0 pb-[env(safe-area-inset-bottom)] sm:hidden" aria-hidden="true" />
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
