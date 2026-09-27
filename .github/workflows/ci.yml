@@ -1,0 +1,115 @@
+name: NEXUS CI Quality Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  NEXT_TELEMETRY_DISABLED: 1
+  NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+  NEXT_PUBLIC_SUPABASE_URL: "https://dummy-project.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy-anon-key-for-ci"
+  SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy-service-key-for-ci"
+
+jobs:
+  static-analysis:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: ESLint Verification
+        run: npm run lint
+
+      - name: TypeScript Type Check
+        run: npm run type-check
+
+  security-audit:
+    name: Security & Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Audit Dependencies for Known Vulnerabilities
+        run: npm audit --audit-level=high
+
+  test-suites:
+    name: Hermetic Unit & Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Unit Tests (Intelligence, Product & Core Services)
+        run: npm run test:unit
+
+      - name: Freemium Quota & Entitlement Contract Tests
+        run: npm run test:freemium
+
+      - name: Subscription & Pricing Contract Tests
+        run: npm run test:subscription
+
+      - name: Admin & Governance Unit Tests
+        run: npm run test:admin:unit
+
+      - name: Hermetic Event Lineage Bridge Tests
+        run: npm run test:lineage
+
+      - name: Domain Logic & Integrations Contract Tests
+        run: npm run test:domains
+
+      - name: Global Product, Timezone & Currency Tests
+        run: npm run test:global
+
+  build-production:
+    name: Production Build Verification
+    needs: [static-analysis, test-suites]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Next.js Production Build
+        run: npm run build

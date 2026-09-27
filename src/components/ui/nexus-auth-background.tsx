@@ -16,6 +16,7 @@ interface NexusAuthBackgroundProps {
   className?: string;
 }
 
-export function NexusAuthBackground(_props: NexusAuthBackgroundProps = {}) {
+export function NexusAuthBackground(props?: NexusAuthBackgroundProps) {
+  void props;
   return null;
 }

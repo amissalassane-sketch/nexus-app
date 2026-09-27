@@ -66,7 +66,6 @@ function NavRow({
   if (item.status !== "ready") {
     return (
       <span
-        role="note"
         aria-disabled="true"
         title={`${item.label} — coming soon: ${item.note ?? "not available yet"}`}
         className={cn(

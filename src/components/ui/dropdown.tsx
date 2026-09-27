@@ -121,10 +121,8 @@ export function Dropdown({
       if (closeTimer.current) clearTimeout(closeTimer.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsClosing(false);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShouldRender(true);
     } else if (shouldRender && !isClosing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsClosing(true);
       if (closeTimer.current) clearTimeout(closeTimer.current);
       closeTimer.current = setTimeout(() => {

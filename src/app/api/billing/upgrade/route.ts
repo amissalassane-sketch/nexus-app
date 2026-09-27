@@ -2,6 +2,7 @@ import { getBillingProviderStatus } from "@/lib/billing/provider";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { readJsonObject } from "@/lib/request-json";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api/response";
 import { createClient } from "@/lib/supabase/server";
 import { PLAN_NAMES, type PlanName } from "@/lib/plan-limits";
 
@@ -15,7 +16,10 @@ function isPlanName(value: unknown): value is PlanName {
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({ ok: false, code: "SERVICE_UNAVAILABLE", message: "Billing is temporarily unavailable", error: "Billing is temporarily unavailable" }, { status: 503 });
+    return apiError("Billing is temporarily unavailable", {
+      code: "SERVICE_UNAVAILABLE",
+      status: 503,
+    });
   }
   const supabase = await createClient();
   const {
@@ -23,18 +27,27 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", {
+      code: "UNAUTHORIZED",
+      status: 401,
+    });
   }
 
   let body: UpgradeRequestBody;
   try {
     body = (await readJsonObject(request)) as UpgradeRequestBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    return apiError("Invalid JSON payload", {
+      code: "INVALID_JSON_PAYLOAD",
+      status: 400,
+    });
   }
 
   if (!isPlanName(body.targetPlan) || body.targetPlan === "FREE") {
-    return NextResponse.json({ error: "Invalid target plan" }, { status: 400 });
+    return apiError("Invalid target plan", {
+      code: "INVALID_TARGET_PLAN",
+      status: 400,
+    });
   }
 
   const { data: membership, error: membershipError } = await supabase
@@ -47,15 +60,24 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (membershipError) {
-    return NextResponse.json({ ok: false, code: "BILLING_UNAVAILABLE", message: "Unable to verify billing access", error: "Unable to verify billing access" }, { status: 500 });
+    return apiError("Unable to verify billing access", {
+      code: "BILLING_UNAVAILABLE",
+      status: 500,
+    });
   }
 
   if (!membership) {
-    return NextResponse.json({ error: "No active workspace found" }, { status: 403 });
+    return apiError("No active workspace found", {
+      code: "NO_ACTIVE_WORKSPACE",
+      status: 403,
+    });
   }
 
   if (!["owner", "admin"].includes(membership.role)) {
-    return NextResponse.json({ error: "Only workspace owners and admins can upgrade billing" }, { status: 403 });
+    return apiError("Only workspace owners and admins can upgrade billing", {
+      code: "FORBIDDEN",
+      status: 403,
+    });
   }
 
   const provider = getBillingProviderStatus();

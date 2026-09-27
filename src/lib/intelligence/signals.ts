@@ -24,6 +24,7 @@
 import type { WorkspaceSnapshot } from "./engine";
 import { isActiveTask, type ProjectLike, type TaskLike } from "./engine";
 import type { ActivityContextItem, IntelligenceAction, IntelligenceActionType, TaskDependencyContextItem } from "./types";
+import { INTELLIGENCE_I18N } from "./i18n";
 
 // ============================================================
 // CENTRALIZED CONSTANTS — no magic numbers anywhere else
@@ -353,9 +354,9 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         `"${task.title}" is overdue`,
         `This task was due ${lateDays === 0 ? "today" : `${lateDays} day${lateDays > 1 ? "s" : ""} ago`} and is still open.`,
         [
-          { label: "Overdue by", value: `${lateDays} day${lateDays > 1 ? "s" : ""}` },
-          { label: "Priority", value: task.priority ?? "medium" },
-          ...(pName ? [{ label: "Project", value: pName }] : []),
+          { label: INTELLIGENCE_I18N.signals.evidence.overdue, value: `${lateDays} day${lateDays > 1 ? "s" : ""}` },
+          { label: INTELLIGENCE_I18N.signals.evidence.priority, value: task.priority ?? "medium" },
+          ...(pName ? [{ label: INTELLIGENCE_I18N.signals.evidence.project, value: pName }] : []),
         ],
         { type: "task", id: task.id, label: task.title },
         1,
@@ -489,11 +490,11 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
         "PROJECT_STALE",
         "attention",
         `PROJECT_STALE:${project.id}`,
-        `"${project.name}" has been inactive`,
+        INTELLIGENCE_I18N.signals.staleProjectTitle(project.name),
         `No updates on this project (or its tasks) for ${staleDays} days, while work is still open.`,
         [
-          { label: "Inactive for", value: `${staleDays} days` },
-          { label: "Open tasks", value: String(pTasks.filter(isActiveTask).length) },
+          { label: INTELLIGENCE_I18N.signals.evidence.inactiveFor, value: `${staleDays} days` },
+          { label: INTELLIGENCE_I18N.signals.evidence.openTasks, value: String(pTasks.filter(isActiveTask).length) },
         ],
         { type: "project", id: project.id, label: project.name },
         pTasks.filter(isActiveTask).length,
@@ -682,7 +683,7 @@ export function computeSignals(snapshot: WorkspaceSnapshot, options: SignalDetec
     if (hasTarget && daysLeft !== null) {
       evidence.push({ label: "Due", value: daysLeft === 0 ? "today" : `in ${daysLeft}d` });
     }
-    evidence.push({ label: "Progress", value: `${progress}%` });
+    evidence.push({ label: INTELLIGENCE_I18N.signals.evidence.progress, value: `${progress}%` });
     if (linkedOpen) evidence.push({ label: "Linked projects", value: String(linkedProjects.length) });
     if (linkedOverdue > 0) evidence.push({ label: "Overdue tasks (linked projects)", value: String(linkedOverdue) });
     if (linkedBlocked > 0) evidence.push({ label: "Blocked tasks (linked projects)", value: String(linkedBlocked) });

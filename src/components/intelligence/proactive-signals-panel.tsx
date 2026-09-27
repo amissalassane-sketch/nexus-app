@@ -17,6 +17,7 @@ import {
   type SuggestedSignalAction,
 } from "@/lib/intelligence/signals";
 import type { ActionVerification } from "@/lib/intelligence/types";
+import { INTELLIGENCE_I18N } from "@/lib/intelligence/i18n";
 
 const SEVERITY_TONE: Record<ProactiveSeverity, "danger" | "warning" | "info" | "neutral"> = {
   critical: "danger",
@@ -81,7 +82,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
       if (!res.ok) {
         setError(
           hasSignalsRef.current
-            ? "Connection lost. The signals shown are still available."
+            ? INTELLIGENCE_I18N.signals.offlineMessage
             : (data.error ?? "Could not load signals.")
         );
         return;
@@ -94,7 +95,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
     } catch {
       setError(
         hasSignalsRef.current
-          ? "Connection lost. The signals shown are still available."
+          ? INTELLIGENCE_I18N.signals.offlineMessage
           : "Connection lost. Signals will reload when the network returns."
       );
     } finally {
@@ -285,7 +286,7 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               <p className="mt-0.5 text-small text-text-secondary">{signal.summary}</p>
               {signal.entityLabel ? (
                 <p className="mt-1 text-caption text-text-tertiary">
-                  About: {entityLabelFor(signal)}{" "}
+                  {INTELLIGENCE_I18N.signals.entityPrefix} {entityLabelFor(signal)}{" "}
                   {signal.affectedCount > 1 ? <span className="font-mono text-text-quaternary tabular-nums">· {signal.affectedCount} affected items</span> : null}
                 </p>
               ) : null}
@@ -362,16 +363,16 @@ export function ProactiveSignalsPanel({ workspaceId }: { workspaceId: string }) 
               {confirming && confirming.signal.id === signal.id ? (
                 <div className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-default bg-bg-surface p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-small font-medium text-text-primary">Confirm "{confirming.action.label}" in the workspace?</p>
+                    <p className="text-small font-medium text-text-primary">Confirmer &laquo;&nbsp;{confirming.action.label}&nbsp;&raquo; dans le workspace&nbsp;?</p>
                     <VerificationLifecycle state={verificationState ?? "confirm"} className="shrink-0 scale-90" />
                   </div>
-                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Destructive action. It will be executed server-side and then verified.</p> : null}
+                  {confirming.action.action?.risk === "high" ? <p className="mt-1 text-caption text-danger">Action destructive. Elle sera exécutée côté serveur puis vérifiée.</p> : null}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <Button loading={executing} onClick={() => void executeAction(signal, confirming.action)} className="min-h-[44px]">
-                      {executing ? "Executing & verifying…" : "Confirm and run"}
+                      {executing ? "Exécution et vérification…" : INTELLIGENCE_I18N.signals.confirmAction}
                     </Button>
                     <Button variant="ghost" disabled={executing} onClick={() => { setConfirming(null); setVerificationState(null); }} className="min-h-[44px]">
-                      Cancel
+                      Annuler
                     </Button>
                   </div>
                 </div>

@@ -30,6 +30,7 @@ import type {
   MissionStep,
   MissionStepStatus,
 } from "@/lib/intelligence/types";
+import { INTELLIGENCE_I18N } from "@/lib/intelligence/i18n";
 
 const STATUS_ICON: Record<MissionStepStatus, TablerIcon> = {
   planned: IconCircle,
@@ -53,8 +54,7 @@ const STATUS_LABEL: Record<MissionStepStatus, string> = {
   cancelled: "Cancelled",
 };
 
-const OFFLINE_MESSAGE =
-  "Connection lost. The information shown is still available.";
+const OFFLINE_MESSAGE = INTELLIGENCE_I18N.mission.offlineMessage;
 
 export function MissionPanel({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
@@ -431,7 +431,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
                 aria-expanded={whyOpen}
                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-input px-3 text-caption font-medium text-text-secondary transition-[color,background-color,transform] duration-150 ease-nexus hover:text-text-primary hover:bg-accent-ghost active:text-text-primary active:scale-[0.97]"
               >
-                <span>{whyOpen ? "Hide context" : "Why this mission?"}</span>
+                <span>{whyOpen ? INTELLIGENCE_I18N.mission.hideContext : INTELLIGENCE_I18N.mission.seeWhy}</span>
                 <NexusIcon icon={IconChevronDown} px={13} className={cn("transition-transform duration-200 ease-nexus", whyOpen && "rotate-180")} />
               </button>
             </div>
@@ -442,7 +442,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
           <div className="mt-3.5 rounded-input border border-success-border bg-success-bg/40 px-3 py-2.5 text-small text-success animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
             <span className="flex items-center gap-1.5">
               <NexusIcon icon={IconCheck} className="animate-[check-pop_320ms_var(--ease-nexus)_both]" />
-              Mission terminée. Toutes les étapes sont vérifiées.
+              {INTELLIGENCE_I18N.mission.completedNotice}
             </span>
           </div>
         ) : null}
@@ -450,24 +450,24 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         {pendingAction?.action ? (
           <div role="alertdialog" aria-label="Confirm action" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-small font-medium text-text-primary">Confirmer « {pendingAction.action.label} » ?</p>
+              <p className="text-small font-medium text-text-primary">{INTELLIGENCE_I18N.mission.confirmPrompt(pendingAction.action.label)}</p>
               <VerificationLifecycle state={verificationState ?? "confirm"} className="shrink-0 scale-90" />
             </div>
             <p className="mt-0.5 text-caption text-text-secondary">
-              {pendingAction.action.description ?? pendingActionStep?.title ?? "Cette action modifiera votre workspace."}
+              {pendingAction.action.description ?? pendingActionStep?.title ?? INTELLIGENCE_I18N.mission.defaultMutationNotice}
             </p>
             {pendingAction.action.risk === "high" ? (
               <p className="mt-1.5 flex items-start gap-1.5 text-caption text-danger animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]">
                 <NexusIcon icon={IconAlertTriangle} px={13} className="mt-px" />
-                Action destructive. Exécutée côté serveur puis vérifiée.
+                {INTELLIGENCE_I18N.mission.highRiskNotice}
               </p>
             ) : null}
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <Button loading={executing} onClick={() => void runAction(pendingAction)} className="min-h-[44px]">
-                {executing ? "Executing & verifying…" : "Confirm and run"}
+                {executing ? "Exécution et vérification…" : INTELLIGENCE_I18N.mission.confirmAction}
               </Button>
               <Button variant="ghost" disabled={executing} onClick={() => setPendingAction(null)} className="min-h-[44px]">
-                Cancel
+                {INTELLIGENCE_I18N.mission.cancelAction}
               </Button>
             </div>
           </div>
@@ -475,14 +475,14 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
 
         {confirmingCancel ? (
           <div role="alertdialog" aria-label="Confirm cancelling the mission" className="mt-3 animate-[scale-in_220ms_var(--ease-nexus)_both] rounded-input border border-border-strong bg-bg-surface p-3.5">
-            <p className="text-small font-medium text-text-primary">Cancel "{mission.title}"?</p>
-            <p className="mt-0.5 text-caption text-text-secondary">The mission and its steps will no longer be suggested. This does not delete any task or project.</p>
+            <p className="text-small font-medium text-text-primary">{INTELLIGENCE_I18N.mission.confirmCancelPrompt(mission.title)}</p>
+            <p className="mt-0.5 text-caption text-text-secondary">{INTELLIGENCE_I18N.mission.cancelWarning}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <Button variant="danger" loading={executing} onClick={() => void cancelMission()} className="min-h-[44px]">
-                Cancel mission
+                {INTELLIGENCE_I18N.mission.cancelMission}
               </Button>
               <Button variant="ghost" disabled={executing} onClick={() => setConfirmingCancel(false)} className="min-h-[44px]">
-                Keep
+                {INTELLIGENCE_I18N.mission.keepMission}
               </Button>
             </div>
           </div>

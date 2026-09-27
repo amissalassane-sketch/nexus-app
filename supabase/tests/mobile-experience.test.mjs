@@ -24,6 +24,8 @@
 
 import { readFileSync, existsSync } from "node:fs";
 
+const { INTELLIGENCE_I18N } = await import("../../src/lib/intelligence/i18n.ts");
+
 let passed = 0;
 let failed = 0;
 function ok(name, cond, detail = "") {
@@ -117,7 +119,7 @@ console.log("-- mission panel: confirmation gate ----------------------");
 ok(
   "mutations render an inline confirmation panel",
   missionPanel.includes('role="alertdialog"') &&
-    missionPanel.includes("Confirmer et exécuter")
+    (missionPanel.includes("INTELLIGENCE_I18N.mission.confirmAction") || missionPanel.includes(INTELLIGENCE_I18N.mission.confirmAction))
 );
 ok(
   "the request with confirmed:true is only sent from the confirmation",
@@ -130,7 +132,8 @@ ok(
 );
 ok(
   "mission cancellation is confirmed (no one-tap cancel)",
-  missionPanel.includes("confirmingCancel") && missionPanel.includes("Annuler la mission")
+  missionPanel.includes("confirmingCancel") &&
+    (missionPanel.includes("INTELLIGENCE_I18N.mission.cancelMission") || missionPanel.includes(INTELLIGENCE_I18N.mission.cancelMission))
 );
 ok(
   "current step shows why it blocks",
@@ -138,7 +141,8 @@ ok(
 );
 ok(
   '"Voir pourquoi" disclosure exists',
-  missionPanel.includes("Voir pourquoi") && missionPanel.includes("MissionWhy")
+  (missionPanel.includes("INTELLIGENCE_I18N.mission.seeWhy") || missionPanel.includes(INTELLIGENCE_I18N.mission.seeWhy)) &&
+    missionPanel.includes("MissionWhy")
 );
 ok(
   "steps show order, status, dependencies, block reason",
@@ -155,7 +159,8 @@ ok(
 );
 ok(
   "offline keeps the mission on screen",
-  missionPanel.includes("Les dernières informations affichées restent disponibles")
+  missionPanel.includes("INTELLIGENCE_I18N.mission.offlineMessage") ||
+    missionPanel.includes(INTELLIGENCE_I18N.mission.offlineMessage)
 );
 ok(
   "no window.location navigation (SPA router)",
@@ -174,16 +179,20 @@ ok(
 );
 ok(
   "the entity concerned is displayed",
-  proactivePanel.includes("Concerne :")
+  proactivePanel.includes("INTELLIGENCE_I18N.signals.entityPrefix") ||
+    proactivePanel.includes(INTELLIGENCE_I18N.signals.entityPrefix)
 );
 ok(
   "offline keeps displayed signals",
-  proactivePanel.includes("Les signaux affichés restent disponibles") &&
+  (proactivePanel.includes("INTELLIGENCE_I18N.signals.offlineMessage") ||
+    proactivePanel.includes(INTELLIGENCE_I18N.signals.offlineMessage)) &&
     !proactivePanel.includes("setSignals([])")
 );
 ok(
   "mutations from signals are confirmation-gated",
-  proactivePanel.includes("setConfirming") && proactivePanel.includes("Confirmer et exécuter")
+  proactivePanel.includes("setConfirming") &&
+    (proactivePanel.includes("INTELLIGENCE_I18N.signals.confirmAction") ||
+      proactivePanel.includes(INTELLIGENCE_I18N.signals.confirmAction))
 );
 
 console.log("-- ask console -------------------------------------------");

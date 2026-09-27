@@ -52,14 +52,11 @@ export function IntelligenceProcessingStates({
     if (!active) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentIndex(0);
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentIndex(0);
 
     if (reduced) {

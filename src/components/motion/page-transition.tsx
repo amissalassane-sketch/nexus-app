@@ -21,7 +21,6 @@ export function PageTransition({
 
   useEffect(() => {
     if (prevPathname.current === pathname) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayChildren(children);
       return;
     }
@@ -33,7 +32,6 @@ export function PageTransition({
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsTransitioning(true);
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
