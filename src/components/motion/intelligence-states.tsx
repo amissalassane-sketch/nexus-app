@@ -99,7 +99,7 @@ export function IntelligenceProcessingStates({
       </span>
       <div className="ml-auto h-[2px] w-16 overflow-hidden rounded-pill bg-white/[0.06]">
         <div
-          className="h-full bg-lavender/60 transition-all duration-300 ease-nexus"
+          className="h-full bg-lavender/60 transition-[width] duration-300 ease-nexus"
           style={{
             width: `${((currentIndex + 1) / STATE_ORDER.length) * 100}%`,
           }}
@@ -159,7 +159,7 @@ export function VerificationLifecycle({
           <div key={step.id} className="flex items-center gap-1.5">
             <div
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-medium transition-all duration-200 ease-nexus",
+                "flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-medium transition-[background-color,border-color,color] duration-200 ease-nexus",
                 isPast && !isFailed && "border-success-border bg-success-bg text-success",
                 isActive && !isFailed && "border-lavender bg-lavender-subtle text-lavender animate-[verification-pulse_900ms_var(--ease-nexus)_infinite]",
                 isActive && isFailed && "border-danger-border bg-danger-bg text-danger",

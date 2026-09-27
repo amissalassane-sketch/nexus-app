@@ -352,7 +352,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         <div className="mt-3.5 rounded-input border border-border-subtle bg-bg-surface/40 p-3">
           <div className="flex items-center justify-between text-caption text-text-secondary">
             <span className="font-medium">Progression</span>
-            <span className="font-mono text-text-primary tabular-nums font-semibold transition-all duration-500 ease-nexus">{mission.progress}%</span>
+            <span className="font-mono text-text-primary tabular-nums font-semibold">{mission.progress}%</span>
           </div>
           <Progress value={mission.progress} tone={mission.status === "blocked" ? "warning" : mission.status === "completed" ? "success" : "white"} className="mt-2" />
         </div>
@@ -388,7 +388,7 @@ export function MissionPanel({ workspaceId }: { workspaceId: string }) {
         {mission.nextBestAction && mission.status !== "completed" ? (
           <div
             className={cn(
-              "mt-3.5 rounded-card border-2 border-lavender-border/50 bg-bg-surface/90 p-4 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)] transition-all duration-300 ease-nexus",
+              "mt-3.5 rounded-card border-2 border-lavender-border/50 bg-bg-surface/90 p-4 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)] transition-[border-color] duration-300 ease-nexus",
               nextActionTransitioning
                 ? "animate-[nba-exit_220ms_var(--ease-nexus)_both]"
                 : "animate-[nba-enter_320ms_var(--ease-nexus)_both] hover:border-lavender-border"
@@ -562,7 +562,7 @@ function MissionStepRow({
   return (
     <li
       className={cn(
-        "flex items-start gap-2.5 border-t border-border-subtle py-2.5 first:border-t-0 mission-step transition-all duration-200 ease-nexus will-change-transform",
+        "flex items-start gap-2.5 border-t border-border-subtle py-2.5 first:border-t-0 mission-step transition-[opacity,transform,background-color] duration-200 ease-nexus will-change-transform",
         completed && "mission-step-completed",
         blocked && "mission-step-blocked",
         !completed && "hover:bg-white/[0.01] -mx-1 px-1 rounded-nav"

@@ -40,6 +40,7 @@ import type { IntelligenceMission } from "@/lib/intelligence/types";
 import { withTimeout } from "@/lib/auth-flow";
 import { getActiveMembership } from "@/lib/workspace";
 import { logDataReadFailure } from "@/lib/server-logs";
+import { readAllPages } from "@/lib/dashboard/paginated-read";
 
 // ============================================================
 // NEXUS — OVERVIEW
@@ -94,43 +95,59 @@ export default async function DashboardPage() {
 
   const emptySnapshot: WorkspaceSnapshot = { tasks: [], projects: [], goals: [] };
 
-  // One snapshot drives the metrics, the signals and the focus block:
-  // the same numbers everywhere, read once.
-  const snapshotPromise: Promise<WorkspaceSnapshot> = workspaceId
+  // One complete snapshot drives the metrics, signals and focus block.
+  // PostgREST caps each response at 1,000 rows, so every source is read
+  // in stable, bounded pages rather than treating one response as all data.
+  const snapshotReadPromise = workspaceId
     ? (async () => {
         const [tasks, projects, goals] = await Promise.all([
-          supabase
-            .from("tasks")
-            .select(
-              "id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at"
-            )
-            .eq("workspace_id", workspaceId)
-            .limit(1000),
-          supabase
-            .from("projects")
-            .select(
-              "id, name, status, due_date, progress, updated_at, created_at"
-            )
-            .eq("workspace_id", workspaceId),
-          supabase
-            .from("goals")
-            .select("id, title, status, progress, target_date, updated_at")
-            .eq("workspace_id", workspaceId),
+          readAllPages((from, to) =>
+            supabase
+              .from("tasks")
+              .select(
+                "id, title, status, priority, due_at, completed_at, project_id, updated_at, created_at"
+              )
+              .eq("workspace_id", workspaceId)
+              .order("id", { ascending: true })
+              .range(from, to)
+          ),
+          readAllPages((from, to) =>
+            supabase
+              .from("projects")
+              .select(
+                "id, name, status, due_date, progress, updated_at, created_at"
+              )
+              .eq("workspace_id", workspaceId)
+              .order("id", { ascending: true })
+              .range(from, to)
+          ),
+          readAllPages((from, to) =>
+            supabase
+              .from("goals")
+              .select("id, title, status, progress, target_date, updated_at")
+              .eq("workspace_id", workspaceId)
+              .order("id", { ascending: true })
+              .range(from, to)
+          ),
         ]);
-        // A failed read degrades to an empty slice (the dashboard renders
-        // an honest "nothing to show" state), but it is never silent: the
-        // real code/message/hint goes to the runtime logs, where an
-        // operator can distinguish "no data" from "could not read data".
+
         logDataReadFailure("dashboard.snapshot.tasks", tasks.error);
         logDataReadFailure("dashboard.snapshot.projects", projects.error);
         logDataReadFailure("dashboard.snapshot.goals", goals.error);
+
+        const unavailable = Boolean(tasks.error || projects.error || goals.error);
         return {
-          tasks: (tasks.data ?? []) as WorkspaceSnapshot["tasks"],
-          projects: (projects.data ?? []) as WorkspaceSnapshot["projects"],
-          goals: (goals.data ?? []) as WorkspaceSnapshot["goals"],
+          unavailable,
+          snapshot: unavailable
+            ? null
+            : {
+                tasks: tasks.data as WorkspaceSnapshot["tasks"],
+                projects: projects.data as WorkspaceSnapshot["projects"],
+                goals: goals.data as WorkspaceSnapshot["goals"],
+              },
         };
       })()
-    : Promise.resolve(emptySnapshot);
+    : Promise.resolve({ unavailable: false, snapshot: emptySnapshot });
 
   const recentGoalsPromise = workspaceId
     ? supabase
@@ -167,22 +184,42 @@ export default async function DashboardPage() {
     : Promise.resolve([]);
 
   const [
-    snapshot,
+    snapshotRead,
     recentGoalsResult,
     recentActivitiesResult,
     missions,
   ] = await Promise.all([
-    snapshotPromise,
+    snapshotReadPromise,
     recentGoalsPromise,
     recentActivitiesPromise,
     missionPromise,
   ]);
 
-  // The recent lists are decorative: a failure degrades to an empty list,
-  // but is logged so a schema drift is visible before it is reported.
+  // A failed read is not an empty workspace. Keep the recent activity's
+  // dedicated unavailable state, and distinguish recent-goal failures below.
   logDataReadFailure("dashboard.recent_goals", recentGoalsResult.error);
   logDataReadFailure("dashboard.recent_activities", recentActivitiesResult.error);
 
+  if (snapshotRead.unavailable) {
+    return (
+      <div className="page-enter space-y-6" data-guide="dashboard">
+        <Alert
+          tone="danger"
+          title="Workspace data unavailable"
+          action={
+            <ButtonLink href="/dashboard" size="sm" variant="secondary">
+              Retry overview
+            </ButtonLink>
+          }
+        >
+          The dashboard couldn’t load a complete workspace snapshot, so its
+          metrics and signals aren’t shown. Try again.
+        </Alert>
+      </div>
+    );
+  }
+
+  const snapshot = snapshotRead.snapshot ?? emptySnapshot;
   const context = describeWorkspace(snapshot);
   const activeMission = missions.length > 0 ? missions[0] : null;
   const insights = computeInsights(snapshot);
@@ -838,7 +875,7 @@ export default async function DashboardPage() {
             {/* LAYER 6 — GIVE NEXUS AN OBJECTIVE (Intention Command Strip) */}
             <section
               aria-label="Direct intelligence objective"
-              className="overflow-hidden rounded-card border border-lavender-border/40 bg-lavender/5 p-5 transition-all duration-200 ease-nexus hover:border-lavender-border/70"
+              className="overflow-hidden rounded-card border border-lavender-border/40 bg-lavender/5 p-5 transition-[border-color] duration-200 ease-nexus hover:border-lavender-border/70"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -937,7 +974,11 @@ export default async function DashboardPage() {
                     </Link>
                   }
                 >
-                  {recentGoals.length === 0 ? (
+                  {recentGoalsResult.error ? (
+                    <p role="status" className="px-4 py-4 text-small text-text-secondary">
+                      Recent goals couldn’t be loaded. Refresh the overview to try again.
+                    </p>
+                  ) : recentGoals.length === 0 ? (
                     <div className="p-4">
                       <EmptyState
                         title="Set your first goal"

@@ -29,7 +29,7 @@ export function LegalCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/60 p-6 transition-all duration-200 ease-nexus hover:border-border-strong hover:bg-bg-surface sm:p-7",
+        "group relative flex flex-col justify-between rounded-card border border-border-subtle bg-bg-surface/60 p-6 transition-[background-color,border-color] duration-200 ease-nexus hover:border-border-strong hover:bg-bg-surface sm:p-7",
         className
       )}
     >
@@ -86,7 +86,7 @@ export function LegalCard({
 
         <Link
           href={document.href}
-          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-pill border border-border-subtle bg-bg-base/80 px-3.5 text-small font-medium text-text-primary transition-all duration-150 ease-nexus hover:border-border-strong hover:bg-white hover:text-black"
+          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-pill border border-border-subtle bg-bg-base/80 px-3.5 text-small font-medium text-text-primary transition-[background-color,border-color,color] duration-150 ease-nexus hover:border-border-strong hover:bg-white hover:text-black"
         >
           <span>Read document</span>
           <NexusIcon

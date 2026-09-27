@@ -132,7 +132,7 @@ export function Spotlight({
         className={cn(
           "pointer-events-none absolute rounded-input ring-2 ring-white/70",
           modalActive && "opacity-0",
-          !reduced && "transition-all duration-200"
+          !reduced && "transition-[top,left,width,height,opacity] duration-200"
         )}
         style={{ top, left, width, height }}
       />
