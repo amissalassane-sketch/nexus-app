@@ -632,7 +632,7 @@ function GoalManagerInner({ userId }: { userId: string }) {
               />
             </Field>
 
-            <Field label="Target date" htmlFor="goal-target" hint="Format: YYYY-MM-DD">
+            <Field label="Target date" htmlFor="goal-target" hint="Saved as YYYY-MM-DD.">
               <Input
                 id="goal-target"
                 type="date"
