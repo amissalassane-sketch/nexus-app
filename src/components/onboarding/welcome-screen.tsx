@@ -53,7 +53,7 @@ export function WelcomeScreen({
     <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 sm:items-center sm:p-4">
       {/* Backdrop — cinematic dark overlay with subtle blur */}
       <motion.div
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/60"
         aria-hidden="true"
         initial={{ opacity: 0 }}
         animate={{ opacity: closing ? 0 : 1 }}
@@ -76,23 +76,23 @@ export function WelcomeScreen({
           ease: [0.22, 1, 0.36, 1],
         }}
         className={cn(
-          "relative z-[71] w-[min(420px,100%)] rounded-2xl border border-white/[0.08] bg-[#0a0a0a]/95 backdrop-blur-md p-6 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)]",
+          "relative z-[71] w-[min(420px,100%)] rounded-overlay surface-overlay p-5",
           closing && "pointer-events-none"
         )}
       >
         {/* Eyebrow — quiet mono label */}
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-white/30">
+        <p className="mono-token text-text-quaternary">
           {t("welcome.kicker", locale)}
         </p>
 
         <h2
           id="nexus-welcome-title"
-          className="mt-3 text-[22px] font-bold tracking-[-0.025em] text-white"
+          className="mt-3 text-h1 text-text-primary"
         >
           {t("welcome.title", locale)}
         </h2>
 
-        <p className="mt-2.5 text-[13.5px] leading-[21px] text-white/50">
+        <p className="mt-2.5 text-small text-text-secondary">
           {t("welcome.body", locale)}
         </p>
 
@@ -101,10 +101,8 @@ export function WelcomeScreen({
             type="button"
             disabled={pending !== null}
             onClick={handleStart}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-medium text-black transition-colors duration-200 hover:bg-white/90 disabled:opacity-60"
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-pill bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-[120ms] hover:bg-accent-hover disabled:opacity-60"
           >
             {pending === "start" ? (
               <svg
@@ -136,10 +134,8 @@ export function WelcomeScreen({
             type="button"
             disabled={pending !== null}
             onClick={handleExplore}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-4 text-[13px] font-medium text-white/60 transition-colors duration-200 hover:bg-white/[0.06] hover:text-white/80 disabled:opacity-50"
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 px-4 text-button font-medium text-text-secondary transition-colors duration-[120ms] hover:border-border-strong hover:text-text-primary disabled:opacity-50"
           >
             {t("welcome.explore", locale)}
           </motion.button>

@@ -83,11 +83,18 @@ html[data-theme="light"],
 
   /* Intelligence */
   --lavender: #635bff;
+  /* Filled intelligence accent. --lavender is the line/accent tint and
+     stays near-white in the dark theme; --lavender-strong is the one
+     value allowed to be *used as a fill* behind intelligence chrome. */
+  --lavender-strong: #4f46e5;
   --lavender-subtle: rgba(99, 91, 255, 0.08);
   --lavender-border: rgba(99, 91, 255, 0.2);
 
-  /* Shadows */
-  --shadow-overlay: 0 16px 36px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px #e7e7e3;
+  /* Shadows — restrained. Elevation on this product is a surface step,
+     never a glow; these are only for true overlays. */
+  --elevation-raise: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elevation-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px #e7e7e3;
+  --elevation-overlay: 0 16px 36px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px #e7e7e3;
 }
 
 html.dark,
@@ -95,41 +102,65 @@ html[data-theme="dark"],
 .dark {
   color-scheme: dark;
 
+  /* ============================================================
+     NEXUS DARK SURFACE LADDER — "PILL ATELIER NOIR"
+     One ladder, five roles, no exceptions:
+
+       L0 canvas   #000000  page substrate (pure black, matte)
+       L1 chrome   #080808  sidebar, toolbars, board columns
+       L2 surface  #0f0f0f  panels, cards
+       L3 raise    #151515  rows, inputs, hover, sticky headers
+       L4 overlay  #1c1c1c  modals, dropdowns, popovers, toasts
+
+     Elevation is expressed as a surface step + a 1px hairline.
+     Shadows are reserved for true overlays (see --shadow-*).
+
+     These five values are the documented NEXUS ramp
+     (NEXUS-DESIGN-KNOWLEDGE/06-NEXUS-CONTEXT/NEXUS-TOKENS.md) and the
+     surfaces the accessibility tests measure text against. They are
+     therefore also a CI contract: --color-bg-base stays #000000 and
+     --color-accent stays #ffffff.
+     ============================================================ */
+
   /* Level 0: Canvas */
-  --background: #111110;
-  --bg-base: #111110;
+  --background: #000000;
+  --bg-base: #000000;
 
-  /* Level 1: Main surfaces (cards, panels, containers) */
-  --surface: #171716;
-  --bg-surface: #171716;
+  /* Level 1: Chrome (sidebar, toolbars, board columns) */
+  --surface: #0f0f0f;
+  --bg-surface: #0f0f0f;
+  --surface-subtle: #080808;
+  --bg-subtle: #080808;
 
-  /* Level 2: Subtle surfaces (sidebar, toolbar, secondary sections) */
-  --surface-subtle: #1c1c1a;
-  --bg-subtle: #1c1c1a;
-  --bg-surface-2: #1e1e1c;
+  /* Level 3: Raised surfaces (rows, inputs, hover, sticky headers) */
+  --bg-surface-2: #151515;
 
-  /* Level 3: Elevated surfaces (modals, dropdowns, popovers, tooltips) */
-  --surface-elevated: #20201e;
-  --bg-surface-3: #20201e;
-  --bg-elevated: #20201e;
+  /* Level 4: Overlays (modals, dropdowns, popovers, tooltips) */
+  --surface-elevated: #1c1c1c;
+  --bg-surface-3: #1c1c1c;
+  --bg-elevated: #1c1c1c;
 
   /* Depth */
   --bg-veil: rgba(255, 255, 255, 0.02);
 
-  /* Borders */
-  --border: #2a2a27;
-  --border-default: #2a2a27;
-  --border-subtle: #232321;
-  --border-strong: #383834;
-  --border-focus: #f2f2ee;
+  /* Borders — discovered, never announced.
+     White hairlines instead of solid greys: on a pure-black canvas a
+     low-alpha white edge reads as a rim light, while a mid-grey line
+     reads as a drawn stroke. 6% / 8% / 14% / 22% is the whole scale. */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-focus: rgba(255, 255, 255, 0.22);
 
-  /* Typography */
-  --text-primary: #f2f2ee;
-  --text-secondary: #b8b8b1;
-  --text-tertiary: #9c9c95;
-  --text-quaternary: #8f8f89;
-  --text-muted: #8f8f89;
-  --text-placeholder: #8f8f89;
+  /* Typography — every step clears WCAG AA on L2 #0f0f0f and on the
+     lightest surface #1c1c1c (asserted by scripts/test-landing-design.mjs). */
+  --text-primary: #f2f2f2;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #9c9c9c;
+  --text-quaternary: #868686;
+  --text-muted: #8f8f8f;
+  --text-placeholder: #8f8f8f;
 
   /* Semantic (AA on dark surfaces) */
   --success: #6fcf97;
@@ -148,15 +179,26 @@ html[data-theme="dark"],
 
   /* Intelligence */
   --lavender: #e9e4ff;
+  --lavender-strong: #b9aeff;
   --lavender-subtle: rgba(233, 228, 255, 0.1);
   --lavender-border: rgba(233, 228, 255, 0.22);
 
-  /* Shadows */
-  --shadow-overlay: 0 16px 36px -8px rgba(0, 0, 0, 0.45), 0 0 0 1px #2a2a27;
+  /* Shadows — restrained. On a pure-black canvas an opaque shadow is
+     invisible, so a dark theme earns elevation from the surface ladder;
+     shadows only seat true overlays (modal, dropdown, sheet). */
+  --elevation-raise: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-pop: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+  --elevation-overlay: 0 20px 48px -16px rgba(0, 0, 0, 0.75);
 }
 
 @theme {
-  /* ---------- Surface ramp ---------- */
+  /* ---------- Surface ramp ----------
+     Roles, not shades. Use the role, never a literal:
+       canvas  bg-base      page substrate
+       chrome  bg-subtle    sidebar, toolbar, board column, recessed well
+       panel   bg-surface   cards, panels, list containers
+       raise   bg-surface-2 rows, inputs, hover, sticky headers
+       overlay bg-surface-3 modal, dropdown, popover, toast              */
   --color-bg-base: var(--bg-base);
   --color-bg-subtle: var(--bg-subtle);
   --color-bg-surface: var(--bg-surface);
@@ -189,6 +231,7 @@ html[data-theme="dark"],
 
   /* Intelligence accent — restrained violet/blue-white */
   --color-lavender: var(--lavender);
+  --color-lavender-strong: var(--lavender-strong);
   --color-lavender-subtle: var(--lavender-subtle);
   --color-lavender-border: var(--lavender-border);
 
@@ -210,17 +253,21 @@ html[data-theme="dark"],
   --color-info-border: color-mix(in srgb, var(--info) 28%, transparent);
 
   /* ---------- ADMIN CONTROL PLANE ----------
-     The internal operator surface is a different room in the same house,
-     and it gets its own ramp on purpose.
+     The internal operator surface is a different room in the same house.
+     It is namespaced (`admin-*` utilities, used ONLY inside
+     src/components/admin and src/app/admin) because that isolation is an
+     architectural contract — but it is NOT a different design language:
+     every value below is the canonical NEXUS ladder, re-declared under
+     the admin namespace so the control plane inherits the product's
+     surfaces, hairlines and text ramp exactly.
 
-     WHY THIS EXISTS SEPARATELY FROM THE RAMP ABOVE:
-     the product identity ("Pill Atelier Noir") is pure black with a white
-     accent and a lavender intelligence tint. The control plane spec calls
-     for a slightly lifted charcoal base and a single rare accent — Volt
-     Lime — reserved for live/active/progress. Rather than repaint the
-     product (which would touch every existing screen) or fake it with
-     one-off hex values inside admin components, the admin palette is
-     declared here as its own namespaced ramp.
+     Surface roles (identical to the product ladder):
+         base   #000000   canvas + shell chrome
+         surface   L2 #0f0f0f   panels, list frames, cards
+         surface-2 L3 #151515   rows, inputs, hover, raised
+         surface-3 L4 #1c1c1c   overlays (drawer, command palette)
+     Borders are white-alpha hairlines, not solid strokes: on pure black a
+     low-alpha white edge reads as a rim light, a mid grey reads as a line.
 
      Rules, so this stays a system and not a theme:
        * `admin-*` utilities are used ONLY inside src/components/admin and
@@ -231,32 +278,35 @@ html[data-theme="dark"],
          never body text, and never decorative. */
   --color-admin-base: #000000;
   --color-admin-sidebar: #000000;
-  --color-admin-surface: #171719;
-  --color-admin-surface-2: #1f1f22;
-  --color-admin-surface-3: #28282c;
+  --color-admin-surface: #0f0f0f;
+  --color-admin-surface-2: #151515;
+  --color-admin-surface-3: #1c1c1c;
 
-  --color-admin-border: #2a2a2d;
-  --color-admin-border-strong: #3a3a3e;
+  --color-admin-border: rgba(255, 255, 255, 0.08);
+  --color-admin-border-strong: rgba(255, 255, 255, 0.14);
 
-  --color-admin-text: #ffffff;
-  --color-admin-text-2: #a1a1a6;
-  --color-admin-text-3: #8e8e94;
+  --color-admin-text: #f2f2f2;
+  --color-admin-text-2: #b0b0b0;
+  --color-admin-text-3: #868686;
 
-  --color-admin-success: #6eff8e;
-  --color-admin-success-bg: rgba(110, 255, 142, 0.1);
-  --color-admin-success-border: rgba(110, 255, 142, 0.24);
+  /* Semantic ramp = the product's desaturated set. A control plane that
+     shouts in traffic-light colours makes every state look like an
+     incident; these stay legible on black without decorating. */
+  --color-admin-success: #6fcf97;
+  --color-admin-success-bg: rgba(111, 207, 151, 0.09);
+  --color-admin-success-border: rgba(111, 207, 151, 0.2);
 
-  --color-admin-warning: #ffc857;
-  --color-admin-warning-bg: rgba(255, 200, 87, 0.1);
-  --color-admin-warning-border: rgba(255, 200, 87, 0.24);
+  --color-admin-warning: #dcb463;
+  --color-admin-warning-bg: rgba(220, 180, 99, 0.09);
+  --color-admin-warning-border: rgba(220, 180, 99, 0.2);
 
-  --color-admin-danger: #ff5a5f;
-  --color-admin-danger-bg: rgba(255, 90, 95, 0.1);
-  --color-admin-danger-border: rgba(255, 90, 95, 0.24);
+  --color-admin-danger: #e87b7b;
+  --color-admin-danger-bg: rgba(232, 123, 123, 0.09);
+  --color-admin-danger-border: rgba(232, 123, 123, 0.2);
 
-  --color-admin-info: #8aa8ff;
-  --color-admin-info-bg: rgba(138, 168, 255, 0.1);
-  --color-admin-info-border: rgba(138, 168, 255, 0.24);
+  --color-admin-info: #7f9dee;
+  --color-admin-info-bg: rgba(127, 157, 238, 0.09);
+  --color-admin-info-border: rgba(127, 157, 238, 0.2);
 
   /* Volt Lime. Rare by contract — see the note above. */
   --color-admin-accent: #d2ff4d;
@@ -295,44 +345,74 @@ html[data-theme="dark"],
   /* Display is reserved for public pages; application screens never use it. */
   --text-display: 34px;
   --text-display--line-height: 38px;
-  --text-display--letter-spacing: -0.035em;
+  --text-display--letter-spacing: -0.032em;
   --text-display--font-weight: 500;
 
+  /* TRACKING LADDER — the rule, in one place.
+     Negative tracking grows with size and relaxes back to 0 as the text
+     gets smaller. Small text is never tightened: at 11–12px, compression
+     costs more legibility than it buys in confidence.
+       display-xl  58  -0.045em
+       display-lg  40  -0.038em
+       display     34  -0.032em
+       h1          22  -0.028em
+       xl          20  -0.024em
+       h2          16  -0.018em
+       lead        15.5 -0.012em
+       h3          14  -0.012em
+       h4          13  -0.008em
+       body        13.5 -0.005em
+       small/caption 12.5 / 11.5  0
+       eyebrow     10.5  +0.10em (uppercase needs air, not compression)   */
   --text-h1: 22px;
   --text-h1--line-height: 28px;
-  --text-h1--letter-spacing: -0.025em;
+  --text-h1--letter-spacing: -0.028em;
   --text-h1--font-weight: 600;
 
   --text-h2: 16px;
   --text-h2--line-height: 24px;
-  --text-h2--letter-spacing: -0.015em;
+  --text-h2--letter-spacing: -0.018em;
   --text-h2--font-weight: 600;
 
   --text-h3: 14px;
   --text-h3--line-height: 20px;
-  --text-h3--letter-spacing: -0.01em;
+  --text-h3--letter-spacing: -0.012em;
   --text-h3--font-weight: 600;
 
   --text-body: 13.5px;
   --text-body--line-height: 21px;
+  --text-body--letter-spacing: -0.005em;
   --text-body--font-weight: 400;
 
   --text-body-medium: 13.5px;
   --text-body-medium--line-height: 21px;
+  --text-body-medium--letter-spacing: -0.005em;
   --text-body-medium--font-weight: 500;
 
   --text-small: 12.5px;
   --text-small--line-height: 18px;
+  --text-small--letter-spacing: 0em;
 
   --text-caption: 11.5px;
   --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0em;
 
   --text-button: 13px;
   --text-button--line-height: 20px;
+  --text-button--letter-spacing: -0.006em;
   --text-button--font-weight: 500;
 
   --text-mono: 11.5px;
   --text-mono--line-height: 16px;
+  --text-mono--letter-spacing: 0em;
+
+  /* METRIC — the one numeric display step inside the product.
+     Used by KPI values and any headline number that is data, not prose.
+     Always mono + tabular so digits never reflow. */
+  --text-metric: 24px;
+  --text-metric--line-height: 28px;
+  --text-metric--letter-spacing: -0.02em;
+  --text-metric--font-weight: 500;
 
   /* ---------- Typography — intermediate steps (DESIGN AUDIT) ----------
      The public surfaces jumped straight from h2 (16px) to display
@@ -359,17 +439,17 @@ html[data-theme="dark"],
 
   --text-xl: 20px;
   --text-xl--line-height: 28px;
-  --text-xl--letter-spacing: -0.02em;
+  --text-xl--letter-spacing: -0.024em;
   --text-xl--font-weight: 600;
 
   --text-display-lg: 40px;
   --text-display-lg--line-height: 1.08;
-  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--letter-spacing: -0.038em;
   --text-display-lg--font-weight: 500;
 
   --text-display-xl: 58px;
   --text-display-xl--line-height: 1.03;
-  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-xl--letter-spacing: -0.045em;
   --text-display-xl--font-weight: 500;
 
   /* ---------- Layout — responsive grid & container -----------------
@@ -430,22 +510,65 @@ html[data-theme="dark"],
   --chrome-nav-bar: 56px;
   --chrome-tab-bar: 56px;
 
-  /* ---------- Radius hierarchy — software, not marshmallows ---------- */
-  --radius-xs: 4px;
-  --radius-input: 8px;
-  --radius-nav: 8px;
-  --radius-row: 8px;
-  --radius-card: 12px;
-  --radius-dropdown: 12px;
-  --radius-panel: 14px;
-  --radius-empty: 12px;
-  --radius-auth: 16px;
-  --radius-pricing: 16px;
+  /* ---------- Spacing — 4px foundation, few deliberate stops ----------
+     Allowed steps inside product surfaces:
+       0 · 2 · 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64
+     Half-stops (10 / 14 / 18 / 22px) are not part of the system: they
+     blur panel rhythm and make two screens that should match drift apart.
+
+     Layout constants are named, not repeated. The shell geometry is a
+     product decision (248px sidebar, 56px topbar) and must stay
+     addressable from one place. */
+  --layout-sidebar-w: 248px;
+  --layout-sidebar-w-mobile: 288px;
+  --layout-topbar-h: 56px;
+
+  /* Control heights — one ladder for every interactive control. */
+  --control-h-xs: 24px;
+  --control-h-sm: 28px;
+  --control-h: 32px;
+  --control-h-lg: 40px;
+  --control-h-touch: 44px;
+
+  /* Row heights — dense product lists. */
+  --row-h-sm: 32px;
+  --row-h: 40px;
+  --row-h-lg: 44px;
+
+  /* Panel padding. */
+  --panel-pad: 16px;
+  --panel-pad-lg: 20px;
+
+  /* ---------- Radius — 4 / 8 / 12 / 16 / pill only ----------
+     Five values, each with one job. The legacy usage names are kept as
+     aliases so existing class names stay valid, but they all resolve to
+     the band — there is no 14px radius and no inline 5/6/7/9px one. */
+  --radius-xs: 4px; /* micro: chips, kbd keys, checkboxes           */
+  --radius-control: 8px; /* every control: button, input, nav item, row  */
+  --radius-surface: 12px; /* panels, cards, dropdowns, empty states       */
+  --radius-overlay: 16px; /* modals, sheets, auth and pricing cards       */
   --radius-pill: 9999px;
 
-  /* ---------- Elevation — contrast first, shadow last ---------- */
-  --shadow-dropdown: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
-  --shadow-overlay: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
+  /* Aliases (usage-named, pre-existing call sites). */
+  --radius-input: var(--radius-control);
+  --radius-nav: var(--radius-control);
+  --radius-row: var(--radius-control);
+  --radius-card: var(--radius-surface);
+  --radius-dropdown: var(--radius-surface);
+  --radius-panel: var(--radius-surface);
+  --radius-empty: var(--radius-surface);
+  --radius-auth: var(--radius-overlay);
+  --radius-pricing: var(--radius-overlay);
+
+  /* ---------- Elevation — surface step first, shadow last ----------
+     Shadows are only for elements that genuinely float above the page,
+     and the dark theme keeps them shallow on purpose: on a pure-black
+     canvas a shadow is nearly invisible, so elevation has to come from
+     the surface ladder. Values live in the theme blocks above. */
+  --shadow-raise: var(--elevation-raise);
+  --shadow-pop: var(--elevation-pop);
+  --shadow-dropdown: var(--elevation-pop);
+  --shadow-overlay: var(--elevation-overlay);
   --shadow-auth: 0 20px 50px -20px rgba(0, 0, 0, 0.9);
 
   /* ---------- Motion — NEXUS Motion Language ---------- */
@@ -458,7 +581,8 @@ html[data-theme="dark"],
   --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
   --ease-spring-soft: cubic-bezier(0.34, 1.26, 0.64, 1);
 
-  /* Duration scale */
+  /* Duration scale — five stops, nothing in between. */
+  --duration-instant: 90ms;
   --duration-micro: 120ms;
   --duration-micro-long: 160ms;
   --duration-small: 200ms;
@@ -997,6 +1121,86 @@ input[type="range"] {
   letter-spacing: 0;
 }
 
+/* ============================================================
+   TECHNICAL MONOSPACE LAYER
+   Monospace is a layer with a job, not a style. Three steps, one
+   purpose each — anything that is not technical data stays sans.
+
+     .mono-meta   timestamps, counts, durations, statuses, IDs in a row
+     .mono-token  machine tokens: codes, keys, paths, query terms
+     .metric      the one numeric display step (KPI values)
+
+   Never used for eyebrows, headings, labels or prose.
+   ============================================================ */
+
+@utility mono-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+@utility mono-token {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@utility metric {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+/* ============================================================
+   SURFACE RECIPES
+   Two composites cover every raised and floating surface in the
+   product, so a panel in Settings and a panel in the showcase are
+   the same object:
+     .surface-raise    L3 — rows, inputs, hover, sticky headers
+     .surface-overlay  L4 — modal, dropdown, popover, command palette
+   ============================================================ */
+
+@utility surface-raise {
+  background-color: var(--color-bg-surface-2);
+  border: 1px solid var(--color-border-subtle);
+}
+
+@utility surface-overlay {
+  background-color: var(--color-bg-surface-3);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-overlay);
+}
+
+/* ============================================================
+   REVEAL — the only entrance motion the product uses.
+   Opacity + 4px rise, 240ms, gated by prefers-reduced-motion (below).
+   Apply to a page's first paint or a board, not to every card.
+   ============================================================ */
+
+@utility reveal {
+  opacity: 0;
+  animation: reveal-in var(--duration-small-long) var(--ease-nexus) both;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Eyebrow / label: the quiet uppercase sans caption used across NEXUS.
    Labels are ordinary text — Instrument Sans semibold, never mono. */
 @utility eyebrow {
@@ -1086,8 +1290,10 @@ input[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   .skeleton,
   .signal-pulse,
-  .page-enter {
+  .page-enter,
+  .reveal {
     animation: none;
+    opacity: 1;
   }
 }
 
@@ -3217,10 +3423,13 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
    top sheen, rows with an active rail. Motion is micro only.
    ============================================================ */
 
+/* One blur budget for the whole product: overlay scrims, 2px, never
+   combined with a second blur inside the overlay (that was the Command
+   Center audit issue — scrim blur + sticky-header blur). */
 .command-backdrop {
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   animation: fade-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -3260,15 +3469,10 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
   animation: fade-out 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* The header rim is a hairline, not a gradient sheen. */
 .command-sheen {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--border-strong) 32%,
-    var(--border-strong) 68%,
-    transparent
-  );
-  opacity: 0.5;
+  background: var(--border-subtle);
+  opacity: 1;
 }
 
 .command-row {
@@ -3283,12 +3487,7 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 }
 
 .command-rail {
-  background: linear-gradient(
-    180deg,
-    transparent,
-    var(--lavender),
-    transparent
-  );
+  background: var(--lavender);
 }
 
 /* Slim, quiet scrollbar for the results list */
@@ -4170,95 +4369,58 @@ body:has([data-dashboard-root="true"])::before {
   background-image: none;
 }
 
-html[data-theme="light"] [data-dashboard-root="true"],
+/* The product dashboard follows the theme; the control plane does not.
+   `.admin-root` is excluded here ON PURPOSE: without the exclusion this
+   rule (1 element + 2 attributes = higher specificity) beat
+   `[data-dashboard-root="true"].admin-root` and painted the admin a light
+   grey — the historical "white text on light canvas" bug. Fixing the
+   cascade at the source is what lets the two-zone hack below disappear. */
+html[data-theme="light"] [data-dashboard-root="true"]:not(.admin-root),
 html[data-theme="light"] [data-dashboard-chrome] {
   background-color: var(--color-bg-base);
 }
 
 
 /* ============================================================
-   ADMIN — TWO-ZONE SCOPING (contrast fix)
+   ADMIN — ONE DARK ROOM
    ------------------------------------------------------------
-   ROOT CAUSE of the unreadable Security page: the dashboard
-   background rule above paints [data-dashboard-root] with
-   --color-bg-base, which is #f7f7f5 in the (default) light theme,
-   while every admin component used the dark-only admin ramp
-   (near-white text). Result: near-white text on a light canvas.
+   Replaces the former "two-zone scoping (contrast fix)".
 
-   Fix: the admin ramp is now scoped instead of global.
-     * Chrome (sidebar, top bar, drawer, command menu): dark ramp.
-     * Content canvas (.admin-canvas = <main>): light ramp, so page
-       titles/descriptions are #111 / #666.
-     * Cards inside the canvas (any element carrying the
-       bg-admin-surface utility, or .admin-dark): dark ramp again,
-       so dark cards keep white titles and #a1a1a6 secondary text.
-   Components keep using the same admin-* utilities; only the
-   custom-property values change per zone.
+   WHAT WAS WRONG: the fix treated a symptom. The admin ramp declared
+   dark-only values, the dashboard rule above painted the root with
+   --color-bg-base (#f7f7f5 in the default light theme), and because that
+   selector out-specified `.admin-root`, the content area had to be
+   re-declared as a LIGHT ramp and dark panels re-darkened per element
+   (`[class~="bg-admin-surface"]`). The control plane ended up as a light
+   canvas holding dark cards inside a dark chrome — three surfaces in one
+   room, and the opposite of the product's hierarchy.
+
+   WHAT REPLACES IT: the admin ramp now carries the canonical ladder, the
+   light-theme dashboard rule excludes `.admin-root` (see above), and the
+   whole surface is declared once, below. Chrome, canvas, panels and
+   overlays are the same five-step ladder the product uses; elevation is a
+   surface step plus a hairline, never a different colour.
+
+   Consequence for components: `admin-*` utilities keep working unchanged
+   and now resolve to canonical values in EVERY zone — no per-element
+   re-darkening, no `.admin-dark` escape hatch. Value-only change.
    ============================================================ */
 [data-dashboard-root="true"].admin-root {
   background-color: var(--color-admin-base);
+  color: var(--color-admin-text);
 }
 
 .admin-canvas {
-  --color-admin-base: #f7f7f5;
-  --color-admin-surface: #ffffff;
-  --color-admin-surface-2: #efefec;
-  --color-admin-surface-3: #e6e6e2;
-  --color-admin-border: #e2e2de;
-  --color-admin-border-strong: #c9c9c3;
-  --color-admin-text: #111111;
-  --color-admin-text-2: #666666;
-  --color-admin-text-3: #6b6b6b;
-  --color-admin-success: #1f7a3d;
-  --color-admin-success-bg: rgba(31, 122, 61, 0.08);
-  --color-admin-success-border: rgba(31, 122, 61, 0.28);
-  --color-admin-warning: #8a5a00;
-  --color-admin-warning-bg: rgba(138, 90, 0, 0.08);
-  --color-admin-warning-border: rgba(138, 90, 0, 0.28);
-  --color-admin-danger: #c0262d;
-  --color-admin-danger-bg: rgba(192, 38, 45, 0.06);
-  --color-admin-danger-border: rgba(192, 38, 45, 0.28);
-  --color-admin-info: #2f5bd3;
-  --color-admin-info-bg: rgba(47, 91, 211, 0.07);
-  --color-admin-info-border: rgba(47, 91, 211, 0.26);
-  /* Volt Lime is unreadable on light; the canvas uses the deep
-     NEXUS green for focus rings and active markers. */
-  --color-admin-accent: #3f7a00;
-  --color-admin-accent-fg: #ffffff;
-  --color-admin-accent-bg: rgba(63, 122, 0, 0.1);
-  --color-admin-accent-border: rgba(63, 122, 0, 0.3);
-  background-color: #f7f7f5;
-  color: #111111;
+  background-color: var(--color-admin-base);
+  color: var(--color-admin-text);
 }
 
-.admin-canvas .admin-dark,
-.admin-canvas [class~="bg-admin-surface"] {
-  --color-admin-base: #0f0f10;
-  --color-admin-surface: #171719;
-  --color-admin-surface-2: #1f1f22;
-  --color-admin-surface-3: #28282c;
-  --color-admin-border: #2a2a2d;
-  --color-admin-border-strong: #3a3a3e;
-  --color-admin-text: #ffffff;
-  --color-admin-text-2: #a1a1a6;
-  --color-admin-text-3: #8e8e94;
-  --color-admin-success: #6eff8e;
-  --color-admin-success-bg: rgba(110, 255, 142, 0.1);
-  --color-admin-success-border: rgba(110, 255, 142, 0.24);
-  --color-admin-warning: #ffc857;
-  --color-admin-warning-bg: rgba(255, 200, 87, 0.1);
-  --color-admin-warning-border: rgba(255, 200, 87, 0.24);
-  --color-admin-danger: #ff7a7e;
-  --color-admin-danger-bg: rgba(255, 90, 95, 0.1);
-  --color-admin-danger-border: rgba(255, 90, 95, 0.28);
-  --color-admin-info: #8aa8ff;
-  --color-admin-info-bg: rgba(138, 168, 255, 0.1);
-  --color-admin-info-border: rgba(138, 168, 255, 0.24);
-  --color-admin-accent: #d2ff4d;
-  --color-admin-accent-fg: #000000;
-  --color-admin-accent-bg: rgba(210, 255, 77, 0.12);
-  --color-admin-accent-border: rgba(210, 255, 77, 0.28);
-  color: #ffffff;
+/* Kept as a no-op compatibility hook: older markup carried `.admin-dark`
+   to re-darken a subtree. It now inherits the same (already dark) ramp,
+   so the class is harmless and nothing depends on it. */
+.admin-canvas .admin-dark {
+  background-color: var(--color-admin-base);
+  color: var(--color-admin-text);
 }
 
 /* ============================================================

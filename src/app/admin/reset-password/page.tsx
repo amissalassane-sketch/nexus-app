@@ -3,32 +3,43 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { AdminIcon } from "@/components/admin/admin-icons";
 
 // ============================================================
 // NEXUS ADMIN — RESET PASSWORD
 // ============================================================
+// The second half of recovery: the operator arrives here from the
+// emailed link and sets a new password. Same overlay card, same field
+// recipe, same primary action as sign-in and recovery.
+//
+// Errors are stated once, next to the fields they belong to, and the
+// submit button says what it is doing rather than spinning silently.
+// ============================================================
+
+const FIELD =
+  "h-10 w-full rounded-control border border-admin-border bg-admin-surface-2 px-3 text-body text-admin-text placeholder:text-admin-text-3 transition-colors duration-[120ms] hover:border-admin-border-strong focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent disabled:opacity-50";
 
 export default function AdminResetPasswordPage() {
   const router = useRouter();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
     if (loading) return;
 
     if (password.length < 8) {
-      setError("Administrator password must be at least 8 characters.");
+      setError("Administrator passwords must be at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Password confirmation does not match.");
+      setError("The two passwords do not match.");
       return;
     }
 
@@ -48,34 +59,33 @@ export default function AdminResetPasswordPage() {
       } | null;
 
       if (!res.ok || !payload?.ok) {
-        setError(payload?.error ?? "Could not update administrator credentials.");
+        setError(payload?.error ?? "Could not update the administrator password.");
         return;
       }
 
       router.replace("/admin/login?notice=password_updated");
     } catch {
-      setError("Network failure. Could not update credentials.");
+      setError("Network failure. The credentials were not updated.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
-      <div className="w-full max-w-[420px] rounded-[12px] border border-admin-border bg-admin-surface p-6 shadow-2xl sm:p-8">
+    <div className="admin-root flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
+      <div className="w-full max-w-[420px] rounded-overlay border border-admin-border bg-admin-surface p-6 sm:p-8">
+        {/* Brand / Title Header — identical to the sign-in card. */}
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg font-mono text-[12px] font-semibold text-admin-accent"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-admin-accent-border bg-admin-accent-bg mono-token font-semibold text-admin-accent"
           >
             N
           </span>
-          <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-admin-text">
-              Credentials
-            </h1>
-            <p className="font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-admin-text-3">
-              Set new operator password
+          <div className="min-w-0">
+            <h1 className="text-h3 text-admin-text">Set a new password</h1>
+            <p className="mt-0.5 mono-token text-admin-text-3">
+              Operator credentials
             </p>
           </div>
         </div>
@@ -83,48 +93,74 @@ export default function AdminResetPasswordPage() {
         <div className="my-5 h-px w-full bg-admin-border" />
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          <p className="text-small text-admin-text-2">
+            This changes the password for the operator account you are signed
+            in as. Signing in elsewhere is not affected until the session
+            there expires.
+          </p>
+
           <div className="space-y-1.5">
             <label
               htmlFor="new-admin-password"
-              className="block font-mono text-[11px] uppercase tracking-[0.06em] text-admin-text-2"
+              className="block text-small font-medium text-admin-text-2"
             >
-              New administrator password
+              New password
             </label>
-            <input
-              id="new-admin-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              disabled={loading}
-              required
-              className="h-10 w-full rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 text-[13px] text-admin-text placeholder:text-admin-text-3 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent disabled:opacity-50"
-            />
+            <div className="relative">
+              <input
+                id="new-admin-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                autoComplete="new-password"
+                disabled={loading}
+                required
+                className={`${FIELD} pl-3 pr-10`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-control text-admin-text-3 transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent disabled:opacity-50"
+              >
+                {showPassword ? (
+                  <NexusIcon icon={IconEyeOff} />
+                ) : (
+                  <NexusIcon icon={IconEye} />
+                )}
+              </button>
+            </div>
+            <p className="text-caption text-admin-text-3">
+              Minimum 8 characters.
+            </p>
           </div>
 
           <div className="space-y-1.5">
             <label
               htmlFor="confirm-admin-password"
-              className="block font-mono text-[11px] uppercase tracking-[0.06em] text-admin-text-2"
+              className="block text-small font-medium text-admin-text-2"
             >
               Confirm new password
             </label>
             <input
               id="confirm-admin-password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••••••"
+              autoComplete="new-password"
               disabled={loading}
               required
-              className="h-10 w-full rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 text-[13px] text-admin-text placeholder:text-admin-text-3 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent disabled:opacity-50"
+              className={FIELD}
             />
           </div>
 
           {error ? (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-[6px] border border-admin-danger/40 bg-admin-danger-bg/40 px-3 py-2 text-[12px] text-admin-danger"
+              className="flex items-start gap-2 rounded-surface border border-admin-danger-border bg-admin-danger-bg px-3 py-2 text-small text-admin-danger"
             >
               <span className="mt-0.5 shrink-0">
                 <AdminIcon name="alert" size="action" />
@@ -136,20 +172,20 @@ export default function AdminResetPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-admin-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 text-[13px]"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-control bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-[120ms] hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />
             ) : null}
-            {loading ? "Updating credentials…" : "Update Credentials"}
+            {loading ? "Updating…" : "Update password"}
           </button>
 
-          <div className="text-center pt-2">
+          <div className="pt-1 text-center">
             <Link
               href="/admin/login"
-              className="font-mono text-[11px] text-admin-text-3 hover:text-admin-text transition-colors"
+              className="text-small text-admin-text-3 transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
             >
-              ← Cancel and return
+              Cancel and return to sign-in
             </Link>
           </div>
         </form>

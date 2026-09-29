@@ -67,7 +67,7 @@ export function ActiveProjectsPanel({
             action={
               <Link
                 href="/projects?create=1"
-                className="inline-flex h-9 items-center rounded-input bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
+                className="inline-flex h-8 items-center rounded-control bg-accent px-3 text-button font-medium text-accent-fg transition-colors hover:bg-accent-hover"
               >
                 Create a project
               </Link>
@@ -77,7 +77,7 @@ export function ActiveProjectsPanel({
       ) : (
         <div>
           {/* Column heads — desktop only */}
-          <div className="hidden items-center gap-4 border-b border-border-subtle px-4 py-2 text-[10.5px] uppercase tracking-wider text-text-quaternary sm:grid sm:grid-cols-[minmax(0,2.4fr)_92px_minmax(120px,1fr)_120px_84px]">
+          <div className="eyebrow hidden items-center gap-4 border-b border-border-subtle px-3 py-2 text-text-quaternary sm:grid sm:grid-cols-[minmax(0,2.4fr)_92px_minmax(120px,1fr)_120px_84px]">
             <span>Project</span>
             <span>Health</span>
             <span>Progress</span>
@@ -99,13 +99,13 @@ export function ActiveProjectsPanel({
                 <li key={forecast.projectId}>
                   <Link
                     href="/projects"
-                    className="grid grid-cols-1 gap-x-4 gap-y-2 border-b border-border-subtle px-4 py-3 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02] sm:grid-cols-[minmax(0,2.4fr)_92px_minmax(120px,1fr)_120px_84px] sm:items-center"
+                    className="grid grid-cols-1 gap-x-4 gap-y-2 border-b border-border-subtle px-3 py-2.5 transition-colors duration-[120ms] ease-nexus last:border-b-0 hover:bg-bg-surface-2 sm:grid-cols-[minmax(0,2.4fr)_92px_minmax(120px,1fr)_120px_84px] sm:items-center"
                   >
                     {/* Name + engine note */}
                     <span className="flex min-w-0 items-start gap-3">
                       <span
                         aria-hidden="true"
-                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
+                        className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-xs border border-border-subtle bg-bg-surface-2 text-text-tertiary"
                       >
                         <NexusIcon icon={IconLayoutKanban} />
                       </span>

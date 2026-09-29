@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 import { formatDateTime, formatRelativeTime, NOT_AVAILABLE } from "@/lib/admin/format";
 
 // ============================================================
-// NEXUS ADMIN — SHARED DIRECTORY PRESENTATION (PR 2)
+// NEXUS ADMIN — SHARED DIRECTORY PRESENTATION
 // ============================================================
 // The three atoms the directory screens repeat constantly:
 //
@@ -14,11 +14,11 @@ import { formatDateTime, formatRelativeTime, NOT_AVAILABLE } from "@/lib/admin/f
 //                    that invents a label for something it cannot name.
 //   AdminTimeCell  — <time> element, relative on the surface, absolute
 //                    UTC in the title; null renders the honest marker.
-//   AdminCountCell — a measured integer, or a dimmed 0 that is visibly
-//                    a count, never a placeholder.
+//   AdminIdValue   — a machine identifier, mono, full value in the title.
 //
 // Mono is applied to ids, usernames, slugs and timestamps — the same rule
-// the Overview follows for technical values.
+// the Overview follows for technical values. Geometry follows the control
+// band (avatar radius 8, matching every other control).
 // ============================================================
 
 /** Initials for the subject's tile, derived from display_name when present.
@@ -69,18 +69,18 @@ export function AdminSubject({
       <span
         aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-[7px] border border-admin-border bg-admin-surface-2 font-mono text-[10px] font-semibold uppercase tracking-[0.02em] text-admin-text-2",
-          size === "row" ? "h-6 w-6" : "h-8 w-8 text-[12px]"
+          "flex shrink-0 items-center justify-center rounded-control border border-admin-border bg-admin-surface-2 font-mono font-semibold uppercase text-admin-text-2",
+          size === "row" ? "h-6 w-6 mono-token" : "h-8 w-8 text-small"
         )}
       >
         {initials}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium leading-[18px] text-admin-text">
+        <span className="block truncate text-body-medium text-admin-text">
           {primary}
         </span>
         {secondary ? (
-          <span className="block truncate font-mono text-[11px] leading-[15px] text-admin-text-3">
+          <span className="block truncate mono-meta text-admin-text-3">
             {secondary}
           </span>
         ) : null}
@@ -92,7 +92,7 @@ export function AdminSubject({
     return (
       <Link
         href={href}
-        className="min-w-0 no-underline transition-colors duration-150 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+        className="min-w-0 no-underline transition-colors duration-[120ms] hover:text-admin-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
       >
         {label}
       </Link>
@@ -120,7 +120,9 @@ export function AdminTimeCell({
 }) {
   if (!iso) {
     return (
-      <span className={cn("text-admin-text-3", className)}>{NOT_AVAILABLE}</span>
+      <span className={cn("mono-meta text-admin-text-3", className)}>
+        {NOT_AVAILABLE}
+      </span>
     );
   }
   const absolute = formatDateTime(iso);
@@ -128,7 +130,7 @@ export function AdminTimeCell({
     <time
       dateTime={iso}
       title={absolute}
-      className={cn("font-mono text-[12px] leading-[16px] text-admin-text-2", className)}
+      className={cn("mono-meta text-admin-text-2", className)}
     >
       {relative ? formatRelativeTime(iso) : absolute}
     </time>
@@ -148,10 +150,7 @@ export function AdminIdValue({
 }) {
   return (
     <span
-      className={cn(
-        "truncate font-mono text-[12px] leading-[16px] text-admin-text-2",
-        className
-      )}
+      className={cn("truncate mono-meta text-admin-text-2", className)}
       title={`${label}: ${value}`}
     >
       {value}

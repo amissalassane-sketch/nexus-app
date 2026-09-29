@@ -119,3 +119,21 @@ export function AdminPriorityBadge({ priority }: { priority: string }) {
   const meta = PRIORITY[priority] ?? { label: priority, tone: "neutral" as const };
   return <AdminStatusPill tone={meta.tone}>{meta.label}</AdminStatusPill>;
 }
+
+/** admin_audit_log.outcome — the RESULT column of the audit trail.
+ *  "Denied" is the interesting one operationally (someone tried and the
+ *  database said no), so it is the only warning; "success" is the quiet
+ *  default and stays monochrome apart from its dot. */
+const AUDIT_OUTCOME: Record<string, { label: string; tone: AdminTone }> = {
+  success: { label: "Success", tone: "neutral" },
+  denied: { label: "Denied", tone: "warning" },
+  failed: { label: "Failed", tone: "danger" },
+};
+
+export function AdminAuditOutcomeBadge({ outcome }: { outcome: string }) {
+  const meta = AUDIT_OUTCOME[outcome] ?? {
+    label: outcome.replace(/_/g, " "),
+    tone: "neutral" as const,
+  };
+  return <AdminStatusPill tone={meta.tone}>{meta.label}</AdminStatusPill>;
+}

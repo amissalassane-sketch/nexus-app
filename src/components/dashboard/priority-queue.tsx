@@ -53,11 +53,11 @@ export function PriorityQueuePanel({ items }: { items: PrioritizedTask[] }) {
             >
               <Link
                 href={entry.href}
-                className="flex items-start gap-3 px-4 py-3 transition-colors duration-150 ease-nexus hover:bg-white/[0.02]"
+                className="flex min-h-11 items-start gap-3 px-3 py-2.5 transition-colors duration-[120ms] ease-nexus hover:bg-bg-surface-2"
               >
                 <span
                   aria-hidden="true"
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-pill border border-border-subtle bg-bg-surface font-mono text-[11px] text-text-secondary"
+                  className="mono-meta mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-xs border border-border-subtle bg-bg-surface-2 text-text-tertiary"
                 >
                   {index + 1}
                 </span>
@@ -69,7 +69,7 @@ export function PriorityQueuePanel({ items }: { items: PrioritizedTask[] }) {
                     {entry.reasons.map((reason) => (
                       <span
                         key={reason}
-                        className="rounded-pill border border-border-subtle bg-bg-surface px-2 py-0.5 text-[10.5px] leading-[1.5] text-text-tertiary"
+                        className="rounded-xs border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 text-caption text-text-tertiary"
                       >
                         {reason}
                       </span>
@@ -77,7 +77,7 @@ export function PriorityQueuePanel({ items }: { items: PrioritizedTask[] }) {
                   </span>
                 </span>
                 <span
-                  className="shrink-0 font-mono text-mono tabular-nums text-text-tertiary"
+                  className="mono-meta shrink-0 text-text-tertiary"
                   title={`Priority score: ${entry.score}/100`}
                 >
                   {entry.score}

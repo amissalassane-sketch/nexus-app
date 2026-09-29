@@ -68,16 +68,16 @@ export function ActivityList({ activity }: { activity: AdminActivityResult }) {
           className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
         >
           <div className="min-w-0">
-            <p className="truncate text-[13px] leading-[18px] text-admin-text">
+            <p className="truncate text-body text-admin-text">
               {labelFor(entry)}
               {entry.subject ? (
                 <span className="text-admin-text-2">
                   {" · "}
-                  <span className="font-mono text-[12px]">{entry.subject}</span>
+                  <span className="mono-meta">{entry.subject}</span>
                 </span>
               ) : null}
             </p>
-            <p className="mt-0.5 truncate font-mono text-[11px] leading-[16px] text-admin-text-3">
+            <p className="mt-0.5 truncate mono-meta text-admin-text-3">
               {entry.source}
             </p>
           </div>
@@ -85,7 +85,7 @@ export function ActivityList({ activity }: { activity: AdminActivityResult }) {
           <time
             dateTime={entry.occurred_at}
             title={formatDateTime(entry.occurred_at)}
-            className="shrink-0 font-mono text-[11.5px] leading-[16px] text-admin-text-2"
+            className="shrink-0 mono-meta text-admin-text-2"
           >
             {formatRelativeTime(entry.occurred_at)}
           </time>
@@ -107,7 +107,7 @@ export function ActivityCount({
 }) {
   if (activity.state === "unavailable") {
     return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-danger">
+      <span className="inline-flex items-center gap-1.5 mono-meta text-admin-danger">
         <AdminIcon name="alert" size="action" />
         Read failed
       </span>
@@ -116,7 +116,7 @@ export function ActivityCount({
 
   if (activity.entries.length === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-text-3">
+      <span className="inline-flex items-center gap-1.5 mono-meta text-admin-text-3">
         <AdminIcon name="activity" size="action" />
         {recordedEvents ? `${recordedEvents} events recorded` : "No events"}
       </span>
@@ -124,7 +124,7 @@ export function ActivityCount({
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] leading-[16px] text-admin-text-3">
+    <span className="inline-flex items-center gap-1.5 mono-meta text-admin-text-3">
       <AdminIcon name="activity" size="action" />
       {activity.entries.length} shown
       {recordedEvents ? ` · ${recordedEvents} recorded` : ""}

@@ -81,12 +81,12 @@ const STATUS_OPTIONS = [
 function UsageCell({ used, limit }: { used: number; limit: number }) {
   const over = used > limit;
   return (
-    <span className="font-mono text-[12.5px] tabular-nums text-admin-text">
+    <span className="mono-meta text-admin-text">
       {formatCount(used)}
       <span className="text-admin-text-3"> / {formatCount(limit)}</span>
       {over ? (
         <span
-          className="ml-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-admin-warning"
+          className="ml-1.5 mono-token text-admin-warning"
           title="Usage exceeds the effective plan's enforced limit. The write guards stop new rows; existing rows stay readable."
         >
           over
@@ -113,20 +113,20 @@ export default async function AdminSubscriptionsPage({
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="sr-only">NEXUS Admin — Subscriptions</h1>
-          <p className="max-w-[76ch] text-[13px] leading-[20px] text-admin-text-2">
+          <p className="max-w-[76ch] text-body text-admin-text-2">
             Every workspace&apos;s effective plan, read live from the
             platform database. A workspace without a subscription row is
             on the documented default FREE plan — shown as{" "}
-            <span className="font-mono text-admin-text">implicit free</span>,
+            <span className="mono-meta text-admin-text">implicit free</span>,
             never as a subscription that was read.
           </p>
-          <p className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] leading-[18px] text-admin-text-3">
+          <p className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-small text-admin-text-3">
             <span>
               Workspaces:{" "}
               {result.state === "unavailable" ? (
-                <span className="font-mono text-admin-danger">read failed</span>
+                <span className="mono-meta text-admin-danger">read failed</span>
               ) : (
-                <span className="font-mono text-admin-text">
+                <span className="mono-meta text-admin-text">
                   {formatCount(result.payload.total)}
                 </span>
               )}
@@ -134,7 +134,7 @@ export default async function AdminSubscriptionsPage({
             <span aria-hidden="true">·</span>
             <Link
               href="/admin/workspaces"
-              className="inline-flex items-center gap-1 text-admin-text-2 no-underline transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+              className="inline-flex items-center gap-1 text-admin-text-2 no-underline transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
             >
               Workspaces
               <AdminIcon name="chevronRight" size="action" />
@@ -145,7 +145,7 @@ export default async function AdminSubscriptionsPage({
           {result.state !== "unavailable" ? (
             <AdminListSummary generatedAt={result.payload.generated_at} />
           ) : (
-            <span className="font-mono text-[11px] text-admin-danger">Read failed</span>
+            <span className="mono-meta text-admin-danger">Read failed</span>
           )}
           <AdminRefreshButton />
         </div>
@@ -237,7 +237,7 @@ export default async function AdminSubscriptionsPage({
               action={
                 <Link
                   href={PATHNAME}
-                  className="inline-flex h-8 items-center rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 text-[12.5px] text-admin-text-2 no-underline transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+                  className="inline-flex h-8 items-center rounded-control border border-admin-border bg-admin-surface-2 px-3 text-small text-admin-text-2 no-underline transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
                 >
                   Back to the first page
                 </Link>
@@ -290,7 +290,7 @@ export default async function AdminSubscriptionsPage({
                         <span className="flex flex-wrap items-center gap-1.5">
                           <AdminPlanBadge plan={row.plan} />
                           {row.has_subscription ? null : (
-                            <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+                            <span className="mono-token text-admin-text-3">
                               {row.subscription_status ? "FREE effective" : "implicit"}
                             </span>
                           )}
@@ -303,7 +303,7 @@ export default async function AdminSubscriptionsPage({
                           />
                           {row.previous_rows > 0 ? (
                             <span
-                              className="font-mono text-[10px] text-admin-text-3"
+                              className="mono-token text-admin-text-3"
                               title="Non-active subscription rows kept as history for this workspace."
                             >
                               +{row.previous_rows} prior
@@ -314,7 +314,7 @@ export default async function AdminSubscriptionsPage({
                       <AdminTd>
                         <span className="flex flex-col gap-1">
                           <span className="flex items-center gap-1.5">
-                            <span className="w-[52px] shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+                            <span className="w-13 shrink-0 mono-token text-admin-text-3">
                               Proj
                             </span>
                             <UsageCell
@@ -323,7 +323,7 @@ export default async function AdminSubscriptionsPage({
                             />
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <span className="w-[52px] shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+                            <span className="w-13 shrink-0 mono-token text-admin-text-3">
                               Tasks
                             </span>
                             <UsageCell
@@ -332,7 +332,7 @@ export default async function AdminSubscriptionsPage({
                             />
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <span className="w-[52px] shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+                            <span className="w-13 shrink-0 mono-token text-admin-text-3">
                               Goals
                             </span>
                             <UsageCell
@@ -347,11 +347,11 @@ export default async function AdminSubscriptionsPage({
                       </AdminTd>
                       <AdminTd className="max-w-[220px]">
                         {row.owner.email ? (
-                          <span className="block truncate font-mono text-[12px] leading-[16px] text-admin-text-2">
+                          <span className="block truncate mono-meta text-admin-text-2">
                             {row.owner.email}
                           </span>
                         ) : row.owner.display_name ? (
-                          <span className="block truncate text-[12.5px] text-admin-text-2">
+                          <span className="block truncate text-small text-admin-text-2">
                             {row.owner.display_name}
                           </span>
                         ) : (
@@ -359,7 +359,7 @@ export default async function AdminSubscriptionsPage({
                         )}
                         {row.has_active_owner ? null : (
                           <span
-                            className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.06em] text-admin-warning"
+                            className="mt-0.5 block mono-token text-admin-warning"
                             title="No workspace_members row with role owner and status active. Nobody can currently administer this workspace."
                           >
                             no active owner
@@ -385,16 +385,16 @@ export default async function AdminSubscriptionsPage({
       )}
 
       {/* ------------------------------------------------- footnotes */}
-      <p className="max-w-[92ch] text-[11.5px] leading-[16px] text-admin-text-3">
+      <p className="max-w-[92ch] text-caption text-admin-text-3">
         Definitions, stated so numbers cannot be over-read:{" "}
-        <span className="font-mono">Plan</span> is the effective plan from
-        <span className="font-mono"> get_workspace_plan()</span>, identical
+        <span className="mono-meta">Plan</span> is the effective plan from
+        <span className="mono-meta"> get_workspace_plan()</span>, identical
         to the write guards and the workspace directory. A lapsed paid row
         displays expired with FREE effective plan and FREE limits. No sweep
         is needed. Cancelled and past-due records remain visible but grant
         only FREE capacity. The live record is the active row, otherwise the
         most recently updated row. Usage is measured against those same limits.
-        <span className="font-mono">Tasks</span> counts active tasks
+        <span className="mono-meta">Tasks</span> counts active tasks
         only (neither done nor cancelled). No money is shown anywhere on
         this screen: no payment provider is connected, so there is no
         revenue to report and none is estimated.

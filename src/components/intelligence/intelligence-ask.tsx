@@ -844,7 +844,7 @@ export function IntelligenceAsk({
                 aria-expanded={toolsOpen}
                 className="flex w-full items-center justify-between gap-3 text-left"
               >
-                <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-quaternary select-none">
+                <span className="mono-token text-text-quaternary select-none">
                   Tools consulted · {currentResponse.toolCalls.length}
                 </span>
                 <NexusIcon

@@ -14,11 +14,16 @@ import { AdminIcon } from "@/components/admin/admin-icons";
 //
 // Properties:
 //   - Zero public sign-up references or links.
-//   - Strict dark institutional internal tool appearance.
+//   - Same overlay card, field recipe and primary action as the product's
+//     authentication surfaces: an operator signing in should recognise the
+//     product they are entering, not a different application.
 //   - Submits email + password via Supabase Auth server session.
 //   - Immediate verification of platform admin context post-auth.
 //   - Clear, non-verbose failure states without leaking internals.
 // ============================================================
+
+const FIELD =
+  "h-10 w-full rounded-control border border-admin-border bg-admin-surface-2 px-3 text-body text-admin-text placeholder:text-admin-text-3 transition-colors duration-[120ms] hover:border-admin-border-strong focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent disabled:opacity-50";
 
 export function AdminLoginForm({ initialError = "" }: { initialError?: string }) {
   const router = useRouter();
@@ -83,21 +88,19 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
   );
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
-      <div className="w-full max-w-[420px] rounded-[12px] border border-admin-border bg-admin-surface p-6 shadow-2xl sm:p-8">
+    <div className="admin-root flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
+      <div className="w-full max-w-[420px] rounded-overlay border border-admin-border bg-admin-surface p-6 sm:p-8">
         {/* Brand / Title Header */}
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg font-mono text-[12px] font-semibold text-admin-accent"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-admin-accent-border bg-admin-accent-bg mono-meta font-semibold text-admin-accent"
           >
             N
           </span>
-          <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-admin-text">
-              NEXUS Control Center
-            </h1>
-            <p className="font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-admin-text-3">
+          <div className="min-w-0">
+            <h1 className="text-h3 text-admin-text">NEXUS Control Center</h1>
+            <p className="mt-0.5 mono-token text-admin-text-3">
               Operator authentication
             </p>
           </div>
@@ -109,7 +112,7 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
           <div className="space-y-1.5">
             <label
               htmlFor="admin-email"
-              className="block font-mono text-[11px] uppercase tracking-[0.06em] text-admin-text-2"
+              className="block text-small font-medium text-admin-text-2"
             >
               Operator email
             </label>
@@ -123,21 +126,21 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
               spellCheck={false}
               disabled={loading}
               required
-              className="h-10 w-full rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 text-[13px] text-admin-text placeholder:text-admin-text-3 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent disabled:opacity-50"
+              className={FIELD}
             />
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <label
                 htmlFor="admin-password"
-                className="block font-mono text-[11px] uppercase tracking-[0.06em] text-admin-text-2"
+                className="block text-small font-medium text-admin-text-2"
               >
                 Password
               </label>
               <Link
                 href="/admin/forgot-password"
-                className="font-mono text-[11px] text-admin-text-3 transition-colors hover:text-admin-text"
+                className="text-small text-admin-text-3 transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
               >
                 Forgot password?
               </Link>
@@ -153,14 +156,14 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
                 spellCheck={false}
                 disabled={loading}
                 required
-                className="h-10 w-full rounded-[8px] border border-admin-border bg-admin-surface-2 pl-3 pr-10 text-[13px] text-admin-text placeholder:text-admin-text-3 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent disabled:opacity-50"
+                className={`${FIELD} pl-3 pr-10`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 disabled={loading}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-admin-text-3 transition-colors hover:text-admin-text disabled:opacity-50"
+                className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-control text-admin-text-3 transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent disabled:opacity-50"
               >
                 {showPassword ? (
                   <NexusIcon icon={IconEyeOff} />
@@ -174,7 +177,7 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
           {error ? (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-[6px] border border-admin-danger/40 bg-admin-danger-bg/40 px-3 py-2 text-[12px] text-admin-danger"
+              className="flex items-start gap-2 rounded-surface border border-admin-danger-border bg-admin-danger-bg px-3 py-2 text-small text-admin-danger"
             >
               <span className="mt-0.5 shrink-0">
                 <AdminIcon name="alert" size="action" />
@@ -186,7 +189,7 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-admin-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent text-[13px]"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-control bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-[120ms] hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             {loading ? (
               <NexusIcon icon={IconLoader2} className="animate-spin" />
@@ -195,8 +198,8 @@ export function AdminLoginForm({ initialError = "" }: { initialError?: string })
           </button>
         </form>
 
-        <div className="mt-6 border-t border-admin-border/60 pt-4 text-center">
-          <p className="font-mono text-[10.5px] text-admin-text-3">
+        <div className="mt-6 border-t border-admin-border pt-4 text-center">
+          <p className="text-caption text-admin-text-3">
             Authorised platform personnel only. Access attempts are recorded.
           </p>
         </div>

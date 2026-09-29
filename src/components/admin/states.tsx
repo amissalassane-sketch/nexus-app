@@ -15,6 +15,10 @@ import { AdminIcon, AdminIconTile } from "./admin-icons";
 //   * nothing measured yet   → "No data yet" + what would fill it
 //   * the source is absent   → "Not connected" + what is missing
 //   * the read failed        → what failed, and that nothing is shown
+//
+// All three use the canonical surface + overlay-radius recipe, and the
+// diagnostic line (SQLSTATE / PGRST codes) rides the monospace layer,
+// because that string is meant to be copied into a terminal.
 // ============================================================
 
 export function AdminEmptyState({
@@ -44,12 +48,8 @@ export function AdminEmptyState({
       )}
     >
       <AdminIconTile name={icon} />
-      <p className="mt-1 text-[13px] font-semibold leading-[18px] text-admin-text">
-        {title}
-      </p>
-      <p className="max-w-[52ch] text-[12.5px] leading-[18px] text-admin-text-2">
-        {description}
-      </p>
+      <p className="mt-1 text-body-medium text-admin-text">{title}</p>
+      <p className="max-w-[52ch] text-small text-admin-text-2">{description}</p>
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
@@ -104,22 +104,18 @@ export function AdminErrorState({
     <div
       role="alert"
       className={cn(
-        "flex flex-col items-start gap-3 rounded-[10px] border border-admin-danger-border bg-admin-danger-bg px-4 py-4 sm:flex-row sm:items-start",
+        "flex flex-col items-start gap-3 rounded-surface border border-admin-danger-border bg-admin-danger-bg px-4 py-4 sm:flex-row sm:items-start",
         className
       )}
     >
       <AdminIconTile name={copy.icon} tone="danger" className="shrink-0" />
       <div className="min-w-0">
-        <p className="text-[13px] font-semibold leading-[18px] text-admin-text">
-          {copy.title}
-        </p>
-        <p className="mt-1 max-w-[72ch] text-[12.5px] leading-[18px] text-admin-text-2">
+        <p className="text-body-medium text-admin-text">{copy.title}</p>
+        <p className="mt-1 max-w-[72ch] text-small text-admin-text-2">
           {copy.description}
         </p>
         {error.message ? (
-          <p className="mt-2 font-mono text-[11.5px] leading-[16px] text-admin-text-3">
-            {error.message}
-          </p>
+          <p className="mt-2 mono-meta text-admin-text-3">{error.message}</p>
         ) : null}
         {/* Diagnostic line for operators: the real code (SQLSTATE / PGRST)
             and the bounded raw message the database answered with. This is
@@ -129,15 +125,15 @@ export function AdminErrorState({
             product app, and logged identically to the runtime logs. */}
         {error.detail ? (
           <p
-            className="mt-2 rounded-[6px] border border-admin-border bg-admin-surface px-2.5 py-1.5 font-mono text-[11px] leading-[16px] text-admin-text-2"
+            className="mt-2 rounded-control border border-admin-border bg-admin-surface-2 px-2.5 py-1.5 mono-meta text-admin-text-2"
             data-error-code={error.detail.code}
           >
-            <span className="text-admin-text">
-              code {error.detail.code}
-            </span>{" "}
+            <span className="text-admin-text">code {error.detail.code}</span>{" "}
             {error.detail.message}
             {error.detail.hint ? (
-              <span className="block text-admin-text-3">hint: {error.detail.hint}</span>
+              <span className="block text-admin-text-3">
+                hint: {error.detail.hint}
+              </span>
             ) : null}
           </p>
         ) : null}
@@ -191,12 +187,12 @@ export function AdminUnavailableState({
       <AdminIconTile name={icon} className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[14px] font-semibold leading-5 text-admin-text">{title}</p>
-          <span className="rounded-[4px] border border-admin-border-strong px-1.5 py-px text-[11px] font-medium leading-4 text-admin-text-2">
+          <p className="text-h3 text-admin-text">{title}</p>
+          <span className="inline-flex h-5 items-center rounded-xs border border-admin-border-strong px-1.5 mono-token leading-none text-admin-text-2">
             Unavailable
           </span>
         </div>
-        <p className="mt-1 max-w-[72ch] text-[13px] leading-5 text-admin-text-2">
+        <p className="mt-1 max-w-[72ch] text-small text-admin-text-2">
           {description}
         </p>
         {action ? <div className="mt-3">{action}</div> : null}

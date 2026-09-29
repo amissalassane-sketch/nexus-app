@@ -5,14 +5,22 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS — NAVIGATION PRIMITIVES
-// Enhanced with motion: active feels anchored, hover reacts
-// immediately, pressed feels physical. GPU-friendly transforms.
+// NEXUS — NAVIGATION PRIMITIVES (canonical)
+// ============================================================
+// Sidebar item: one geometry for every destination.
+//   44px on touch / 32px on desktop (laptop pointer) — dense, but never
+//   below the touch target when a finger is the input device.
+//   Resting  transparent
+//   Hover    accent-ghost wash, label steps up
+//   Active   L3 raise surface + primary label + the 2px lavender rail
+//
+// The rail is the only lavender in the chrome. It marks "this is where
+// you are" and nothing else.
 // ============================================================
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="eyebrow px-2.5 pb-1.5 pt-5 text-text-quaternary select-none">
+    <p className="eyebrow px-2.5 pt-5 pb-1.5 text-text-quaternary select-none">
       {children}
     </p>
   );
@@ -45,53 +53,41 @@ export function NavItem({
       aria-current={active ? "page" : undefined}
       {...rest}
       className={cn(
-        "group relative flex h-10 items-center gap-2.5 rounded-nav border px-2.5 text-[13px] outline-none transition-[background-color,border-color,color,transform,box-shadow] duration-[160ms] ease-nexus focus-visible:border-border-focus focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-[34px] will-change-transform",
+        "group relative flex h-11 items-center gap-2.5 rounded-control px-2.5 text-[13px] outline-none transition-[background-color,color] duration-[120ms] ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-8",
         active
-          ? "border-border-subtle bg-accent-ghost-hover font-medium text-text-primary shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
-          : "border-transparent text-text-secondary hover:border-border-subtle/40 hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.98]",
+          ? "bg-bg-surface-2 font-medium text-text-primary"
+          : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary",
         className
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "absolute left-[-9px] top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-pill bg-lavender transition-[opacity,transform] duration-[220ms] ease-nexus will-change-transform",
-          active
-            ? "scale-y-100 opacity-90"
-            : "scale-y-0 opacity-0 group-hover:opacity-30 group-hover:scale-y-50"
+          "absolute -left-2 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-pill bg-lavender transition-opacity duration-[160ms] ease-nexus",
+          active ? "opacity-90" : "opacity-0"
         )}
       />
       <span
         className={cn(
-          "shrink-0 transition-[color,transform] duration-[150ms] ease-nexus",
+          "shrink-0 transition-colors duration-[120ms] ease-nexus",
           active
             ? "text-text-primary"
-            : "text-text-tertiary group-hover:text-text-secondary group-active:scale-[0.92]"
+            : "text-text-tertiary group-hover:text-text-secondary"
         )}
       >
         {icon}
       </span>
-      <span className="min-w-0 flex-1 truncate transition-transform duration-[150ms] ease-nexus group-active:translate-x-[0.5px]">
-        {label}
-      </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && count > 0 ? (
         <span
           className={cn(
-            "shrink-0 font-mono text-mono tabular-nums transition-[color,transform,opacity] duration-[200ms] ease-nexus",
-            countTone === "accent"
-              ? "text-lavender font-medium"
-              : "text-text-quaternary",
-            active && "text-text-primary"
+            "mono-meta shrink-0 transition-colors duration-[120ms] ease-nexus",
+            countTone === "accent" ? "text-lavender" : "text-text-quaternary",
+            active && "text-text-secondary"
           )}
         >
           {count}
         </span>
-      ) : null}
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-nav bg-gradient-to-r from-white/[0.04] to-transparent opacity-60"
-        />
       ) : null}
     </Link>
   );
@@ -128,32 +124,28 @@ export function MobileNavItem({
         // parts below it — iOS home indicator 34pt, Android system nav
         // 48px — come from env(safe-area-inset-bottom) on the bar
         // container, never from the bar itself.
-        "relative flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 outline-none transition-[color,transform,background-color] duration-[160ms] ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border active:scale-[0.94]",
-        active
-          ? "font-medium text-text-primary"
-          : "text-text-tertiary hover:text-text-secondary active:text-text-primary",
+        "relative flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control py-1.5 outline-none transition-[color,background-color] duration-[120ms] ease-nexus focus-visible:ring-1 focus-visible:ring-lavender-border active:bg-accent-ghost",
+        active ? "font-medium text-text-primary" : "text-text-tertiary",
         className
       )}
     >
-      <span className="relative transition-transform duration-[160ms] ease-nexus group-active:scale-[0.92]">
+      <span className="relative">
         {icon}
         {badge !== undefined && badge > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-pill bg-lavender animate-[signal-pulse_2.6s_var(--ease-nexus)_infinite]"
+            className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-pill bg-lavender"
           />
         ) : null}
       </span>
-      <span className="max-w-full truncate text-[11px] leading-none transition-transform duration-[150ms] ease-nexus">
+      <span className="max-w-full truncate text-[11px] leading-none">
         {label}
       </span>
       <span
         aria-hidden="true"
         className={cn(
-          "absolute -top-px h-[2px] w-8 rounded-pill bg-lavender transition-[opacity,transform] duration-[220ms] ease-nexus will-change-transform",
-          active
-            ? "opacity-90 scale-x-100"
-            : "opacity-0 scale-x-50"
+          "absolute -top-px h-0.5 w-8 rounded-pill bg-lavender transition-opacity duration-[160ms] ease-nexus",
+          active ? "opacity-90" : "opacity-0"
         )}
       />
     </Link>

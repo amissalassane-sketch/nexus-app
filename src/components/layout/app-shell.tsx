@@ -129,7 +129,7 @@ function AppShellInner({
         data-dashboard-root="true"
         className={cn(
           "relative flex h-dvh overflow-hidden",
-          "bg-[#000000]"
+          "bg-bg-base"
         )}
       >
         <CommandMenu />
@@ -137,7 +137,7 @@ function AppShellInner({
 
         <a
           href="#nexus-main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[90] focus:rounded-nav focus:bg-accent focus:px-3 focus:py-2 focus:text-caption focus:font-medium focus:text-accent-fg"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[90] focus:rounded-control focus:bg-accent focus:px-3 focus:py-2 focus:text-caption focus:font-medium focus:text-accent-fg"
         >
           Skip to content
         </a>
@@ -146,8 +146,8 @@ function AppShellInner({
           aria-label="Workspace navigation"
           data-dashboard-chrome="sidebar"
           className={cn(
-            "relative hidden w-[248px] shrink-0 border-r border-border-subtle lg:block",
-            "bg-[#000000]"
+            "relative hidden w-(--layout-sidebar-w) shrink-0 border-r border-border-subtle lg:block",
+            "bg-bg-base"
           )}
         >
           <WorkspaceSidebar
@@ -162,24 +162,24 @@ function AppShellInner({
           data-dashboard-chrome="column"
           className={cn(
             "relative flex min-w-0 flex-1 flex-col overflow-hidden",
-            "bg-[#000000]"
+            "bg-bg-base"
           )}
         >
           <header
             data-dashboard-chrome="mobile-header"
             className={cn(
               "shrink-0 border-b border-border-subtle transition-[border-color,background-color] duration-200 ease-nexus lg:hidden sticky-nav",
-              "bg-[#000000]"
+              "bg-bg-base"
             )}
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
-            <div className="flex h-14 items-center gap-1.5 px-2 sm:px-3">
+            <div className="flex h-(--layout-topbar-h) items-center gap-1.5 px-2 sm:px-3">
               <button
                 type="button"
                 onClick={openNav}
                 aria-label="Open navigation"
                 aria-expanded={navOpen}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control text-text-secondary outline-none transition-[background-color,color] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
               >
                 <NexusIcon icon={IconMenu} size="toolbar" />
               </button>
@@ -195,7 +195,7 @@ function AppShellInner({
                   type="button"
                   onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
                   aria-label="Search NEXUS"
-                  className="flex h-10 w-10 items-center justify-center rounded-nav text-text-secondary transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+                  className="flex h-10 w-10 items-center justify-center rounded-control text-text-secondary outline-none transition-[background-color,color] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover focus-visible:ring-1 focus-visible:ring-lavender-border"
                 >
                   <NexusIcon icon={IconSearch} size="toolbar" />
                 </button>
@@ -209,7 +209,7 @@ function AppShellInner({
             </div>
           </header>
 
-          <div className={cn("hidden lg:block", "bg-[#000000]")}>
+          <div className={cn("hidden lg:block", "bg-bg-base")}>
             <Topbar
               user={user}
               workspace={workspace}
@@ -228,15 +228,15 @@ function AppShellInner({
             data-dashboard-chrome="main"
             className={cn(
               "min-w-0 flex-1 overflow-y-auto scroll-smooth",
-              "bg-[#000000]"
+              "bg-bg-base"
             )}
           >
             <PageTransition>
               <div
                 data-dashboard-chrome="content"
                 className={cn(
-                  "mx-auto w-full max-w-page px-4 pb-24 pt-6 sm:px-6 sm:pb-10 sm:pt-8",
-                  "bg-[#000000]"
+                  "mx-auto w-full max-w-page px-4 pt-6 pb-24 sm:px-6 sm:pt-8 sm:pb-10",
+                  "bg-bg-base"
                 )}
               >
                 {!user.profileComplete && !tourActive && pathname !== "/dashboard" ? (
@@ -257,7 +257,7 @@ function AppShellInner({
             data-dashboard-chrome="mobile-nav"
             className={cn(
               "flex shrink-0 items-stretch gap-1 border-t border-border-subtle px-2 pb-[env(safe-area-inset-bottom)] lg:hidden mobile-nav",
-              "bg-[#000000]"
+              "bg-bg-base"
             )}
           >
             {MOBILE_NAV.map((item) => (
@@ -289,7 +289,7 @@ function AppShellInner({
               type="button"
               onClick={openNav}
               aria-label="More destinations"
-              className="flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-nav py-1.5 text-text-tertiary outline-none transition-[color,transform,background-color] duration-150 ease-nexus hover:text-text-primary active:scale-[0.94] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+              className="flex min-h-(--chrome-tab-bar) min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-control py-1.5 text-text-tertiary outline-none transition-[color,background-color] duration-150 ease-nexus hover:text-text-primary active:bg-accent-ghost focus-visible:ring-1 focus-visible:ring-lavender-border"
             >
               <NexusIcon icon={IconMenu} size="nav" />
               <span className="text-[10.5px] leading-none">More</span>
@@ -329,7 +329,7 @@ function AppShellInner({
               data-dashboard-chrome="drawer"
               className={cn(
                 "absolute inset-y-0 left-0 flex w-[280px] max-w-[88vw] flex-col overflow-hidden border-r border-border-default shadow-overlay will-change-transform",
-                "bg-[#000000]",
+                "bg-bg-base",
                 navClosing
                   ? "animate-[panel-out_200ms_var(--ease-nexus)_both]"
                   : "animate-[panel-in_320ms_var(--ease-nexus)_both]"

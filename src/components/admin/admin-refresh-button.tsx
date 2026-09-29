@@ -12,6 +12,10 @@ import { AdminIcon } from "./admin-icons";
  * numbers on this page are produced by server components reading the
  * database, so the honest way to "update" them is to re-run those reads.
  * There is no client cache to invalidate and no stale value to patch.
+ *
+ * One secondary-action recipe for the whole control plane: 32px on a
+ * pointer device, 40px on touch, hairline border, no fill change on hover
+ * beyond the surface step the product uses everywhere.
  */
 export function AdminRefreshButton({ className }: { className?: string }) {
   const router = useRouter();
@@ -32,7 +36,8 @@ export function AdminRefreshButton({ className }: { className?: string }) {
       disabled={isPending}
       aria-label={isPending ? "Refreshing platform data" : "Refresh platform data"}
       className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-[8px] border border-admin-border bg-admin-surface px-2.5 text-[12.5px] leading-[18px] text-admin-text-2 transition-colors duration-150 hover:text-admin-text disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent",
+        "inline-flex h-10 items-center gap-2 rounded-control border border-admin-border bg-admin-surface px-2.5 text-small text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text disabled:opacity-60 sm:h-8",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent",
         className
       )}
     >

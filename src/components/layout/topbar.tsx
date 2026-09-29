@@ -74,8 +74,8 @@ export function Topbar({
     <header
       data-dashboard-chrome="topbar"
       className={cn(
-        "flex h-14 shrink-0 items-center gap-3 border-b border-border-subtle px-4 sm:px-6 transition-[border-color,background-color] duration-200 ease-nexus sticky-nav",
-        solidBackground && "bg-[#000000]"
+        "flex h-(--layout-topbar-h) shrink-0 items-center gap-3 border-b border-border-subtle px-4 transition-[border-color,background-color] duration-200 ease-nexus sticky-nav sm:px-6",
+        solidBackground && "bg-bg-base"
       )}
     >
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export function Topbar({
                   aria-current={last ? "page" : undefined}
                   className={cn(
                     "truncate text-[13px] transition-[color,opacity,transform] duration-[200ms] ease-nexus",
-                    last ? "font-medium text-text-primary animate-[intelligence-state-in_200ms_var(--ease-nexus)_both]" : "text-text-tertiary"
+                    last ? "font-medium text-text-primary" : "text-text-tertiary"
                   )}
                 >
                   {crumb}
@@ -106,9 +106,9 @@ export function Topbar({
         type="button"
         onClick={() => window.dispatchEvent(new Event("nexus:open-command"))}
         aria-label="Search NEXUS, command palette"
-        className="hidden h-8 w-[260px] items-center gap-2 rounded-nav border border-border-subtle bg-bg-surface/40 px-2.5 text-left text-[12.5px] text-text-tertiary transition-[border-color,background-color,color,transform] duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface hover:text-text-secondary active:scale-[0.98] md:flex xl:w-[320px] will-change-transform"
+        className="hidden h-8 w-[260px] items-center gap-2 rounded-control border border-border-subtle bg-bg-surface-2 px-2.5 text-left text-small text-text-tertiary outline-none transition-[border-color,background-color,color] duration-150 ease-nexus hover:border-border-strong hover:text-text-secondary focus-visible:ring-1 focus-visible:ring-lavender-border md:flex xl:w-[320px]"
       >
-        <NexusIcon icon={IconSearch} className="transition-transform duration-150 ease-nexus group-hover:scale-105" />
+        <NexusIcon icon={IconSearch} className="text-text-quaternary" />
         <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
         <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary"> {commandKey} </kbd>
       </button>
@@ -130,7 +130,7 @@ export function Topbar({
           onClick={onOpenHelp}
           aria-label="NEXUS Guide and help"
           data-guide="help-button"
-          className="flex h-8 w-8 items-center justify-center rounded-nav text-text-tertiary outline-none transition-[background-color,color,transform] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+          className="flex h-8 w-8 items-center justify-center rounded-control text-text-tertiary outline-none transition-[background-color,color] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border"
         >
           <NexusIcon icon={IconLifebuoy} size="toolbar" />
         </button>
@@ -145,7 +145,7 @@ export function Topbar({
               ref={ref}
               onClick={toggle}
               aria-label={hasName ? `Account: ${user.name}` : "Account: complete profile"}
-              className="ml-1 flex h-7 w-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary outline-none transition-[border-color,background-color,transform] duration-150 ease-nexus hover:border-border-strong active:scale-[0.9] focus-visible:ring-1 focus-visible:ring-lavender-border will-change-transform"
+              className="ml-1 flex size-7 items-center justify-center rounded-pill border border-border-default bg-bg-surface-2 text-[11px] font-semibold text-text-primary outline-none transition-[border-color,background-color] duration-150 ease-nexus hover:border-border-strong focus-visible:ring-1 focus-visible:ring-lavender-border"
               {...ariaProps}
             >
               {hasName ? initial : <NexusIcon icon={IconUser} />}

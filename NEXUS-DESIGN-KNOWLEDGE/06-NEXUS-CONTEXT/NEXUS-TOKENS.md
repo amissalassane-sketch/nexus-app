@@ -33,7 +33,7 @@ Nom du système : **"NEXUS V3 — Pill Atelier Noir"** (nom déclaré dans l'en-
 | `text-secondary` | `#b0b0b0` | 8.9:1 |
 | `text-tertiary` | `#9c9c9c` | 7.0:1 |
 | `text-quaternary` | `#868686` | 5.3:1 |
-| `text-muted` | `#6b6b6b` | non garanti AA — **réservé aux éléments non-lisibles par construction** (lignes désactivées, séparateurs décoratifs), jamais pour du texte porteur d'information |
+| `text-muted` | `#8f8f8f` | aligné sur le pas quaternaire (AA maintenu) — réservé aux éléments secondaires |
 
 Ordre de lecture (`[CONFIRMED]`, commentaire source) : primary = l'affirmation principale, secondary = le corps, tertiary = la ligne de support, quaternary = la métadonnée — "discreet but never illegible".
 
@@ -49,7 +49,8 @@ Ordre de lecture (`[CONFIRMED]`, commentaire source) : primary = l'affirmation p
 ### Accent Intelligence — violet/lavande, **usage restreint** [CONFIRMED — contrainte produit déjà respectée dans le code]
 | Token | Valeur |
 |---|---|
-| `lavender` | `#e9e4ff` |
+| `lavender` | `#e9e4ff` — trait, icône, focus, rail actif |
+| `lavender-strong` | `#b9aeff` — **seule** valeur autorisée en remplissage (chip/CSS intelligence plein) |
 | `lavender-subtle` | `rgba(233,228,255,0.1)` |
 | `lavender-border` | `rgba(233,228,255,0.22)` |
 
@@ -66,6 +67,37 @@ Citation du code source : *"Intelligence accent — restrained violet/blue-white
 Toutes les couleurs sémantiques sont volontairement désaturées (pas de vert/rouge/jaune saturés façon feu de signalisation) — cohérent avec l'identité "Pill Atelier Noir" qui refuse tout ce qui ressemble à un dashboard générique criard.
 
 ---
+
+## Évolution design (2026-09) — bande de rayons consolidée
+
+Les noms d'usage ci-dessus sont conservés (aucune classe existante ne casse) mais
+**tous résolvent désormais à une bande de cinq valeurs** :
+
+| Valeur | Token canonique | Job |
+|---|---|---|
+| 4px | `radius-xs` | micro : chips, touches `kbd`, cases à cocher |
+| 8px | `radius-control` | **tout** contrôle : bouton, champ, item de navigation, ligne |
+| 12px | `radius-surface` | panneaux, cards, dropdowns, états vides |
+| 16px | `radius-overlay` | modales, sheets, cartes auth/pricing |
+| 9999px | `radius-pill` | pills (CTA primaires, avatars, badges ronds) |
+
+Il n'existe plus de rayon 14px ni de valeur inline 5/6/7/9px dans le code produit
+ou showcase : cinq rayons, un seul job chacun.
+
+## Évolution design (2026-09) — fondations système
+
+| Ajout | Valeur | Rôle |
+|---|---|---|
+| `--layout-sidebar-w` | 248px | géométrie de shell (invariant produit) |
+| `--layout-topbar-h` | 56px | géométrie de shell (invariant produit) |
+| `--control-h-sm/-/-lg` | 28 / 32 / 40px | échelle unique des contrôles |
+| `--row-h-sm/-/-lg` | 32 / 40 / 44px | lignes de listes denses |
+| `--panel-pad` / `--panel-pad-lg` | 16 / 20px | padding de panneau |
+| `--duration-instant` | 90ms | 5ᵉ palier de durée (feedbacks de survol) |
+| `--shadow-raise/-pop/-overlay` | valeurs par thème | élévation réservée aux surfaces flottantes |
+| utilitaires `.mono-meta` / `.mono-token` / `.metric` | — | couche monospace technique (voir Typographie) |
+| utilitaires `.surface-raise` / `.surface-overlay` | — | recettes de surface composites |
+| utilitaire `.reveal` | — | seule animation d'entrée produit (opacité + 4px) |
 
 ## Typographie
 
@@ -139,7 +171,7 @@ Principe directeur : **le nombre de colonnes change, pas seulement la largeur du
 | `radius-row` | 8px | Lignes de liste |
 | `radius-card` | 12px | Cards |
 | `radius-dropdown` | 12px | Menus déroulants |
-| `radius-panel` | 14px | Panneaux, sheets |
+| `radius-panel` | 12px (alias de `radius-surface` depuis l'évolution design) | Panneaux, sheets |
 | `radius-empty` | 12px | États vides |
 | `radius-auth` | 16px | Cartes d'authentification |
 | `radius-pricing` | 16px | Cartes de pricing |
@@ -169,3 +201,23 @@ Voir `02-DESIGN-SYSTEMS/motion-language.md` pour le détail complet (easings, du
 
 - Toute valeur hexadécimale ou rgba en dur dans un composant qui duplique une valeur ci-dessus est une **dette**, pas un nouveau token — elle doit être remplacée par la classe Tailwind générée.
 - Les valeurs des chartes graphiques `design/NEXUS-FINAL-BRAND-BUNDLE/` et `design/NEXUS-V3-IMPLEMENTATION-BUNDLE/` (ex. `#0A0A0A`, `#8F8F8F`, radius `10px`/`16px`/`24px`) sont des **spécifications antérieures ou externes**, non synchronisées avec `globals.css` après les passes d'audit de contraste. Elles ne doivent **pas** être utilisées comme source de vérité tant qu'elles n'ont pas été explicitement réconciliées — voir `NEXUS-BRAND.md`.
+
+---
+
+## Espace Admin (control plane)
+
+Le control plane n'a **pas** sa propre rampe de surface : il réutilise la rampe canonique sous un namespace
+`admin-*` (`--color-admin-base`, `--color-admin-surface`, `--color-admin-surface-2/3`, `--color-admin-border*`,
+`--color-admin-text-1/2/3`) dont les valeurs sont **identiques** au produit. Le namespace existe pour que
+`test-admin-foundation` puisse vérifier qu'aucun composant admin n'emprunte les classes produit (et
+inversement), pas pour créer un second système.
+
+| Élément | Règle Admin |
+|---|---|
+| Canvas | `bg-admin-base` = `#000000` — le contrôle est une seule pièce sombre, sans variante claire |
+| Accent | Volt Lime `#d2ff4d` réservé aux actions primaires, à la barre active et aux focus rings |
+| Lavande | réservée à l'Intelligence ; jamais décorative |
+| Mono | `mono-meta` (valeurs, horodatages, compteurs) et `mono-token` (actions, types d'entité, états machine) |
+| Contrôles | 44px tactile, 32px desktop (`h-10 … sm:h-8` / `h-11 lg:h-8`) |
+| Radius | `rounded-control` (8) pour les contrôles, `rounded-surface` (12) pour les panneaux, `rounded-overlay` (16) pour les overlays |
+| Élévation | une marche de surface + une hairline ; les ombres n'apparaissent que sur les overlays |

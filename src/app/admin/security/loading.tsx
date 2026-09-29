@@ -8,7 +8,7 @@ export default function AdminSecurityLoading() {
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-5">
       <div className="flex flex-col gap-2" aria-hidden="true">
-        <div className="h-6 w-36 animate-pulse rounded-[6px] bg-admin-surface-2 motion-reduce:animate-none" />
+        <div className="h-6 w-36 animate-pulse rounded-xs bg-admin-surface-2 motion-reduce:animate-none" />
         <div className="h-4 w-96 max-w-full animate-pulse rounded bg-admin-surface motion-reduce:animate-none" />
       </div>
 

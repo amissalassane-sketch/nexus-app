@@ -89,7 +89,7 @@ export default async function AdminWorkspaceDetailPage({
         backLabel="Back to Workspaces"
         detail={
           <>
-            <span className="font-mono text-[12px] text-admin-text-2">
+            <span className="mono-meta text-admin-text-2">
               {raw.slice(0, 64)}
             </span>{" "}
             is not a valid workspace id, so no lookup was attempted.
@@ -108,7 +108,7 @@ export default async function AdminWorkspaceDetailPage({
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/admin/workspaces"
-            className="text-[12.5px] text-admin-text-2 no-underline hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+            className="text-small text-admin-text-2 no-underline hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             ← Back to Workspaces
           </Link>
@@ -127,12 +127,12 @@ export default async function AdminWorkspaceDetailPage({
         detail={
           <>
             This id does not exist in{" "}
-            <span className="font-mono text-[12px] text-admin-text-2">
+            <span className="mono-meta text-admin-text-2">
               public.workspaces
             </span>
             . The database answered normally — “no such workspace” is a
             measured fact here, not a read failure.
-            <span className="mt-2 block truncate font-mono text-[11.5px] text-admin-text-3">
+            <span className="mt-2 block truncate mono-meta text-admin-text-3">
               {workspaceId}
             </span>
           </>
@@ -163,7 +163,7 @@ export default async function AdminWorkspaceDetailPage({
           <span className="flex min-w-0 items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface-2 text-admin-text-2"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-admin-border bg-admin-surface-2 text-admin-text-2"
             >
               <AdminIcon name="building" size="state" />
             </span>
@@ -174,17 +174,17 @@ export default async function AdminWorkspaceDetailPage({
           <>
             <AdminPlanBadge plan={effectivePlanOf(activeSubscription)} />
             {displayStatusOf(activeSubscription) === "expired" ? (
-              <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+              <span className="mono-token text-admin-text-3">
                 expired · FREE effective
               </span>
             ) : null}
             {!activeSubscription ? (
-              <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-admin-text-3">
+              <span className="mono-token text-admin-text-3">
                 default plan
               </span>
             ) : null}
             {health.has_active_owner ? null : (
-              <span className="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-admin-danger">
+              <span className="inline-flex items-center gap-1 mono-token text-admin-danger">
                 <AdminIcon name="warning" size="action" />
                 no active owner
               </span>
@@ -204,10 +204,10 @@ export default async function AdminWorkspaceDetailPage({
       {health.has_active_owner ? null : (
         <div
           role="alert"
-          className="flex items-start gap-3 rounded-[10px] border border-admin-danger-border bg-admin-danger-bg px-4 py-3"
+          className="flex items-start gap-3 rounded-surface border border-admin-danger-border bg-admin-danger-bg px-4 py-3"
         >
           <AdminIcon name="warning" size="state" className="mt-0.5 shrink-0 text-admin-danger" />
-          <p className="min-w-0 text-[12.5px] leading-[18px] text-admin-text-2">
+          <p className="min-w-0 text-small text-admin-text-2">
             <span className="font-medium text-admin-text">Nobody can open this workspace.</span>{" "}
             No active membership holds the workspace&apos;s owner role — the
             same condition the Overview lists under “Needs attention”. This
@@ -269,7 +269,7 @@ export default async function AdminWorkspaceDetailPage({
                 <AdminDivider className="mt-3" />
                 <div className="mt-3">
                   <AdminEyebrow>Description</AdminEyebrow>
-                  <span className="mt-1 block max-w-[70ch] whitespace-pre-line text-[12.5px] leading-[18px] text-admin-text-2">
+                  <span className="mt-1 block max-w-[70ch] whitespace-pre-line text-small text-admin-text-2">
                     {overview.description.slice(0, 500)}
                     {overview.description.length > 500 ? "…" : ""}
                   </span>
@@ -286,7 +286,7 @@ export default async function AdminWorkspaceDetailPage({
                 detail.members.length >= 200 ? "First 200 shown." : ""
               }`}
               action={
-                <span className="font-mono text-[11px] text-admin-text-3">
+                <span className="mono-meta text-admin-text-3">
                   {formatCount(detail.members.length)} shown
                 </span>
               }
@@ -320,7 +320,7 @@ export default async function AdminWorkspaceDetailPage({
                     <span className="flex shrink-0 flex-wrap items-center gap-1.5">
                       {member.is_creator ? (
                         <span
-                          className="font-mono text-[10px] uppercase tracking-[0.08em] text-admin-text-3"
+                          className="mono-token text-admin-text-3"
                           title="workspaces.owner_id points at this account"
                         >
                           creator
@@ -329,7 +329,7 @@ export default async function AdminWorkspaceDetailPage({
                       <AdminMembershipRoleBadge role={member.role} />
                       <AdminMembershipStatusBadge status={member.membership_status} />
                       <AdminAccountBadge status={member.account_status} />
-                      <AdminTimeCell iso={member.joined_at} className="text-[11px]" />
+                      <AdminTimeCell iso={member.joined_at} className="text-caption" />
                     </span>
                   </li>
                 ))}
@@ -343,7 +343,7 @@ export default async function AdminWorkspaceDetailPage({
               title="Projects"
               description="Most recently updated, with real task counts per project."
               action={
-                <span className="font-mono text-[11px] text-admin-text-3">
+                <span className="mono-meta text-admin-text-3">
                   {formatCount(usage.projects)} total
                 </span>
               }
@@ -363,22 +363,22 @@ export default async function AdminWorkspaceDetailPage({
                     className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-admin-border/60 py-2.5 last:border-b-0"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[13px] font-medium leading-[18px] text-admin-text">
+                      <span className="block truncate text-body-medium text-admin-text">
                         {project.name}
                       </span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] leading-[15px] text-admin-text-3">
+                      <span className="mt-0.5 block truncate mono-meta text-admin-text-3">
                         {project.tasks_done}/{project.tasks_total} tasks done
                         {project.due_date ? ` · due ${project.due_date}` : ""}
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
-                      <span className="font-mono text-[11px] tabular-nums text-admin-text-3">
+                      <span className="mono-meta text-admin-text-3">
                         {Math.round(project.progress)}%
                       </span>
-                      <span className="inline-flex h-[21px] items-center rounded-[6px] border border-admin-border bg-admin-surface-2 px-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-admin-text-2">
+                      <span className="inline-flex h-[21px] items-center rounded-xs border border-admin-border bg-admin-surface-2 px-1.5 mono-token text-admin-text-2">
                         {project.status.replace(/_/g, " ")}
                       </span>
-                      <AdminTimeCell iso={project.updated_at} className="text-[11px]" />
+                      <AdminTimeCell iso={project.updated_at} className="text-caption" />
                     </span>
                   </li>
                 ))}
@@ -404,9 +404,9 @@ export default async function AdminWorkspaceDetailPage({
                 <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Tasks by status">
                   {statusKeys.map((status) => (
                     <li key={status}>
-                      <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-admin-border bg-admin-surface-2 px-2 py-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-xs border border-admin-border bg-admin-surface-2 px-2 py-1">
                         <AdminTaskStatusBadge status={status} />
-                        <span className="font-mono text-[11px] tabular-nums text-admin-text-2">
+                        <span className="mono-meta text-admin-text-2">
                           {formatCount(detail.tasks_by_status[status] ?? 0)}
                         </span>
                       </span>
@@ -419,13 +419,13 @@ export default async function AdminWorkspaceDetailPage({
                       key={task.task_id}
                       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-admin-border/60 py-2 last:border-b-0"
                     >
-                      <span className="min-w-0 truncate text-[12.5px] leading-[18px] text-admin-text">
+                      <span className="min-w-0 truncate text-small text-admin-text">
                         {task.title}
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5">
                         <AdminTaskStatusBadge status={task.status} />
                         <AdminPriorityBadge priority={task.priority} />
-                        <AdminTimeCell iso={task.updated_at} className="text-[11px]" />
+                        <AdminTimeCell iso={task.updated_at} className="text-caption" />
                       </span>
                     </li>
                   ))}
@@ -443,10 +443,10 @@ export default async function AdminWorkspaceDetailPage({
               description="Stored subscription history (not effective entitlements). No payment provider writes to this table yet."
             />
             {detail.subscription.length === 0 ? (
-              <p className="mt-3 text-[12.5px] leading-[18px] text-admin-text-2">
+              <p className="mt-3 text-small text-admin-text-2">
                 No subscription row. The application treats this workspace as{" "}
                 <AdminPlanBadge plan="FREE" /> — the default of{" "}
-                <span className="font-mono text-[11.5px] text-admin-text-3">
+                <span className="mono-meta text-admin-text-3">
                   get_workspace_plan()
                 </span>
                 , not a measured plan.
@@ -460,19 +460,19 @@ export default async function AdminWorkspaceDetailPage({
                   >
                     <span className="flex items-center gap-2">
                       <AdminPlanBadge plan={row.plan} />
-                      <span className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-admin-text-3">
+                      <span className="mono-token text-admin-text-3">
                         {row.status}
                       </span>
                     </span>
-                    <span className="font-mono text-[11px] text-admin-text-3">
-                      updated <AdminTimeCell iso={row.updated_at} className="text-[11px]" />
+                    <span className="mono-meta text-admin-text-3">
+                      updated <AdminTimeCell iso={row.updated_at} className="text-caption" />
                     </span>
                   </li>
                 ))}
               </ul>
             )}
             <AdminDivider className="my-3" />
-            <p className="text-[11.5px] leading-[16px] text-admin-text-3">
+            <p className="text-caption text-admin-text-3">
               No invoices, no amounts, no renewal dates: the billing columns
               exist but nothing writes provider data into them, so there is
               nothing to display honestly. Billing administration is out of
@@ -521,18 +521,18 @@ export default async function AdminWorkspaceDetailPage({
                     key={entry.activity_id}
                     className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-admin-border/60 py-2 last:border-b-0"
                   >
-                    <span className="min-w-0 text-[12.5px] leading-[18px] text-admin-text-2">
+                    <span className="min-w-0 text-small text-admin-text-2">
                       <span className="text-admin-text">
                         {(entry.entity_type ?? "item").replace(/_/g, " ")}
                       </span>{" "}
                       {entry.action ?? "?"}
                       {entry.actor_email ? (
-                        <span className="font-mono text-[11px] text-admin-text-3">
+                        <span className="mono-meta text-admin-text-3">
                           {" "}
                           · {entry.actor_email}
                         </span>
                       ) : (
-                        <span className="font-mono text-[11px] text-admin-text-3">
+                        <span className="mono-meta text-admin-text-3">
                           {" "}· no actor row
                         </span>
                       )}

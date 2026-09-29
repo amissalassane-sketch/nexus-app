@@ -2,9 +2,21 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 // ============================================================
-// NEXUS — SURFACES
-// Enhanced with motion: cards lift subtly, panels enter gracefully,
-// metrics animate value changes. Calm, premium, intentional.
+// NEXUS — SURFACES (canonical)
+// ============================================================
+// Two containers, one surface language:
+//
+//   Card   a panel-shaped container with no chrome — the surface you
+//          drop content into directly.
+//   Panel  the product's workhorse: eyebrow / title / description header
+//          + hairline-separated body (+ optional footer).
+//
+// Both sit on the L2 panel surface with a 1px hairline. Elevation is
+// surface + hairline, never a shadow or a lift: a card that jumps on
+// hover makes a dense screen feel unstable.
+//
+// Entrance motion is opt-in (`reveal`), applied by pages and boards —
+// not by every card on every render.
 // ============================================================
 
 export function Card({
@@ -12,19 +24,24 @@ export function Card({
   className,
   as: Tag = "div",
   interactive,
+  reveal,
+  padded = true,
 }: {
   children: ReactNode;
   className?: string;
   as?: "div" | "section" | "article" | "li";
   interactive?: boolean;
+  reveal?: boolean;
+  padded?: boolean;
 }) {
   return (
     <Tag
       className={cn(
-        "rounded-card border border-border-subtle bg-bg-subtle transition-[border-color,background-color,transform,box-shadow] duration-[200ms] ease-nexus will-change-transform",
+        "rounded-surface border border-border-subtle bg-bg-surface transition-[border-color,background-color] duration-[160ms] ease-nexus",
+        padded && "p-4",
         interactive &&
-          "hover:border-border-default hover:bg-bg-surface hover:-translate-y-[1px] hover:shadow-[0_4px_20px_-8px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-[0.99] cursor-pointer",
-        "animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]",
+          "hover:border-border-default hover:bg-bg-surface-2 active:bg-bg-surface-2 cursor-pointer",
+        reveal && "reveal",
         className
       )}
     >
@@ -49,7 +66,7 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        "mb-3 flex items-end justify-between gap-3 border-b border-border-subtle pb-2.5 animate-[intelligence-state-in_240ms_var(--ease-nexus)_both]",
+        "mb-3 flex items-end justify-between gap-3 border-b border-border-subtle pb-3",
         className
       )}
     >
@@ -59,7 +76,7 @@ export function SectionHeader({
         ) : null}
         <h2 className="truncate text-h3 text-text-primary">{title}</h2>
         {description ? (
-          <p className="mt-0.5 truncate text-caption text-text-tertiary">
+          <p className="mt-1 truncate text-caption text-text-tertiary">
             {description}
           </p>
         ) : null}
@@ -79,6 +96,7 @@ export function Panel({
   bodyClassName,
   footer,
   as: Tag = "section",
+  reveal,
 }: {
   title?: string;
   description?: string;
@@ -89,16 +107,19 @@ export function Panel({
   bodyClassName?: string;
   footer?: ReactNode;
   as?: "section" | "div";
+  /** Entrance motion, opt-in — for a screen's first paint or a board. */
+  reveal?: boolean;
 }) {
   return (
     <Tag
       className={cn(
-        "overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 transition-[border-color,transform] duration-[200ms] ease-nexus will-change-transform animate-[intelligence-state-in_300ms_var(--ease-nexus)_both]",
+        "overflow-hidden rounded-surface border border-border-subtle bg-bg-surface transition-[border-color] duration-[160ms] ease-nexus",
+        reveal && "reveal",
         className
       )}
     >
       {title ? (
-        <div className="flex min-h-[46px] items-center justify-between gap-3 border-b border-border-subtle px-4 py-2.5">
+        <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border-subtle px-4 py-2">
           <div className="min-w-0">
             {eyebrow ? (
               <p className="eyebrow text-text-quaternary">{eyebrow}</p>
@@ -117,20 +138,27 @@ export function Panel({
       ) : null}
       <div className={cn("p-4", bodyClassName)}>{children}</div>
       {footer ? (
-        <div className="border-t border-border-subtle px-4 py-2.5">{footer}</div>
+        <div className="border-t border-border-subtle px-4 py-3">{footer}</div>
       ) : null}
     </Tag>
   );
 }
 
+/** Inline "view all" style link used in panel headers. */
 export function PanelLink({ children }: { children: ReactNode }) {
   return (
-    <span className="text-caption text-text-tertiary transition-[color,transform] duration-150 ease-nexus hover:text-text-primary hover:translate-x-[1px] inline-flex items-center gap-1">
+    <span className="text-caption text-text-tertiary transition-colors duration-150 ease-nexus hover:text-text-primary inline-flex items-center gap-1">
       {children}
     </span>
   );
 }
 
+/**
+ * Metric — a bordered strip of numbers (In progress · Completed · Avg).
+ * Label is an ordinary label (sans eyebrow), the value is data (mono,
+ * tabular). Colour is semantic only: danger/warning mean something is
+ * actually wrong, `accent` means the number belongs to the AI layer.
+ */
 export function Metric({
   label,
   value,
@@ -143,13 +171,11 @@ export function Metric({
   tone?: "default" | "danger" | "warning" | "accent";
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3.5 transition-colors duration-200 ease-nexus hover:bg-white/[0.01] group">
-      <span className="eyebrow truncate text-text-quaternary group-hover:text-text-tertiary transition-colors duration-150">
-        {label}
-      </span>
+    <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3 transition-colors duration-[160ms] ease-nexus group hover:bg-bg-surface-2">
+      <span className="eyebrow truncate text-text-quaternary">{label}</span>
       <span
         className={cn(
-          "font-mono text-[21px] leading-none tabular-nums transition-[color,transform] duration-[300ms] ease-nexus will-change-transform",
+          "metric text-[21px] leading-none",
           tone === "danger"
             ? "text-danger"
             : tone === "warning"
@@ -166,4 +192,19 @@ export function Metric({
       ) : null}
     </div>
   );
+}
+
+/**
+ * PanelBody — flushes the padding so a list of Rows can span the full
+ * panel width with hairline separators. The canonical pairing is
+ * `<Panel bodyClassName="p-0"><DataList>…`.
+ */
+export function PanelBody({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("p-0", className)}>{children}</div>;
 }

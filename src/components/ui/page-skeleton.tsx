@@ -1,9 +1,16 @@
 import { Skeleton } from "@/components/ui/feedback";
 
 // ============================================================
-// NEXUS — ROUTE LOADING STATE
-// Enhanced: contextual skeletons, staggered entrance, preserves layout,
-// progressive resolution. No generic spinner, no layout shifts.
+// NEXUS — ROUTE LOADING STATE (canonical)
+// ============================================================
+// A skeleton is a promise about layout: it must mirror the real grid so
+// nothing moves when the data lands. It is NOT an animation opportunity —
+// the only motion is the surface breath inside `.skeleton`, which is
+// already gated by prefers-reduced-motion.
+//
+//   header    eyebrow · title · description
+//   metrics   one bordered strip, N cells sharing hairlines (KpiGrid)
+//   panels    header row + 4 list rows, matching Panel/DataList geometry
 // ============================================================
 
 export function PageSkeleton({
@@ -19,22 +26,18 @@ export function PageSkeleton({
         Loading workspace: structure appears immediately, details resolve progressively
       </p>
 
-      <div className="space-y-3 border-b border-border-subtle pb-6 animate-[intelligence-state-in_280ms_var(--ease-nexus)_both]">
+      <div className="space-y-2 border-b border-border-subtle pb-6">
         <Skeleton className="h-2.5 w-28 rounded-pill" />
-        <Skeleton className="h-5 w-56 rounded-pill" style={{ animationDelay: "60ms" }} />
-        <Skeleton className="h-2.5 w-80 max-w-full rounded-pill" style={{ animationDelay: "120ms" }} />
+        <Skeleton className="h-5 w-56 rounded-pill" />
+        <Skeleton className="h-2.5 w-80 max-w-full rounded-pill" />
       </div>
 
       {metrics > 0 ? (
-        <div className="grid grid-cols-2 overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/50 sm:grid-cols-3 lg:grid-cols-5 [&>*]:border-b [&>*]:border-r [&>*]:border-border-subtle animate-[intelligence-state-in_320ms_var(--ease-nexus)_80ms_both]">
+        <div className="grid grid-cols-2 overflow-hidden rounded-surface border border-border-subtle bg-bg-surface sm:grid-cols-3 lg:grid-cols-5 [&>*]:border-r [&>*]:border-b [&>*]:border-border-subtle">
           {Array.from({ length: metrics }).map((_, index) => (
-            <div
-              key={index}
-              className="space-y-3 px-4 py-3.5 animate-[list-in_200ms_var(--ease-nexus)_both]"
-              style={{ animationDelay: `${80 + index * 40}ms` }}
-            >
+            <div key={index} className="space-y-3 px-4 py-3">
               <Skeleton className="h-2 w-16 rounded-pill" />
-              <Skeleton className="h-4 w-10 rounded-pill" style={{ animationDelay: `${index * 50}ms` }} />
+              <Skeleton className="h-4 w-10 rounded-pill" />
             </div>
           ))}
         </div>
@@ -43,10 +46,9 @@ export function PageSkeleton({
       {Array.from({ length: panels }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-card border border-border-subtle bg-bg-subtle/70 animate-[intelligence-state-in_320ms_var(--ease-nexus)_both] layout-preserve"
-          style={{ animationDelay: `${160 + index * 80}ms` }}
+          className="overflow-hidden rounded-surface border border-border-subtle bg-bg-surface layout-preserve"
         >
-          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+          <div className="flex min-h-11 items-center justify-between border-b border-border-subtle px-4 py-2">
             <Skeleton className="h-2.5 w-32 rounded-pill" />
             <Skeleton className="h-2.5 w-16 rounded-pill" />
           </div>
@@ -54,10 +56,9 @@ export function PageSkeleton({
             {Array.from({ length: 4 }).map((__, row) => (
               <div
                 key={row}
-                className="flex h-11 items-center gap-3 border-b border-border-subtle px-4 last:border-b-0 animate-[list-in_200ms_var(--ease-nexus)_both]"
-                style={{ animationDelay: `${200 + index * 80 + row * 40}ms` }}
+                className="flex min-h-10 items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0"
               >
-                <Skeleton className="h-[15px] w-[15px] rounded-[5px]" />
+                <Skeleton className="size-4 rounded-xs" />
                 <Skeleton
                   className="h-2.5 rounded-pill"
                   style={{ width: `${34 + ((row * 19) % 38)}%` }}

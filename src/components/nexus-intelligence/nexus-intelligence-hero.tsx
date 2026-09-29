@@ -65,7 +65,7 @@ export function NexusIntelligenceHero({
 
   return (
     <section
-      className={`nexus-intelligence-hero dark relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-black text-white ${
+      className={`nexus-intelligence-hero dark relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-bg-base text-text-primary ${
         dense ? "min-h-[74svh]" : "min-h-[82svh] lg:min-h-[86svh]"
       }`}
     >
@@ -109,7 +109,7 @@ export function NexusIntelligenceHero({
           ) : null}
 
           <span
-            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-300 backdrop-blur-sm"
+            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-control border border-border-subtle bg-bg-surface-2 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-300 backdrop-blur-sm"
             style={delay(60)}
           >
             <span
@@ -123,21 +123,21 @@ export function NexusIntelligenceHero({
             className="nexus-intelligence-item nexus-intelligence-lockup mt-6"
             style={delay(140)}
           >
-            <span className="nexus-intelligence-lockup-primary !text-white">NEXUS</span>
-            <span className="nexus-intelligence-lockup-secondary !text-neutral-400">
+            <span className="nexus-intelligence-lockup-primary !text-text-primary">NEXUS</span>
+            <span className="nexus-intelligence-lockup-secondary !text-text-tertiary">
               INTELLIGENCE
             </span>
           </h1>
 
           <p
-            className="nexus-intelligence-item mt-5 text-[20px] font-medium leading-[1.3] tracking-[-0.02em] text-white sm:text-[24px]"
+            className="nexus-intelligence-item mt-5 text-xl font-medium leading-[1.3] tracking-[-0.02em] text-text-primary sm:text-[24px]"
             style={delay(220)}
           >
             Your workspace, read end to end.
           </p>
 
           <p
-            className="nexus-intelligence-item mt-4 max-w-[490px] text-balance text-body text-neutral-400 sm:text-[15.5px] sm:leading-[25px]"
+            className="nexus-intelligence-item mt-4 max-w-[490px] text-balance text-body text-text-secondary"
             style={delay(300)}
           >
             NEXUS Intelligence reads your tasks, projects, goals and activity,
@@ -167,14 +167,14 @@ export function NexusIntelligenceHero({
 
       {/* ---- Footnote rule ---- */}
       <div
-        className="nexus-intelligence-item relative z-10 border-t border-white/10 bg-black/50 backdrop-blur-xs"
+        className="nexus-intelligence-item relative z-10 border-t border-border-subtle bg-bg-base"
         style={delay(520)}
       >
         <ul className="mx-auto flex w-full max-w-page flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:gap-8 sm:px-6 sm:py-4">
           {FOOTNOTES.map((item) => (
             <li
               key={item.label}
-              className="flex items-center gap-2.5 text-[13px] font-medium text-neutral-300 sm:justify-start"
+              className="flex items-center gap-2.5 text-caption font-medium text-text-secondary sm:justify-start"
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-lavender"

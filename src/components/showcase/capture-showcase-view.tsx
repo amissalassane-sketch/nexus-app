@@ -8,195 +8,231 @@ import {
   IconCheck,
   IconChecklist,
   IconCloudCheck,
-  IconCornerDownLeft,
   IconFolder,
   IconLoader2,
   IconSparkles,
 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
+import { SegmentedControl, type TabItem } from "@/components/ui/tabs";
+import { Badge, Tag } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+
+// ============================================================
+// SHOWCASE 05 — UNIVERSAL CAPTURE & NLP
+// ============================================================
+// The front door of the operating system, in five discrete motion
+// states: idle → typing → understanding → parsed → confirmed.
+//
+// Everything is the shared control language now:
+//   stage selector  SegmentedControl (same object as the task views)
+//   omnibar         L3 raise surface + hairline strong, lavender only on
+//                   the bolt (that is the intelligence marker)
+//   extraction      four Cards, mono field labels, semantic hairline for
+//                   the two fields the parser actually inferred
+//   confirmation    success hairline + mono "what changed" line — no
+//                   green fill block, no celebration
+// ============================================================
 
 export type CaptureStage = "idle" | "typing" | "understanding" | "parsed" | "confirmed";
 
-const STAGES: { id: CaptureStage; label: string }[] = [
-  { id: "idle", label: "1. Idle" },
-  { id: "typing", label: "2. Typing" },
-  { id: "understanding", label: "3. Understanding" },
-  { id: "parsed", label: "4. Parsed Structure" },
-  { id: "confirmed", label: "5. Confirmed & Synced" },
+const STAGES: TabItem<CaptureStage>[] = [
+  { id: "idle", label: "Idle" },
+  { id: "typing", label: "Typing" },
+  { id: "understanding", label: "Understanding" },
+  { id: "parsed", label: "Parsed" },
+  { id: "confirmed", label: "Synced" },
 ];
+
+const SENTENCE = "Deploy staging tomorrow at 3pm #infra";
+
+const EXTRACTED = [
+  {
+    id: "task",
+    label: "task action",
+    value: "Deploy staging",
+    detail: "Action verb and target identified",
+    icon: IconChecklist,
+    inferred: false,
+  },
+  {
+    id: "date",
+    label: "due date",
+    value: "Tomorrow · 15:00",
+    detail: "Sep 29, 2026 · 15:00 UTC",
+    icon: IconCalendar,
+    inferred: true,
+  },
+  {
+    id: "project",
+    label: "project tag",
+    value: "#infra",
+    detail: "Matched NEXUS Website / Infra",
+    icon: IconFolder,
+    inferred: false,
+  },
+  {
+    id: "priority",
+    label: "priority",
+    value: "P1 · High",
+    detail: "Inferred from staging deployment",
+    icon: IconAlertTriangle,
+    inferred: true,
+  },
+] as const;
 
 export function CaptureShowcaseView() {
   const [stage, setStage] = useState<CaptureStage>("parsed");
-  const [inputVal, setInputVal] = useState("Deploy staging tomorrow at 3pm #infra");
+  const [inputVal, setInputVal] = useState(SENTENCE);
+
+  const selectStage = (next: CaptureStage) => {
+    setStage(next);
+    setInputVal(next === "idle" ? "" : SENTENCE);
+  };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pt-6">
-      {/* Header */}
-      <header className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-lavender/30 bg-lavender/10 px-3 py-1 text-[11px] font-mono text-lavender">
-          <NexusIcon icon={IconBolt} className="size-3.5" />
-          <span>Universal Natural Language Capture</span>
-        </div>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-text-primary">
-          Instant Intent Parsing
-        </h1>
-        <p className="text-[14px] text-text-secondary max-w-lg mx-auto">
-          Type a sentence in plain English or French. NEXUS extracts the action, due date, project tag and priority without friction.
+    <div className="mx-auto max-w-4xl space-y-6">
+      {/* ---------- Header ---------- */}
+      <header className="flex flex-col gap-2">
+        <Badge
+          tone="lavender"
+          icon={<NexusIcon icon={IconBolt} className="size-3" />}
+          className="self-start"
+        >
+          Universal capture
+        </Badge>
+        <h1 className="text-h1 text-text-primary">One sentence in, one task out</h1>
+        <p className="max-w-[68ch] text-small text-text-secondary">
+          Write it the way you would say it, in English or French. NEXUS
+          extracts the action, the date, the project and the priority, shows
+          exactly what it understood, and only then writes to the workspace.
         </p>
       </header>
 
-      {/* Interactive Motion State Selector */}
-      <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 rounded-pill border border-border-subtle bg-bg-surface w-fit mx-auto">
-        {STAGES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => {
-              setStage(s.id);
-              if (s.id === "idle") setInputVal("");
-              else setInputVal("Deploy staging tomorrow at 3pm #infra");
-            }}
-            className={cn(
-              "h-7 rounded-pill px-3 text-[12px] font-medium transition-all duration-150",
-              stage === s.id
-                ? "bg-white text-black shadow-xs font-semibold"
-                : "text-text-secondary hover:text-text-primary"
-            )}
-          >
-            {s.label}
-          </button>
-        ))}
+      {/* ---------- Motion state selector ---------- */}
+      <div className="flex flex-wrap items-center gap-3 border-y border-border-subtle py-3">
+        <span className="mono-token text-text-quaternary">State</span>
+        <SegmentedControl
+          items={STAGES}
+          value={stage}
+          onChange={selectStage}
+          label="Capture motion state"
+        />
+        <span className="mono-meta ml-auto hidden text-text-quaternary sm:block">
+          deterministic parser · no network round-trip
+        </span>
       </div>
 
-      {/* Main Omnibar Capture Container */}
-      <div className="relative rounded-panel border border-border-strong bg-[#141416] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.6)] space-y-6">
-        {/* Omnibar Input Box */}
-        <div className="relative flex items-center rounded-panel border border-border-strong bg-[#1A1A1D] px-4 py-3.5 shadow-inner">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-lavender/15 text-lavender mr-3">
-            <NexusIcon icon={IconBolt} className="size-4" />
+      {/* ---------- Omnibar ---------- */}
+      <div className="rounded-surface border border-border-subtle bg-bg-surface p-4">
+        <div className="flex items-center gap-3 rounded-control border border-border-strong bg-bg-surface-2 px-3 py-2.5">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-xs bg-lavender-subtle text-lavender">
+            <NexusIcon icon={IconBolt} className="size-3.5" />
           </span>
 
           <input
             type="text"
-            value={stage === "idle" ? "" : inputVal}
-            onChange={(e) => setInputVal(e.target.value)}
-            placeholder="Capture a thought, task or priority (e.g. Deploy staging tomorrow at 3pm #infra)..."
-            className="w-full bg-transparent text-[15px] font-medium text-text-primary outline-none placeholder:text-text-quaternary"
+            value={inputVal}
+            onChange={(event) => setInputVal(event.target.value)}
+            placeholder="Capture a thought, task or priority…"
+            aria-label="Capture input"
+            className="w-full bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-placeholder"
           />
 
           {stage === "understanding" ? (
-            <span className="flex items-center gap-1.5 text-caption font-mono text-lavender">
-              <NexusIcon icon={IconLoader2} className="size-4 animate-spin" />
-              <span>Parsing...</span>
+            <span className="mono-meta flex shrink-0 items-center gap-1.5 text-lavender">
+              <NexusIcon icon={IconLoader2} className="size-3.5 animate-spin" />
+              parsing
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[11px] font-mono text-text-quaternary bg-bg-surface-3 border border-border-subtle px-2 py-1 rounded-[6px]">
-              <span>Press</span>
-              <NexusIcon icon={IconCornerDownLeft} className="size-3 text-text-secondary" />
-            </span>
+            <kbd className="mono-token flex shrink-0 items-center gap-1 rounded-xs border border-border-subtle bg-bg-surface-3 px-1.5 py-1 text-text-quaternary">
+              ↵
+            </kbd>
           )}
         </div>
 
-        {/* Parsed Structure Visual Breakdown (Stages: 'understanding', 'parsed', 'confirmed') */}
-        {(stage === "parsed" || stage === "confirmed" || stage === "understanding") && (
-          <div className="space-y-4 pt-2 border-t border-border-subtle animate-fade-in">
-            <div className="flex items-center justify-between">
-              <p className="eyebrow text-text-quaternary uppercase tracking-wider font-semibold">
-                EXTRACTED INTENT STRUCTURE
+        {/* ---------- Extraction ---------- */}
+        {stage !== "idle" && stage !== "typing" ? (
+          <div className="mt-4 border-t border-border-subtle pt-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="mono-token text-text-quaternary">
+                Extracted intent
               </p>
-              <span className="text-[11px] font-mono text-success flex items-center gap-1">
+              <span className="mono-meta flex items-center gap-1.5 text-success">
                 <NexusIcon icon={IconSparkles} className="size-3" />
-                Deterministic NLP match (100% confidence)
+                deterministic · 100% confidence
               </span>
             </div>
 
-            {/* 4 Extraction Cards Grid */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {/* 1. TASK */}
-              <div className="rounded-card border border-border-default bg-bg-surface p-4 space-y-1.5">
-                <div className="flex items-center justify-between text-caption text-text-tertiary">
-                  <span className="font-mono text-[10px] uppercase">TASK ACTION</span>
-                  <NexusIcon icon={IconChecklist} className="size-3.5" />
+            <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {EXTRACTED.map((field) => (
+                <div
+                  key={field.id}
+                  className={cn(
+                    "rounded-control border bg-bg-surface-2 p-3",
+                    field.inferred
+                      ? "border-lavender-border"
+                      : "border-border-subtle"
+                  )}
+                >
+                  <dt className="flex items-center justify-between gap-2">
+                    <span className="mono-token text-text-quaternary">
+                      {field.label}
+                    </span>
+                    <NexusIcon
+                      icon={field.icon}
+                      className={cn(
+                        "size-3.5",
+                        field.inferred ? "text-lavender" : "text-text-quaternary"
+                      )}
+                    />
+                  </dt>
+                  <dd className="mt-1.5 text-[14px] font-medium text-text-primary">
+                    {field.value}
+                  </dd>
+                  <dd className="mono-meta mt-1 text-text-tertiary">
+                    {field.detail}
+                  </dd>
                 </div>
-                <p className="text-[15px] font-semibold text-text-primary">
-                  Deploy staging
-                </p>
-                <p className="text-caption text-text-secondary">
-                  Action verb &amp; target identified
-                </p>
-              </div>
-
-              {/* 2. DATE */}
-              <div className="rounded-card border border-lavender/30 bg-lavender/5 p-4 space-y-1.5">
-                <div className="flex items-center justify-between text-caption text-lavender">
-                  <span className="font-mono text-[10px] uppercase">DUE DATE &amp; TIME</span>
-                  <NexusIcon icon={IconCalendar} className="size-3.5" />
-                </div>
-                <p className="text-[15px] font-semibold text-text-primary">
-                  Tomorrow · 3:00 PM
-                </p>
-                <p className="text-caption text-text-secondary font-mono">
-                  Sep 29, 2026, 15:00 UTC
-                </p>
-              </div>
-
-              {/* 3. PROJECT */}
-              <div className="rounded-card border border-border-default bg-bg-surface p-4 space-y-1.5">
-                <div className="flex items-center justify-between text-caption text-text-tertiary">
-                  <span className="font-mono text-[10px] uppercase">PROJECT TAG</span>
-                  <NexusIcon icon={IconFolder} className="size-3.5" />
-                </div>
-                <p className="text-[15px] font-semibold text-text-primary flex items-center gap-1.5">
-                  <span className="text-text-tertiary">#</span>
-                  <span>Infra</span>
-                </p>
-                <p className="text-caption text-text-secondary">
-                  Matched &ldquo;NEXUS Website / Infra&rdquo;
-                </p>
-              </div>
-
-              {/* 4. PRIORITY */}
-              <div className="rounded-card border border-warning/30 bg-warning/5 p-4 space-y-1.5">
-                <div className="flex items-center justify-between text-caption text-warning">
-                  <span className="font-mono text-[10px] uppercase">PRIORITY LEVEL</span>
-                  <NexusIcon icon={IconAlertTriangle} className="size-3.5" />
-                </div>
-                <p className="text-[15px] font-semibold text-text-primary">
-                  High (P1)
-                </p>
-                <p className="text-caption text-text-secondary">
-                  Inferred from staging deployment
-                </p>
-              </div>
-            </div>
+              ))}
+            </dl>
           </div>
-        )}
+        ) : null}
 
-        {/* Confirmation & Synced State Banner (Stage: 'confirmed') */}
-        {stage === "confirmed" && (
-          <div className="flex items-center justify-between rounded-card border border-success/30 bg-success/10 p-4 animate-scale-in">
-            <div className="flex items-center gap-3">
-              <span className="flex size-7 items-center justify-center rounded-full bg-success text-black font-bold">
-                <NexusIcon icon={IconCheck} className="size-4 stroke-[3]" />
-              </span>
-              <div>
-                <p className="text-[14px] font-semibold text-text-primary">
-                  Captured successfully
-                </p>
-                <p className="text-caption text-text-secondary">
-                  Task created under <strong className="text-text-primary">NEXUS Website</strong> · Due tomorrow at 15:00
-                </p>
-              </div>
-            </div>
-
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-bg-surface px-3 py-1 font-mono text-[11px] text-success">
-              <NexusIcon icon={IconCloudCheck} className="size-3.5" />
-              <span>Synced to NEXUS</span>
+        {/* ---------- Confirmation ---------- */}
+        {stage === "confirmed" ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-control border border-success-border bg-bg-surface-2 p-3">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-pill bg-success-bg text-success">
+              <NexusIcon icon={IconCheck} className="size-3.5" />
             </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-small font-medium text-text-primary">
+                Task created under NEXUS Website
+              </p>
+              <p className="mono-meta mt-0.5 text-text-tertiary">
+                task_9f2c1a · due 2026-09-29 15:00 UTC · priority P1
+              </p>
+            </div>
+            <Tag tone="success">
+              <NexusIcon icon={IconCloudCheck} className="size-3" />
+              synced
+            </Tag>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {/* ---------- Trace ---------- */}
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 border-t border-border-subtle pt-4 sm:grid-cols-3">
+        {[
+          { label: "Parser", value: "nexus/capture·v3" },
+          { label: "Input", value: `${inputVal.length} characters` },
+          { label: "Writes", value: stage === "confirmed" ? "1 task" : "0 (preview)" },
+        ].map((item) => (
+          <div key={item.label}>
+            <dt className="mono-token text-text-quaternary">{item.label}</dt>
+            <dd className="mono-meta mt-1 text-text-secondary">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

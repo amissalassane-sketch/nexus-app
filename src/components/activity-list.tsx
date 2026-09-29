@@ -145,16 +145,16 @@ export function ActivityList({
         return (
           <li
             key={activity.id}
-            className="stagger-item flex items-start gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0"
-            style={{ animationDelay: `${Math.min(index, 8) * 20}ms` }}
+            className="stagger-item flex min-h-11 items-start gap-3 border-b border-border-subtle px-3 py-2.5 last:border-b-0"
+            style={{ animationDelay: `${Math.min(index, 6) * 40}ms` }}
           >
             <span
               aria-hidden="true"
               className={cn(
-                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border",
+                "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-xs border",
                 isIntelligence
                   ? "border-lavender-border bg-lavender-subtle text-lavender"
-                  : "border-border-subtle bg-bg-surface text-text-tertiary"
+                  : "border-border-subtle bg-bg-surface-2 text-text-tertiary"
               )}
             >
               <NexusIcon icon={Icon} />
@@ -173,7 +173,7 @@ export function ActivityList({
                 <span>{sentenceFor(activity, !isIntelligence && !activity.actor)}</span>{" "}
                 <span className="text-text-primary">{labelFor(activity)}</span>
               </p>
-              <p className="eyebrow mt-1 text-text-quaternary">
+              <p className="mono-meta mt-1 text-text-quaternary">
                 {relativeTime(activity.created_at)}
               </p>
             </div>

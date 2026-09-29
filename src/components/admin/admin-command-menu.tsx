@@ -21,6 +21,10 @@ import { cn } from "@/lib/cn";
 //   - Filtering: strict whitelist of status="ready" items only.
 //     "soon" or "planned" items are strictly omitted from search.
 //   - Keyboard navigation: ArrowUp/ArrowDown, Enter to activate.
+//
+// Visual language = the product's overlay tier, which the app already
+// owns: L4 surface, hairline border, radius 16, --shadow-overlay, and the
+// single 2px scrim blur used by every other floating surface in NEXUS.
 // ============================================================
 
 interface FlatNavRoute extends AdminNavItem {
@@ -144,19 +148,19 @@ export function AdminCommandMenu({
       role="presentation"
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pt-20 sm:pb-4"
     >
-      {/* Backdrop */}
+      {/* Backdrop — the product's single scrim recipe. */}
       <div
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity motion-safe:animate-[fade-in_120ms_ease-out_both]"
+        className="fixed inset-0 bg-black/60 backdrop-blur-[2px] motion-safe:animate-[fade-in_120ms_ease-out_both]"
       />
 
-      {/* Dialog content */}
+      {/* Dialog content — overlay tier (L4 + hairline + radius 16). */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="NEXUS Admin command palette"
-        className="relative z-10 my-auto flex w-full max-w-xl flex-col overflow-hidden rounded-[10px] border border-admin-border bg-admin-surface shadow-[0_24px_70px_-10px_rgba(0,0,0,0.85)] motion-safe:animate-[panel-in_140ms_ease-out_both]"
+        className="relative z-10 my-auto flex w-full max-w-xl flex-col overflow-hidden rounded-overlay border border-admin-border bg-admin-surface-3 shadow-overlay motion-safe:animate-[panel-in_140ms_ease-out_both]"
       >
         {/* Search Input Bar */}
         <div className="flex h-12 items-center gap-3 border-b border-admin-border px-3.5">
@@ -176,9 +180,9 @@ export function AdminCommandMenu({
             aria-label="Search sections"
             aria-autocomplete="list"
             aria-controls="admin-command-list"
-            className="flex-1 bg-transparent text-[13.5px] leading-normal text-admin-text placeholder:text-admin-text-3 focus:outline-none"
+            className="flex-1 bg-transparent text-body text-admin-text placeholder:text-admin-text-3 focus:outline-none"
           />
-          <kbd className="hidden rounded-[4px] border border-admin-border bg-admin-surface-2 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-admin-text-3 sm:inline-block">
+          <kbd className="hidden rounded-xs border border-admin-border bg-admin-surface-2 px-1.5 py-0.5 mono-token text-admin-text-3 sm:inline-block">
             ESC
           </kbd>
         </div>
@@ -187,10 +191,11 @@ export function AdminCommandMenu({
         <div className="max-h-[320px] overflow-y-auto p-1.5">
           {filteredRoutes.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-[13px] text-admin-text-2">
-                No active section matching <span className="font-mono text-admin-text">&quot;{query}&quot;</span>
+              <p className="text-small text-admin-text-2">
+                No active section matching{" "}
+                <span className="mono-meta text-admin-text">&quot;{query}&quot;</span>
               </p>
-              <p className="mt-1 font-mono text-[11px] text-admin-text-3">
+              <p className="mt-1 mono-meta text-admin-text-3">
                 Planned or future routes are excluded from the command palette.
               </p>
             </div>
@@ -211,7 +216,7 @@ export function AdminCommandMenu({
                       onClick={() => onOpenChange(false)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={cn(
-                        "flex items-center justify-between gap-3 rounded-[7px] px-3 py-2 text-[13px] transition-colors",
+                        "flex min-h-10 items-center justify-between gap-3 rounded-control px-3 py-2 transition-colors duration-[120ms] md:min-h-8",
                         isSelected
                           ? "bg-admin-surface-2 text-admin-text"
                           : "text-admin-text-2 hover:bg-admin-surface-2/60 hover:text-admin-text"
@@ -224,16 +229,16 @@ export function AdminCommandMenu({
                           className={isSelected ? "text-admin-accent" : "text-admin-text-3"}
                         />
                         <span className="font-medium text-admin-text">{item.label}</span>
-                        <span className="font-mono text-[11px] text-admin-text-3">
+                        <span className="mono-meta text-admin-text-3">
                           {item.href}
                         </span>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className="rounded-[4px] border border-admin-border bg-admin-surface px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.06em] text-admin-text-3">
+                        <span className="rounded-xs border border-admin-border bg-admin-surface px-1.5 py-0.5 mono-token text-admin-text-3">
                           {item.groupLabel}
                         </span>
                         {isSelected ? (
-                          <span className="font-mono text-[10px] text-admin-accent">↵</span>
+                          <span className="mono-token text-admin-accent">↵</span>
                         ) : null}
                       </div>
                     </Link>
@@ -245,15 +250,15 @@ export function AdminCommandMenu({
         </div>
 
         {/* Footer Navigation Bar */}
-        <div className="flex items-center justify-between border-t border-admin-border bg-admin-surface-2/40 px-3 py-2 font-mono text-[11px] text-admin-text-3">
+        <div className="flex items-center justify-between border-t border-admin-border px-3 py-2 mono-meta text-admin-text-3">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1">
-              <kbd className="rounded border border-admin-border bg-admin-surface px-1 py-0.2 text-[9.5px]">↑</kbd>
-              <kbd className="rounded border border-admin-border bg-admin-surface px-1 py-0.2 text-[9.5px]">↓</kbd>
+              <kbd className="rounded-xs border border-admin-border bg-admin-surface px-1 py-0.5 mono-token">↑</kbd>
+              <kbd className="rounded-xs border border-admin-border bg-admin-surface px-1 py-0.5 mono-token">↓</kbd>
               <span className="ml-0.5">navigate</span>
             </span>
             <span className="inline-flex items-center gap-1">
-              <kbd className="rounded border border-admin-border bg-admin-surface px-1 py-0.2 text-[9.5px]">↵</kbd>
+              <kbd className="rounded-xs border border-admin-border bg-admin-surface px-1 py-0.5 mono-token">↵</kbd>
               <span className="ml-0.5">open</span>
             </span>
           </div>

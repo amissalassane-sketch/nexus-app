@@ -16,13 +16,13 @@ export default function AdminOverviewLoading() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between" aria-hidden="true">
         <div className="flex flex-col gap-2">
           <div className="h-3 w-16 animate-pulse rounded bg-admin-surface-2 motion-reduce:animate-none" />
-          <div className="h-7 w-44 animate-pulse rounded-[6px] bg-admin-surface-2 motion-reduce:animate-none" />
+          <div className="h-7 w-44 animate-pulse rounded-xs bg-admin-surface-2 motion-reduce:animate-none" />
           <div className="h-4 w-80 max-w-full animate-pulse rounded bg-admin-surface motion-reduce:animate-none" />
           <div className="h-3.5 w-60 max-w-full animate-pulse rounded bg-admin-surface motion-reduce:animate-none" />
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-9 w-28 animate-pulse rounded-[8px] border border-admin-border bg-admin-surface motion-reduce:animate-none" />
-          <div className="h-9 w-24 animate-pulse rounded-[8px] border border-admin-border bg-admin-surface motion-reduce:animate-none" />
+          <div className="h-9 w-28 animate-pulse rounded-control border border-admin-border bg-admin-surface motion-reduce:animate-none" />
+          <div className="h-9 w-24 animate-pulse rounded-control border border-admin-border bg-admin-surface motion-reduce:animate-none" />
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export default function AdminOverviewLoading() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-[8px] border border-admin-border/60 bg-admin-surface-2/40 px-3 py-2.5"
+                className="flex items-center justify-between rounded-control border border-admin-border/60 bg-admin-surface-2/40 px-3 py-2.5"
               >
                 <div className="h-4 w-32 animate-pulse rounded bg-admin-surface-2 motion-reduce:animate-none" />
                 <div className="h-4 w-20 animate-pulse rounded bg-admin-surface-2 motion-reduce:animate-none" />
@@ -80,8 +80,8 @@ export default function AdminOverviewLoading() {
             description="Evaluating database anomalies and invariants…"
           />
           <div className="mt-4 flex flex-col gap-2.5">
-            <div className="h-16 w-full animate-pulse rounded-[8px] border border-admin-border bg-admin-surface-2/30 motion-reduce:animate-none" />
-            <div className="h-16 w-full animate-pulse rounded-[8px] border border-admin-border bg-admin-surface-2/30 motion-reduce:animate-none" />
+            <div className="h-16 w-full animate-pulse rounded-control border border-admin-border bg-admin-surface-2/30 motion-reduce:animate-none" />
+            <div className="h-16 w-full animate-pulse rounded-control border border-admin-border bg-admin-surface-2/30 motion-reduce:animate-none" />
           </div>
         </AdminPanel>
       </div>

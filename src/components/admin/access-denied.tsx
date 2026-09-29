@@ -16,6 +16,10 @@ import { AdminIconTile } from "./admin-icons";
 //
 // This screen reveals no data: no counts, no user list, no hint about
 // who does have access.
+//
+// It is the first admin surface a refused operator sees, so it wears the
+// product's overlay card recipe (radius 16, hairline, L2 surface): the
+// control plane and the product open with the same object.
 // ============================================================
 
 const UNAVAILABLE_HELP: Record<string, { title: string; detail: string }> = {
@@ -48,41 +52,43 @@ export function AdminAccessDenied({ state }: { state: PlatformAdminState }) {
       : undefined;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-admin-base px-4 py-16 text-admin-text">
-      <div className="w-full max-w-[560px] rounded-[12px] border border-admin-border bg-admin-surface p-6 sm:p-8">
+    <div className="admin-root flex min-h-dvh items-center justify-center bg-admin-base px-4 py-16 text-admin-text">
+      <div className="w-full max-w-[560px] rounded-overlay border border-admin-border bg-admin-surface p-6 sm:p-8">
         <AdminIconTile name="shield" />
 
-        <p className="mt-4 font-mono text-[10.5px] uppercase leading-[14px] tracking-[0.12em] text-admin-text-3">
-          NEXUS Admin
-        </p>
+        <p className="mt-4 mono-token text-admin-text-3">NEXUS Admin</p>
 
-        <h1 className="mt-1.5 text-[20px] font-semibold leading-[28px] tracking-[-0.02em]">
+        <h1 className="mt-1.5 text-xl text-admin-text">
           {unavailable ? unavailable.title : "Platform access required"}
         </h1>
 
-        <p className="mt-2 text-[13px] leading-[20px] text-admin-text-2">
+        <p className="mt-2 text-body text-admin-text-2">
           {unavailable
             ? unavailable.detail
             : "This surface is the internal control plane for the operator of NEXUS. The account you are signed in with is not a platform admin, so nothing here is returned — not even an empty version of it."}
         </p>
 
         {unavailable ? null : (
-          <p className="mt-3 text-[13px] leading-[20px] text-admin-text-2">
-            Access is decided by a row in <code className="font-mono text-[12px] text-admin-text">public.platform_admins</code>, checked server-side on every
-            request. The URL is not a secret and it is not the gate.
+          <p className="mt-3 text-body text-admin-text-2">
+            Access is decided by a row in{" "}
+            <code className="mono-meta text-admin-text">
+              public.platform_admins
+            </code>
+            , checked server-side on every request. The URL is not a secret and
+            it is not the gate.
           </p>
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <Link
             href="/app"
-            className="inline-flex h-9 items-center rounded-[8px] bg-admin-text px-3.5 text-[13px] font-medium leading-[20px] text-admin-base transition-opacity duration-150 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+            className="inline-flex h-10 items-center rounded-control bg-accent px-3.5 text-button font-medium text-accent-fg transition-colors duration-[120ms] hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             Back to NEXUS
           </Link>
           <Link
             href="/admin/login"
-            className="inline-flex h-9 items-center rounded-[8px] border border-admin-border bg-admin-surface-2 px-3.5 text-[13px] leading-[20px] text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+            className="inline-flex h-10 items-center rounded-control border border-admin-border bg-admin-surface-2 px-3.5 text-button text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             Sign in with an Administrator Account
           </Link>
