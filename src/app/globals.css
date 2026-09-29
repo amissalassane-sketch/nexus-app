@@ -1344,6 +1344,77 @@ input[type="range"] {
 }
 
 /* ============================================================
+   SLIDE LABEL — the one hover interaction for high-intent CTAs
+   ============================================================
+   A label that swaps on hover: the current text rises out of a clipped
+   box while the incoming text rises into it from below. Both labels sit
+   in the same grid cell, so the box is exactly one line tall and as
+   wide as the longer of the two — no measurement, no layout shift, no
+   clipped word, and no animation on the button itself.
+
+   Contract:
+     · 200ms (--duration-small), --ease-standard — transform only
+     · triggers on :hover and :focus-visible of the owning button only —
+       a *named* group (`group/slide`), so an ancestor that carries a plain
+       `group` class can never fire the reveal from across the screen, and
+       a keyboard visitor gets exactly what a pointer visitor gets
+     · the incoming label is aria-hidden (see SlideLabel): the accessible
+       name never changes and is never read twice — the reveal is
+       decoration for assistive technology, state for everyone else
+     · reduced motion: no travel at all, the primary label stays put and
+       the second label is not rendered; the button's own colour and
+       border states still change on hover and focus
+
+   Scope — high-intent navigation and entry CTAs only. Never on Save,
+   Cancel, Delete, Archive, Confirm, form submission, pagination, table
+   row utilities, icon buttons or dense repeated actions: the reveal
+   only keeps meaning while it stays rare.
+   ============================================================ */
+
+.slide-label {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  /* The reveal distance is the label's own line box. */
+  line-height: inherit;
+}
+
+.slide-label-inner {
+  display: grid;
+  transition: transform var(--duration-small) var(--ease-standard);
+}
+
+/* Both labels share one cell → the box is one line tall and as wide as
+   the wider label. */
+.slide-label-inner > * {
+  grid-area: 1 / 1;
+}
+
+/* Parked one line below the box, clipped by the owner. */
+.slide-label-hover {
+  transform: translateY(100%);
+}
+
+.group\/slide:hover .slide-label-inner,
+.group\/slide:focus-visible .slide-label-inner {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-label-inner,
+  .group\/slide:hover .slide-label-inner,
+  .group\/slide:focus-visible .slide-label-inner {
+    transform: none;
+  }
+  /* The second label is a hover affordance, not information: with
+     movement disabled it is simply absent, and the primary label — the
+     one that states the action — stays readable. */
+  .slide-label-hover {
+    display: none;
+  }
+}
+
+/* ============================================================
    LANDING — SCROLL REVEAL & HERO ENTRANCE
    The landing page motion system. GPU-friendly (opacity +
    transform only), driven by the NEXUS tokens, and strictly

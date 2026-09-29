@@ -91,6 +91,40 @@ Ce fichier consigne les décisions de design **déjà prises** (extraites du cod
 **Source :** `PHASE6-FINAL-REPORT.md`, `MOBILE_UX_PHASE_REPORT.md`, `PHASE6-MOBILE-EXPERIENCE-REPORT.md`.
 **Statut :** actif.
 
+### D-018 — La rampe sombre canonicale est celle du noyau, pas une dérive chaude
+**Pourquoi :** `globals.css` avait dérivé vers une rampe gris chaud (`#111110 / #171716 / #1c1c1a / #20201e`) avec des bordures gris plein, alors que le système documenté (ce fichier, `tailwind.config.js`, les tests d'accessibilité) décrit une rampe **noire** (`#000000 / #080808 / #0f0f0f / #151515 / #1c1c1c`) et des hairlines blanc-alpha 6/8/14/22 %. Le showcase peignait `#000000` en dur : trois langages de surface coexistaient. L'évolution restaure la rampe documentée et supprime tout hex de surface en dur du code produit.
+**Source :** `docs/NEXUS-DESIGN-EVOLUTION-PLAN.md` §3 (D1, D2), `docs/DESIGN-EVOLUTION-REPORT.md`.
+**Statut :** actif — `--color-bg-base: #000000` et `--color-accent: #ffffff` restent des contrats de test.
+
+### D-019 — Une seule recette par primitive, et une couche monospace technique explicite
+**Pourquoi :** 61 composants portaient leur propre animation d'entrée, 89 usages de `bg-bg-subtle` tenaient lieu de « carte », et la métadonnée technique était recodée à la main en `font-mono text-[10.5px]` à ~40 endroits. L'évolution fixe une recette canonique par problème (Button, Field/SearchField, Card/Panel, Badge/Tag, Row/DataList) et trois utilitaires monospace (`.mono-meta`, `.mono-token`, `.metric`).
+**Source :** `docs/NEXUS-DESIGN-EVOLUTION-PLAN.md` §3 (D3, D4, D6), §4.2.
+**Statut :** actif — toute nouvelle surface de liste doit passer par `Row`/`DataList`.
+
+### D-020 — L'Admin hérite du système, il n'en invente pas un second
+**Pourquoi :** le control plane portait une rampe propre (canvas clair puis sombre, `rounded-[7px]/[8px]/[10px]/[12px]`,
+séparateurs `border-admin-border/60`, six hauteurs de contrôles, trois traitements de focus) et des tableaux
+réimplémentés par page. L'évolution le ramène sur les fondations canoniques : rampe noire unique, radius 4/8/12/16,
+une seule recette de focus, une seule implémentation de tableau (`AdminTableShell`/`AdminTableRow` +
+`AdminCardList` sous `md`), et une couche monospace technique déjà définie.
+**Source :** `docs/NEXUS-ADMIN-DESIGN-EVOLUTION-PLAN.md`, `docs/ADMIN-DESIGN-EVOLUTION-REPORT.md`.
+**Statut :** actif — toute nouvelle surface admin passe par les primitives `src/components/admin/*` ; aucun
+composant Admin-only ne remplace une primitive canonique.
+
+### D-021 — L'interaction de survol des CTA est une capacité du Button canonique, pas un nouveau bouton
+**Pourquoi :** une référence externe (KokonutUI *Slide Text Button*) proposait un bouton complet, avec son propre
+style et son animation d'entrée. Seul le **principe d'interaction** a été retenu (libellé sortant par le haut,
+libellé entrant par le bas, boîte clippée, 200ms ease-in-out) ; le style et l'animation d'entrée ont été rejetés.
+L'interaction est implémentée une fois — un contrat CSS dans `globals.css` et un composant `SlideLabel` sans
+couleur — puis exposée par trois variantes du `Button` canonique (`slide`, `slide-ghost`, `slide-intelligence`)
+qui sont *exactement* les recettes existantes plus un marqueur de groupe nommé. Aucune animation d'entrée, aucun
+déplacement du bouton.
+**Source :** `docs/SLIDE-LABEL-IMPLEMENTATION.md`, `scripts/test-slide-text.mjs`.
+**Statut :** actif — le périmètre est fermé par test (liste blanche d'adoption) : l'interaction ne doit pas se
+répandre aux formulaires, aux tableaux, aux actions destructrices ni aux actions répétées. NEXUS Admin consomme
+le même composant (action de navigation « Needs attention ») ; les autres contrôles Admin restent volontairement
+statiques pour des raisons opérationnelles documentées.
+
 ---
 
 ## Décisions encore ouvertes (à trancher, pas à deviner)

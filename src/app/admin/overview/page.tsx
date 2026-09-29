@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ActivityCount, ActivityList } from "@/components/admin/activity-list";
 import { AdminRefreshButton } from "@/components/admin/admin-refresh-button";
 import { HealthList } from "@/components/admin/health-list";
+import { SlideLabel } from "@/components/ui/slide-label";
 import { KpiGrid, KpiTile } from "@/components/admin/kpi";
 import {
   AdminDivider,
@@ -512,31 +514,42 @@ export default async function AdminOverviewPage() {
                 return (
                   <li
                     key={item.id}
-                    className="flex items-start gap-2.5 rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 py-2.5"
+                    className="flex items-start gap-2.5 rounded-control border border-admin-border bg-admin-surface-2 px-3 py-2.5"
                   >
                     <span className="mt-0.5 shrink-0">
                       <AdminSeverityIcon severity={item.severity} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-baseline gap-2 text-[13px] font-medium leading-[18px] text-admin-text">
+                      <p className="flex flex-wrap items-baseline gap-2 text-body-medium text-admin-text">
                         {item.title}
-                        <span className="font-mono text-[11.5px] tabular-nums text-admin-text-2">
+                        <span className="mono-meta tabular-nums text-admin-text-2">
                           {formatCount(item.count)}
                         </span>
                       </p>
-                      <p className="mt-1 text-[12px] leading-[17px] text-admin-text-2">
+                      <p className="mt-1 text-small text-admin-text-2">
                         {item.detail}
                       </p>
-                      <p className="mt-1 font-mono text-[11px] leading-[15px] text-admin-text-3">
+                      <p className="mt-1 mono-meta text-admin-text-3">
                         Source · admin_overview() · {item.id}
                       </p>
                       {action ? (
-                        <a
+                        // The console's one decisive navigation per exception:
+                        // the label states the inspection, the slide states the
+                        // destination. It stays a still label for any action
+                        // that has no honest second wording.
+                        <Link
                           href={action.href}
-                          className="mt-1.5 inline-flex min-h-[28px] items-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg px-2.5 text-[12px] font-medium text-admin-accent transition-colors hover:bg-admin-accent-bg hover:brightness-125"
+                          className="group/slide mt-1.5 inline-flex min-h-7 items-center rounded-xs border border-admin-accent-border bg-admin-accent-bg px-2.5 text-small font-medium text-admin-accent transition-colors duration-[120ms] hover:border-admin-accent hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
                         >
-                          {action.label}
-                        </a>
+                          {action.hoverLabel ? (
+                            <SlideLabel
+                              text={action.label}
+                              hoverText={action.hoverLabel}
+                            />
+                          ) : (
+                            action.label
+                          )}
+                        </Link>
                       ) : null}
                     </div>
                   </li>

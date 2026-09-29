@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SlideLabel } from "@/components/ui/slide-label";
 import {
   IconArrowRight,
   IconBolt,
@@ -118,41 +119,43 @@ export default function ShowcaseIndexPage() {
               <Link
                 key={card.href}
                 href={card.href}
-                className="group relative flex flex-col justify-between rounded-panel border border-border-default bg-bg-surface p-5 transition-all duration-200 hover:border-border-strong hover:bg-bg-surface-2 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+                className="group/slide relative flex flex-col justify-between rounded-surface border border-border-subtle bg-bg-surface p-4 transition-colors duration-[160ms] ease-nexus hover:border-border-strong hover:bg-bg-surface-2"
               >
                 <div className="space-y-3">
                   {/* Top Bar inside card */}
                   <div className="flex items-center justify-between">
-                    <span className="flex size-9 items-center justify-center rounded-[8px] border border-border-subtle bg-bg-surface-2 text-text-primary group-hover:bg-white group-hover:text-black transition-colors">
+                    <span className="flex size-8 items-center justify-center rounded-control border border-border-subtle bg-bg-surface-2 text-text-secondary">
                       <NexusIcon icon={Icon} className="size-4" />
                     </span>
                     <Badge tone={card.tone}>{card.badge}</Badge>
                   </div>
 
                   <div>
-                    <span className="font-mono text-[11px] text-text-quaternary">
-                      SCREEN {card.num}
+                    <span className="mono-token text-text-quaternary">
+                      Screen {card.num}
                     </span>
-                    <h2 className="text-[17px] font-semibold text-text-primary group-hover:text-white mt-0.5">
+                    <h2 className="mt-1 text-h2 text-text-primary">
                       {card.title}
                     </h2>
-                    <p className="text-[12px] font-mono text-lavender mt-0.5">
+                    <p className="mt-0.5 text-caption text-lavender">
                       {card.subtitle}
                     </p>
                   </div>
 
-                  <p className="text-caption text-text-secondary leading-relaxed line-clamp-3">
+                  <p className="line-clamp-3 text-caption text-text-secondary">
                     {card.description}
                   </p>
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-border-subtle flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-text-secondary group-hover:text-text-primary">
-                    Open screen
-                  </span>
+                <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3">
+                  <SlideLabel
+                    text="Open screen"
+                    hoverText={`Open ${card.title}`}
+                    className="text-caption font-medium text-text-secondary transition-colors duration-[160ms] ease-nexus group-hover:text-text-primary"
+                  />
                   <NexusIcon
                     icon={IconArrowRight}
-                    className="size-3.5 text-text-tertiary group-hover:text-text-primary group-hover:translate-x-1 transition-all"
+                    className="size-3.5 text-text-tertiary transition-transform duration-[160ms] ease-nexus group-hover:translate-x-0.5 group-hover:text-text-primary"
                   />
                 </div>
               </Link>

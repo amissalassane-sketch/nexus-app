@@ -3,50 +3,102 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { SlideLabel } from "./slide-label";
 
 // ============================================================
-// NEXUS — BUTTON SYSTEM
-// primary   : white surface, black label — one per screen
-// secondary : dark surface + border
-// ghost     : transparent
-// danger    : muted red, outlined
-// icon      : 32x32 square-ish, 8px radius
+// NEXUS — BUTTON SYSTEM (canonical)
+// ============================================================
+// One button primitive for the whole operating system. Variants express
+// role, never decoration:
 //
-// Every variant implements hover, active, focus-visible, disabled and
-// loading. Heights are locked to the control scale (28 / 32 / 36 / 40).
+//   primary       white surface, black label — the single decisive action
+//                 of a screen (one per view, not one per panel)
+//   secondary     hairline + raised surface — the ordinary action
+//   ghost         transparent until intent — tertiary / toolbar actions
+//   intelligence  lavender hairline + lavender label — actions NEXUS
+//                 itself proposes. The AI layer's only button. It is a
+//                 hairline and a label, never a fill and never a glow.
+//   danger        danger hairline, quiet until hover (destructive, gated)
+//   icon          square, transparent until intent
+//
+// Three of those recipes also carry the slide interaction (label swap on
+// hover / keyboard focus) and otherwise look exactly like their base
+// variant — same surface, border, radius, focus ring, disabled state:
+//
+//   slide              = primary  + slide
+//   slide-ghost        = ghost    + slide
+//   slide-intelligence = intelligence + slide
+//
+// They exist for high-intent navigation and entry CTAs only (see the
+// SlideLabel header for the two call shapes). Everything else in the
+// control plane keeps a still label on purpose: the reveal is worth
+// something precisely because it is rare.
+//
+// Geometry is the control ladder: 28 / 32 / 36 / 40px, radius 8 (control).
+// Touch devices get one step more height below `sm` (44px target for the
+// primary reach actions), per the mobile invariants.
+//
+// Motion budget: background / border / colour in 90–140ms, and a 1px
+// press translate. No scale bounce, no glow, no shimmer.
 // ============================================================
 
 export type ButtonVariant =
   | "primary"
   | "secondary"
   | "ghost"
+  | "intelligence"
   | "danger"
-  | "icon";
+  | "icon"
+  | "slide"
+  | "slide-ghost"
+  | "slide-intelligence";
+
+/** The variants that own the slide interaction. Used by the callers that
+ *  need to know whether a label is expected to move. */
+export const SLIDE_VARIANTS: readonly ButtonVariant[] = [
+  "slide",
+  "slide-ghost",
+  "slide-intelligence",
+];
+
+export function isSlideVariant(variant: ButtonVariant): boolean {
+  return SLIDE_VARIANTS.includes(variant);
+}
 export type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 const base =
-  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-input font-medium transition-[background-color,color,border-color,transform,box-shadow,opacity] duration-[140ms] ease-nexus select-none disabled:pointer-events-none disabled:cursor-not-allowed active:scale-[0.98] active:translate-y-px will-change-transform gpu-accelerated";
+  "relative inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium transition-[background-color,color,border-color,opacity] duration-[120ms] ease-nexus select-none outline-none focus-visible:ring-1 focus-visible:ring-lavender-border disabled:pointer-events-none disabled:cursor-not-allowed active:translate-y-px";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent text-accent-fg hover:bg-accent-hover hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_20px_-4px_rgba(255,255,255,0.12)] active:shadow-none disabled:bg-bg-surface-2 disabled:text-text-quaternary btn-press",
+    "border border-transparent bg-accent text-accent-fg hover:bg-accent-hover disabled:bg-bg-surface-2 disabled:text-text-quaternary",
   secondary:
-    "border border-border-default bg-bg-surface/60 text-text-secondary hover:border-border-strong hover:bg-bg-surface hover:text-text-primary disabled:opacity-40 btn-press",
+    "border border-border-default bg-bg-surface-2 text-text-secondary hover:border-border-strong hover:text-text-primary disabled:border-border-subtle disabled:text-text-quaternary",
   ghost:
-    "bg-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40 btn-press",
+    "border border-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:text-text-quaternary",
+  intelligence:
+    "border border-lavender-border bg-lavender-subtle text-lavender hover:border-lavender/50 hover:bg-lavender/[0.14] disabled:border-border-subtle disabled:bg-transparent disabled:text-text-quaternary",
   danger:
-    "border border-danger-border bg-transparent text-danger hover:bg-danger-bg hover:border-danger-border active:bg-danger-bg disabled:opacity-40 btn-press",
-  // 36px hit area on touch screens, 32px where a precise pointer exists.
-  icon: "h-9 w-9 shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary active:bg-accent-ghost-hover active:scale-[0.92] disabled:opacity-40 sm:h-8 sm:w-8 transition-[background-color,color,transform] duration-[120ms] ease-nexus will-change-transform",
+    "border border-danger-border bg-transparent text-danger hover:bg-danger-bg disabled:border-border-subtle disabled:text-text-quaternary",
+  // 44px hit area on touch screens, 32px where a precise pointer exists.
+  icon: "h-11 w-11 border border-transparent bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary sm:h-8 sm:w-8",
+  // Slide variants: the base recipe, unchanged, plus the `group/slide`
+  // marker the stylesheet hooks the reveal on — named, so an ancestor that
+  // carries a plain `group` class can never trigger it. The visual difference between
+  // `primary` and `slide` is zero until the pointer or the keyboard
+  // arrives.
+  slide:
+    "group/slide border border-transparent bg-accent text-accent-fg hover:bg-accent-hover disabled:bg-bg-surface-2 disabled:text-text-quaternary",
+  "slide-ghost":
+    "group/slide border border-transparent text-text-secondary hover:bg-accent-ghost hover:text-text-primary disabled:text-text-quaternary",
+  "slide-intelligence":
+    "group/slide border border-lavender-border bg-lavender-subtle text-lavender hover:border-lavender/50 hover:bg-lavender/[0.14] disabled:border-border-subtle disabled:bg-transparent disabled:text-text-quaternary",
 };
 
-// Touch-first: one extra step of height below `sm` so the buttons people
-// reach for on a phone are never 36px targets; desktop keeps the compact
-// control scale.
 const sizes: Record<ButtonSize, string> = {
-  xs: "h-7 px-2.5 text-caption",
-  sm: "h-9 px-3 text-caption sm:h-8",
-  md: "h-10 px-4 text-button sm:h-9 sm:px-3.5",
+  xs: "h-6 px-2 text-caption",
+  sm: "h-9 px-2.5 text-caption sm:h-7 sm:px-2",
+  md: "h-10 px-3.5 text-button sm:h-8 sm:px-3",
   lg: "h-11 px-4 text-button sm:h-10",
 };
 
@@ -92,7 +144,7 @@ function Spinner() {
 
 function SuccessIcon() {
   return (
-    <span className="absolute inset-0 flex items-center justify-center animate-[badge-in_220ms_var(--ease-nexus)_both]">
+    <span className="absolute inset-0 flex items-center justify-center animate-[badge-in_180ms_var(--ease-nexus)_both]">
       <svg
         width="14"
         height="14"
@@ -111,6 +163,20 @@ function SuccessIcon() {
   );
 }
 
+/** The child of a slide-variant button. A plain string takes the sugar
+ *  form and is wrapped automatically; anything composed (a trailing icon,
+ *  a counter) is rendered as given, so the caller can place a <SlideLabel>
+ *  exactly where the moving text belongs. */
+function resolveSlideChild(
+  children: ReactNode,
+  hoverText?: string
+): ReactNode {
+  if (!hoverText || typeof children !== "string" || children.trim() === "") {
+    return children;
+  }
+  return <SlideLabel text={children} hoverText={hoverText} />;
+}
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -120,6 +186,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   success?: boolean;
   /** Shows error state with shake */
   error?: boolean;
+  /** The label revealed on hover / keyboard focus, for `slide*` variants.
+   *  Ignored by every other variant. Requires a plain string child; for
+   *  composed children pass a <SlideLabel> instead. */
+  hoverText?: string;
 }
 
 export function Button({
@@ -132,6 +202,7 @@ export function Button({
   error = false,
   disabled,
   children,
+  hoverText,
   ...props
 }: ButtonProps) {
   const isBusy = loading || success;
@@ -158,7 +229,7 @@ export function Button({
           (loading || success) && "opacity-0"
         )}
       >
-        {children}
+        {resolveSlideChild(children, hoverText)}
       </span>
     </button>
   );
@@ -170,6 +241,7 @@ export function ButtonLink({
   size = "md",
   className,
   children,
+  hoverText,
   ref,
   ...props
 }: {
@@ -177,6 +249,9 @@ export function ButtonLink({
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
+  /** The label revealed on hover / keyboard focus, for `slide*` variants.
+   *  Ignored by every other variant. */
+  hoverText?: string;
   children: ReactNode;
   /** React 19 forwards refs through props — used by callers that need
    *  the rendered anchor (e.g. to measure it for a motion effect). */
@@ -189,7 +264,7 @@ export function ButtonLink({
       className={buttonClasses({ variant, size, className })}
       {...props}
     >
-      {children}
+      {resolveSlideChild(children, hoverText)}
     </Link>
   );
 }
@@ -214,8 +289,8 @@ export function IconButton({
       title={label}
       className={cn(
         base,
-        "shrink-0 bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary disabled:opacity-40",
-        size === "sm" ? "h-7 w-7" : "h-8 w-8",
+        "shrink-0 border border-transparent bg-transparent text-text-tertiary hover:bg-accent-ghost hover:text-text-primary disabled:text-text-quaternary sm:h-8 sm:w-8",
+        size === "sm" ? "h-10 w-10" : "h-11 w-11",
         className
       )}
       {...props}

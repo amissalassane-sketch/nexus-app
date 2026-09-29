@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ServiceHealth } from "@/lib/admin/types";
 import { formatLatency, formatRelativeTime } from "@/lib/admin/format";
 import { cn } from "@/lib/cn";
@@ -39,22 +40,26 @@ export function HealthList({ services }: { services: ServiceHealth[] }) {
               )}
             />
             <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-2 text-[13px] font-medium leading-[18px] text-admin-text">
+              <p className="flex flex-wrap items-center gap-2 text-body-medium text-admin-text">
                 {service.label}
                 <span className="sm:hidden">
                   <AdminServiceStatus status={service.status} />
                 </span>
               </p>
-              <p className="mt-1 max-w-[76ch] text-[12.5px] leading-[18px] text-admin-text-2">
+              <p className="mt-1 max-w-[76ch] text-small text-admin-text-2">
                 {service.detail}
               </p>
               {service.action ? (
-                <a
+                // Internal destinations only — client navigation keeps the
+                // page entrance animation and the operator's scroll intent.
+                // Deliberately not a slide label: this is a secondary action
+                // inside a dense status row.
+                <Link
                   href={service.action.href}
-                  className="mt-1.5 inline-flex min-h-[24px] items-center text-[12px] font-medium text-admin-accent hover:underline"
+                  className="mt-1.5 inline-flex min-h-6 items-center text-small font-medium text-admin-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
                 >
                   {service.action.label}
-                </a>
+                </Link>
               ) : null}
             </div>
           </div>
@@ -65,14 +70,14 @@ export function HealthList({ services }: { services: ServiceHealth[] }) {
             </span>
             {typeof service.latencyMs === "number" ? (
               <span
-                className="inline-flex items-center gap-1.5 font-mono text-[11.5px] leading-[16px] tabular-nums text-admin-text-2"
+                className="inline-flex items-center gap-1.5 mono-meta tabular-nums text-admin-text-2"
                 title="Measured round trip for this check"
               >
                 <AdminIcon name="clock" size="action" className="text-admin-text-3" />
                 {formatLatency(service.latencyMs)}
               </span>
             ) : null}
-            <span className="font-mono text-[11px] leading-[16px] text-admin-text-3">
+            <span className="mono-meta text-admin-text-3">
               {formatRelativeTime(service.checkedAt)}
             </span>
           </div>

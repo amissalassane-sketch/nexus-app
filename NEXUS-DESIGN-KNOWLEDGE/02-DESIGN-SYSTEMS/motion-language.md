@@ -39,6 +39,25 @@ Le mouvement NEXUS est **fonctionnel avant d'être esthétique** : chaque animat
 - **Feedback d'erreur** : `feedback-shake` (classe utilitaire, cf. `Button` en `error`) — seul cas où un mouvement "physique" (secousse) est toléré, car il communique un refus, pas une réussite.
 - **Chargement** : `shimmer` (boucle infinie sur skeleton), spinner SVG inline dans `Button`.
 
+### `slide-label` — interaction de survol nommée [CONFIRMED — 2026-09-29]
+
+Contrat CSS unique (`globals.css`, bloc **SLIDE LABEL**) + composant unique (`components/ui/slide-label.tsx`),
+consommé par les deux produits. Le libellé courant sort par le haut d'une boîte clippée pendant que le libellé
+suivant entre par le bas : **200ms (`--duration-small`)**, **`--ease-standard`**, `transform` uniquement, une
+seule ligne de course, le bouton lui-même ne bouge jamais. Les deux libellés partagent une cellule de grille, donc
+la boîte fait exactement une ligne de haut et la largeur du plus long des deux — aucun décalage de mise en page.
+
+- **Déclencheur** : `:hover` **et** `:focus-visible` du propriétaire (groupe *nommé* `group/slide`, pour qu'un
+  ancêtre portant un `group` quelconque ne puisse jamais déclencher la révélation à distance).
+- **Accessibilité** : le libellé entrant est `aria-hidden="true"` — le nom accessible ne change pas et n'est jamais
+  lu deux fois ; l'interaction reste décorative, aucune fonction ne dépend du survol.
+- **`prefers-reduced-motion`** : aucun déplacement, le libellé de repos reste lisible, le libellé entrant n'est pas
+  rendu ; les états hover/focus du bouton sont conservés.
+- **Périmètre** : CTA de navigation ou d'entrée à forte intention uniquement (voir
+  `docs/SLIDE-LABEL-IMPLEMENTATION.md` §2–§3 pour la liste exacte et les exclusions). Jamais sur Save / Cancel /
+  Delete / Archive / Confirm / soumission de formulaire / pagination / actions de ligne / boutons d'icône /
+  actions répétées. La révélation ne garde son sens que si elle reste rare.
+
 ## Accessibilité du mouvement [CONFIRMED]
 
 - `@media (prefers-reduced-motion: reduce)` est déjà présent à ~15 endroits distincts dans `globals.css`, gelant les animations décoratives tout en préservant les changements d'état essentiels (ex. le focus doit rester visible, la disparition d'un élément doit rester perceptible même sans transition).

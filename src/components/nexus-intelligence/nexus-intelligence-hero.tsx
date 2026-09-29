@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 
 // ============================================================
@@ -44,7 +45,10 @@ function useNarrow(query = "(max-width: 1023px)") {
 
 export interface NexusIntelligenceHeroProps {
   notice?: ReactNode;
-  primaryCta?: { label: string; href: string };
+  /** `hoverLabel` turns the primary CTA into the slide interaction: the
+   *  resting label states the offer, the revealed one states the outcome
+   *  ("Get started" → "Start building"). Omit it and the CTA is still. */
+  primaryCta?: { label: string; href: string; hoverLabel?: string };
   secondaryCta?: { label: string; href: string };
   dense?: boolean;
 }
@@ -57,7 +61,11 @@ const FOOTNOTES = [
 
 export function NexusIntelligenceHero({
   notice,
-  primaryCta = { label: "Get started", href: "/signup" },
+  primaryCta = {
+    label: "Get started",
+    href: "/signup",
+    hoverLabel: "Start building",
+  },
   secondaryCta = { label: "See how it works", href: "#in-action" },
   dense = false,
 }: NexusIntelligenceHeroProps) {
@@ -149,15 +157,26 @@ export function NexusIntelligenceHero({
             className="nexus-intelligence-item mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
             style={delay(380)}
           >
-            <ButtonLink href={primaryCta.href} size="lg">
-              {primaryCta.label}
+            <ButtonLink
+              href={primaryCta.href}
+              size="lg"
+              variant={primaryCta.hoverLabel ? "slide" : "primary"}
+            >
+              {primaryCta.hoverLabel ? (
+                <SlideLabel
+                  text={primaryCta.label}
+                  hoverText={primaryCta.hoverLabel}
+                />
+              ) : (
+                primaryCta.label
+              )}
               <NexusIcon icon={IconArrowRight} />
             </ButtonLink>
             <ButtonLink
               href={secondaryCta.href}
               variant="secondary"
               size="lg"
-              className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white"
+              className="border-border-strong bg-bg-surface-2 text-text-primary hover:bg-bg-surface-3"
             >
               {secondaryCta.label}
             </ButtonLink>

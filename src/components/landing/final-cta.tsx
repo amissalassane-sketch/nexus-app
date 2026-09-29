@@ -2,6 +2,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 
 // ============================================================
 // NEXUS LANDING — FINAL CTA
@@ -35,8 +36,8 @@ export function FinalCtaSection() {
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <ButtonLink href="/signup" size="lg">
-                Get started
+              <ButtonLink href="/signup" variant="slide" size="lg">
+                <SlideLabel text="Get started" hoverText="Start building" />
                 <NexusIcon icon={IconArrowRight} />
               </ButtonLink>
               <ButtonLink href="#product" variant="secondary" size="lg">
