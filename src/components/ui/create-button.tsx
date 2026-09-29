@@ -6,8 +6,11 @@ import { IconPlus } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
+// Identical recipe to <Button variant="primary" size="lg"> — the create
+// action is the primary action of its screen, so it must not be a second
+// button dialect (no glow, no scale bounce).
 const shell =
-  "group relative inline-flex h-10 items-center justify-center gap-2 rounded-input bg-accent px-4 text-button font-medium text-accent-fg transition-[background-color,transform,box-shadow] duration-[160ms] ease-nexus hover:bg-accent-hover hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_20px_-4px_rgba(255,255,255,0.15)] active:translate-y-px active:scale-[0.98] active:shadow-none disabled:pointer-events-none disabled:opacity-40 sm:h-9 sm:px-3.5 will-change-transform";
+  "group relative inline-flex h-11 items-center justify-center gap-2 rounded-control border border-transparent bg-accent px-3.5 text-button font-medium text-accent-fg transition-[background-color,opacity] duration-[120ms] ease-nexus outline-none hover:bg-accent-hover focus-visible:ring-1 focus-visible:ring-lavender-border active:translate-y-px disabled:pointer-events-none disabled:bg-bg-surface-2 disabled:text-text-quaternary sm:h-10";
 
 function Spinner() {
   return (

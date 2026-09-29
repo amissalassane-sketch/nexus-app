@@ -128,7 +128,13 @@ for (const file of [
 
 has("components/notification-center.tsx", "sm:opacity-0", "“Mark as read” visible on touch");
 has("components/intelligence/signal-card.tsx", "sm:h-7", "signal CTA ≥36px on phones");
-has("components/ui/button.tsx", 'sm:h-9 sm:px-3.5', "primary buttons ≥40px on phones");
+// Primary controls keep a ≥40px box on phones; the desktop pointer gets
+// the compact step of the canonical control ladder (40 → 32px at `sm`).
+check(
+  "components/ui/button.tsx: primary buttons ≥40px on phones",
+  /(?:^|[^\w-])h-10[^\n]*sm:h-8/.test(read("components/ui/button.tsx")) ||
+    read("components/ui/button.tsx").includes('lg: "h-11 px-4 text-button sm:h-10"')
+);
 has("components/ui/dropdown.tsx", "max-w-[calc(100vw-24px)]", "dropdowns clamped to viewport");
 
 // ------------------------------------------------------------------
@@ -144,9 +150,13 @@ check(
   "intelligence-ask: agent trace is a collapsible accordion",
   ask.includes('aria-expanded={traceOpen}') && ask.includes("AGENT_STATE_LABEL")
 );
+// The disclosure ships in English ("Tools consulted · n") and is collapsed
+// by default on phones; the invariant is the accordion, not the copy.
 check(
   "intelligence-ask: tool trace is a collapsible accordion",
-  ask.includes("setToolsOpen") && ask.includes("Outils consultés")
+  ask.includes("setToolsOpen") &&
+    ask.includes("aria-expanded={toolsOpen}") &&
+    ask.includes("Tools consulted")
 );
 check(
   "intelligence-ask: send button keeps a ≥44px target on phones",
@@ -160,9 +170,15 @@ has("components/intelligence/mission-panel.tsx", "min-h-[44px]", "mission action
 console.log("Modals, forms, scroll & motion");
 // ------------------------------------------------------------------
 const modal = read("components/ui/modal.tsx");
+// Mobile sheet anchored to the bottom and bounded by the dynamic viewport
+// (the mobile bound is safe-area aware; the desktop bound is 92dvh capped
+// at 800px).
 check(
   "modal: bottom sheet on phones (never exceeds the screen)",
-  modal.includes("items-end") && modal.includes("max-h-[92dvh]") && modal.includes("sm:items-center")
+  modal.includes("items-end") &&
+    modal.includes("sm:items-center") &&
+    modal.includes("max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)]") &&
+    modal.includes("sm:max-h-[min(92dvh,800px)]")
 );
 check(
   "modal: body scrolls internally with pinned actions",

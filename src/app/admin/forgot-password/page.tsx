@@ -9,6 +9,27 @@ import { AdminIcon } from "@/components/admin/admin-icons";
 // ============================================================
 // NEXUS ADMIN — FORGOT PASSWORD
 // ============================================================
+// Recovery is deliberately the quietest surface in the control plane.
+// It exists for one reason: an operator who cannot sign in needs a way
+// back that does not involve a second operator handing over a password.
+//
+// Two properties are non-negotiable here:
+//   * The response never reveals whether an address is an admin account.
+//     "If an administrator account corresponds to this address…" is the
+//     whole answer, and it is the same answer for every input.
+//   * The screen wears the same overlay card, field recipe and primary
+//     action as the login form above it, so the flow reads as one
+//     surface rather than three unrelated pages.
+// ============================================================
+
+const FIELD =
+  "h-10 w-full rounded-control border border-admin-border bg-admin-surface-2 px-3 text-body text-admin-text placeholder:text-admin-text-3 transition-colors duration-[120ms] hover:border-admin-border-strong focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent disabled:opacity-50";
+
+const PRIMARY =
+  "flex h-10 w-full items-center justify-center gap-2 rounded-control bg-accent px-4 text-button font-medium text-accent-fg transition-colors duration-[120ms] hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent";
+
+const SECONDARY =
+  "flex h-10 w-full items-center justify-center rounded-control border border-admin-border bg-admin-surface-2 text-button text-admin-text-2 no-underline transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent";
 
 export default function AdminForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -16,8 +37,8 @@ export default function AdminForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
     if (loading) return;
 
     const trimmed = email.trim().toLowerCase();
@@ -42,34 +63,33 @@ export default function AdminForgotPasswordPage() {
       } | null;
 
       if (!res.ok || !payload?.ok) {
-        setError(payload?.error ?? "Could not process recovery request.");
+        setError(payload?.error ?? "Could not process the recovery request.");
         return;
       }
 
       setSubmitted(true);
     } catch {
-      setError("Network failure. Could not reach recovery service.");
+      setError("Network failure. The recovery service could not be reached.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
-      <div className="w-full max-w-[420px] rounded-[12px] border border-admin-border bg-admin-surface p-6 shadow-2xl sm:p-8">
+    <div className="admin-root flex min-h-dvh items-center justify-center bg-admin-base px-4 py-12 text-admin-text">
+      <div className="w-full max-w-[420px] rounded-overlay border border-admin-border bg-admin-surface p-6 sm:p-8">
+        {/* Brand / Title Header — identical to the sign-in card. */}
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg font-mono text-[12px] font-semibold text-admin-accent"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-admin-accent-border bg-admin-accent-bg mono-token font-semibold text-admin-accent"
           >
             N
           </span>
-          <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-admin-text">
-              Recovery
-            </h1>
-            <p className="font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-admin-text-3">
-              Operator password reset
+          <div className="min-w-0">
+            <h1 className="text-h3 text-admin-text">Operator recovery</h1>
+            <p className="mt-0.5 mono-token text-admin-text-3">
+              Password reset
             </p>
           </div>
         </div>
@@ -77,27 +97,31 @@ export default function AdminForgotPasswordPage() {
         <div className="my-5 h-px w-full bg-admin-border" />
 
         {submitted ? (
-          <div className="space-y-4">
-            <div className="rounded-[8px] border border-admin-border bg-admin-surface-2 p-3 text-[12.5px] leading-relaxed text-admin-text-2">
-              If an administrator account corresponds to <strong className="text-admin-text">{email}</strong>, a recovery dispatch has been transmitted.
-            </div>
-            <Link
-              href="/admin/login"
-              className="flex h-9 w-full items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface text-[12.5px] font-medium text-admin-text hover:bg-admin-surface-2 transition-colors"
+          <div className="flex flex-col gap-4">
+            <div
+              role="status"
+              className="rounded-surface border border-admin-border bg-admin-surface-2 px-3 py-2.5 text-small text-admin-text-2"
             >
-              Return to Admin Sign In
+              If an administrator account corresponds to{" "}
+              <span className="mono-meta text-admin-text">{email}</span>, a
+              recovery link has been sent. Nothing on this page confirms or
+              denies that the address exists.
+            </div>
+            <Link href="/admin/login" className={SECONDARY}>
+              Return to operator sign-in
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-            <p className="text-[12.5px] text-admin-text-2">
-              Enter your registered operator address to receive a secure password recovery transmission.
+            <p className="text-small text-admin-text-2">
+              Enter the address this operator account was created with. The
+              recovery link signs you back in to this surface only.
             </p>
 
             <div className="space-y-1.5">
               <label
                 htmlFor="recovery-email"
-                className="block font-mono text-[11px] uppercase tracking-[0.06em] text-admin-text-2"
+                className="block text-small font-medium text-admin-text-2"
               >
                 Operator email
               </label>
@@ -108,16 +132,17 @@ export default function AdminForgotPasswordPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="operator@nexus.internal"
                 autoComplete="email"
+                spellCheck={false}
                 disabled={loading}
                 required
-                className="h-10 w-full rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 text-[13px] text-admin-text placeholder:text-admin-text-3 focus:border-admin-accent focus:outline-none focus:ring-1 focus:ring-admin-accent disabled:opacity-50"
+                className={FIELD}
               />
             </div>
 
             {error ? (
               <div
                 role="alert"
-                className="flex items-start gap-2 rounded-[6px] border border-admin-danger/40 bg-admin-danger-bg/40 px-3 py-2 text-[12px] text-admin-danger"
+                className="flex items-start gap-2 rounded-surface border border-admin-danger-border bg-admin-danger-bg px-3 py-2 text-small text-admin-danger"
               >
                 <span className="mt-0.5 shrink-0">
                   <AdminIcon name="alert" size="action" />
@@ -126,23 +151,19 @@ export default function AdminForgotPasswordPage() {
               </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-[8px] bg-admin-accent px-4 font-medium text-admin-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 text-[13px]"
-            >
+            <button type="submit" disabled={loading} className={`mt-2 ${PRIMARY}`}>
               {loading ? (
                 <NexusIcon icon={IconLoader2} className="animate-spin" />
               ) : null}
-              {loading ? "Transmitting…" : "Transmit Recovery Link"}
+              {loading ? "Sending…" : "Send recovery link"}
             </button>
 
-            <div className="text-center pt-2">
+            <div className="pt-1 text-center">
               <Link
                 href="/admin/login"
-                className="font-mono text-[11px] text-admin-text-3 hover:text-admin-text transition-colors"
+                className="text-small text-admin-text-3 transition-colors duration-[120ms] hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
               >
-                ← Return to Sign In
+                Back to operator sign-in
               </Link>
             </div>
           </form>

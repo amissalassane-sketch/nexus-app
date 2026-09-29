@@ -127,7 +127,7 @@ export function LandingNav({
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-200 ease-nexus",
         scrolled || open
-          ? "border-b border-border-subtle bg-bg-base/85 backdrop-blur-md"
+          ? "border-b border-border-subtle bg-bg-base"
           : "border-b border-transparent bg-transparent",
         !scrolled && !open && context === "intelligence" && "dark text-white"
       )}
@@ -211,7 +211,7 @@ export function LandingNav({
       {open ? (
         <div
           id="landing-mobile-menu"
-          className="border-t border-border-subtle bg-bg-base/95 backdrop-blur-md md:hidden"
+          className="border-t border-border-subtle bg-bg-base md:hidden"
         >
           <nav
             aria-label="Landing sections"

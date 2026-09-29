@@ -119,7 +119,7 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
       >
         <NexusIcon
           icon={IconBolt}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lavender-text"
+          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-lavender"
         />
         <input
           value={text}
@@ -127,13 +127,13 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
           placeholder="Capture anything — “call the bank tomorrow”, “prepare Friday's meeting”…"
           aria-label="Capture a task"
           disabled={busy}
-          className="h-11 w-full rounded-input border border-border-default bg-bg-surface pl-10 pr-11 text-small text-text-primary outline-none transition-colors placeholder:text-text-quaternary focus:border-border-strong disabled:opacity-50"
+          className="h-10 w-full rounded-control border border-border-default bg-bg-surface-2 pr-11 pl-9 text-small text-text-primary outline-none transition-[border-color,box-shadow] duration-[120ms] ease-nexus placeholder:text-text-placeholder hover:border-border-strong focus:border-border-focus focus:shadow-[0_0_0_3px_var(--focus-ring)] disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={!text.trim() || busy}
           aria-label="Capture this as a task"
-          className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-input bg-accent text-accent-fg transition-opacity disabled:opacity-30"
+          className="absolute top-1/2 right-1 flex size-8 -translate-y-1/2 items-center justify-center rounded-control bg-accent text-accent-fg transition-opacity disabled:opacity-30"
         >
           <NexusIcon icon={IconCornerDownLeft} px={13} />
         </button>
@@ -145,12 +145,12 @@ export function CaptureBar({ compact = false }: { compact?: boolean }) {
             : "Dates and urgency are understood automatically — English and French."}
         </p>
         {offlineCount > 0 ? (
-          <span className="flex items-center gap-1 font-mono text-[10.5px] text-warning">
+          <span className="mono-meta flex items-center gap-1 text-warning">
             <NexusIcon icon={IconCloudOff} px={12} />
             <span>{offlineCount} pending</span>
           </span>
         ) : (
-          <span className="hidden sm:flex items-center gap-1 font-mono text-[10.5px] text-text-quaternary">
+          <span className="mono-meta hidden items-center gap-1 text-text-quaternary sm:flex">
             <NexusIcon icon={IconCloudCheck} px={12} />
             <span>Sync ready</span>
           </span>

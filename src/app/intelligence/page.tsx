@@ -48,7 +48,11 @@ export default function IntelligenceLandingPage() {
 
       <main id="main">
         <NexusIntelligenceHero
-          primaryCta={{ label: "Get started", href: "/signup" }}
+          primaryCta={{
+            label: "Get started",
+            href: "/signup",
+            hoverLabel: "Start building",
+          }}
           secondaryCta={{ label: "See how it works", href: "#in-action" }}
         />
         <WhatIntelligenceSees />

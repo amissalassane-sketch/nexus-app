@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 
 // ============================================================
@@ -44,7 +45,10 @@ function useNarrow(query = "(max-width: 1023px)") {
 
 export interface NexusIntelligenceHeroProps {
   notice?: ReactNode;
-  primaryCta?: { label: string; href: string };
+  /** `hoverLabel` turns the primary CTA into the slide interaction: the
+   *  resting label states the offer, the revealed one states the outcome
+   *  ("Get started" → "Start building"). Omit it and the CTA is still. */
+  primaryCta?: { label: string; href: string; hoverLabel?: string };
   secondaryCta?: { label: string; href: string };
   dense?: boolean;
 }
@@ -57,7 +61,11 @@ const FOOTNOTES = [
 
 export function NexusIntelligenceHero({
   notice,
-  primaryCta = { label: "Get started", href: "/signup" },
+  primaryCta = {
+    label: "Get started",
+    href: "/signup",
+    hoverLabel: "Start building",
+  },
   secondaryCta = { label: "See how it works", href: "#in-action" },
   dense = false,
 }: NexusIntelligenceHeroProps) {
@@ -65,7 +73,7 @@ export function NexusIntelligenceHero({
 
   return (
     <section
-      className={`nexus-intelligence-hero dark relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-black text-white ${
+      className={`nexus-intelligence-hero dark relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-bg-base text-text-primary ${
         dense ? "min-h-[74svh]" : "min-h-[82svh] lg:min-h-[86svh]"
       }`}
     >
@@ -109,7 +117,7 @@ export function NexusIntelligenceHero({
           ) : null}
 
           <span
-            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-pill border border-white/10 bg-white/5 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-300 backdrop-blur-sm"
+            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-control border border-border-subtle bg-bg-surface-2 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-300 backdrop-blur-sm"
             style={delay(60)}
           >
             <span
@@ -123,21 +131,21 @@ export function NexusIntelligenceHero({
             className="nexus-intelligence-item nexus-intelligence-lockup mt-6"
             style={delay(140)}
           >
-            <span className="nexus-intelligence-lockup-primary !text-white">NEXUS</span>
-            <span className="nexus-intelligence-lockup-secondary !text-neutral-400">
+            <span className="nexus-intelligence-lockup-primary !text-text-primary">NEXUS</span>
+            <span className="nexus-intelligence-lockup-secondary !text-text-tertiary">
               INTELLIGENCE
             </span>
           </h1>
 
           <p
-            className="nexus-intelligence-item mt-5 text-[20px] font-medium leading-[1.3] tracking-[-0.02em] text-white sm:text-[24px]"
+            className="nexus-intelligence-item mt-5 text-xl font-medium leading-[1.3] tracking-[-0.02em] text-text-primary sm:text-[24px]"
             style={delay(220)}
           >
             Your workspace, read end to end.
           </p>
 
           <p
-            className="nexus-intelligence-item mt-4 max-w-[490px] text-balance text-body text-neutral-400 sm:text-[15.5px] sm:leading-[25px]"
+            className="nexus-intelligence-item mt-4 max-w-[490px] text-balance text-body text-text-secondary"
             style={delay(300)}
           >
             NEXUS Intelligence reads your tasks, projects, goals and activity,
@@ -149,15 +157,26 @@ export function NexusIntelligenceHero({
             className="nexus-intelligence-item mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
             style={delay(380)}
           >
-            <ButtonLink href={primaryCta.href} size="lg">
-              {primaryCta.label}
+            <ButtonLink
+              href={primaryCta.href}
+              size="lg"
+              variant={primaryCta.hoverLabel ? "slide" : "primary"}
+            >
+              {primaryCta.hoverLabel ? (
+                <SlideLabel
+                  text={primaryCta.label}
+                  hoverText={primaryCta.hoverLabel}
+                />
+              ) : (
+                primaryCta.label
+              )}
               <NexusIcon icon={IconArrowRight} />
             </ButtonLink>
             <ButtonLink
               href={secondaryCta.href}
               variant="secondary"
               size="lg"
-              className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white"
+              className="border-border-strong bg-bg-surface-2 text-text-primary hover:bg-bg-surface-3"
             >
               {secondaryCta.label}
             </ButtonLink>
@@ -167,14 +186,14 @@ export function NexusIntelligenceHero({
 
       {/* ---- Footnote rule ---- */}
       <div
-        className="nexus-intelligence-item relative z-10 border-t border-white/10 bg-black/50 backdrop-blur-xs"
+        className="nexus-intelligence-item relative z-10 border-t border-border-subtle bg-bg-base"
         style={delay(520)}
       >
         <ul className="mx-auto flex w-full max-w-page flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:gap-8 sm:px-6 sm:py-4">
           {FOOTNOTES.map((item) => (
             <li
               key={item.label}
-              className="flex items-center gap-2.5 text-[13px] font-medium text-neutral-300 sm:justify-start"
+              className="flex items-center gap-2.5 text-caption font-medium text-text-secondary sm:justify-start"
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-lavender"

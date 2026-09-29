@@ -374,7 +374,7 @@ export function NexusGrid({
     <div
       ref={wrapperRef}
       aria-hidden="true"
-      className={`pointer-events-none fixed inset-0 -z-[1] overflow-hidden bg-[#050505] ${
+      className={`pointer-events-none fixed inset-0 -z-[1] overflow-hidden bg-bg-base ${
         className ?? ""
       }`}
     >

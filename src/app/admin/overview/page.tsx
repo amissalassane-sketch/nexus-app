@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ActivityCount, ActivityList } from "@/components/admin/activity-list";
 import { AdminRefreshButton } from "@/components/admin/admin-refresh-button";
 import { HealthList } from "@/components/admin/health-list";
+import { SlideLabel } from "@/components/ui/slide-label";
 import { KpiGrid, KpiTile } from "@/components/admin/kpi";
 import {
   AdminDivider,
@@ -16,7 +18,7 @@ import {
   AdminErrorState,
   AdminNotMeasured,
 } from "@/components/admin/states";
-import { AdminSeverityIcon } from "@/components/admin/status";
+import { AdminServiceStatus, AdminSeverityIcon } from "@/components/admin/status";
 import {
   getAdminOverview,
   getAutomationHealth,
@@ -110,14 +112,14 @@ export default async function AdminOverviewPage() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <AdminEyebrow>Control</AdminEyebrow>
-          <h1 className="mt-1.5 text-[30px] font-semibold leading-[36px] tracking-[-0.02em] text-admin-text">
+          <h1 className="mt-1.5 text-h1 text-admin-text">
             Overview
           </h1>
-          <p className="mt-1.5 max-w-[70ch] text-[13px] leading-[20px] text-admin-text-2">
+          <p className="mt-1.5 max-w-[70ch] text-body text-admin-text-2">
             Platform status, business health and product usage, read from the
             live database. Nothing here is estimated or cached.
           </p>
-          <p className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11.5px] leading-[16px] text-admin-text-3">
+          <p className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 mono-meta text-admin-text-3">
             <span>Updated {formatRelativeTime(generatedAt)}</span>
             <span aria-hidden="true">·</span>
             <span>{formatDateTime(generatedAt)}</span>
@@ -126,22 +128,11 @@ export default async function AdminOverviewPage() {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-admin-border bg-admin-surface px-2.5 font-mono text-[11px] uppercase leading-none tracking-[0.06em] text-admin-text-2">
-            <span
-              aria-hidden="true"
-              className={`h-1.5 w-1.5 rounded-full ${
-                health.status === "operational"
-                  ? "bg-admin-success"
-                  : health.status === "degraded" || health.status === "stale"
-                    ? "bg-admin-warning"
-                    : health.status === "error"
-                      ? "bg-admin-danger"
-                      : "bg-admin-text-3"
-              }`}
-            />
-            {health.label}
-          </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* One status vocabulary for the whole control plane: the
+              overview header shows the same object as any row in the
+              Platform Status panel below. */}
+          <AdminServiceStatus status={health.status} />
           <AdminRefreshButton />
         </div>
       </header>
@@ -160,7 +151,7 @@ export default async function AdminOverviewPage() {
           <HealthList services={services} />
         </div>
         <AdminDivider className="my-4" />
-        <p className="font-mono text-[11px] leading-[16px] text-admin-text-3">
+        <p className="mono-meta text-admin-text-3">
           Latency is the round trip of a real probe. Above 1500 ms a
           measured service is reported as Degraded. No uptime percentage
           is shown: this application keeps no time-series history to
@@ -172,7 +163,7 @@ export default async function AdminOverviewPage() {
       <section aria-labelledby="business-health-title">
         <h2
           id="business-health-title"
-          className="text-[15px] font-semibold leading-[20px] tracking-[-0.01em] text-admin-text"
+          className="text-h2 text-admin-text"
         >
           Business health
         </h2>
@@ -249,17 +240,17 @@ export default async function AdminOverviewPage() {
               />
             </AdminFieldList>
             <AdminDivider className="my-3" />
-            <p className="text-[12px] leading-[17px] text-admin-text-2">
+            <p className="text-small text-admin-text-2">
               Plan mix today:{" "}
-              <span className="font-mono tabular-nums text-admin-text">
+              <span className="mono-meta tabular-nums text-admin-text">
                 {formatCount(overview?.plans.free)} Free
               </span>
               {" · "}
-              <span className="font-mono tabular-nums text-admin-text">
+              <span className="mono-meta tabular-nums text-admin-text">
                 {formatCount(overview?.plans.pro)} Pro
               </span>
               {" · "}
-              <span className="font-mono tabular-nums text-admin-text">
+              <span className="mono-meta tabular-nums text-admin-text">
                 {formatCount(overview?.plans.team)} Team
               </span>
               . Conversion and churn are not shown: without a payment
@@ -310,7 +301,7 @@ export default async function AdminOverviewPage() {
               />
             </AdminFieldList>
             <AdminDivider className="my-3" />
-            <p className="text-[12px] leading-[17px] text-admin-text-2">
+            <p className="text-small text-admin-text-2">
               Sessions are not listed: GoTrue session rows are only readable
               with the service role key, which this application deliberately
               does not hold.
@@ -370,7 +361,7 @@ export default async function AdminOverviewPage() {
                 />
               </AdminFieldList>
               <AdminDivider className="my-3" />
-              <p className="text-[12px] leading-[17px] text-admin-text-2">
+              <p className="text-small text-admin-text-2">
                 Provider reachability is not probed from this panel; the
                 provider column in Platform status states whether a model
                 key is configured at all.
@@ -424,7 +415,7 @@ export default async function AdminOverviewPage() {
                 />
               </AdminFieldList>
               <AdminDivider className="my-3" />
-              <p className="text-[12px] leading-[17px] text-admin-text-2">
+              <p className="text-small text-admin-text-2">
                 Plaintext tokens are encrypted at rest (AES-256-GCM). Provider access is checked only during an explicit sync; no background verification is deployed.
               </p>
             </>
@@ -523,31 +514,42 @@ export default async function AdminOverviewPage() {
                 return (
                   <li
                     key={item.id}
-                    className="flex items-start gap-2.5 rounded-[8px] border border-admin-border bg-admin-surface-2 px-3 py-2.5"
+                    className="flex items-start gap-2.5 rounded-control border border-admin-border bg-admin-surface-2 px-3 py-2.5"
                   >
                     <span className="mt-0.5 shrink-0">
                       <AdminSeverityIcon severity={item.severity} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-baseline gap-2 text-[13px] font-medium leading-[18px] text-admin-text">
+                      <p className="flex flex-wrap items-baseline gap-2 text-body-medium text-admin-text">
                         {item.title}
-                        <span className="font-mono text-[11.5px] tabular-nums text-admin-text-2">
+                        <span className="mono-meta tabular-nums text-admin-text-2">
                           {formatCount(item.count)}
                         </span>
                       </p>
-                      <p className="mt-1 text-[12px] leading-[17px] text-admin-text-2">
+                      <p className="mt-1 text-small text-admin-text-2">
                         {item.detail}
                       </p>
-                      <p className="mt-1 font-mono text-[11px] leading-[15px] text-admin-text-3">
+                      <p className="mt-1 mono-meta text-admin-text-3">
                         Source · admin_overview() · {item.id}
                       </p>
                       {action ? (
-                        <a
+                        // The console's one decisive navigation per exception:
+                        // the label states the inspection, the slide states the
+                        // destination. It stays a still label for any action
+                        // that has no honest second wording.
+                        <Link
                           href={action.href}
-                          className="mt-1.5 inline-flex min-h-[28px] items-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg px-2.5 text-[12px] font-medium text-admin-accent transition-colors hover:bg-admin-accent-bg hover:brightness-125"
+                          className="group/slide mt-1.5 inline-flex min-h-7 items-center rounded-xs border border-admin-accent-border bg-admin-accent-bg px-2.5 text-small font-medium text-admin-accent transition-colors duration-[120ms] hover:border-admin-accent hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
                         >
-                          {action.label}
-                        </a>
+                          {action.hoverLabel ? (
+                            <SlideLabel
+                              text={action.label}
+                              hoverText={action.hoverLabel}
+                            />
+                          ) : (
+                            action.label
+                          )}
+                        </Link>
                       ) : null}
                     </div>
                   </li>

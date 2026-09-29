@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 
 import { HeroHeadline } from "@/components/landing/hero-headline";
 import { HeroAtmosphere } from "@/components/landing/hero-atmosphere";
@@ -88,8 +89,13 @@ export function Hero({ notice }: { notice?: ReactNode }) {
           className="landing-hero-item mt-8 flex w-full flex-col items-stretch gap-2.5 sm:mt-9 sm:w-auto sm:flex-row sm:items-center sm:justify-center"
           style={delay(210)}
         >
-          <ButtonLink href="/signup" size="lg" className="sm:min-w-[190px]">
-            Get started
+          <ButtonLink
+            href="/signup"
+            variant="slide"
+            size="lg"
+            className="sm:min-w-[190px]"
+          >
+            <SlideLabel text="Get started" hoverText="Start building" />
             <NexusIcon icon={IconArrowRight} />
           </ButtonLink>
           <ButtonLink

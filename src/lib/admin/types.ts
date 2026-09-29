@@ -210,6 +210,11 @@ export type AdminAttentionAction = {
   href: string;
   /** One-line explanation of why this helps. */
   rationale: string;
+  /** The label the button reveals on hover / keyboard focus — the same
+   *  action stated as its outcome ("Inspect workspaces" → "Open
+   *  workspaces"). Optional on purpose: an action with no honest second
+   *  label keeps a still button rather than animating a synonym. */
+  hoverLabel?: string;
 };
 
 export type AdminActivityKind =

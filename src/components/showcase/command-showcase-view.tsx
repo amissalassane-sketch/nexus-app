@@ -18,24 +18,41 @@ import {
 import { NexusIcon } from "@/components/nexus-icon";
 import { cn } from "@/lib/cn";
 
+// ============================================================
+// SHOWCASE 02 — COMMAND CENTER (⌘K)
+// ============================================================
+// The palette is an overlay layer: L4 surface + hairline + one shadow.
+//
+// Audit fixes folded into this file:
+//   · double blur removed — the scrim carries the product's single 2px
+//     blur; the sticky group header is a solid L4 surface with a hairline
+//     (it used to blur again on top of the scrim).
+//   · every hardcoded surface (#171717 / #1C1C1C / #111111) replaced by
+//     the token ladder.
+//   · the decorative top sheen gradient is gone; the header rim is a
+//     hairline.
+//
+// Layer separation for capture: the workspace behind stays a discrete,
+// dimmed layer (data-showcase-backdrop) so the palette can be exported
+// with or without its context.
+// ============================================================
+
 type ShowcaseCommand = {
   id: string;
   category: "Recent" | "Actions" | "Navigation" | "Entities";
   label: string;
   hint?: string;
   icon: React.ReactNode;
-  active?: boolean;
 };
 
 const INITIAL_COMMANDS: ShowcaseCommand[] = [
-  // ENTITIES (Matching "deploy")
+  // ENTITIES (matching "deploy")
   {
     id: "e-deploy-staging",
     category: "Entities",
     label: "Deploy staging environment #infra",
     hint: "Task · Tomorrow 3 PM",
     icon: <NexusIcon icon={IconChecklist} />,
-    active: true,
   },
   {
     id: "e-deploy-prod",
@@ -93,7 +110,7 @@ const INITIAL_COMMANDS: ShowcaseCommand[] = [
   {
     id: "a-ask-ai",
     category: "Actions",
-    label: "Ask NEXUS AI: What's putting the Q4 launch at risk?",
+    label: "Ask NEXUS: what's putting the Q4 launch at risk?",
     hint: "Intelligence",
     icon: <NexusIcon icon={IconSparkles} />,
   },
@@ -131,7 +148,7 @@ const INITIAL_COMMANDS: ShowcaseCommand[] = [
     id: "n-calendar",
     category: "Navigation",
     label: "Go to Calendar",
-    hint: "Time Layer",
+    hint: "Time layer",
     icon: <NexusIcon icon={IconCalendarTime} />,
   },
   {
@@ -145,29 +162,35 @@ const INITIAL_COMMANDS: ShowcaseCommand[] = [
     id: "n-intelligence",
     category: "Navigation",
     label: "Go to Intelligence",
-    hint: "Signals & Missions",
+    hint: "Signals",
     icon: <NexusIcon icon={IconRadar} />,
   },
 ];
 
+const CATEGORY_ORDER: Array<ShowcaseCommand["category"]> = [
+  "Entities",
+  "Recent",
+  "Actions",
+  "Navigation",
+];
+
+/**
+ * Query match. This is a *system state*, not an intelligence signal, so
+ * the highlight stays monochrome (a raised wash + a hairline underline)
+ * instead of painting the palette lavender.
+ */
 function HighlightedText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) return <>{text}</>;
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const index = lowerText.indexOf(lowerQuery);
+  const index = text.toLowerCase().indexOf(query.toLowerCase());
   if (index === -1) return <>{text}</>;
-
-  const before = text.slice(0, index);
-  const match = text.slice(index, index + query.length);
-  const after = text.slice(index + query.length);
 
   return (
     <>
-      {before}
-      <span className="rounded-[3px] bg-white/[0.16] font-semibold text-white px-0.5">
-        {match}
+      {text.slice(0, index)}
+      <span className="rounded-xs bg-accent-ghost-hover px-0.5 font-medium text-text-primary underline decoration-border-strong decoration-1 underline-offset-2">
+        {text.slice(index, index + query.length)}
       </span>
-      {after}
+      {text.slice(index + query.length)}
     </>
   );
 }
@@ -176,163 +199,165 @@ export function CommandShowcaseView() {
   const [query, setQuery] = useState("deploy");
   const [activeId, setActiveId] = useState("e-deploy-staging");
 
-  const categories: Array<ShowcaseCommand["category"]> = [
-    "Entities",
-    "Actions",
-    "Recent",
-    "Navigation",
-  ];
-
-  const filtered = INITIAL_COMMANDS.filter((cmd) => {
+  const filtered = INITIAL_COMMANDS.filter((command) => {
     if (!query.trim()) return true;
-    const q = query.toLowerCase();
+    const needle = query.toLowerCase();
     return (
-      cmd.label.toLowerCase().includes(q) ||
-      cmd.category.toLowerCase().includes(q) ||
-      (cmd.hint && cmd.hint.toLowerCase().includes(q))
+      command.label.toLowerCase().includes(needle) ||
+      command.category.toLowerCase().includes(needle) ||
+      (command.hint ? command.hint.toLowerCase().includes(needle) : false)
     );
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center p-4 pt-[10vh] sm:pt-[14vh] bg-black/70 backdrop-blur-sm pointer-events-auto">
-      <div className="command-panel relative w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-[#171717] shadow-[0_24px_64px_rgba(0,0,0,0.85)]">
-        {/* Top subtle sheen */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" aria-hidden="true" />
-
-        {/* Search Row */}
-        <div className="flex h-[52px] items-center gap-3 border-b border-border-subtle pl-4 pr-3 bg-[#171717]">
-          <NexusIcon icon={IconSearch} className="text-text-tertiary size-4" />
+    <div
+      data-showcase-backdrop="true"
+      className="fixed inset-0 z-40 flex items-start justify-center bg-black/60 p-4 pt-[10vh] backdrop-blur-[2px] sm:pt-[14vh]"
+    >
+      <div
+        role="dialog"
+        aria-label="Command palette"
+        className="relative w-full max-w-[680px] overflow-hidden rounded-overlay surface-overlay"
+      >
+        {/* ---- Search row ---- */}
+        <div className="flex h-12 items-center gap-3 border-b border-border-subtle pr-2.5 pl-3.5">
+          <NexusIcon icon={IconSearch} className="shrink-0 text-text-quaternary" />
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search NEXUS, or type a sentence to capture it…"
-            className="h-full w-full bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-quaternary"
-            autoFocus
+            aria-label="Search NEXUS"
+            className="h-full w-full bg-transparent text-[13.5px] text-text-primary outline-none placeholder:text-text-placeholder"
           />
-          <kbd className="shrink-0 rounded-[5px] border border-border-subtle bg-bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] leading-[14px] text-text-quaternary">
-            ESC
+          <kbd className="mono-token shrink-0 rounded-xs border border-border-subtle bg-bg-surface-2 px-1.5 py-1 text-text-quaternary">
+            esc
           </kbd>
         </div>
 
-        {/* Results List */}
-        <div className="command-list max-h-[440px] overflow-y-auto p-2 space-y-2">
-          {categories.map((category) => {
-            const items = filtered.filter((cmd) => cmd.category === category);
-            if (items.length === 0) return null;
+        {/* ---- Results ---- */}
+        <div className="command-list max-h-[440px] overflow-y-auto px-2 py-1">
+          {filtered.length === 0 ? (
+            <p className="px-2 py-6 text-center text-small text-text-secondary">
+              Nothing matches “{query.trim()}”. Press Enter to capture it as a
+              task.
+            </p>
+          ) : (
+            CATEGORY_ORDER.map((category) => {
+              const items = filtered.filter(
+                (command) => command.category === category
+              );
+              if (items.length === 0) return null;
 
-            return (
-              <div key={category} className="pb-1">
-                {/* Sticky Group Header */}
-                <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 bg-[#171717]/95 px-4 pb-1 pt-2 backdrop-blur-sm">
-                  <p className="eyebrow text-text-quaternary uppercase tracking-wider text-[10px] font-semibold">
-                    {category}
-                  </p>
-                  <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
-                  <span className="font-mono text-[10px] tabular-nums text-text-quaternary">
-                    {items.length}
-                  </span>
-                </div>
+              return (
+                <div key={category}>
+                  {/* Sticky group header — solid L4 + hairline. No blur. */}
+                  <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 border-b border-border-subtle bg-bg-surface-3 px-4 pt-2 pb-1">
+                    <p className="eyebrow text-text-quaternary">{category}</p>
+                    <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+                    <span className="mono-token text-text-quaternary">
+                      {items.length}
+                    </span>
+                  </div>
 
-                {/* Items */}
-                <div className="mt-1 space-y-0.5">
-                  {items.map((command) => {
-                    const isActive = command.id === activeId;
-                    return (
-                      <button
-                        key={command.id}
-                        type="button"
-                        onClick={() => setActiveId(command.id)}
-                        onMouseEnter={() => setActiveId(command.id)}
-                        className={cn(
-                          "group relative flex h-10 w-full items-center gap-3 rounded-nav px-2 text-left transition-colors duration-100",
-                          isActive
-                            ? "bg-white/[0.08] text-text-primary"
-                            : "text-text-secondary hover:text-text-primary hover:bg-white/[0.04]"
-                        )}
-                      >
-                        {/* Active Indicator Left Line */}
-                        <span
-                          aria-hidden="true"
+                  <div className="pt-1">
+                    {items.map((command) => {
+                      const isActive = command.id === activeId;
+                      return (
+                        <button
+                          key={command.id}
+                          type="button"
+                          aria-selected={isActive}
+                          onClick={() => setActiveId(command.id)}
+                          onMouseEnter={() => setActiveId(command.id)}
                           className={cn(
-                            "absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-pill bg-white transition-opacity",
-                            isActive ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-
-                        {/* Icon Box */}
-                        <span
-                          className={cn(
-                            "flex size-7 shrink-0 items-center justify-center rounded-[7px] border transition-colors",
+                            "relative flex h-9 w-full items-center gap-2.5 rounded-control px-2 text-left transition-colors duration-[120ms] ease-nexus",
                             isActive
-                              ? "border-border-strong bg-[#1C1C1C] text-text-primary"
-                              : "border-border-subtle bg-bg-subtle text-text-tertiary"
+                              ? "bg-bg-surface-2 text-text-primary"
+                              : "text-text-secondary hover:bg-accent-ghost hover:text-text-primary"
                           )}
                         >
-                          {command.icon}
-                        </span>
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "absolute top-1/2 left-0 h-3.5 w-0.5 -translate-y-1/2 rounded-pill bg-lavender transition-opacity duration-[120ms]",
+                              isActive ? "opacity-100" : "opacity-0"
+                            )}
+                          />
 
-                        {/* Label */}
-                        <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px]">
-                          <HighlightedText text={command.label} query={query} />
-                        </span>
-
-                        {/* Hint Badge */}
-                        {command.hint ? (
                           <span
                             className={cn(
-                              "eyebrow shrink-0 text-[10px] uppercase font-mono tracking-wide",
-                              isActive ? "text-text-tertiary" : "text-text-quaternary"
+                              "flex size-6 shrink-0 items-center justify-center rounded-xs border",
+                              isActive
+                                ? "border-border-strong bg-bg-surface-2 text-text-primary"
+                                : "border-border-subtle bg-bg-surface text-text-tertiary"
                             )}
                           >
-                            {command.hint}
+                            {command.icon}
                           </span>
-                        ) : null}
 
-                        {/* Return Key Icon */}
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "flex size-5 shrink-0 items-center justify-center rounded-[5px] border border-border-subtle bg-bg-surface-2 transition-opacity",
-                            isActive ? "opacity-100" : "opacity-0"
-                          )}
-                        >
-                          <NexusIcon
-                            icon={IconCornerDownLeft}
-                            className="text-text-tertiary size-3"
-                          />
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className="min-w-0 flex-1 truncate text-[13px]">
+                            <HighlightedText text={command.label} query={query} />
+                          </span>
+
+                          {command.hint ? (
+                            <span
+                              className={cn(
+                                "mono-meta shrink-0",
+                                isActive
+                                  ? "text-text-tertiary"
+                                  : "text-text-quaternary"
+                              )}
+                            >
+                              {command.hint}
+                            </span>
+                          ) : null}
+
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "flex size-5 shrink-0 items-center justify-center rounded-xs border border-border-subtle bg-bg-surface-2 transition-opacity duration-[120ms]",
+                              isActive ? "opacity-100" : "opacity-0"
+                            )}
+                          >
+                            <NexusIcon
+                              icon={IconCornerDownLeft}
+                              px={11}
+                              className="text-text-tertiary"
+                            />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
-        {/* Status Footer */}
-        <div className="flex h-9 items-center gap-4 border-t border-border-subtle bg-[#111111]/80 px-4 text-[11px] text-text-quaternary">
-          <span className="flex items-center gap-1.5">
-            <kbd className="rounded-[4px] border border-border-subtle bg-bg-surface-2 px-1 py-0.5 font-mono text-[9.5px]">
+        {/* ---- Status footer ---- */}
+        <div className="flex h-9 items-center gap-4 border-t border-border-subtle bg-bg-surface-2 px-4">
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <kbd className="mono-token rounded-xs border border-border-subtle bg-bg-surface-3 px-1 py-0.5 text-text-quaternary">
               ↑↓
             </kbd>
-            <span>Navigate</span>
+            <span className="text-caption text-text-tertiary">Navigate</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <kbd className="rounded-[4px] border border-border-subtle bg-bg-surface-2 px-1 py-0.5 font-mono text-[9.5px]">
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <kbd className="mono-token rounded-xs border border-border-subtle bg-bg-surface-3 px-1 py-0.5 text-text-quaternary">
               ↵
             </kbd>
-            <span>Open</span>
+            <span className="text-caption text-text-tertiary">Open</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <kbd className="rounded-[4px] border border-border-subtle bg-bg-surface-2 px-1 py-0.5 font-mono text-[9.5px]">
+            <kbd className="mono-token rounded-xs border border-border-subtle bg-bg-surface-3 px-1 py-0.5 text-text-quaternary">
               esc
             </kbd>
-            <span>Close</span>
+            <span className="text-caption text-text-tertiary">Close</span>
           </span>
-          <span className="ml-auto font-mono text-[10.5px] tabular-nums text-text-tertiary">
-            {filtered.length} results matching &ldquo;{query}&rdquo;
+          <span className="mono-meta ml-auto truncate text-text-tertiary">
+            {filtered.length} results · “{query}”
           </span>
         </div>
       </div>

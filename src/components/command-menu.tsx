@@ -664,15 +664,12 @@ export function CommandMenu() {
 
       <div
         className={cn(
-          "command-panel relative my-auto w-full max-w-[680px] overflow-hidden rounded-panel border border-border-default bg-bg-surface-3 shadow-overlay",
+          "command-panel relative my-auto w-full max-w-[680px] overflow-hidden rounded-overlay border border-border-default bg-bg-surface-3 shadow-overlay",
           closing ? "animate-command-out" : "animate-command-in"
         )}
       >
-        {/* Top sheen — one quiet light across the header */}
-        <div className="command-sheen pointer-events-none absolute inset-x-0 top-0 h-px" aria-hidden="true" />
-
         {/* ---- Search row ---- */}
-        <div className="flex h-[52px] items-center gap-3 border-b border-border-subtle pl-4 pr-3">
+        <div className="flex h-12 items-center gap-3 border-b border-border-subtle pr-2.5 pl-3.5">
           <NexusIcon
             icon={IconSearch}
             className="text-text-tertiary"
@@ -693,7 +690,7 @@ export function CommandMenu() {
             aria-activedescendant={
               flat[currentIndex] ? `${listboxId}-opt-${currentIndex}` : undefined
             }
-            className="h-full w-full bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-quaternary"
+            className="h-full w-full bg-transparent text-[13.5px] text-text-primary outline-none placeholder:text-text-placeholder"
           />
           {state === "loading" ? (
             <span
@@ -732,7 +729,7 @@ export function CommandMenu() {
                     key={command.id}
                     type="button"
                     onClick={() => void runCommand(command)}
-                    className="inline-flex h-7 items-center gap-1.5 rounded-pill border border-border-default bg-bg-subtle px-2.5 text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-control border border-border-subtle bg-bg-surface-2 px-2.5 text-caption text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:text-text-primary"
                   >
                     {command.icon}
                     {command.label}
@@ -743,12 +740,12 @@ export function CommandMenu() {
           ) : (
             groups.map((group) => (
               <div key={group.category} className="pb-1.5 last:pb-0">
-                <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 bg-bg-surface-3/95 px-4 pb-1 pt-2 backdrop-blur-sm">
+                <div className="sticky top-0 z-10 -mx-2 flex items-center gap-2 border-b border-border-subtle bg-bg-surface-3 px-4 pt-2 pb-1">
                   <p className="eyebrow text-text-quaternary">
                     {group.category}
                   </p>
                   <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
-                  <span className="font-mono text-[10px] tabular-nums text-text-quaternary">
+                  <span className="mono-token text-text-quaternary">
                     {group.items.length}
                   </span>
                 </div>
@@ -767,7 +764,7 @@ export function CommandMenu() {
                       onMouseMove={() => setActiveIndex(index)}
                       onClick={() => void runCommand(command)}
                       className={cn(
-                        "command-row group relative flex h-10 w-full items-center gap-3 rounded-nav px-2 text-left",
+                        "command-row group relative flex h-9 w-full items-center gap-2.5 rounded-control px-2 text-left",
                         active ? "text-text-primary" : "text-text-secondary"
                       )}
                     >
@@ -780,7 +777,7 @@ export function CommandMenu() {
                       />
                       <span
                         className={cn(
-                          "flex size-7 shrink-0 items-center justify-center rounded-[7px] border transition-colors duration-100",
+                          "flex size-6 shrink-0 items-center justify-center rounded-xs border transition-colors duration-100",
                           active
                             ? "border-border-strong bg-bg-surface-3 text-text-primary"
                             : "border-border-subtle bg-bg-subtle text-text-tertiary group-hover:text-text-secondary"
@@ -808,7 +805,7 @@ export function CommandMenu() {
                       <span
                         aria-hidden="true"
                         className={cn(
-                          "flex size-5 shrink-0 items-center justify-center rounded-[5px] border transition-opacity duration-100",
+                          "flex size-5 shrink-0 items-center justify-center rounded-xs border transition-opacity duration-100",
                           active
                             ? "border-border-subtle bg-bg-surface-2 opacity-100"
                             : "opacity-0"
@@ -829,7 +826,7 @@ export function CommandMenu() {
         </div>
 
         {/* ---- Status footer ---- */}
-        <div className="flex h-9 items-center gap-4 border-t border-border-subtle bg-bg-subtle/60 px-4">
+        <div className="flex h-9 items-center gap-4 border-t border-border-subtle bg-bg-surface-2 px-4">
           <span className="hidden sm:contents">
             <Hint keys="↑↓" label="Navigate" />
             <Hint keys="↵" label="Open" />
@@ -856,7 +853,7 @@ export function CommandMenu() {
                 Indexing workspace
               </span>
             ) : tokens.length > 0 ? (
-              <span className="font-mono text-[10.5px] tabular-nums text-text-quaternary">
+              <span className="mono-token text-text-quaternary">
                 {flat.length} result{flat.length === 1 ? "" : "s"}
               </span>
             ) : null}

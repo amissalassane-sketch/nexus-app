@@ -36,7 +36,7 @@ export function PageHeader({
         {eyebrow ? (
           <p className="eyebrow mb-2 text-text-quaternary">{eyebrow}</p>
         ) : null}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <h1 className="text-h1 text-text-primary">{title}</h1>
           {count !== undefined ? (
             <CountBadge value={count} label={`${count} items`} />
@@ -72,12 +72,12 @@ export function StatLine({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-2.5 gap-y-1 border-y border-border-subtle py-2.5 text-small text-text-secondary",
+        "flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-border-subtle py-2 text-small text-text-secondary",
         className
       )}
     >
       {items.map((item, index) => (
-        <span key={item.label} className="flex items-center gap-2.5">
+        <span key={item.label} className="flex items-center gap-3">
           {index > 0 ? (
             <span className="text-text-quaternary" aria-hidden="true">
               ·
@@ -86,7 +86,7 @@ export function StatLine({
           <span>
             <span
               className={cn(
-                "font-mono tabular-nums",
+                "mono-meta",
                 item.tone === "danger"
                   ? "text-danger"
                   : item.tone === "warning"

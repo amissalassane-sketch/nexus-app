@@ -12,8 +12,10 @@ import {
   IconSparkles,
 } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Tag } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/feedback";
 import { cn } from "@/lib/cn";
 import {
@@ -23,311 +25,329 @@ import {
   SHOWCASE_AI_ASK,
 } from "@/lib/showcase/mock-data";
 
+// ============================================================
+// SHOWCASE 03 — AI INTELLIGENCE CORE
+// ============================================================
+// The reasoning console. Every surface here is the same surface as the
+// rest of the product: L2 panel + hairline. Intelligence is signalled by
+// *structure and one accent*, never by a gradient, a glow or a coloured
+// shadow — those were removed in the design evolution pass.
+//
+// Layering that must survive a Figma / Butter capture:
+//   hero (L2 + lavender hairline) → signals (rows) → mission → ask
+// ============================================================
+
+const SEVERITY_TONE = {
+  risk: { badge: "danger" as const, icon: IconAlertTriangle, rail: "bg-danger" },
+  blocker: { badge: "warning" as const, icon: IconBan, rail: "bg-warning" },
+  opportunity: {
+    badge: "lavender" as const,
+    icon: IconSparkles,
+    rail: "bg-lavender",
+  },
+};
+
 export function IntelligenceShowcaseView() {
   const [askQuery, setAskQuery] = useState(SHOWCASE_AI_ASK.query);
   const [selectedSignal, setSelectedSignal] = useState(SHOWCASE_SIGNALS[0].id);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-        <div>
+      {/* ---------- Header ---------- */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-[6px] border border-lavender/30 bg-lavender/10 text-lavender">
-              <NexusIcon icon={IconRadar} className="size-3.5" />
+            <span className="flex size-7 items-center justify-center rounded-control border border-lavender-border bg-lavender-subtle text-lavender">
+              <NexusIcon icon={IconRadar} className="size-4" />
             </span>
-            <h1 className="text-[22px] font-semibold text-text-primary">
-              NEXUS Intelligence
-            </h1>
+            <p className="eyebrow text-text-quaternary">Intelligence</p>
           </div>
-          <p className="text-[13px] text-text-secondary mt-1">
-            Proactive signals, automated dependency reasoning &amp; autonomous missions.
+          <h1 className="mt-2 text-h1 text-text-primary">
+            Signals, reasoning &amp; autonomous missions
+          </h1>
+          <p className="mt-1 max-w-[68ch] text-small text-text-secondary">
+            Every recommendation is derived from your workspace graph. Nothing
+            is generated for display: each line maps to a task, a project or a
+            goal you can open.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-bg-surface px-3 py-1 text-[11px] font-mono text-text-secondary">
-            <span className="size-1.5 rounded-full bg-lavender animate-pulse" aria-hidden="true" />
-            Deterministic graph scan · 100% auditable
+        <span className="flex shrink-0 items-center gap-2 rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-1.5">
+          <span
+            aria-hidden="true"
+            className="size-1.5 rounded-pill bg-lavender"
+          />
+          <span className="mono-meta text-text-tertiary">
+            graph scan · 100% auditable
           </span>
-        </div>
+        </span>
       </header>
 
-      {/* Hero: Next Best Action Card */}
+      {/* ---------- Next best action (canonical: surface + lavender hairline) ---------- */}
       <section aria-label="Next best action">
-        <div className="relative overflow-hidden rounded-panel border border-lavender/30 bg-gradient-to-br from-[#171719] via-[#141416] to-[#101012] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
-          {/* Subtle glow edge */}
-          <div className="pointer-events-none absolute right-0 top-0 -mr-16 -mt-16 size-48 rounded-full bg-lavender/5 blur-3xl" />
+        <div className="flex flex-col gap-5 rounded-surface border border-lavender-border bg-bg-surface p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="lavender" icon={<NexusIcon icon={IconSparkles} className="size-3" />}>
+                Next best action
+              </Badge>
+              <Tag tone="success">{SHOWCASE_NEXT_BEST_ACTION.impactScore}</Tag>
+            </div>
 
-          <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-            <div className="space-y-3 max-w-2xl">
+            <h2 className="text-xl text-text-primary">
+              {SHOWCASE_NEXT_BEST_ACTION.title}
+            </h2>
+
+            <p className="max-w-[76ch] text-small text-text-secondary">
+              {SHOWCASE_NEXT_BEST_ACTION.rationale}
+            </p>
+
+            <dl className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-0.5">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 items-center gap-1.5 rounded-full bg-lavender/15 px-2 text-[10.5px] font-semibold uppercase tracking-wider text-lavender">
-                  <NexusIcon icon={IconSparkles} className="size-3" />
-                  Next Best Action
-                </span>
-                <span className="text-[11px] font-mono text-success bg-success/10 border border-success/20 px-2 py-0.5 rounded-full">
-                  {SHOWCASE_NEXT_BEST_ACTION.impactScore}
-                </span>
+                <dt className="mono-token text-text-quaternary">Target</dt>
+                <dd className="mono-meta text-text-secondary">
+                  Q4 Launch milestone
+                </dd>
               </div>
-
-              <h2 className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.02em] text-text-primary">
-                {SHOWCASE_NEXT_BEST_ACTION.title}
-              </h2>
-
-              <p className="text-[13.5px] leading-relaxed text-text-secondary">
-                {SHOWCASE_NEXT_BEST_ACTION.rationale}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4 pt-1 text-caption text-text-tertiary">
-                <span className="flex items-center gap-1.5 font-mono">
-                  <NexusIcon icon={IconShieldCheck} className="size-3.5 text-lavender" />
-                  Target: Q4 Launch milestone
-                </span>
-                <span>·</span>
-                <span className="font-mono text-text-secondary">
-                  Confidence: 98%
-                </span>
+              <div className="flex items-center gap-2">
+                <dt className="mono-token text-text-quaternary">Confidence</dt>
+                <dd className="mono-meta text-text-secondary">98%</dd>
               </div>
-            </div>
+              <div className="flex items-center gap-2">
+                <dt className="mono-token text-text-quaternary">Signals</dt>
+                <dd className="mono-meta text-text-secondary">3</dd>
+              </div>
+            </dl>
+          </div>
 
-            <div className="flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-pill bg-white px-5 text-[13px] font-semibold text-black shadow-sm transition-all hover:bg-[#E8E8E8] active:scale-[0.99]"
-              >
-                <span>{SHOWCASE_NEXT_BEST_ACTION.actionLabel}</span>
-                <NexusIcon icon={IconArrowRight} className="size-3.5" />
-              </button>
-            </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+            <Button variant="primary" size="lg">
+              {SHOWCASE_NEXT_BEST_ACTION.actionLabel}
+              <NexusIcon icon={IconArrowRight} className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="lg">
+              Show reasoning
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Main Grid: Proactive Signals (Left) + Mission & Ask (Right) */}
+      {/* ---------- Signals + mission/ask ---------- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column: Proactive Signals Panel (7 cols) */}
         <div className="space-y-6 lg:col-span-7">
           <Panel
-            eyebrow="PROACTIVE INTELLIGENCE"
-            title="Active signals &amp; anomalies"
-            description="Detected risks, blockers and optimization opportunities"
+            eyebrow="Proactive intelligence"
+            title="Active signals & anomalies"
+            description="Risks, blockers and opportunities detected in this workspace"
+            actions={<Tag tone="quiet">3 open</Tag>}
+            bodyClassName="p-0"
           >
-            <div className="space-y-3 pt-2">
+            <div className="flex flex-col">
               {SHOWCASE_SIGNALS.map((signal) => {
+                const config = SEVERITY_TONE[signal.type];
                 const isSelected = signal.id === selectedSignal;
-                const tone =
-                  signal.type === "risk"
-                    ? "danger"
-                    : signal.type === "blocker"
-                    ? "warning"
-                    : "accent";
-
                 return (
-                  <div
+                  <button
                     key={signal.id}
+                    type="button"
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedSignal(signal.id)}
                     className={cn(
-                      "cursor-pointer rounded-card border p-4 transition-all duration-150",
+                      "group relative flex w-full flex-col gap-2 border-b border-border-subtle px-4 py-3 text-left transition-colors duration-[120ms] ease-nexus last:border-b-0",
                       isSelected
-                        ? "border-border-strong bg-[#1A1A1A] shadow-sm"
-                        : "border-border-subtle bg-bg-subtle/60 hover:border-border-default hover:bg-bg-subtle"
+                        ? "bg-bg-surface-2"
+                        : "hover:bg-accent-ghost"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span
-                          className={cn(
-                            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[7px] border",
-                            signal.type === "risk"
-                              ? "border-danger/30 bg-danger/10 text-danger"
-                              : signal.type === "blocker"
-                              ? "border-warning/30 bg-warning/10 text-warning"
-                              : "border-lavender/30 bg-lavender/10 text-lavender"
-                          )}
-                        >
-                          <NexusIcon
-                            icon={
-                              signal.type === "risk"
-                                ? IconAlertTriangle
-                                : signal.type === "blocker"
-                                ? IconBan
-                                : IconSparkles
-                            }
-                            className="size-3.5"
-                          />
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              tone={
-                                tone === "danger"
-                                  ? "danger"
-                                  : tone === "warning"
-                                  ? "warning"
-                                  : "lavender"
-                              }
-                            >
-                              {signal.type.toUpperCase()}
-                            </Badge>
-                            <span className="text-[14px] font-medium text-text-primary">
-                              {signal.headline}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-small text-text-secondary leading-relaxed">
-                            {signal.summary}
-                          </p>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute top-3 bottom-3 left-0 w-0.5 rounded-pill transition-opacity duration-[120ms]",
+                        config.rail,
+                        isSelected ? "opacity-100" : "opacity-0"
+                      )}
+                    />
 
-                          {/* Evidence Pills */}
-                          <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            {signal.evidence.map((ev, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center rounded-[4px] border border-border-subtle bg-bg-surface px-2 py-0.5 font-mono text-[10.5px] text-text-tertiary"
-                              >
-                                {ev}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Badge tone={config.badge} icon={<NexusIcon icon={config.icon} className="size-3" />}>
+                        {signal.type}
+                      </Badge>
+                      <span className="text-small font-medium text-text-primary">
+                        {signal.headline}
+                      </span>
+                      <Tag tone="quiet" className="ml-auto">
+                        {signal.severity}
+                      </Tag>
+                    </span>
+
+                    <span className="text-caption text-text-secondary">
+                      {signal.summary}
+                    </span>
+
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {signal.evidence.map((evidence) => (
+                        <Tag key={evidence} tone="quiet">
+                          {evidence}
+                        </Tag>
+                      ))}
+                      <span className="mono-meta ml-auto text-text-quaternary">
+                        {signal.entityType} · {signal.entityLabel}
+                      </span>
+                    </span>
+
+                    <span className="flex items-center gap-1.5 text-caption text-lavender">
+                      <NexusIcon icon={IconArrowRight} className="size-3" />
+                      {signal.suggestedAction}
+                    </span>
+                  </button>
                 );
               })}
             </div>
           </Panel>
 
-          {/* Explainable Intelligence Rationale Box */}
-          <div className="rounded-card border border-border-default bg-bg-surface p-5">
+          <div className="rounded-surface border border-border-subtle bg-bg-surface p-4">
             <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
               <NexusIcon icon={IconShieldCheck} className="size-4 text-lavender" />
-              <h3 className="text-[14px] font-semibold text-text-primary">
-                Explainable Reasoning Model
-              </h3>
+              <h2 className="text-h3 text-text-primary">
+                Why NEXUS says this
+              </h2>
             </div>
-            <p className="mt-3 text-[13px] leading-relaxed text-text-secondary">
-              NEXUS Intelligence uses deterministic graph traversal across your tasks, projects and goals. Every recommendation maps 1:1 to measurable data points in your workspace. Zero hallucination, zero black-box decisions.
+            <p className="mt-3 text-small text-text-secondary">
+              Deterministic graph traversal across tasks, projects and goals.
+              Dependencies, due dates and blockers are read directly from the
+              workspace, so the same inputs always produce the same
+              recommendation — no sampling, no black box.
             </p>
+            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 border-t border-border-subtle pt-3 sm:grid-cols-3">
+              {[
+                { label: "Method", value: "dependency graph" },
+                { label: "Inputs", value: "24 tasks · 6 projects" },
+                { label: "Last scan", value: "2026-09-28 09:04" },
+              ].map((item) => (
+                <div key={item.label}>
+                  <dt className="mono-token text-text-quaternary">
+                    {item.label}
+                  </dt>
+                  <dd className="mono-meta mt-1 text-text-secondary">
+                    {item.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
 
-        {/* Right Column: Autonomous Mission + Ask AI Console (5 cols) */}
         <div className="space-y-6 lg:col-span-5">
-          {/* Active Mission Panel */}
+          {/* Autonomous mission */}
           <Panel
-            eyebrow="AUTONOMOUS AGENT"
+            eyebrow="Autonomous agent"
             title={SHOWCASE_MISSION.title}
             description={SHOWCASE_MISSION.objective}
-            actions={
-              <Badge tone="lavender" className="font-mono">
-                RUNNING · 50%
-              </Badge>
-            }
+            actions={<Tag tone="lavender">Running · 50%</Tag>}
           >
-            <div className="space-y-4 pt-2">
-              <Progress value={SHOWCASE_MISSION.progress} />
-
-              <ol className="relative space-y-3 pl-6 border-l border-border-default mt-4">
-                {SHOWCASE_MISSION.steps.map((step, idx) => {
-                  const isDone = step.status === "completed";
-                  const isCurrent = step.status === "in_progress";
-
-                  return (
-                    <li key={step.id} className="relative">
-                      {/* Step Marker Dot */}
-                      <span
-                        className={cn(
-                          "absolute -left-[31px] top-1 flex size-4 items-center justify-center rounded-full border bg-bg-base",
-                          isDone
-                            ? "border-success bg-success/20 text-success"
-                            : isCurrent
-                            ? "border-lavender bg-lavender/30 text-lavender animate-pulse"
-                            : "border-border-default text-text-quaternary"
-                        )}
-                      >
-                        {isDone ? (
-                          <NexusIcon icon={IconCheck} className="size-2.5" />
-                        ) : isCurrent ? (
-                          <NexusIcon icon={IconLoader2} className="size-2.5 animate-spin" />
-                        ) : (
-                          <span className="size-1 rounded-full bg-text-quaternary" />
-                        )}
-                      </span>
-
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <p
-                            className={cn(
-                              "text-[13px] font-medium",
-                              isDone
-                                ? "text-text-primary"
-                                : isCurrent
-                                ? "text-lavender font-semibold"
-                                : "text-text-tertiary"
-                            )}
-                          >
-                            {idx + 1}. {step.title}
-                          </p>
-                          <span className="font-mono text-[10px] text-text-quaternary">
-                            {isDone ? "Done" : isCurrent ? "Active" : "Pending"}
-                          </span>
-                        </div>
-                        <p className="text-caption text-text-secondary mt-0.5">
-                          {step.detail}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
+            <div className="mb-4 flex items-center gap-3">
+              <Progress
+                value={SHOWCASE_MISSION.progress}
+                label="Mission progress"
+                tone="lavender"
+                className="flex-1"
+              />
+              <span className="mono-meta text-text-tertiary">
+                {SHOWCASE_MISSION.progress}%
+              </span>
             </div>
+
+            <ol className="flex flex-col gap-3">
+              {SHOWCASE_MISSION.steps.map((step, index) => {
+                const isDone = step.status === "completed";
+                const isCurrent = step.status === "in_progress";
+                return (
+                  <li key={step.id} className="flex gap-3">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-pill border",
+                        isDone
+                          ? "border-success-border bg-success-bg text-success"
+                          : isCurrent
+                            ? "border-lavender-border bg-lavender-subtle text-lavender"
+                            : "border-border-default text-text-quaternary"
+                      )}
+                    >
+                      {isDone ? (
+                        <NexusIcon icon={IconCheck} className="size-3" />
+                      ) : isCurrent ? (
+                        <NexusIcon icon={IconLoader2} className="size-3 animate-spin" />
+                      ) : (
+                        <span className="mono-token">{index + 1}</span>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span
+                          className={cn(
+                            "truncate text-small",
+                            isCurrent
+                              ? "font-medium text-text-primary"
+                              : isDone
+                                ? "text-text-secondary"
+                                : "text-text-tertiary"
+                          )}
+                        >
+                          {step.title}
+                        </span>
+                        <span className="mono-token shrink-0 text-text-quaternary">
+                          {isDone ? "done" : isCurrent ? "active" : "queued"}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 block text-caption text-text-tertiary">
+                        {step.detail}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
           </Panel>
 
-          {/* Intelligence Ask Console */}
+          {/* Grounded ask */}
           <Panel
-            eyebrow="CONTEXTUAL ASK"
-            title="Ask NEXUS AI"
-            description="Natural language queries over your live workspace graph"
+            eyebrow="Contextual ask"
+            title="Ask NEXUS"
+            description="Questions answered from your workspace graph"
           >
-            <div className="space-y-3 pt-2">
-              {/* Question Input */}
-              <div className="relative flex items-center rounded-input border border-border-strong bg-bg-surface-2 px-3 py-2">
-                <NexusIcon icon={IconSparkles} className="size-4 text-lavender shrink-0 mr-2" />
-                <input
-                  type="text"
-                  value={askQuery}
-                  onChange={(e) => setAskQuery(e.target.value)}
-                  className="w-full bg-transparent text-[13px] text-text-primary outline-none"
-                  placeholder="Ask anything about your workspace..."
+            <div className="space-y-3">
+              <div className="relative">
+                <NexusIcon
+                  icon={IconSparkles}
+                  className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-lavender"
                 />
-                <kbd className="shrink-0 rounded bg-bg-surface px-1.5 py-0.5 font-mono text-[9px] text-text-quaternary border border-border-subtle">
-                  ↵
-                </kbd>
+                <Input
+                  value={askQuery}
+                  onChange={(event) => setAskQuery(event.target.value)}
+                  aria-label="Ask NEXUS about this workspace"
+                  className="pl-8"
+                  placeholder="Ask anything about your workspace…"
+                />
               </div>
 
-              {/* Response Card */}
-              <div className="rounded-card border border-border-subtle bg-bg-subtle/80 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-caption font-mono text-lavender">
-                  <span className="size-1.5 rounded-full bg-lavender" />
-                  Synthesized Answer:
-                </div>
-                <p className="text-[13px] leading-relaxed text-text-primary">
-                  The Q4 Launch is primarily at risk due to 2 blocked tasks in the infrastructure layer: <strong className="text-white">API integration</strong> and <strong className="text-white">Staging deployment verification</strong>. Resolving the API endpoint mock will unlock all 3 downstream items without slipping the October 15 milestone.
+              <div className="rounded-control border border-border-subtle bg-bg-subtle p-3">
+                <p className="mono-token mb-2 flex items-center gap-2 text-lavender">
+                  <span aria-hidden="true" className="size-1.5 rounded-pill bg-lavender" />
+                  Synthesised answer
+                </p>
+                <p className="text-small text-text-primary">
+                  {SHOWCASE_AI_ASK.answer}
                 </p>
 
-                {/* Grounding Sources */}
-                <div className="pt-2 border-t border-border-subtle">
-                  <p className="eyebrow text-text-quaternary mb-1.5">Evidence &amp; Grounding Sources</p>
+                <div className="mt-3 border-t border-border-subtle pt-3">
+                  <p className="mono-token mb-2 text-text-quaternary">
+                    Evidence used
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {SHOWCASE_AI_ASK.sources.map((src, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1.5 rounded-[4px] border border-border-subtle bg-bg-surface px-2 py-0.5 text-[11px] font-mono text-text-secondary"
-                      >
-                        <span className="size-1 rounded-full bg-text-tertiary" />
-                        <span>{src.label}</span>
-                        <span className="text-text-quaternary">({src.status})</span>
-                      </span>
+                    {SHOWCASE_AI_ASK.sources.map((source) => (
+                      <Tag key={source.label} tone="quiet">
+                        {source.label} · {source.status}
+                      </Tag>
                     ))}
                   </div>
                 </div>

@@ -5,12 +5,12 @@ import { cn } from "@/lib/cn";
 import { AdminIcon } from "./admin-icons";
 
 // ============================================================
-// NEXUS ADMIN — COPY BUTTON (PR 2)
+// NEXUS ADMIN — COPY BUTTON
 // ============================================================
-// The only mutation a directory screen in PR 2 performs is to the
-// operator's own clipboard. It exists because support workflows start by
-// pasting a user id or email somewhere else, and it is safe precisely
-// because it touches nothing on the platform.
+// The only mutation a directory screen performs is to the operator's own
+// clipboard. It exists because support workflows start by pasting a user
+// id or email somewhere else, and it is safe precisely because it touches
+// nothing on the platform.
 //
 // Behaviour rules:
 //   * Support is probed on click, never rendered from an effect — if the
@@ -18,6 +18,9 @@ import { AdminIcon } from "./admin-icons";
 //     transiently instead of silently doing nothing.
 //   * Success is announced through an aria-live region, so a screen-reader
 //     operator hears "Copied to clipboard" as well as seeing the check.
+//
+// It is a machine-token button (id / email in, id / email out), so it wears
+// the canonical Tag geometry: 20px tall, radius 4, uppercase mono 10.5.
 // ============================================================
 
 type CopyState = "idle" | "copied" | "unsupported";
@@ -67,12 +70,12 @@ export function AdminCopyButton({
         type="button"
         onClick={copy}
         className={cn(
-          "inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2 font-mono text-[10.5px] uppercase leading-none tracking-[0.06em] transition-colors duration-150",
+          "inline-flex h-5 items-center gap-1 rounded-xs border px-1.5 mono-token leading-none transition-colors duration-[120ms]",
           state === "copied"
             ? "border-admin-accent-border bg-admin-accent-bg text-admin-accent"
             : state === "unsupported"
               ? "border-admin-warning-border bg-admin-warning-bg text-admin-warning"
-              : "border-admin-border bg-admin-surface text-admin-text-2 hover:text-admin-text",
+              : "border-admin-border bg-admin-surface-2 text-admin-text-2 hover:border-admin-border-strong hover:text-admin-text",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
         )}
       >

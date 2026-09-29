@@ -109,7 +109,7 @@ export default async function AdminUserDetailPage({
         backLabel="Back to Users"
         detail={
           <>
-            <span className="font-mono text-[12px] text-admin-text-2">
+            <span className="mono-meta text-admin-text-2">
               {raw.slice(0, 64)}
             </span>{" "}
             is not a valid user id, so no lookup was attempted.
@@ -128,7 +128,7 @@ export default async function AdminUserDetailPage({
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/admin/users"
-            className="text-[12.5px] text-admin-text-2 no-underline hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+            className="text-small text-admin-text-2 no-underline hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
           >
             ← Back to Users
           </Link>
@@ -147,12 +147,12 @@ export default async function AdminUserDetailPage({
         detail={
           <>
             This id does not exist in{" "}
-            <span className="font-mono text-[12px] text-admin-text-2">auth.users</span>.
+            <span className="mono-meta text-admin-text-2">auth.users</span>.
             The database answered normally — “no such account” is a measured
             fact here, not a read failure. The account may have been deleted;
             admin actions against it would still be visible in the audit log
             (PR 3).
-            <span className="mt-2 block truncate font-mono text-[11.5px] text-admin-text-3">
+            <span className="mt-2 block truncate mono-meta text-admin-text-3">
               {userId}
             </span>
           </>
@@ -176,7 +176,7 @@ export default async function AdminUserDetailPage({
           <span className="flex min-w-0 items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface-2 font-mono text-[12px] font-semibold uppercase text-admin-text-2"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-admin-border bg-admin-surface-2 mono-meta font-semibold uppercase text-admin-text-2"
             >
               {initialsFor(name, identity.username)}
             </span>
@@ -263,7 +263,7 @@ export default async function AdminUserDetailPage({
                 <AdminDivider className="mt-3" />
                 <div className="mt-3">
                   <AdminEyebrow>Bio (as written by the account)</AdminEyebrow>
-                  <span className="mt-1 block max-w-[70ch] whitespace-pre-line text-[12.5px] leading-[18px] text-admin-text-2">
+                  <span className="mt-1 block max-w-[70ch] whitespace-pre-line text-small text-admin-text-2">
                     {identity.bio.slice(0, 500)}
                     {identity.bio.length > 500 ? "…" : ""}
                   </span>
@@ -346,17 +346,17 @@ export default async function AdminUserDetailPage({
                   >
                     <Link
                       href={`/admin/workspaces/${ws.workspace_id}`}
-                      className="min-w-0 inline-flex items-center gap-2 text-[13px] font-medium text-admin-text no-underline hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+                      className="min-w-0 inline-flex items-center gap-2 text-body-medium text-admin-text no-underline hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
                     >
                       <span className="truncate">{ws.name}</span>
-                      <span className="truncate font-mono text-[11px] text-admin-text-3">
+                      <span className="truncate mono-meta text-admin-text-3">
                         {ws.slug}
                       </span>
                     </Link>
                     <span className="flex shrink-0 flex-wrap items-center gap-1.5">
                       {ws.is_creator ? (
                         <span
-                          className="font-mono text-[10px] uppercase tracking-[0.08em] text-admin-text-3"
+                          className="mono-token text-admin-text-3"
                           title="Row exists in workspaces with owner_id set to this account"
                         >
                           created
@@ -364,7 +364,7 @@ export default async function AdminUserDetailPage({
                       ) : null}
                       <AdminMembershipRoleBadge role={ws.role} />
                       <AdminMembershipStatusBadge status={ws.membership_status} />
-                      <AdminTimeCell iso={ws.joined_at} className="text-[11px]" />
+                      <AdminTimeCell iso={ws.joined_at} className="text-caption" />
                     </span>
                   </li>
                 ))}
@@ -378,7 +378,7 @@ export default async function AdminUserDetailPage({
               title="Recent activity"
               description="Rows this account caused in the workspace activity stream (public.activities)."
               action={
-                <span className="font-mono text-[11px] text-admin-text-3">
+                <span className="mono-meta text-admin-text-3">
                   {formatCount(usage.activity_events)} recorded
                 </span>
               }
@@ -423,9 +423,9 @@ export default async function AdminUserDetailPage({
                 <AdminField label="Note" mono={false} value={platform.note ?? NOT_AVAILABLE} />
               </AdminFieldList>
             ) : (
-              <p className="mt-3 text-[12.5px] leading-[18px] text-admin-text-2">
+              <p className="mt-3 text-small text-admin-text-2">
                 Not a platform admin. Grants live in{" "}
-                <span className="font-mono text-[11.5px] text-admin-text-3">
+                <span className="mono-meta text-admin-text-3">
                   public.platform_admins
                 </span>{" "}
                 and are managed by SQL until PR 5 adds the settings surface.
@@ -462,7 +462,7 @@ export default async function AdminUserDetailPage({
               />
             </AdminFieldList>
             <AdminDivider className="my-3" />
-            <p className="text-[11.5px] leading-[16px] text-admin-text-3">
+            <p className="text-caption text-admin-text-3">
               No time-series usage history is stored, so there is no trend
               to chart. These are counts of what exists now.
             </p>

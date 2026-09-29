@@ -2,9 +2,9 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { IconLoader2, IconPhotoPlus, IconUser } from "@tabler/icons-react";
+import { IconPhotoPlus, IconUser } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { computeProfileCompleteness, isValidUsername, missingLabel } from "@/lib/profile-state";
@@ -148,39 +148,26 @@ function ProfileCompletionForm({
       description="Add your name and username so your NEXUS workspace can recognise you. You can always change these later in Settings."
       footer={
         <>
-          <motion.button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            transition={{ duration: 0.15 }}
-            className="inline-flex h-9 items-center rounded-full px-3.5 text-[13px] font-medium text-white/50 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:text-white/70 transition-colors disabled:opacity-40"
-          >
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Not now
-          </motion.button>
-          <motion.button
+          </Button>
+          <Button
             type="submit"
             form="profile-completion-form"
-            disabled={saving}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            transition={{ duration: 0.15 }}
-            className="inline-flex h-9 flex-1 sm:flex-none items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-medium text-black hover:bg-white/90 transition-colors disabled:opacity-60"
+            variant="primary"
+            loading={saving}
+            className="flex-1 sm:flex-none"
           >
-            {saving ? (
-              <NexusIcon icon={IconLoader2} px={14} className="animate-spin" />
-            ) : null}
-            {saving ? "Saving…" : "Save profile"}
-          </motion.button>
+            Save profile
+          </Button>
         </>
       }
     >
       <form id="profile-completion-form" onSubmit={handleSave} className="flex flex-col gap-4">
         {/* Progress indicator */}
-        <div className="flex items-center gap-2.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-          <NexusIcon icon={IconUser} px={14} className="text-white/30" />
-          <p className="min-w-0 flex-1 truncate text-[11.5px] text-white/40">
+        <div className="flex items-center gap-2.5 rounded-surface border border-border-subtle bg-bg-surface-2 px-3 py-2">
+          <NexusIcon icon={IconUser} px={14} className="text-text-tertiary" />
+          <p className="min-w-0 flex-1 truncate text-caption text-text-secondary">
             {completeness.complete
               ? "Profile complete. Ready to go."
               : `${completeness.filled} of ${completeness.total} completed${
@@ -191,10 +178,10 @@ function ProfileCompletionForm({
 
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between">
-            <label htmlFor="profile-completion-name" className="text-[11.5px] font-medium text-white/50">
+            <label htmlFor="profile-completion-name" className="text-caption font-medium text-text-secondary">
               Full name
             </label>
-            <span className="text-[11.5px] text-white/25">required</span>
+            <span className="text-caption text-text-tertiary">required</span>
           </div>
           <input
             id="profile-completion-name"
@@ -204,22 +191,22 @@ function ProfileCompletionForm({
             placeholder="Your name"
             autoComplete="name"
             required
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
+            className="h-10 w-full rounded-control border border-border-subtle bg-bg-surface-2 px-3 text-body text-text-primary transition-colors duration-[120ms] hover:border-border-strong focus-visible:border-focus focus-visible:outline-none disabled:opacity-50 placeholder:text-text-tertiary"
           />
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between">
-            <label htmlFor="profile-completion-username" className="text-[11.5px] font-medium text-white/50">
+            <label htmlFor="profile-completion-username" className="text-caption font-medium text-text-secondary">
               Username
             </label>
-            <span className="text-[11.5px] text-white/25">required</span>
+            <span className="text-caption text-text-tertiary">required</span>
           </div>
-          <p className="text-[11.5px] text-white/30">
+          <p className="text-caption text-text-tertiary">
             Your NEXUS identity, not your login. 3–32 letters, numbers, dots, underscores or dashes.
           </p>
-          <div className="flex items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-[1px] transition-[border-color,box-shadow] duration-200 focus-within:border-white/30 focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.06)]">
-            <span className="pl-4 font-mono text-[11.5px] text-white/25" aria-hidden="true">
+          <div className="flex h-10 items-center overflow-hidden rounded-control border border-border-subtle bg-bg-surface-2 transition-colors duration-[120ms] focus-within:border-focus">
+            <span className="pl-3 mono-meta text-text-tertiary" aria-hidden="true">
               @
             </span>
             <input
@@ -232,23 +219,23 @@ function ProfileCompletionForm({
               spellCheck={false}
               autoCapitalize="none"
               required
-              className="h-[42px] w-full min-w-0 flex-1 bg-transparent px-2 text-[13.5px] text-white placeholder:text-white/25 focus:outline-none"
+              className="h-10 w-full min-w-0 flex-1 bg-transparent px-2 text-body text-text-primary placeholder:text-text-tertiary focus-visible:outline-none"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="profile-completion-avatar" className="text-[11.5px] font-medium text-white/50">
-            Profile photo <span className="text-white/25">· Optional</span>
+          <label htmlFor="profile-completion-avatar" className="text-caption font-medium text-text-secondary">
+            Profile photo <span className="text-text-tertiary">· Optional</span>
           </label>
-          <p className="text-[11.5px] text-white/30">
+          <p className="text-caption text-text-tertiary">
             A link to an image you host. Leave it empty and NEXUS uses your initial.
           </p>
           <div className="relative">
             <NexusIcon
               icon={IconPhotoPlus}
               px={14}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
             />
             <input
               id="profile-completion-avatar"
@@ -256,14 +243,14 @@ function ProfileCompletionForm({
               onChange={(event) => setAvatarUrl(event.target.value)}
               placeholder="https://…"
               autoComplete="off"
-              className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 pl-9 pr-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
+              className="h-10 w-full rounded-control border border-border-subtle bg-bg-surface-2 pl-9 pr-3 text-body text-text-primary transition-colors duration-[120ms] hover:border-border-strong focus-visible:border-focus focus-visible:outline-none disabled:opacity-50 placeholder:text-text-tertiary"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="profile-completion-job" className="text-[11.5px] font-medium text-white/50">
-            Job title <span className="text-white/25">· Optional</span>
+          <label htmlFor="profile-completion-job" className="text-caption font-medium text-text-secondary">
+            Job title <span className="text-text-tertiary">· Optional</span>
           </label>
           <input
             id="profile-completion-job"
@@ -271,13 +258,13 @@ function ProfileCompletionForm({
             onChange={(event) => setJobTitle(event.target.value)}
             placeholder="e.g. Product lead"
             autoComplete="off"
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-full py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25"
+            className="h-10 w-full rounded-control border border-border-subtle bg-bg-surface-2 px-3 text-body text-text-primary transition-colors duration-[120ms] hover:border-border-strong focus-visible:border-focus focus-visible:outline-none disabled:opacity-50 placeholder:text-text-tertiary"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="profile-completion-bio" className="text-[11.5px] font-medium text-white/50">
-            Bio <span className="text-white/25">· Optional · {bio.length}/500</span>
+          <label htmlFor="profile-completion-bio" className="text-caption font-medium text-text-secondary">
+            Bio <span className="text-text-tertiary">· Optional · {bio.length}/500</span>
           </label>
           <textarea
             id="profile-completion-bio"
@@ -285,12 +272,12 @@ function ProfileCompletionForm({
             onChange={(event) => setBio(event.target.value.slice(0, 500))}
             rows={3}
             placeholder="A short line about what you work on"
-            className="w-full backdrop-blur-[1px] text-white bg-white/[0.03] border border-white/10 rounded-2xl py-2.5 px-4 text-[13.5px] focus:outline-none focus:border-white/30 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 placeholder:text-white/25 resize-none"
+            className="w-full resize-none rounded-surface border border-border-subtle bg-bg-surface-2 px-3 py-2.5 text-body text-text-primary transition-colors duration-[120ms] hover:border-border-strong focus-visible:border-focus focus-visible:outline-none disabled:opacity-50 placeholder:text-text-tertiary"
           />
         </div>
 
         {error ? (
-          <p className="text-sm text-red-400/90 text-center" role="alert">
+          <p className="text-center text-small text-danger" role="alert">
             {error}
           </p>
         ) : null}

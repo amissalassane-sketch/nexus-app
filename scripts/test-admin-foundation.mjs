@@ -394,9 +394,15 @@ check(
   "shell: the current section is exposed to assistive technology",
   shell.includes('aria-current={active ? "page" : undefined}')
 );
+// The shell keeps one canonical focus recipe (`const FOCUS = …`) and applies
+// it at every interactive site, so the assertion checks the ring is declared
+// and that at least five controls actually use it (trigger, close, links,
+// sign out) — inlining the same five utility classes seven times would be the
+// inconsistency this suite exists to prevent.
+const focusUses = (shell.match(/\bFOCUS\b/g) ?? []).length - 1; // minus the declaration
 check(
   "shell: focus is visible on every interactive element",
-  (shell.match(/focus-visible:outline/g) ?? []).length >= 5,
+  shell.includes("focus-visible:outline") && focusUses >= 5,
   "expected a focus ring on the trigger, close button, links and sign out"
 );
 check(

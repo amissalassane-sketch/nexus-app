@@ -58,7 +58,14 @@ export default function HowItWorksPage() {
                 NEXUS continuously structures workspace activity into evidence-backed signals, then recommends what deserves attention next.
               </p>
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" size="lg">Get started</ButtonLink>
+                <ButtonLink
+                  href="/signup"
+                  variant="slide"
+                  hoverText="Start building"
+                  size="lg"
+                >
+                  Get started
+                </ButtonLink>
                 <ButtonLink href="/intelligence" variant="secondary" size="lg">
                   See Intelligence <NexusIcon icon={IconArrowRight} />
                 </ButtonLink>

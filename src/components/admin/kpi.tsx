@@ -13,6 +13,10 @@ import { AdminEyebrow } from "./panel";
 // A tile never invents a value. `value` accepts the pre-formatted string
 // so the caller decides — and the formatters in lib/admin/format.ts turn
 // a missing measurement into "Not available", never into 0.
+//
+// The value rides the canonical numeric step (`.metric`: mono 24, tabular,
+// −0.02em) and the label rides the technical token layer, so a KPI here
+// and a metric in the product are the same typographic object.
 // ============================================================
 
 export function KpiTile({
@@ -29,10 +33,22 @@ export function KpiTile({
   definition: string;
   /** Secondary line: a real delta, a window, or a status. */
   hint?: ReactNode;
-  tone?: "default" | "accent";
+  tone?: "default" | "accent" | "success" | "warning" | "danger";
   className?: string;
 }) {
   const unavailable = value === "Not available";
+
+  const valueTone = unavailable
+    ? "text-admin-text-3"
+    : tone === "accent"
+      ? "text-admin-accent"
+      : tone === "success"
+        ? "text-admin-success"
+        : tone === "warning"
+          ? "text-admin-warning"
+          : tone === "danger"
+            ? "text-admin-danger"
+            : "text-admin-text";
 
   return (
     <div
@@ -42,25 +58,10 @@ export function KpiTile({
       )}
     >
       <AdminEyebrow>{label}</AdminEyebrow>
-      <span
-        className={cn(
-          "font-mono text-[26px] font-medium leading-[30px] tabular-nums tracking-[-0.02em]",
-          unavailable
-            ? "text-admin-text-3"
-            : tone === "accent"
-              ? "text-admin-accent"
-              : "text-admin-text"
-        )}
-      >
-        {value}
-      </span>
-      <span className="text-[11.5px] leading-[16px] text-admin-text-2">
-        {definition}
-      </span>
+      <span className={cn("metric", valueTone)}>{value}</span>
+      <span className="text-caption text-admin-text-2">{definition}</span>
       {hint ? (
-        <span className="mt-0.5 text-[11.5px] leading-[16px] text-admin-text-3">
-          {hint}
-        </span>
+        <span className="mt-0.5 text-caption text-admin-text-3">{hint}</span>
       ) : null}
     </div>
   );
@@ -83,7 +84,7 @@ export function KpiGrid({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[10px] border border-admin-border",
+        "overflow-hidden rounded-surface border border-admin-border",
         className
       )}
     >

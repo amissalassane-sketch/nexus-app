@@ -234,7 +234,7 @@ export function AdminIconTile({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-[10px] border",
+        "inline-flex h-10 w-10 items-center justify-center rounded-surface border",
         tones[tone],
         className
       )}

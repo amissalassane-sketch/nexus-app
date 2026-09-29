@@ -16,6 +16,7 @@ import { getProfileSummary, requireUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 import { Panel } from "@/components/ui/card";
 import { Alert, EmptyState, Progress } from "@/components/ui/feedback";
 import { FocusPanel, InsightRow } from "@/components/intelligence-panel";
@@ -515,9 +516,14 @@ export default async function DashboardPage() {
 
               {/* SINGLE DOMINANT PRIMARY CTA */}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                {/* The screen's one decisive action. Its label states the offer
+                    and slides to state the outcome, so the button explains
+                    where it goes without a second control. */}
                 {!profile.profileComplete ? (
                   <ButtonLink
                     href="/settings?tab=profile"
+                    variant="slide"
+                    hoverText="Open settings"
                     size="lg"
                   >
                     Set up your profile
@@ -525,28 +531,31 @@ export default async function DashboardPage() {
                 ) : context.projects === 0 ? (
                   <ButtonLink
                     href="/projects?create=1"
+                    variant="slide"
                     size="lg"
                     data-guide="new-project"
                   >
                     <NexusIcon icon={IconLayoutKanban} />
-                    Create your first project
+                    <SlideLabel text="Create your first project" hoverText="Open projects" />
                   </ButtonLink>
                 ) : context.tasks === 0 ? (
                   <ButtonLink
                     href="/tasks?create=1"
+                    variant="slide"
                     size="lg"
                     data-guide="new-task"
                   >
                     <NexusIcon icon={IconChecklist} />
-                    Create your first task
+                    <SlideLabel text="Create your first task" hoverText="Open tasks" />
                   </ButtonLink>
                 ) : (
                   <ButtonLink
                     href="/app/intelligence?ask=1"
+                    variant="slide"
                     size="lg"
                   >
                     <NexusIcon icon={IconSparkles} />
-                    Ask NEXUS what matters
+                    <SlideLabel text="Ask NEXUS what matters" hoverText="Open Command Center" />
                   </ButtonLink>
                 )}
                 <Link

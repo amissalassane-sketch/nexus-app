@@ -144,11 +144,10 @@ export function Modal({
         tabIndex={-1}
         onClick={onClose}
         className={cn(
-          // Restrained scrim: the app shell is already a near-black
-          // surface, so 70% black crushed the interface behind the
-          // dialog into a void. 50% keeps the layer hierarchy readable
-          // (spotlight 40% < dialogs 50% < drawers 60% < command 78%),
-          // with a light blur only — no glass.
+          // The scrim is the product's one and only blur. The app shell
+          // is already a near-black surface, so 50% black keeps the layer
+          // hierarchy readable (spotlight 40% < dialogs 50% < drawers 60%
+          // < command 78%) without crushing the workspace into a void.
           "fixed inset-0 bg-black/50 backdrop-blur-[2px] will-change-transform",
           isClosing
             ? "animate-[fade-out_180ms_var(--ease-nexus)_both]"
@@ -164,7 +163,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative my-0 flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-full flex-col overflow-hidden rounded-t-panel border border-border-default bg-bg-surface-3 shadow-overlay will-change-transform sm:my-4 sm:max-h-[min(92dvh,800px)] sm:rounded-panel",
+          "relative my-0 flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-full flex-col overflow-hidden rounded-t-overlay border border-border-default bg-bg-surface-3 shadow-overlay will-change-transform sm:my-4 sm:max-h-[min(92dvh,800px)] sm:rounded-overlay",
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
           isClosing
             ? "animate-[sheet-out_220ms_var(--ease-nexus)_both] sm:animate-[scale-out_180ms_var(--ease-nexus)_both]"
@@ -179,13 +178,11 @@ export function Modal({
           <span className="h-1 w-9 rounded-pill bg-border-strong transition-colors duration-200" />
         </div>
 
-        <div className="mb-4 flex shrink-0 items-start justify-between gap-4 px-5 pt-3 sm:px-6 sm:pt-6">
+        <div className="mb-4 flex shrink-0 items-start justify-between gap-4 px-4 pt-4 sm:px-5 sm:pt-5">
           <div className="min-w-0 flex-1">
-            <h2 className="text-h2 text-text-primary animate-[intelligence-state-in_240ms_var(--ease-nexus)_both]">
-              {title}
-            </h2>
+            <h2 className="text-h2 text-text-primary">{title}</h2>
             {description ? (
-              <p id={descriptionId} className="mt-1 text-small text-text-secondary animate-[intelligence-state-in_240ms_var(--ease-nexus)_80ms_both]">
+              <p id={descriptionId} className="mt-1 text-small text-text-secondary">
                 {description}
               </p>
             ) : null}
@@ -194,13 +191,13 @@ export function Modal({
             variant="icon"
             onClick={onClose}
             aria-label="Close dialog"
-            className="shrink-0 transition-transform duration-150 ease-nexus active:scale-90"
+            className="shrink-0"
           >
             <NexusIcon icon={IconX} />
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 sm:px-6 sm:pb-0">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2 sm:px-5 sm:pb-0">
           <div
             className={cn(
               "pb-2 transition-opacity duration-200 ease-nexus sm:pb-0",
@@ -212,7 +209,7 @@ export function Modal({
         </div>
 
         {footer ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-6 sm:py-0 sm:pb-4">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:border-t-0 sm:px-5 sm:py-0 sm:pb-4">
             {footer}
           </div>
         ) : (

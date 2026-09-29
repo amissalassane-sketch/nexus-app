@@ -6,10 +6,10 @@ import { listHref, type AdminListQuery } from "@/lib/admin/query";
 import { formatCount } from "@/lib/admin/format";
 
 // ============================================================
-// NEXUS ADMIN — LIST CONTROLS (PR 2)
+// NEXUS ADMIN — LIST CONTROLS
 // ============================================================
-// Search, filters and pagination for the directory lists — all
-// server-rendered, zero client JavaScript. The mechanism:
+// Search, filters and pagination for every list — all server-rendered,
+// zero client JavaScript. The mechanism:
 //
 //   * The toolbar is a GET <form>. Submitting it navigates; the page
 //     re-parses the URL through lib/admin/query. A browser without JS
@@ -19,7 +19,19 @@ import { formatCount } from "@/lib/admin/format";
 //     size) travel as hidden inputs — the visible fields own the rest.
 //   * Pagination is plain links. Page 1 has no ?page=, so every "clear"
 //     path returns to the canonical URL instead of accumulating params.
+//
+// Geometry: 32px controls on a pointer device, 40px on touch (the same
+// dense/comfortable split the product uses), one field recipe shared by
+// search, selects and the apply action.
 // ============================================================
+
+/** The dense control recipe. Kept in one place so a search field, a
+ *  select and the apply button cannot drift apart. */
+const CONTROL =
+  "rounded-control border border-admin-border bg-admin-surface-2 text-body text-admin-text transition-colors duration-[120ms] hover:border-admin-border-strong focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent";
+
+const ACTION =
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-control border border-admin-border bg-admin-surface px-3 text-body text-admin-text-2 no-underline transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent sm:h-8";
 
 export function AdminListToolbar({
   pathname,
@@ -38,6 +50,7 @@ export function AdminListToolbar({
       action={pathname}
       method="get"
       className="flex flex-col gap-2 sm:flex-row sm:items-center"
+      role="search"
     >
       {/* Sort, direction and page size are not visible fields here; hidden
           inputs carry them through submit so searching never resets the
@@ -57,31 +70,29 @@ export function AdminListToolbar({
           <AdminIcon name="search" size="action" />
         </span>
         <input
+          // Keyed by the server value so "Clear" (a client-side navigation)
+          // re-mounts the field empty instead of leaving stale text in the
+          // DOM under a URL that no longer contains it.
+          key={query.search ?? ""}
           id="admin-list-search"
           type="search"
           name="q"
           defaultValue={query.search ?? ""}
           placeholder="Search…"
           maxLength={200}
-          className="h-9 w-full rounded-[8px] border border-admin-border bg-admin-surface pl-8 pr-3 text-[13px] leading-[18px] text-admin-text placeholder:text-admin-text-3 focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent"
+          className={cn(CONTROL, "h-10 w-full pl-8 pr-3 sm:h-8")}
         />
       </div>
 
       {children}
 
-      <button
-        type="submit"
-        className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-admin-border bg-admin-surface px-3 text-[12.5px] leading-[18px] text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
-      >
+      <button type="submit" className={ACTION}>
         <AdminIcon name="search" size="action" />
         Apply
       </button>
 
       {hasActiveFilters ? (
-        <Link
-          href={pathname}
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] px-2 text-[12.5px] leading-[18px] text-admin-text-2 no-underline transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
-        >
+        <Link href={pathname} className={cn(ACTION, "border-transparent bg-transparent px-2")}>
           <AdminIcon name="close" size="action" />
           Clear
         </Link>
@@ -107,18 +118,17 @@ export function AdminSelectFilter({
   options: { value: string; label: string }[];
 }) {
   return (
-    <span className="inline-flex h-9 items-center gap-2">
-      <label
-        htmlFor={id}
-        className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-admin-text-3"
-      >
+    <span className="inline-flex items-center gap-2">
+      <label htmlFor={id} className="shrink-0 mono-token text-admin-text-3">
         {label}
       </label>
       <select
+        // Same reason as the search field: the URL owns the value.
+        key={value}
         id={id}
         name={name}
         defaultValue={value}
-        className="h-9 rounded-[8px] border border-admin-border bg-admin-surface px-2 text-[12.5px] leading-[18px] text-admin-text-2 focus-visible:border-admin-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-admin-accent"
+        className={cn(CONTROL, "h-10 px-2 sm:h-8")}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -149,7 +159,7 @@ export function AdminPagination({
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (pages <= 1 && total <= pageSize) {
     return (
-      <p className="font-mono text-[11px] leading-[16px] text-admin-text-3">
+      <p className="mono-meta text-admin-text-3">
         {formatCount(total)} {unitLabel} · all on one page
       </p>
     );
@@ -170,10 +180,13 @@ export function AdminPagination({
       </>
     );
     const shape =
-      "inline-flex h-8 items-center gap-1 rounded-[8px] border px-2.5 text-[12px] leading-[16px] no-underline";
+      "inline-flex h-10 items-center gap-1 rounded-control border px-2.5 text-small no-underline sm:h-8";
     if (!enabled || !href) {
       return (
-        <span aria-hidden="true" className={cn(shape, "border-admin-border/60 text-admin-text-3 opacity-50")}>
+        <span
+          aria-hidden="true"
+          className={cn(shape, "border-admin-border/60 text-admin-text-3 opacity-50")}
+        >
           {content}
         </span>
       );
@@ -181,11 +194,10 @@ export function AdminPagination({
     return (
       <Link
         href={href}
-        rel={dir === "prev" ? "prev" : "next"}
         aria-label={dir === "prev" ? "Previous page" : "Next page"}
         className={cn(
           shape,
-          "border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+          "border-admin-border text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
         )}
       >
         {content}
@@ -198,7 +210,7 @@ export function AdminPagination({
       aria-label="Pagination"
       className="flex flex-wrap items-center justify-between gap-3"
     >
-      <p className="font-mono text-[11px] leading-[16px] text-admin-text-3">
+      <p className="mono-meta text-admin-text-3">
         {formatCount(total)} {unitLabel} · page {page} / {pages}
       </p>
       <div className="flex items-center gap-2">
@@ -220,7 +232,7 @@ export function AdminListSummary({
   children?: ReactNode;
 }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-[16px] text-admin-text-3">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 mono-meta text-admin-text-3">
       {children}
       {children ? <span aria-hidden="true">·</span> : null}
       <span>read {generatedAt.replace("T", " ").replace("Z", " UTC")}</span>

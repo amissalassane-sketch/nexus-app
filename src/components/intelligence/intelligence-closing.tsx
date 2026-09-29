@@ -2,6 +2,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { LandingReveal } from "@/components/landing/landing-reveal";
 import { ButtonLink } from "@/components/ui/button";
+import { SlideLabel } from "@/components/ui/slide-label";
 
 // ============================================================
 // SECTION 7 — CLOSING
@@ -37,8 +38,13 @@ export function IntelligenceClosing() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <ButtonLink href="/signup" size="lg" className="nexus-intel-sweep">
-              Get started
+            <ButtonLink
+              href="/signup"
+              variant="slide"
+              size="lg"
+              className="nexus-intel-sweep"
+            >
+              <SlideLabel text="Get started" hoverText="Start building" />
               <NexusIcon icon={IconArrowRight} />
             </ButtonLink>
             <ButtonLink href="/login" variant="secondary" size="lg">

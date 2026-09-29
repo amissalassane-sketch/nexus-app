@@ -117,7 +117,7 @@ export function WorkspaceSidebar({
   return (
     <div className={cn("flex h-full w-full flex-col", className)}>
       {/* Brand — hidden below lg, where the mobile header carries it */}
-      <div className="hidden h-14 shrink-0 items-center px-4 lg:flex">
+      <div className="hidden h-(--layout-topbar-h) shrink-0 items-center px-4 lg:flex">
         <Link
           href="/dashboard"
           aria-label="NEXUS Overview"
@@ -143,12 +143,12 @@ export function WorkspaceSidebar({
               type="button"
               ref={ref}
               onClick={toggle}
-              className="flex h-11 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-bg-surface/50 px-2 text-left transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-bg-surface focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border"
+              className="flex h-11 w-full items-center gap-2.5 rounded-control border border-border-subtle bg-bg-surface-2 px-2 text-left outline-none transition-colors duration-150 ease-nexus hover:border-border-strong focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-8"
               {...ariaProps}
             >
               <span
                 aria-hidden="true"
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] border border-border-default bg-bg-surface-2 text-text-tertiary"
+                className="flex size-6 shrink-0 items-center justify-center rounded-xs border border-border-default bg-bg-surface text-text-tertiary"
               >
                 <NexusIcon icon={IconBox} />
               </span>
@@ -172,7 +172,7 @@ export function WorkspaceSidebar({
             <p className="truncate text-body-medium text-text-primary">
               {workspaceName}
             </p>
-            <p className="truncate font-mono text-mono text-text-tertiary">
+            <p className="mono-meta truncate text-text-tertiary">
               {plan.name} · {workspace.role ?? "member"}
             </p>
           </div>
@@ -206,11 +206,11 @@ export function WorkspaceSidebar({
         <button
           type="button"
           onClick={openCommandPalette}
-          className="flex h-10 w-full items-center gap-2.5 rounded-nav border border-border-subtle bg-transparent px-2.5 text-left text-[13px] text-text-tertiary transition-colors duration-150 ease-nexus hover:border-border-default hover:bg-accent-ghost hover:text-text-secondary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-9"
+          className="flex h-11 w-full items-center gap-2.5 rounded-control border border-transparent px-2.5 text-left text-[13px] text-text-tertiary outline-none transition-colors duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-secondary focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-8"
         >
           <NexusIcon icon={IconSearch} />
           <span className="min-w-0 flex-1 truncate">Search NEXUS…</span>
-          <kbd className="shrink-0 rounded-[4px] border border-border-subtle px-1 font-mono text-[10px] leading-[15px] text-text-quaternary">
+          <kbd className="mono-token shrink-0 rounded-xs border border-border-subtle px-1 py-0.5 text-text-quaternary">
             {commandKey}
           </kbd>
         </button>
@@ -227,12 +227,12 @@ export function WorkspaceSidebar({
               ref={ref}
               onClick={toggle}
               data-guide="global-create"
-              className="flex h-10 w-full items-center gap-2 rounded-nav bg-accent px-2.5 text-[13px] font-medium text-accent-fg transition-[background-color,transform] duration-[140ms] ease-nexus hover:bg-accent-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base lg:h-9"
+              className="flex h-11 w-full items-center gap-2 rounded-control bg-accent px-2.5 text-[13px] font-medium text-accent-fg outline-none transition-[background-color] duration-[120ms] ease-nexus hover:bg-accent-hover active:translate-y-px focus-visible:ring-1 focus-visible:ring-lavender-border lg:h-8"
               {...ariaProps}
             >
               <NexusIcon icon={IconPlus} />
               <span className="flex-1 text-left">Create</span>
-              <kbd className="font-mono text-[10px] text-black/45">C</kbd>
+              <kbd className="mono-token text-black/45">C</kbd>
             </button>
           )}
         >
@@ -321,7 +321,7 @@ export function WorkspaceSidebar({
           <span className="eyebrow text-text-quaternary">Plan</span>
           <span
             className={cn(
-              "font-mono text-mono",
+              "mono-meta",
               plan.name === "FREE" ? "text-text-secondary" : "text-lavender"
             )}
           >
@@ -330,7 +330,7 @@ export function WorkspaceSidebar({
         </div>
 
         <p className="mt-2 text-caption text-text-tertiary">
-          <span className="font-mono tabular-nums text-text-secondary">
+          <span className="mono-meta text-text-secondary">
             {pressure.used}/{pressure.limit}
           </span>{" "}
           {pressure.label}
@@ -346,7 +346,7 @@ export function WorkspaceSidebar({
           <Link
             href="/upgrade"
             onClick={onNavigate}
-            className="mt-3 flex h-8 items-center justify-center rounded-nav border border-border-default text-caption font-medium text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
+            className="mt-3 flex h-8 items-center justify-center rounded-control border border-border-default text-caption font-medium text-text-secondary transition-colors duration-150 ease-nexus hover:border-border-strong hover:bg-accent-ghost hover:text-text-primary"
           >
             Compare plans
           </Link>

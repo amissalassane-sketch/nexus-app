@@ -71,11 +71,11 @@ export function UpcomingPanel({ items }: { items: UpcomingItem[] }) {
             <li key={item.id}>
               <Link
                 href="/tasks"
-                className="flex items-center gap-3 border-b border-border-subtle px-4 py-3 transition-colors duration-150 ease-nexus last:border-b-0 hover:bg-white/[0.02]"
+                className="flex min-h-11 items-center gap-3 border-b border-border-subtle px-3 py-2.5 transition-colors duration-[120ms] ease-nexus last:border-b-0 hover:bg-bg-surface-2"
               >
                 <span
                   aria-hidden="true"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-input border border-border-subtle bg-bg-surface text-text-tertiary"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-xs border border-border-subtle bg-bg-surface-2 text-text-tertiary"
                 >
                   <NexusIcon icon={IconCalendarClock} />
                 </span>
@@ -89,7 +89,7 @@ export function UpcomingPanel({ items }: { items: UpcomingItem[] }) {
                     </span>
                   ) : null}
                 </span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-secondary">
+                <span className="mono-meta shrink-0 text-text-tertiary">
                   {dueLabel(item.dueAt)}
                 </span>
               </Link>

@@ -9,6 +9,11 @@ import { AdminIcon } from "./admin-icons";
 // A status is a word plus a dot, never a dot alone. Colour is redundant
 // with the label on every variant here, because an operator reading the
 // panel at 07:00 should not have to remember what amber meant yesterday.
+//
+// The pill IS the canonical Tag of the design system: 20px tall, radius 4,
+// uppercase monospace 10.5 at +0.06em. There is exactly one of these in
+// the control plane — a badge here and a badge in a table are the same
+// object, which is why nothing else in admin/ declares a chip class.
 // ============================================================
 
 export type AdminTone =
@@ -51,7 +56,7 @@ export function AdminStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex h-[21px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[6px] border px-1.5 font-mono text-[10.5px] uppercase leading-none tracking-[0.06em]",
+        "inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs border px-1.5 mono-token leading-none",
         TONES[tone],
         className
       )}
@@ -59,7 +64,7 @@ export function AdminStatusPill({
       {dot ? (
         <span
           aria-hidden="true"
-          className={cn("h-1.5 w-1.5 rounded-full", DOT[tone])}
+          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[tone])}
         />
       ) : null}
       {children}

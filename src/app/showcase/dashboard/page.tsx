@@ -63,18 +63,21 @@ export default function ShowcaseDashboardPage() {
     <ShowcaseShell activeTab="dashboard">
       <div className="space-y-6">
         {/* Session Header */}
-        <header className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-text-primary">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="eyebrow text-text-quaternary">Wednesday, Sep 28</p>
+            <h1 className="mt-2 text-h1 text-text-primary">
               Good morning, {SHOWCASE_USER.name}
             </h1>
-            <p className="text-[13px] text-text-secondary mt-0.5">
-              Wednesday, Sep 28 · 6 projects active · 3 items require attention
+            <p className="mt-1 text-small text-text-secondary">
+              6 projects active · 3 items require attention
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-bg-surface px-3 py-1 text-[11px] font-mono text-text-tertiary">
-            <span className="size-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />
-            NEXUS OS v3.0 · Online
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-pill border border-border-subtle bg-bg-surface px-2.5 py-1.5">
+            <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+            <span className="mono-meta text-text-tertiary">
+              NEXUS OS v3.0 · online
+            </span>
           </span>
         </header>
 
@@ -102,16 +105,20 @@ export default function ShowcaseDashboardPage() {
         </div>
 
         {/* Live Activity Stream */}
-        <section aria-label="Activity history" className="pt-2">
-          <div className="rounded-panel border border-border-default bg-bg-surface p-5">
-            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
-              <div>
-                <p className="eyebrow text-text-quaternary">AUDIT LOG</p>
-                <h2 className="text-[16px] font-semibold text-text-primary">Workspace activity</h2>
+        <section aria-label="Activity history">
+          <div className="overflow-hidden rounded-surface border border-border-subtle bg-bg-surface">
+            <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border-subtle px-4 py-2">
+              <div className="min-w-0">
+                <p className="eyebrow text-text-quaternary">Audit log</p>
+                <h2 className="truncate text-h3 text-text-primary">
+                  Workspace activity
+                </h2>
               </div>
-              <span className="text-caption text-text-tertiary">Live stream</span>
+              <span className="mono-meta shrink-0 text-text-tertiary">
+                12 events · 24h
+              </span>
             </div>
-            <div className="pt-4">
+            <div className="p-1.5">
               <ActivityList activities={SHOWCASE_ACTIVITIES} />
             </div>
           </div>

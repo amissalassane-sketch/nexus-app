@@ -24,7 +24,16 @@ import { AdminCommandMenu } from "./admin-command-menu";
 //            present for assistive technology and still focusable)
 //   <768px   drawer, opened from the top bar, closed by Escape, the
 //            scrim, or the link you followed
+//
+// Geometry and surface language are the product's: pure-black chrome, 248px
+// rail, 56px top bar, hairline borders, 32px navigation rows on a pointer
+// device / 40px in the touch drawer. Volt Lime appears in exactly two
+// places — the live status dot and the active rail — because on an
+// operator surface the accent is state, not decoration.
 // ============================================================
+
+const FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent";
 
 function isActive(currentPath: string, href: string): boolean {
   return currentPath === href || currentPath.startsWith(`${href}/`);
@@ -69,7 +78,7 @@ function NavRow({
         aria-disabled="true"
         title={`${item.label} — coming soon: ${item.note ?? "not available yet"}`}
         className={cn(
-          "flex h-9 w-full cursor-not-allowed items-center gap-3 rounded-[8px] text-[13.5px] leading-[18px] text-admin-text-3",
+          "flex h-10 w-full cursor-not-allowed items-center gap-3 rounded-control text-body text-admin-text-3 md:h-8",
           rowShape
         )}
       >
@@ -79,7 +88,7 @@ function NavRow({
         </span>
         <span
           className={cn(
-            "shrink-0 rounded-[4px] border border-admin-border px-1.5 py-px text-[10.5px] font-medium leading-[14px] tracking-[0.02em] text-admin-text-3",
+            "shrink-0 items-center rounded-xs border border-admin-border px-1.5 py-px mono-token text-admin-text-3",
             labelClass
           )}
         >
@@ -101,8 +110,8 @@ function NavRow({
       aria-current={active ? "page" : undefined}
       title={responsive ? item.label : undefined}
       className={cn(
-        "group relative flex h-9 w-full items-center gap-3 rounded-[8px] text-[13.5px] leading-[18px] transition-colors duration-150",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent",
+        "group relative flex h-10 w-full items-center gap-3 rounded-control text-body transition-colors duration-[120ms] md:h-8",
+        FOCUS,
         rowShape,
         active
           ? "bg-admin-surface-2 font-medium text-admin-text"
@@ -149,13 +158,14 @@ function NavBody({
       )}
     >
       {ADMIN_NAV.map((group) => (
-        <div key={group.id} className="mb-5 last:mb-0">
+        <div key={group.id} className="mb-4 last:mb-0">
           {/* Group heading, or a hairline when the rail is too narrow for
               words. In the compact state the heading is hidden, because
-              the rows themselves carry the labels. */}
+              the rows themselves carry the labels. Sans, never mono: this
+              is a human label, not a machine token. */}
           <p
             className={cn(
-              "mb-1 text-[11px] font-medium leading-4 tracking-[0.04em] text-admin-text-3",
+              "eyebrow mb-1.5 text-admin-text-3",
               responsive ? "hidden px-2.5 lg:block" : "px-2.5"
             )}
           >
@@ -190,15 +200,15 @@ function BrandBlock() {
     <div className="flex h-14 shrink-0 items-center justify-center gap-2.5 border-b border-admin-border px-0 md:px-0 lg:justify-start lg:px-4">
       <span
         aria-hidden="true"
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-admin-accent-border bg-admin-accent-bg font-mono text-[11px] font-semibold text-admin-accent"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-admin-accent-border bg-admin-accent-bg mono-meta font-semibold text-admin-accent"
       >
         N
       </span>
       <span className="hidden min-w-0 lg:block">
-        <span className="block truncate text-[13px] font-semibold leading-[16px] tracking-[-0.01em] text-admin-text">
+        <span className="block truncate text-body-medium font-semibold text-admin-text">
           NEXUS Admin
         </span>
-        <span className="block truncate font-mono text-[10px] uppercase leading-[14px] tracking-[0.1em] text-admin-text-3">
+        <span className="block truncate mono-token text-admin-text-3">
           Control plane
         </span>
       </span>
@@ -223,7 +233,10 @@ function SignOutButton() {
       type="button"
       onClick={signOut}
       disabled={pending}
-      className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-admin-border bg-admin-surface px-2.5 text-[12.5px] leading-[18px] text-admin-text-2 transition-colors duration-150 hover:text-admin-text disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+      className={cn(
+        "inline-flex h-10 items-center gap-2 rounded-control border border-admin-border bg-admin-surface px-2.5 text-small text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text disabled:opacity-50 sm:h-8",
+        FOCUS
+      )}
     >
       <AdminIcon name="logout" size="action" />
       <span className="hidden sm:inline">{pending ? "Signing out" : "Sign out"}</span>
@@ -283,20 +296,19 @@ export function AdminShell({
 
   const identity = (
     <div className="shrink-0 border-t border-admin-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-      <p className="font-mono text-[9.5px] uppercase leading-[14px] tracking-[0.14em] text-admin-text-3">
-        Signed in
-      </p>
-      <p className="mt-1 truncate text-[12.5px] leading-[18px] text-admin-text">
+      <p className="mono-token text-admin-text-3">Signed in</p>
+      <p className="mt-1 truncate text-small text-admin-text">
         {email ?? "Platform operator"}
       </p>
-      <p className="mt-0.5 font-mono text-[10.5px] uppercase leading-[14px] tracking-[0.08em] text-admin-accent">
-        {role}
-      </p>
+      <p className="mt-0.5 truncate mono-token text-admin-accent">{role}</p>
     </div>
   );
 
   return (
-    <div data-dashboard-root="true" className="admin-root flex h-dvh overflow-hidden bg-admin-base text-admin-text">
+    <div
+      data-dashboard-root="true"
+      className="admin-root flex h-dvh overflow-hidden bg-admin-base text-admin-text"
+    >
       {/* Desktop / tablet rail. One DOM tree: the compact state is CSS. */}
       <aside className="sticky top-0 hidden h-dvh w-[64px] shrink-0 flex-col border-r border-admin-border bg-admin-sidebar md:flex lg:w-[248px]">
         <BrandBlock />
@@ -313,7 +325,10 @@ export function AdminShell({
             aria-label="Open NEXUS Admin navigation"
             aria-expanded={drawerOpen}
             aria-controls="nexus-admin-drawer"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent md:hidden"
+            className={cn(
+              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text md:hidden",
+              FOCUS
+            )}
           >
             <AdminIcon name="menu" size="toolbar" />
           </button>
@@ -322,18 +337,17 @@ export function AdminShell({
             type="button"
             onClick={() => setCommandMenuOpen(true)}
             aria-label="Search admin sections (Cmd+K)"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-150 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent sm:hidden"
+            className={cn(
+              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-admin-border bg-admin-surface text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text sm:hidden",
+              FOCUS
+            )}
           >
             <AdminIcon name="search" size="toolbar" />
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-[10px] uppercase leading-[14px] tracking-[0.12em] text-admin-text-3">
-              NEXUS Admin
-            </p>
-            <p className="truncate text-[13px] leading-[18px] text-admin-text">
-              Control plane
-            </p>
+            <p className="truncate mono-token text-admin-text-3">NEXUS Admin</p>
+            <p className="truncate text-small text-admin-text">Control plane</p>
           </div>
 
           {/* Global Quick Search Button (Ctrl/Cmd + K) */}
@@ -341,11 +355,14 @@ export function AdminShell({
             type="button"
             onClick={() => setCommandMenuOpen(true)}
             aria-label="Search admin sections (Cmd+K)"
-            className="hidden sm:inline-flex h-9 items-center gap-2.5 rounded-[8px] border border-admin-border bg-admin-surface px-3 text-[12.5px] leading-[18px] text-admin-text-2 transition-colors duration-150 hover:border-admin-border/80 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+            className={cn(
+              "hidden h-8 items-center gap-2.5 rounded-control border border-admin-border bg-admin-surface px-3 text-small text-admin-text-2 transition-colors duration-[120ms] hover:border-admin-border-strong hover:text-admin-text sm:inline-flex",
+              FOCUS
+            )}
           >
             <AdminIcon name="search" size="action" className="text-admin-text-3" />
             <span className="hidden md:inline">Jump to…</span>
-            <kbd className="rounded border border-admin-border bg-admin-surface-2 px-1.5 py-0.5 font-mono text-[10px] font-medium text-admin-text-3">
+            <kbd className="rounded-xs border border-admin-border bg-admin-surface-2 px-1.5 py-0.5 mono-token text-admin-text-3">
               ⌘K
             </kbd>
           </button>
@@ -354,14 +371,17 @@ export function AdminShell({
             {platformLabel}
           </AdminStatusPill>
 
-          <span className="hidden shrink-0 font-mono text-[11px] leading-[16px] text-admin-text-3 lg:inline">
+          <span className="hidden shrink-0 lg:inline mono-meta text-admin-text-3">
             {lastUpdated}
           </span>
 
           <SignOutButton />
         </header>
 
-        <main id="admin-content" className="admin-canvas min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
+        <main
+          id="admin-content"
+          className="admin-canvas min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+        >
           {children}
         </main>
       </div>
@@ -383,10 +403,10 @@ export function AdminShell({
             role="dialog"
             aria-modal="true"
             aria-label="NEXUS Admin navigation"
-            className="absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col border-r border-admin-border bg-admin-sidebar shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] motion-safe:animate-[list-in_180ms_ease-out_both]"
+            className="absolute inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col border-r border-admin-border bg-admin-sidebar shadow-overlay motion-safe:animate-[list-in_180ms_ease-out_both]"
           >
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-admin-border pl-4 pr-2">
-              <span className="text-[13px] font-semibold leading-[16px] text-admin-text">
+              <span className="text-body-medium font-semibold text-admin-text">
                 NEXUS Admin
               </span>
               <button
@@ -394,7 +414,10 @@ export function AdminShell({
                 type="button"
                 onClick={close}
                 aria-label="Close navigation"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] text-admin-text-2 transition-colors duration-150 hover:bg-admin-surface-2 hover:text-admin-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+                className={cn(
+                  "inline-flex h-10 w-10 items-center justify-center rounded-control text-admin-text-2 transition-colors duration-[120ms] hover:bg-admin-surface-2 hover:text-admin-text",
+                  FOCUS
+                )}
               >
                 <AdminIcon name="close" size="toolbar" />
               </button>

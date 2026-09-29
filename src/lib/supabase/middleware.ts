@@ -58,11 +58,26 @@ export async function updateSession(request: NextRequest) {
       pathname.startsWith("/admin/reset-password") ||
       pathname.startsWith("/auth/") ||
       pathname.startsWith("/api/") ||
+      // The showcase is the product's visual reference environment: five
+      // static presentation states built from src/lib/showcase/mock-data.ts.
+      // It reads no workspace, no session and no database — every value on
+      // screen is a constant — so it stays reachable without a session, the
+      // same way /pricing and /how-it-works do. Gate it again by removing
+      // this line if the environment is ever meant to be internal-only.
+      pathname.startsWith("/showcase") ||
       pathname === "/robots.txt" ||
       pathname === "/sitemap.xml";
-    return publicWithoutAuth
-      ? response
-      : redirectWithCookies(response, new URL("/login", request.url).href);
+    if (publicWithoutAuth) return response;
+    // The control plane keeps its own sign-in surface, and this branch is
+    // exactly when an operator most needs it: on a deployment without
+    // Supabase, /admin/login is the page that explains what is missing.
+    return redirectWithCookies(
+      response,
+      new URL(
+        pathname.startsWith("/admin") ? "/admin/login" : "/login",
+        request.url
+      ).href
+    );
   }
 
   // Intercept stray auth codes on non-auth routes
@@ -149,6 +164,13 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/admin/login") ||
     pathname.startsWith("/admin/forgot-password") ||
     pathname.startsWith("/admin/reset-password") ||
+    // The showcase is the product's visual reference environment: five
+    // presentation states built from src/lib/showcase/mock-data.ts. It reads
+    // no session, no workspace and no database — every value on screen is a
+    // constant — so it is reachable without a session, exactly as it already
+    // is on a deployment without Supabase. Gate it again by removing this
+    // line (and its twin above) if it is ever meant to be internal-only.
+    pathname.startsWith("/showcase") ||
     pathname.startsWith("/auth/");
 
   const isAuthForm =
