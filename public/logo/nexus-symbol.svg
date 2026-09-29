@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%" fill="none" role="img" aria-label="NEXUS Symbol">
+  <!-- NEXUS Locked Architectural Interlaced "N" Symbol -->
+  <g fill="currentColor">
+    <!-- Right interlaced ribbon -->
+    <path d="M767.5 238V767.5H645.5L377.5 528V436.5L649 683.5H696.5V349.5L597 409.5L552.5 367L767.5 238Z" />
+    <!-- Left interlaced ribbon -->
+    <path d="M255.5 256H377L639.5 514V593.5L372 345.5H318.5V660L403 608.5L449.5 651L255.5 779V256Z" />
+  </g>
+</svg>
