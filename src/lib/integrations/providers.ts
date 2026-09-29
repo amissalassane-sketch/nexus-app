@@ -13,8 +13,9 @@
 //   * `connectionState` values come from the database
 //     (integration_connections.state), never from this file.
 //   * A provider is `available: false` until its OAuth client is
-//     configured in the environment — and the UI says exactly which
-//     variables are missing.
+//     configured in the environment — the UI then says it is not
+//     available yet, without naming env vars (operators find them
+//     in the server logs / .env.example).
 // ============================================================
 
 export type ProviderId =
@@ -597,7 +598,7 @@ export const CONNECTION_STATE_LABEL: Record<ConnectionLifecycleState, string> = 
 export const CONNECTION_STATE_DESCRIPTION: Record<ConnectionLifecycleState, string> = {
   disconnected: "No account is connected. Connect to bring this source into NEXUS.",
   connecting: "The provider handshake is in progress.",
-  connected: "OAuth credentials saved. Data access and Intelligence support must be verified separately.",
+  connected: "Connected. Run a sync to pull in the latest data.",
   syncing: "Fetching the latest data from the provider.",
   stale: "The last complete sync is old or incomplete. Run a sync to verify access.",
   error: "The last sync failed. Check the error and retry.",

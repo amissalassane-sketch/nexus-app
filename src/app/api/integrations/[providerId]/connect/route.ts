@@ -6,6 +6,9 @@
 // is a CSRF token sealed in a short-lived httpOnly cookie; the
 // callback refuses any code that does not come with the matching
 // state.
+// Failures answer with user-facing copy only — env var names and
+// deployment instructions go to the runtime logs (operators), never
+// in the response body a browser can land on.
 
 import { createOAuthAttempt, integrationOrigin } from "@/lib/integrations/oauth-state";
 import { NextResponse } from "next/server";
@@ -15,6 +18,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveMembership } from "@/lib/workspace";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getProvider } from "@/lib/integrations/providers";
+import { logDataReadFailure } from "@/lib/server-logs";
 import {
   beginConnect,
   OAUTH_STATE_COOKIE,
@@ -29,7 +33,7 @@ export async function GET(
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
-      { error: "Supabase is not configured in this environment" },
+      { error: "Connections aren't available right now. Try again later." },
       { status: 503 }
     );
   }
@@ -48,22 +52,26 @@ export async function GET(
   const { membership } = await getActiveMembership(supabase, user.id);
   if (!membership?.workspaceId) {
     return NextResponse.json(
-      { error: "No active workspace associated with user" },
+      { error: "Open a workspace before connecting an app." },
       { status: 400 }
     );
   }
 
   const origin = integrationOrigin(request.url);
-  if (!origin) return NextResponse.json({ error: "Configure NEXT_PUBLIC_SITE_URL with the public HTTPS origin before connecting." }, { status: 503 });
+  if (!origin) return NextResponse.json({ error: "Connecting isn't available right now. Try again later." }, { status: 503 });
   const result = beginConnect({ providerId, origin });
 
   if ("error" in result) {
     if (result.error === "NOT_CONFIGURED") {
+      // Operator diagnostic in the logs; the response body stays user-safe.
+      logDataReadFailure("integrations.connect", {
+        code: "NOT_CONFIGURED",
+        message: `missing ${result.missing?.join(" and ")}`,
+      });
       return NextResponse.json(
         {
           error: "Provider not configured",
-          detail: `This deployment is missing ${result.missing?.join(" and ")}. Set them in the server environment to enable ${provider.name}.`,
-          missingEnvVars: result.missing,
+          detail: `${provider.name} can't be connected right now. Nothing was saved.`,
         },
         { status: 501 }
       );

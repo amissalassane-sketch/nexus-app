@@ -20,11 +20,34 @@ import {
   persistConnection,
   OAUTH_STATE_COOKIE,
 } from "@/lib/integrations/connections";
+import { logDataReadFailure } from "@/lib/server-logs";
 
-function redirectWithError(origin: string, code: string, message: string) {
+// What the USER sees on the Integrations page — never env var names,
+// schema details or deployment instructions. The raw message goes to
+// the runtime logs instead (operator), this copy goes to the page.
+function userFacingConnectMessage(code: string, rawMessage: string): string {
+  switch (code) {
+    case "NOT_CONFIGURED":
+      return "This app can't be connected right now. Nothing was saved.";
+    case "ENCRYPTION_NOT_CONFIGURED":
+      return "We couldn't store this connection securely, so nothing was saved. Try again later.";
+    case "PERSIST_FAILED":
+    case "CREDENTIALS_PERSIST_FAILED":
+      return "We couldn't save this connection. Nothing was changed — try again.";
+    default:
+      return rawMessage;
+  }
+}
+
+function redirectWithError(origin: string, code: string, rawMessage: string) {
+  // Operator diagnostics: the raw cause, bounded, in the server logs.
+  logDataReadFailure("integrations.oauth", { code, message: rawMessage });
   const url = new URL("/integrations", origin);
   url.searchParams.set("connect_error", code);
-  url.searchParams.set("connect_message", message.slice(0, 300));
+  url.searchParams.set(
+    "connect_message",
+    userFacingConnectMessage(code, rawMessage).slice(0, 300)
+  );
   const response = NextResponse.redirect(url);
   response.cookies.delete(OAUTH_STATE_COOKIE);
   return response;

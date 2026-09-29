@@ -54,24 +54,21 @@ export default async function IntegrationsPage({
       <PageHeader
         title="Integrations"
         count={connectedCount > 0 ? `${connectedCount} connected` : undefined}
-        description="Manage OAuth accounts and check available adapters. Connecting an account does not verify sync or make it available to Intelligence."
+        description="Connect the apps your work already lives in. Connecting an account does not sync its data automatically — you choose when to sync."
       />
 
       {!anyConfigured ? (
         <Alert
           tone="info"
-          title="No provider is configured on this server yet"
+          title="No connected apps available yet"
         >
-          OAuth routes and encrypted storage are implemented, but no provider client is configured in this deployment. An operator must
-          set the provider environment variables (for example{" "}
-          <span className="font-mono text-caption">GOOGLE_CLIENT_ID</span> and{" "}
-          <span className="font-mono text-caption">GOOGLE_CLIENT_SECRET</span>) to turn
-          them on. Each card below names the exact variables it needs.
+          Connecting external apps is not enabled on this workspace right now. Your
+          workspace itself — tasks, projects, goals and activity — works as usual.
         </Alert>
       ) : null}
 
-      {workspaceId && !snapshot ? <Alert tone="danger" title="Connection status could not be read">Check the database configuration and integration migrations, then refresh. No connection status has been inferred.</Alert> : null}
-      {snapshot && !snapshot.encryptionConfigured ? <Alert tone="warning" title="Secure credential storage is not configured">Set NEXUS_INTEGRATION_ENCRYPTION_KEY on the server before connecting accounts.</Alert> : null}
+      {workspaceId && !snapshot ? <Alert tone="danger" title="We couldn't load your connections">Refresh the page to try again. Nothing has been changed.</Alert> : null}
+      {snapshot && !snapshot.encryptionConfigured ? <Alert tone="warning" title="Connections are temporarily unavailable">Connecting or syncing an account is paused right now. Nothing has been lost — try again later.</Alert> : null}
       {snapshot ? (
         <IntegrationPlatform
           providers={snapshot.providers}
@@ -95,7 +92,7 @@ export default async function IntegrationsPage({
               <NexusIcon icon={IconPlugConnected} />
             </span>
             <p className="max-w-[62ch] text-small text-text-secondary">
-              Intelligence reads workspace tasks, projects, goals and activity, with bounded note and event metadata. File content and external provider data are not yet included in its answers.
+              Intelligence reads your tasks, projects, goals and activity, plus basic note and event details. File contents and data from connected apps are not included in its answers yet.
             </p>
           </div>
         </Panel>
@@ -108,8 +105,8 @@ export default async function IntegrationsPage({
             <ul className="max-w-[62ch] space-y-1.5 text-small text-text-secondary">
               <li>OAuth only — NEXUS never asks for an API key when OAuth exists.</li>
               <li>Requested permissions are listed before connection. Provider restrictions still apply.</li>
-              <li>Tokens are encrypted at rest. Plaintext tokens are not returned by NEXUS routes.</li>
-              <li>Only Google Calendar has a data adapter, invoked by Sync now. External write actions are not implemented.</li>
+              <li>Your credentials are encrypted and never shown inside NEXUS.</li>
+              <li>Sync now reads your Google Calendar events. NEXUS only reads connected apps — it never writes to them.</li>
               <li>Disconnect removes the stored connection and credentials. Revoke the OAuth grant separately in provider settings.</li>
             </ul>
           </div>
