@@ -45,7 +45,7 @@ export async function GET() {
   const workspaceId = membership?.workspaceId;
   if (!workspaceId) {
     return NextResponse.json(
-      { error: "No active workspace associated with user" },
+      { error: "Open a workspace before connecting an app." },
       { status: 400 }
     );
   }
@@ -67,7 +67,6 @@ export async function GET() {
         description: provider.description,
         phase: provider.phase,
         oauthConfigured: configuration.configured,
-        missingEnvVars: configuration.configured ? [] : configuration.missing,
         scopes: provider.oauth.scopes,
         scopeNotes: provider.oauth.scopeNotes,
         capabilities: provider.capabilities,
@@ -77,6 +76,6 @@ export async function GET() {
     }),
   });
   } catch {
-    return NextResponse.json({ code: "INTEGRATION_STATE_UNAVAILABLE", error: "Connection status could not be read. Check the database and integration migrations, then retry." }, { status: 503 });
+    return NextResponse.json({ code: "INTEGRATION_STATE_UNAVAILABLE", error: "We couldn't load your connections. Try again in a moment." }, { status: 503 });
   }
 }

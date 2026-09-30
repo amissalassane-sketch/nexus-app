@@ -6,7 +6,8 @@
 // Real connection cards: state, permissions, last sync, errors,
 // connect / sync / disconnect. Every state shown here comes from the
 // server (database + environment) — nothing is simulated, and a
-// provider that is not configured says exactly what is missing.
+// provider that is not available says so without exposing server
+// configuration (env vars stay an operator concern).
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -128,8 +129,8 @@ export function IntegrationPlatform({
   if (providers.length === 0) {
     return (
       <EmptyState
-        title="No integration providers"
-        description="No provider is registered in this build. This should never happen — it means the provider registry is empty."
+        title="No connected apps yet"
+        description="Apps you can connect will appear here."
       />
     );
   }
@@ -141,7 +142,7 @@ export function IntegrationPlatform({
           <NexusIcon icon={IconCheck} className="mt-0.5 shrink-0 text-lavender-text" />
           <p>
             <span className="font-medium text-text-primary">{connectedNotice} is connected.</span>{" "}
-            OAuth credentials have been saved. This does not verify data sync or Intelligence access.
+            Its data reaches NEXUS after you run the first sync.
           </p>
         </div>
       ) : null}
@@ -257,8 +258,7 @@ function ProviderCard({
         ) : null}
         {!provider.oauthConfigured ? (
           <p className="text-caption text-text-tertiary">
-            Not configured on this server — requires{" "}
-            <span className="font-mono">{provider.missingEnvVars.join(" and ")}</span>.
+            Not available yet — this app can&apos;t be connected right now.
           </p>
         ) : null}
       </div>
@@ -302,7 +302,7 @@ function ProviderCard({
             <span
               key={capability.id}
               className="rounded-pill border border-border-subtle px-2 py-0.5 text-caption text-text-quaternary"
-              title={`${capability.label} — server adapter not implemented yet`}
+              title={`${capability.label} — coming soon`}
             >
               {capability.label} · planned
             </span>
@@ -315,10 +315,10 @@ function ProviderCard({
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
         <span className="text-caption text-text-quaternary">
           {connection.connectionId
-            ? "OAuth saved ≠ sync verified. External writes are not implemented."
+            ? "Read-only — NEXUS never writes back to your connected apps."
             : provider.oauthConfigured
               ? "You choose what to connect. Nothing is read before that."
-              : "Server connection required"}
+              : "Not available yet"}
         </span>
         <div className="flex shrink-0 items-center gap-2">
           {connection.connectionId ? (
@@ -331,7 +331,7 @@ function ProviderCard({
                 title={`Read the latest ${provider.name} data`}
               >
                 <NexusIcon icon={IconRefresh} className={busy ? "animate-spin" : undefined} />
-                {implemented.length ? "Sync now" : "Sync not implemented"}
+                {implemented.length ? "Sync now" : "Sync unavailable"}
               </Button>
               <Button
                 size="sm"
@@ -356,7 +356,7 @@ function ProviderCard({
               Connect {provider.name}
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" disabled title="This provider is not configured on this server">
+            <Button size="sm" variant="secondary" disabled title="Not available yet">
               Connect {provider.name}
             </Button>
           )}

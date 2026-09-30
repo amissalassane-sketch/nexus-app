@@ -77,7 +77,7 @@ export async function POST(
   if (provider.id !== "google-calendar") {
     return NextResponse.json(
       {
-        error: `${provider.name} has no server-side data adapter yet. The connection is stored; the sync path is implemented for Google Calendar first.`,
+        error: `Syncing isn't available for ${provider.name} yet.`,
         code: "ADAPTER_NOT_IMPLEMENTED",
       },
       { status: 501 }
