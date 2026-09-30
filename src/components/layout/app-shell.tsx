@@ -60,6 +60,7 @@ function AppShellInner({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [navClosing, setNavClosing] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const navCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -142,21 +143,20 @@ function AppShellInner({
           Skip to content
         </a>
 
-        <aside
-          aria-label="Workspace navigation"
-          data-dashboard-chrome="sidebar"
-          className={cn(
-            "relative hidden w-(--layout-sidebar-w) shrink-0 border-r border-border-subtle lg:block",
-            "bg-bg-base"
-          )}
-        >
-          <WorkspaceSidebar
-            user={user}
-            workspace={workspace}
-            counts={counts}
-            plan={plan}
-          />
-        </aside>
+        {sidebarVisible ? (
+          <aside
+            aria-label="Workspace navigation"
+            data-dashboard-chrome="sidebar"
+            className="relative hidden w-(--layout-sidebar-w) shrink-0 border-r border-border-subtle bg-bg-base lg:block"
+          >
+            <WorkspaceSidebar
+              user={user}
+              workspace={workspace}
+              counts={counts}
+              plan={plan}
+            />
+          </aside>
+        ) : null}
 
         <div
           data-dashboard-chrome="column"
@@ -218,6 +218,8 @@ function AppShellInner({
               workspaceId={workspaceId}
               isPlatformAdmin={isPlatformAdmin}
               solidBackground
+              sidebarVisible={sidebarVisible}
+              onToggleSidebar={() => setSidebarVisible((visible) => !visible)}
               onOpenProfileModal={openProfileModal}
               onOpenHelp={openHelp}
             />
