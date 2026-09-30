@@ -5,6 +5,8 @@ import {
   IconChevronRight,
   IconCreditCard,
   IconKey,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
   IconLifebuoy,
   IconLogout,
   IconSearch,
@@ -35,6 +37,8 @@ export function Topbar({
   workspaceId,
   isPlatformAdmin,
   solidBackground,
+  sidebarVisible,
+  onToggleSidebar,
   onOpenProfileModal,
   onOpenHelp,
 }: {
@@ -49,6 +53,8 @@ export function Topbar({
   isPlatformAdmin: boolean;
   /** Dashboard route only: opaque pure-black bar, no translucency. */
   solidBackground?: boolean;
+  sidebarVisible?: boolean;
+  onToggleSidebar?: () => void;
   onOpenProfileModal?: () => void;
   onOpenHelp?: () => void;
 }) {
@@ -78,6 +84,22 @@ export function Topbar({
         solidBackground && "bg-bg-base"
       )}
     >
+      {onToggleSidebar ? (
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+          aria-pressed={!sidebarVisible}
+          title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-control text-text-tertiary outline-none transition-[background-color,color] duration-150 ease-nexus hover:bg-accent-ghost hover:text-text-primary focus-visible:ring-1 focus-visible:ring-lavender-border lg:flex"
+        >
+          <NexusIcon
+            icon={sidebarVisible ? IconLayoutSidebarLeftCollapse : IconLayoutSidebarLeftExpand}
+            size="toolbar"
+          />
+        </button>
+      ) : null}
+
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
         <ol className="flex min-w-0 items-center gap-1.5">
           {crumbs.map((crumb, index) => {
