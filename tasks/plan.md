@@ -1,7 +1,7 @@
-# Implementation Plan: Proactive Automation (`proactive-automation`)
+# Implementation Plan: Autonomous Missions (`autonomous-missions`)
 
 Initiative: **Intelligence Engine 2.0**  
-Module: **`proactive-automation`**  
+Module: **`autonomous-missions`**  
 Status: **Ready for Execution**  
 Date: 2026-10-02  
 

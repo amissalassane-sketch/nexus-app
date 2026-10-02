@@ -550,3 +550,38 @@ export interface AutomationDetectionOptions {
   staleDaysThreshold?: number; // default: 30
   maxOverloadPerDay?: number; // default: 4
 }
+
+// ============================================================
+// AUTONOMOUS MISSIONS — Checkpoints & Step Orchestration
+// ============================================================
+
+export interface MissionCheckpoint {
+  id: string;
+  stepId: string;
+  previousStatus: MissionStepStatus;
+  newStatus: MissionStepStatus;
+  reason: string;
+  timestamp: string;
+}
+
+export interface UnblockingPath {
+  stepId: string;
+  blockedByStepId?: string;
+  reason: string;
+  suggestedAction: IntelligenceAction;
+}
+
+export interface OrchestratedMissionProgress {
+  mission: IntelligenceMission;
+  hasAdvanced: boolean;
+  unblockingPaths: UnblockingPath[];
+  checkpoint?: MissionCheckpoint;
+  isComplete: boolean;
+}
+
+export interface SynthesizeMissionOptions {
+  workspaceId: string;
+  userId: string;
+  proposal: ProactiveAutomationProposal;
+  language?: "fr" | "en";
+}
