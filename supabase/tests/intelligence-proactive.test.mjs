@@ -8,13 +8,13 @@
 // API contract (401/400/structured/404) and full loop.
 // ============================================================
 
-const { computeSignals, mergeSignalsWithState, SIGNAL_CONSTANTS, SEVERITY_ORDER } = await import("../../src/lib/intelligence/signals.ts");
+const { computeSignals, mergeSignalsWithState, SIGNAL_CONSTANTS } = await import("../../src/lib/intelligence/signals.ts");
 const { getProactiveIntelligence, readSignals, updateSignalStatus, markSignalActed } = await import("../../src/lib/intelligence/signal-store.ts");
 const { handleSignalsRequest } = await import("../../src/lib/intelligence/signal-api.ts");
 const { runAgentDeterministic } = await import("../../src/lib/intelligence/agent.ts");
 const { buildWorkspaceContext } = await import("../../src/lib/intelligence/context-builder.ts");
 const { executeIntelligenceAction } = await import("../../src/lib/intelligence/actions.ts");
-const { emptyMemoryState, focusMemoryOnEntity, readMemory, saveMemory, updateMemoryAfterTurn } = await import("../../src/lib/intelligence/memory.ts");
+const { emptyMemoryState, readMemory, saveMemory } = await import("../../src/lib/intelligence/memory.ts");
 
 let passed = 0;
 let failed = 0;

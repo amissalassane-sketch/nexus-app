@@ -267,6 +267,7 @@ export function CommandShowcaseView() {
                         <button
                           key={command.id}
                           type="button"
+                          role="option"
                           aria-selected={isActive}
                           onClick={() => setActiveId(command.id)}
                           onMouseEnter={() => setActiveId(command.id)}

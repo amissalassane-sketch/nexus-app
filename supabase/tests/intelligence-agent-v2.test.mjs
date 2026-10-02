@@ -19,16 +19,14 @@ const { classifyIntent, extractPriorityFromQuery, extractDueDateFromQuery } = aw
 const { runAgent, runAgentDeterministic, validateModelToolCalls, validateModelPlan } = await import("../../src/lib/intelligence/agent.ts");
 const {
   TOOL_REGISTRY,
-  READ_TOOL_NAMES,
   MUTATE_TOOL_NAMES,
   NAVIGATE_TOOL_NAMES,
   selectToolsForIntent,
   executeReadTool,
   validateToolProposal,
-  runReadTools,
 } = await import("../../src/lib/intelligence/tools.ts");
 const { buildPlan } = await import("../../src/lib/intelligence/planner.ts");
-const { executeIntelligenceAction, ActionError } = await import("../../src/lib/intelligence/actions.ts");
+const { executeIntelligenceAction } = await import("../../src/lib/intelligence/actions.ts");
 const { callAIProvider } = await import("../../src/lib/intelligence/ai-provider.ts");
 
 let passed = 0;

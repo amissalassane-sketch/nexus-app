@@ -7,7 +7,7 @@
 // enrichment fallback, orchestration (getProactiveIntelligence).
 // ============================================================
 
-const { computeSignals, mergeSignalsWithState, SIGNAL_CONSTANTS, SEVERITY_ORDER } = await import("../../src/lib/intelligence/signals.ts");
+const { computeSignals, mergeSignalsWithState, SIGNAL_CONSTANTS } = await import("../../src/lib/intelligence/signals.ts");
 const { getProactiveIntelligence, enrichSignalsWithLLM, readSignals, updateSignalStatus } = await import("../../src/lib/intelligence/signal-store.ts");
 const { executeIntelligenceAction } = await import("../../src/lib/intelligence/actions.ts");
 

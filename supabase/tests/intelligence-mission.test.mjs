@@ -9,14 +9,12 @@
 // loop, no hallucination, full multi-step scenario.
 // ============================================================
 
-const { buildWorkspaceContext } = await import("../../src/lib/intelligence/context-builder.ts");
 const {
   detectMissionRequest,
   createMissionObject,
   findRelatedEntities,
   recomputeMission,
   runMissionLoop,
-  computeNextBestAction,
   applyVerifiedActionToStep,
   readMission,
   readActiveMissions,
@@ -50,7 +48,6 @@ const SNAPSHOT = {
   ],
   goals: [],
 };
-const context = buildWorkspaceContext("ws-1", SNAPSHOT);
 
 const QUERY = "Prépare-moi pour ma présentation de vendredi";
 

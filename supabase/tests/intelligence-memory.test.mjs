@@ -22,7 +22,7 @@ const {
   scrubDeletedIds,
 } = await import("../../src/lib/intelligence/memory.ts");
 const { classifyIntent } = await import("../../src/lib/intelligence/intent.ts");
-const { executeIntelligenceAction, ActionError } = await import("../../src/lib/intelligence/actions.ts");
+const { executeIntelligenceAction } = await import("../../src/lib/intelligence/actions.ts");
 const { reasonWorkspace } = await import("../../src/lib/intelligence/advanced.ts");
 
 let passed = 0;

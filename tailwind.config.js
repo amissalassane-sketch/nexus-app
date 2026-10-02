@@ -4,7 +4,7 @@
  * primitives built here compile unchanged when lifted back into the app.
  * Token NAMES are identical to the app, so class strings are portable verbatim.
  */
-export default {
+const config = {
   content: [
   './index.html',
   './src/**/*.{js,ts,jsx,tsx}'
@@ -120,4 +120,6 @@ export default {
     },
   },
   plugins: [],
-}
+};
+
+export default config;

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import path from "node:path";
+
 const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
@@ -27,6 +29,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   // Standalone is for self-hosting/Docker only. Vercel's adapter packages the
   // output itself, and standalone + adapter breaks on Next 16.3.0-16.3.4.
   output: process.env.VERCEL ? undefined : "standalone",
