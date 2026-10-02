@@ -26,7 +26,7 @@
     "test:mobile-experience": "node --import tsx supabase/tests/mobile-experience.test.mjs",
     "test:lineage": "node supabase/tests/bridge-lineage-hermetic.test.mjs",
     "test:domains": "node scripts/test-p0-domains.mjs && node --import tsx supabase/tests/capture-parser.test.mjs && node --import tsx supabase/tests/integrations-contract.test.mjs",
-    "test:intelligence": "node --import tsx scripts/test-intelligence-context.mjs && node --import tsx --test supabase/tests/intelligence-daily-briefing.test.mjs",
+    "test:intelligence": "node --import tsx scripts/test-intelligence-context.mjs && node --import tsx --test supabase/tests/intelligence-daily-briefing.test.mjs && node --import tsx --test supabase/tests/intelligence-proactive-automation.test.mjs",
     "test:audit": "node --import tsx supabase/tests/integrations-hardening.test.mjs && node supabase/tests/integrations-rls.test.mjs",
     "test:global": "node --import tsx --test supabase/tests/global-product.test.mjs && node --conditions=react-server --import tsx --test supabase/tests/stripe-transport.test.mjs && node supabase/tests/global-privacy-rls.test.mjs"
   },

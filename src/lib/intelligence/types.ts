@@ -509,3 +509,44 @@ export interface GenerateBriefingOptions {
   language?: "fr" | "en";
   useLLM?: boolean;
 }
+
+// ============================================================
+// PROACTIVE AUTOMATION — Batch optimization proposals & diffs
+// ============================================================
+
+export type AutomationProposalKind =
+  | "reschedule_overdue"
+  | "archive_stale"
+  | "rebalance_workload"
+  | "harmonize_priorities";
+
+export interface AutomationDiffItem {
+  entityId: string;
+  entityType: "task" | "project";
+  title: string;
+  field: "due_at" | "status" | "priority";
+  currentValue: string | null;
+  proposedValue: string;
+  reason: string;
+}
+
+export interface ProactiveAutomationProposal {
+  id: string;
+  workspaceId: string;
+  kind: AutomationProposalKind;
+  title: string;
+  description: string;
+  severity: "critical" | "warning" | "info";
+  diffItems: AutomationDiffItem[];
+  actions: IntelligenceAction[];
+  estimatedTimeSavedMinutes: number;
+  generatedAt: string;
+}
+
+export interface AutomationDetectionOptions {
+  workspaceId: string;
+  civilDate?: string;
+  language?: "fr" | "en";
+  staleDaysThreshold?: number; // default: 30
+  maxOverloadPerDay?: number; // default: 4
+}

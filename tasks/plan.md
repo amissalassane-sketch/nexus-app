@@ -1,7 +1,7 @@
-# Implementation Plan: Daily Briefing Engine (`daily-briefing`)
+# Implementation Plan: Proactive Automation (`proactive-automation`)
 
 Initiative: **Intelligence Engine 2.0**  
-Module: **`daily-briefing`**  
+Module: **`proactive-automation`**  
 Status: **Ready for Execution**  
 Date: 2026-10-02  
 
