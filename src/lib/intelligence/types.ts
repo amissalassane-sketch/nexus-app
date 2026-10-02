@@ -454,3 +454,58 @@ export interface IntelligenceMission {
   createdAt: string;
   updatedAt: string;
 }
+
+// ============================================================
+// DAILY BRIEFING — Autonomous daily executive synthesis
+// ============================================================
+
+export interface BriefingFocusItem {
+  id: string;
+  type: "task" | "goal" | "signal";
+  title: string;
+  priority: "urgent" | "high" | "medium";
+  reason: string;
+  dueToday: boolean;
+  isOverdue: boolean;
+  actionHref?: string;
+}
+
+export interface DailyBriefingMetrics {
+  totalTasksDueToday: number;
+  totalOverdueTasks: number;
+  unresolvedUrgentSignals: number;
+  completedTasksYesterday: number;
+}
+
+export interface BriefingAttentionAlert {
+  id: string;
+  level: "critical" | "warning" | "info";
+  message: string;
+  targetId?: string;
+}
+
+export interface BriefingScheduleSummary {
+  totalEvents: number;
+  nextEventTitle?: string;
+  nextEventTime?: string;
+}
+
+export interface DailyBriefing {
+  workspaceId: string;
+  date: string; // ISO civil date YYYY-MM-DD
+  generatedAt: string; // ISO UTC timestamp
+  headline: string;
+  summary: string;
+  focusItems: BriefingFocusItem[]; // Clamped to max 3
+  metrics: DailyBriefingMetrics;
+  attentionAlerts: BriefingAttentionAlert[]; // Clamped to max 5
+  scheduleSummary?: BriefingScheduleSummary;
+  deterministicOnly: boolean;
+}
+
+export interface GenerateBriefingOptions {
+  workspaceId: string;
+  civilDate?: string; // Defaults to current civil date
+  language?: "fr" | "en";
+  useLLM?: boolean;
+}
