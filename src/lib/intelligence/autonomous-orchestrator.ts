@@ -23,10 +23,16 @@ import type {
   UnblockingPath,
   OrchestratedMissionProgress,
   SynthesizeMissionOptions,
+  ProactiveAutomationProposal,
+  AutomationDiffItem,
+  IntelligenceAction,
+  IntelligenceActionType,
+  IntelligenceRisk,
 } from "./types";
 import type { WorkspaceSnapshot } from "./engine";
 import { isActiveTask } from "./engine";
 import { assertIntelligenceData } from "./data-error";
+import { readMission, saveMission, type MissionDbClient } from "./mission";
 
 /**
  * Evaluates whether a deterministic completion rule is satisfied
@@ -357,10 +363,7 @@ export function synthesizeMissionFromProposal(
   };
 }
 
-export interface OrchestrateApiDb {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from(table: string): any;
-}
+export type OrchestrateApiDb = MissionDbClient;
 
 export interface HandleOrchestrateOptions {
   db: OrchestrateApiDb;
@@ -369,6 +372,130 @@ export interface HandleOrchestrateOptions {
   missionId?: string;
   proposal?: unknown;
   language?: "fr" | "en";
+}
+
+const ACTION_TYPES = new Set<IntelligenceActionType>([
+  "create_task", "create_project", "create_goal", "update_task", "update_project", "update_goal",
+  "complete_task", "move_task", "delete_task", "delete_project", "delete_goal", "open_project",
+  "open_task", "view_blocked_tasks", "view_overdue_tasks", "view_risky_projects", "navigate",
+]);
+const RISKS = new Set<IntelligenceRisk>(["low", "medium", "high", "none"]);
+const PROPOSAL_KINDS = new Set(["reschedule_overdue", "archive_stale", "rebalance_workload", "harmonize_priorities"]);
+const PROPOSAL_SEVERITIES = new Set(["critical", "warning", "info"]);
+const DIFF_FIELDS = new Set(["due_at", "status", "priority"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readString(value: unknown, maxLength: number): string | null {
+  return typeof value === "string" && value.length > 0 && value.length <= maxLength ? value : null;
+}
+
+function readOptionalString(value: unknown, maxLength: number): string | undefined {
+  return typeof value === "string" && value.length <= maxLength ? value : undefined;
+}
+
+function parseAction(value: unknown): IntelligenceAction | null {
+  if (!isRecord(value)) return null;
+  const id = readString(value.id, 200);
+  const label = readString(value.label, 500);
+  // Proposals arrive from the client and may later be executed by the
+  // mission action endpoint. Keep this boundary limited to the update
+  // operations produced by automation, and never downgrade their HITL gate.
+  if (!id || !label || (value.type !== "update_task" && value.type !== "update_project")
+    || !ACTION_TYPES.has(value.type as IntelligenceActionType)
+    || value.confirmationRequired !== true) return null;
+
+  const action: IntelligenceAction = {
+    id,
+    type: value.type as IntelligenceActionType,
+    label,
+    confirmationRequired: value.confirmationRequired,
+  };
+  const description = readOptionalString(value.description, 2_000);
+  if (description !== undefined) action.description = description;
+  if (value.risk !== undefined) {
+    if (typeof value.risk !== "string" || !RISKS.has(value.risk as IntelligenceRisk)) return null;
+    action.risk = value.risk as IntelligenceRisk;
+  }
+  if (value.payload !== undefined) {
+    if (!isRecord(value.payload)) return null;
+    const payload: NonNullable<IntelligenceAction["payload"]> = {};
+    for (const key of ["title", "name", "status", "description", "url", "query"] as const) {
+      const parsed = readOptionalString(value.payload[key], 2_000);
+      if (value.payload[key] !== undefined && parsed === undefined) return null;
+      if (parsed !== undefined) payload[key] = parsed;
+    }
+    for (const key of ["dueDate", "projectId", "taskId", "goalId"] as const) {
+      const field = value.payload[key];
+      if (field !== undefined && field !== null && readOptionalString(field, 200) === undefined) return null;
+      if (typeof field === "string" || field === null) payload[key] = field;
+    }
+    if (value.payload.priority !== undefined) {
+      if (!["low", "medium", "high", "urgent"].includes(String(value.payload.priority))) return null;
+      payload.priority = value.payload.priority as NonNullable<IntelligenceAction["payload"]>["priority"];
+    }
+    if (value.payload.confirmDeletion !== undefined) {
+      if (typeof value.payload.confirmDeletion !== "boolean") return null;
+      payload.confirmDeletion = value.payload.confirmDeletion;
+    }
+    action.payload = payload;
+  }
+  return action;
+}
+
+export function parseOrchestrationProposal(value: unknown): ProactiveAutomationProposal | null {
+  if (!isRecord(value)) return null;
+  const id = readString(value.id, 200);
+  const workspaceId = readString(value.workspaceId, 200);
+  const title = readString(value.title, 500);
+  const description = readString(value.description, 2_000);
+  const generatedAt = readString(value.generatedAt, 100);
+  const estimatedTimeSavedMinutes = value.estimatedTimeSavedMinutes;
+  if (!id || !workspaceId || !title || !description || !generatedAt
+    || typeof value.kind !== "string" || !PROPOSAL_KINDS.has(value.kind)
+    || typeof value.severity !== "string" || !PROPOSAL_SEVERITIES.has(value.severity)
+    || !Array.isArray(value.diffItems) || value.diffItems.length > 100
+    || !Array.isArray(value.actions) || value.actions.length > 25
+    || typeof estimatedTimeSavedMinutes !== "number" || !Number.isInteger(estimatedTimeSavedMinutes) || estimatedTimeSavedMinutes < 0) return null;
+
+  const diffItems: AutomationDiffItem[] = [];
+  for (const item of value.diffItems) {
+    if (!isRecord(item)) return null;
+    const entityId = readString(item.entityId, 200);
+    const itemTitle = readString(item.title, 500);
+    const proposedValue = readString(item.proposedValue, 2_000);
+    const reason = readString(item.reason, 2_000);
+    if (!entityId || !itemTitle || !proposedValue || !reason
+      || (item.entityType !== "task" && item.entityType !== "project")
+      || typeof item.field !== "string" || !DIFF_FIELDS.has(item.field)
+      || (item.currentValue !== null && readOptionalString(item.currentValue, 2_000) === undefined)) return null;
+    diffItems.push({
+      entityId,
+      entityType: item.entityType,
+      title: itemTitle,
+      field: item.field as AutomationDiffItem["field"],
+      currentValue: item.currentValue as string | null,
+      proposedValue,
+      reason,
+    });
+  }
+  const actions = value.actions.map(parseAction);
+  if (actions.some((action): action is null => action === null)) return null;
+
+  return {
+    id,
+    workspaceId,
+    kind: value.kind as ProactiveAutomationProposal["kind"],
+    title,
+    description,
+    severity: value.severity as ProactiveAutomationProposal["severity"],
+    diffItems,
+    actions: actions as IntelligenceAction[],
+    estimatedTimeSavedMinutes,
+    generatedAt,
+  };
 }
 
 /**
@@ -387,15 +514,19 @@ export async function handleOrchestrateMissionRequest(
     return { status: 400, body: { error: "Active workspace is required" } };
   }
 
-  // 1. Synthesize proposal into mission if proposal passed
-  if (proposal && typeof proposal === "object" && "kind" in proposal && "diffItems" in proposal) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // 1. Synthesize proposal into a persisted mission if proposal passed.
+  if (proposal !== undefined) {
+    const parsedProposal = parseOrchestrationProposal(proposal);
+    if (!parsedProposal || parsedProposal.workspaceId !== workspaceId) {
+      return { status: 422, body: { error: "Invalid proposal payload" } };
+    }
     const mission = synthesizeMissionFromProposal({
       workspaceId,
       userId,
-      proposal: proposal as any,
+      proposal: parsedProposal,
       language,
     });
+    await saveMission(db, mission);
     return { status: 200, body: { mission } };
   }
 
@@ -403,15 +534,8 @@ export async function handleOrchestrateMissionRequest(
     return { status: 400, body: { error: "Mission ID or Proposal is required" } };
   }
 
-  // Load mission row
-  const missionRes = await db
-    .from("intelligence_missions")
-    .select("*")
-    .eq("id", missionId)
-    .eq("workspace_id", workspaceId)
-    .single();
-
-  if (missionRes.error || !missionRes.data) {
+  const mission = await readMission(db, workspaceId, userId, missionId);
+  if (!mission) {
     return { status: 404, body: { error: "Mission not found in workspace" } };
   }
 
@@ -429,7 +553,8 @@ export async function handleOrchestrateMissionRequest(
     goals: [],
   };
 
-  const progress = advanceAutonomousMission(missionRes.data as IntelligenceMission, snapshot, language);
+  const progress = advanceAutonomousMission(mission, snapshot, language);
+  await saveMission(db, progress.mission);
 
   return { status: 200, body: progress };
 }
