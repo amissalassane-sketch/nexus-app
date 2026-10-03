@@ -3248,30 +3248,36 @@ html[data-nexus-launch-seen="true"] .nexus-launch {
 }
 
 .nexus-intelligence-visual {
-  -webkit-mask-image: radial-gradient(
-    ellipse 38% 58% at 75% 46%,
-    #000 45%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 38% 58% at 75% 46%,
-    #000 45%,
-    transparent 100%
-  );
+  overflow: hidden;
+}
+
+.nexus-intelligence-visual-art {
+  position: absolute;
+  top: 50%;
+  right: -3%;
+  width: min(64vw, 920px);
+  height: 92%;
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+.nexus-intelligence-visual-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+html[data-theme="dark"] .nexus-intelligence-visual-art {
+  opacity: 0.78;
 }
 
 @media (max-width: 1023px) {
-  .nexus-intelligence-visual {
-    -webkit-mask-image: radial-gradient(
-      ellipse 96% 40% at 50% 78%,
-      #000 42%,
-      transparent 100%
-    );
-    mask-image: radial-gradient(
-      ellipse 96% 40% at 50% 78%,
-      #000 42%,
-      transparent 100%
-    );
+  .nexus-intelligence-visual-art {
+    top: 66%;
+    right: -38%;
+    width: 126vw;
+    height: 54%;
+    opacity: 0.48;
   }
 }
 
