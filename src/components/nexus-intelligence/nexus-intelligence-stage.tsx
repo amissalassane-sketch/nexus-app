@@ -11,9 +11,8 @@ import type { IntelligenceProfileName } from "./scene/config";
 //
 // Decides what the hero's visual layer actually is:
 //
-//   pending  → nothing. The section is black, which is exactly the
-//              first frame of the entrance animation, so there is no
-//              flash and no placeholder to remove.
+//   pending  → nothing. The section keeps its active theme surface,
+//              so there is no flash or placeholder to remove.
 //   webgl    → the live scene (which loads its own Three.js chunk on
 //              idle — see nexus-intelligence-scene).
 //   fallback → the static SVG core, for browsers with no WebGL and for
