@@ -1,47 +1,28 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { NexusIcon } from "@/components/nexus-icon";
 import { ButtonLink } from "@/components/ui/button";
 import { SlideLabel } from "@/components/ui/slide-label";
-import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
+import { NexusIntelligenceVisual } from "./nexus-intelligence-visual";
 
 // ============================================================
 // NEXUS INTELLIGENCE — HERO
 //
-// The black hole is the visual identity; the page is still HTML.
-// Two separate layers that never touch:
+// The signal core is decorative; the page remains semantic HTML.
 //
-//   layer 0  the raymarched black hole (WebGL, unified in dark & light)
+//   layer 0  a theme-friendly orbital signal illustration
 //   layer 1  the copy and the two NEXUS actions
 //
-// Readability comes from the composition, not from a flat overlay:
-// the hole is framed high-right on desktop (the reading half stays
-// clear) and low on mobile (the copy sits on top), with the shader's
-// own scrim tinted to the active page surface. The footnote rule carries
-// the same surface into the section below the glow.
-//
-// The disc burns lavender — white-hot rim, violet mid, deep indigo
-// edge — instead of the film's amber: same physics, NEXUS palette.
+// The illustration stays restrained and to the right on desktop, then
+// drops behind the copy at low opacity on mobile. Theme surfaces remain
+// visible around it.
 // Every claim below still maps to src/lib/intelligence/engine.ts.
 // ============================================================
 
 const delay = (ms: number) =>
   ({ "--nxi-delay": `${ms}ms` }) as CSSProperties;
-
-/** True below the `lg` breakpoint, where the layout stacks. */
-function useNarrow(query = "(max-width: 1023px)") {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const m = window.matchMedia(query);
-    const sync = () => setNarrow(m.matches);
-    sync();
-    m.addEventListener("change", sync);
-    return () => m.removeEventListener("change", sync);
-  }, [query]);
-  return narrow;
-}
 
 export interface NexusIntelligenceHeroProps {
   notice?: ReactNode;
@@ -69,34 +50,14 @@ export function NexusIntelligenceHero({
   secondaryCta = { label: "See how it works", href: "#in-action" },
   dense = false,
 }: NexusIntelligenceHeroProps) {
-  const narrow = useNarrow();
-
   return (
     <section
       className={`nexus-intelligence-hero relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-bg-base text-text-primary ${
         dense ? "min-h-[74svh]" : "min-h-[82svh] lg:min-h-[86svh]"
       }`}
     >
-      {/* ---- Layer 0: the raymarched black hole (unified dark & light modes) ---- */}
-      <div
-        className="nexus-intelligence-visual pointer-events-none absolute inset-0 z-0"
-        aria-hidden="true"
-      >
-        <BlackHoleHeroSection
-          focus={narrow ? [0.5, 0.8] : [0.72, 0.46]}
-          scrim={narrow ? "top" : "left"}
-          scrimStrength={0.9}
-          distance={narrow ? 26 : 24}
-          elevation={narrow ? -7 : -5.5}
-          fov={narrow ? 58 : 42}
-          hotColor="#F5F2FF"
-          midColor="#9C8CFF"
-          coolColor="#46338C"
-          glow={narrow ? 0.85 : 1}
-          steps={narrow ? 200 : 300}
-          resolution={narrow ? 0.6 : 0.7}
-        />
-      </div>
+      {/* ---- Layer 0: restrained orbital signal illustration ---- */}
+      <NexusIntelligenceVisual />
 
       {/* Bottom fade into the page */}
       <div

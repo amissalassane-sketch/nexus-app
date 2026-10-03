@@ -1,0 +1,8 @@
+[
+  {
+    "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "reviewBy": "2026-10-31",
+    "reason": "No patched npm release is available. This is currently reachable only through the development-only Next.js ESLint dependency chain. Recheck upstream before this date."
+  }
+]

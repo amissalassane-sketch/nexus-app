@@ -55,7 +55,7 @@ jobs:
           cache: "npm"
 
       - name: Audit Dependencies for Known Vulnerabilities
-        run: npm audit --audit-level=high
+        run: node scripts/audit-gate.mjs
 
   test-suites:
     name: Hermetic Unit & Contract Tests
