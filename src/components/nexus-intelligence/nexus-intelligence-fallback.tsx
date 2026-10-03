@@ -2,7 +2,7 @@
 // NEXUS INTELLIGENCE — STATIC FALLBACK
 //
 // Rendered when WebGL is unavailable: no canvas, no broken frame, no
-// empty black rectangle. It is the same composition as the 3D scene —
+// empty rectangle. It is the same composition as the 3D scene —
 // a faceted core, a mid layer of bound nodes, three orbital pathways,
 // a thin network — drawn once as inline SVG and left alone.
 //

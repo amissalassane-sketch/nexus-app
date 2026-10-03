@@ -19,7 +19,7 @@ import { cn } from "@/lib/cn";
 //   hotColor="#FFF3DE" midColor="#FF9838" coolColor="#8E3A0B"
 //
 // Copy sits in `children`, over the canvas. The canvas degrades
-// gracefully: no WebGL → black background + copy; reduced motion
+// gracefully: no WebGL → theme background + copy; reduced motion
 // → one settled still; software renderer → cheap settings.
 // ============================================================
 
@@ -703,7 +703,7 @@ export function BlackHoleHeroSection({
       | null;
 
     /**
-     * Take the canvas out of the picture and leave the black background and
+     * Take the canvas out of the picture and leave the theme background and
      * whatever copy sits on it. A canvas whose context has died does not go
      * quietly: it paints white, or the browser's broken-image mark, straight
      * over the background — which is worse than showing nothing at all.

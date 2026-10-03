@@ -19,8 +19,8 @@ import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 // Readability comes from the composition, not from a flat overlay:
 // the hole is framed high-right on desktop (the reading half stays
 // clear) and low on mobile (the copy sits on top), with the shader's
-// own scrim darkening only the edge the copy sits on. The footnote
-// rule carries its own bottom wash so it stays legible over the glow.
+// own scrim tinted to the active page surface. The footnote rule carries
+// the same surface into the section below the glow.
 //
 // The disc burns lavender — white-hot rim, violet mid, deep indigo
 // edge — instead of the film's amber: same physics, NEXUS palette.
@@ -73,13 +73,13 @@ export function NexusIntelligenceHero({
 
   return (
     <section
-      className={`nexus-intelligence-hero dark relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-bg-base text-text-primary ${
+      className={`nexus-intelligence-hero relative isolate flex flex-col overflow-hidden pt-12 sm:pt-14 bg-bg-base text-text-primary ${
         dense ? "min-h-[74svh]" : "min-h-[82svh] lg:min-h-[86svh]"
       }`}
     >
       {/* ---- Layer 0: the raymarched black hole (unified dark & light modes) ---- */}
       <div
-        className="pointer-events-none absolute inset-0 z-0"
+        className="nexus-intelligence-visual pointer-events-none absolute inset-0 z-0"
         aria-hidden="true"
       >
         <BlackHoleHeroSection
@@ -101,7 +101,7 @@ export function NexusIntelligenceHero({
       {/* Bottom fade into the page */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-24 bg-gradient-to-b from-transparent to-black"
+        className="nexus-intelligence-bottom-fade pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-24"
       />
 
       {/* ---- Layer 1: the copy ---- */}
@@ -117,7 +117,7 @@ export function NexusIntelligenceHero({
           ) : null}
 
           <span
-            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-control border border-border-subtle bg-bg-surface-2 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-300 backdrop-blur-sm"
+            className="nexus-intelligence-item inline-flex h-[28px] items-center gap-2 rounded-control border border-border-subtle bg-bg-surface-2 px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-secondary backdrop-blur-sm"
             style={delay(60)}
           >
             <span

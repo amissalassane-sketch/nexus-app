@@ -129,7 +129,7 @@ export function LandingNav({
         scrolled || open
           ? "border-b border-border-subtle bg-bg-base"
           : "border-b border-transparent bg-transparent",
-        !scrolled && !open && context === "intelligence" && "dark text-white"
+        !scrolled && !open && context === "intelligence" && "text-text-primary"
       )}
     >
       {/* DESIGN AUDIT — a keyboard/screen-reader visitor must be able to
